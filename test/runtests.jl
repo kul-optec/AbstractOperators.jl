@@ -10,4 +10,4 @@ include("test_operators_calculus.jl")
 #include("test_lbfgs.jl")
 #include("test_lbfgs_larger.jl")
 
-include("test_linOp_old.jl")
+#include("test_linOp_old.jl")
