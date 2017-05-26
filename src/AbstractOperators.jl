@@ -12,7 +12,7 @@ import Base: A_mul_B!, Ac_mul_B!, size, ndims, transpose, *, +, -
 
 # deep stuff
 
-include("deep.jl")
+include("utilities/deep.jl")
 
 # Basic operators
 
@@ -37,14 +37,14 @@ include("operators/utils.jl")
 
 # Calculus rules
 
-include("operators/calculus/DCAT.jl")
-include("operators/calculus/HCAT.jl")
-include("operators/calculus/VCAT.jl")
-include("operators/calculus/Compose.jl")
-include("operators/calculus/Reshape.jl")
-include("operators/calculus/Scale.jl")
-include("operators/calculus/Sum.jl")
-include("operators/calculus/Transpose.jl")
+include("calculus/DCAT.jl")
+include("calculus/HCAT.jl")
+include("calculus/VCAT.jl")
+include("calculus/Compose.jl")
+include("calculus/Reshape.jl")
+include("calculus/Scale.jl")
+include("calculus/Sum.jl")
+include("calculus/Transpose.jl")
 
 size(L::LinearOperator, i::Int) = size(L)[i]
 ndims(L::LinearOperator) = length(size(L,1)), length(size(L,2))
