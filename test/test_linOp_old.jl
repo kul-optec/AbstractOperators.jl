@@ -20,10 +20,10 @@ function test_FwAdj(A::LinearOperator, x, y, verb::Bool = false)
 	@test all(vecnorm(x1 .- x2) .<= 1e-12)
 	verb && @time Ac_mul_B!(x2,A,y)
 
-	test2 = RegLS.vecnorm(x.-x2) #verify equivalence
+	test2 = AbstractOperators.vecnorm(x.-x2) #verify equivalence
 
-	d1 = RegLS.deepvecdot(y2, y)
-	d2 = RegLS.deepvecdot(x, x2)
+	d1 = AbstractOperators.deepvecdot(y2, y)
+	d2 = AbstractOperators.deepvecdot(x, x2)
 	return abs( d1 - d2 )
 end
 
@@ -629,9 +629,9 @@ for i in eachindex(stuff)
 	if "in_out" in keys(stuff[i])
 		verb && println("testing output")
 		x0,y0 = stuff[i]["in_out"]
-		y1 = 0.*RegLS.deepcopy(y0)
+		y1 = 0.*AbstractOperators.deepcopy(y0)
 		A_mul_B!(y1, A, x0)
-		test4 = RegLS.deepvecnorm(y1.-y0)
+		test4 = AbstractOperators.deepvecnorm(y1.-y0)
 		@test test4 < 1e-8
 	end
 
