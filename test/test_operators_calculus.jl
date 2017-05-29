@@ -92,3 +92,51 @@ y1 = test_op(opS, x, (randn(m1), randn(m2)), verb)
 y2 = (A1*x + B1*x +C1*x, A2*x + B2*x + C2*x)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+## test Compose
+m1, m2, m3 = 4, 7, 3
+A1 = randn(m2, m1)
+A2 = randn(m3, m2)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+
+opC = Compose(opA2,opA1)
+x = randn(m1)
+y1 = test_op(opC, x, randn(m3), verb)
+y2 = A2*A1*x
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+# test Compose longer
+m1, m2, m3, m4 = 4, 7, 3, 2
+A1 = randn(m2, m1)
+A2 = randn(m3, m2)
+A3 = randn(m4, m3)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opA3 = MatrixOp(A3)
+
+opC1 = Compose(opA3,Compose(opA2,opA1))
+opC2 = Compose(Compose(opA3,opA2),opA1)
+x = randn(m1)
+y1 = test_op(opC1, x, randn(m4), verb)
+y2 = test_op(opC2, x, randn(m4), verb)
+y3 = A3*A2*A1*x
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(vecnorm.(y3 .- y2) .<= 1e-12)
+
+## test Compose of HCAT
+m1, m2, m3, m4 = 4, 7, 3, 2
+A1 = randn(m3, m1)
+A2 = randn(m3, m2)
+A3 = randn(m4, m3)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opA3 = MatrixOp(A3)
+opH = HCAT(opA1,opA2)
+opC = Compose(opA3,opH)
+x1, x2 = randn(m1), randn(m2)
+y1 = test_op(opC, (x1,x2), randn(m4), verb)
+
+y2 = A3*(A1*x1+A2*x2)
+
+
