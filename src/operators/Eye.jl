@@ -9,6 +9,9 @@ end
 Eye{N}(t::Type, dims::NTuple{N, Integer}) = Eye{t, N}(dims)
 Eye(t::Type, dims::Vararg{Integer}) = Eye{t, length(dims)}(dims)
 
+Eye{N}(dims::NTuple{N, Integer}) = Eye{Float64, N}(dims)
+Eye(dims::Vararg{Integer}) = Eye{Float64, length(dims)}(dims)
+
 # Mappings
 
 A_mul_B!{T, N}(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) = y .= b

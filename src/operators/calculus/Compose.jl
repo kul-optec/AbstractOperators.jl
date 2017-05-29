@@ -34,6 +34,10 @@ Compose{N,M,typeof(A),typeof(mid),
 	Array{codomainType(A[end]),ndims(A[end],1)},
 	Array{domainType(A[1]),ndims(A[1],2)}}(A,mid)
 
+Compose(L1::LinearOperator, L2::Eye) = L1
+Compose(L1::Eye, L2::LinearOperator) = L2
+Compose(L1::Eye, L2::Eye) = L1
+
 # Syntax (commented for now; does not belong here)
 
 # *(L1::LinearOperator, L2::LinearOperator) = Compose(L1,L2)
