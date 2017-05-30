@@ -5,12 +5,13 @@ immutable Eye{T, N} <: LinearOperator
 end
 
 # Constructors
+###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
+Eye{N}(DomainType::Type, DomainDim::NTuple{N,Int}) = Eye{DomainType,N}(DomainDim)  
+###
 
-Eye{N}(t::Type, dims::NTuple{N, Integer}) = Eye{t, N}(dims)
-Eye(t::Type, dims::Vararg{Integer}) = Eye{t, length(dims)}(dims)
-
-Eye{N}(dims::NTuple{N, Integer}) = Eye{Float64, N}(dims)
-Eye(dims::Vararg{Integer}) = Eye{Float64, length(dims)}(dims)
+Eye(t::Type, dims::Vararg{Integer}) = Eye(t,dims)
+Eye{N}(dims::NTuple{N, Integer}) = Eye(Float64,dims)
+Eye(dims::Vararg{Integer}) = Eye(Float64,dims)
 
 # Mappings
 

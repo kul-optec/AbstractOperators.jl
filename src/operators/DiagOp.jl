@@ -1,27 +1,29 @@
 export DiagOp
 
-immutable DiagOp{A <: AbstractArray, T} <: LinearOperator
-	d::A
-	# function DiagOp{R, D, T}(d::D{T}) where {R <: Real, D <: AbstractArray, T <: Union{R, Complex{R}}}
-	# 	if domainType <: Real && eltype(d) <: Complex
-	# 		throw(DomainError())
-	# 	end
-	# 	new(d, domainType)
-	# end
+immutable DiagOp{T,N,D <: AbstractArray{T,N}} <: LinearOperator
+	d::D
 end
 
 # Constructors
 
-DiagOp{A <: AbstractArray}(d::A) = DiagOp{A, eltype(d)}(d)
-DiagOp{A <: AbstractArray}(d::A, T::Type) = DiagOp{A, T}(d)
+##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
+###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
+function DiagOp{N, D <: AbstractArray}(DomainType::Type, DomainDim::NTuple{N,Int}, d::D)  
+	size(d) != DomainDim && error("dimension of d must coincide with DomainDim")
+	DiagOp{DomainType, N, D}(d)
+end
+###
+
+DiagOp{A <: AbstractArray}(d::A) = DiagOp(eltype(d),size(d),d)
+DiagOp{A <: AbstractArray}(T::Type, d::A) = DiagOp(T,size(d),d)
 
 # Mappings
 
-function A_mul_B!{A, T}(y::AbstractArray, L::DiagOp{A, T}, b::AbstractArray)
+function A_mul_B!{T,N,D}(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N})
 	y .= (*).(L.d, b)
 end
 
-function Ac_mul_B!{A, T}(y::AbstractArray, L::DiagOp{A, T}, b::AbstractArray)
+function Ac_mul_B!{T,N,D}(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N})
 	y .= (*).(conj.(L.d), b)
 end
 
@@ -30,8 +32,8 @@ end
 
 # Properties
 
-domainType{A, T}(L::DiagOp{A, T}) = T
-codomainType{A, T}(L::DiagOp{A, T}) = T
+domainType{T,N,D}(L::DiagOp{T,N,D}) = T
+codomainType{T,N,D}(L::DiagOp{T,N,D}) = T
 
 size(L::DiagOp) = (size(L.d), size(L.d))
 

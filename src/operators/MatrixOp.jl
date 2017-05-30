@@ -1,19 +1,29 @@
 export MatrixOp
 
-immutable MatrixOp{M <: AbstractMatrix, T} <: LinearOperator
+immutable MatrixOp{T, M <: AbstractMatrix{T}} <: LinearOperator
 	A::M
 	n_columns_input::Integer
 end
 
 # Constructors
 
-MatrixOp{M <: AbstractMatrix}(A::M) = MatrixOp{M, eltype(A)}(A, 1)
-MatrixOp{M <: AbstractMatrix}(A::M, T::Type) = MatrixOp{M, T}(A, 1)
-MatrixOp{M <: AbstractMatrix}(A::M, n::Integer) = MatrixOp{M, eltype(A)}(A, n)
-MatrixOp{M <: AbstractMatrix}(A::M, T::Type, n::Integer) = MatrixOp{M, T}(A, n)
+##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
+###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
+function MatrixOp{N, M <: AbstractMatrix}(DomainType::Type, DomainDim::NTuple{N,Int}, A::M)  
+	N > 2 && error("cannot multiply a Matrix by a n-dimensional Variable with n > 2") 
+	size(A,2) != DomainDim[1] && error("wrong input dimensions")
+	if N == 1
+		MatrixOp{DomainType, M}(A, 1)
+	else
+		MatrixOp{DomainType, M}(A, DomainDim[2])
+	end
+end
+###
 
-MatrixOp{M <: AbstractMatrix}(x::AbstractArray, A::M) = ndims(x) > 2 ?
-error("cannot multiply a Matrix by a n-dimensional Variable with n > 2") : MatrixOp{M,eltype(x)}(A,size(x,2))
+MatrixOp{M <: AbstractMatrix}(A::M) = MatrixOp{eltype(A), M}(A, 1)
+MatrixOp{M <: AbstractMatrix}(T::Type, A::M) = MatrixOp{T, M}(A, 1)
+MatrixOp{M <: AbstractMatrix}(A::M, n::Integer) = MatrixOp{eltype(A), M}(A, n)
+MatrixOp{M <: AbstractMatrix}(T::Type, A::M, n::Integer) = MatrixOp{T, M}(A, n)
 
 # Mappings
 
@@ -22,8 +32,8 @@ Ac_mul_B!{M, T}(y::AbstractArray, L::MatrixOp{M, T}, b::AbstractArray) = Ac_mul_
 
 # Properties
 
-domainType{M, T}(L::MatrixOp{M, T}) = T
-codomainType{M, T}(L::MatrixOp{M, T}) = T
+domainType{T, M}(L::MatrixOp{T, M}) = T
+codomainType{T, M}(L::MatrixOp{T, M}) = T
 
 function size(L::MatrixOp)
 	if L.n_columns_input == 1
