@@ -36,22 +36,6 @@ Compose(L1::LinearOperator, L2::Eye) = L1
 Compose(L1::Eye, L2::LinearOperator) = L2
 Compose(L1::Eye, L2::Eye) = L1
 
-# Syntax (commented for now; does not belong here)
-
-# *(L1::LinearOperator, L2::LinearOperator) = Compose(L1,L2)
-
-# *{E<:Eye}(L1::E, L2::LinearOperator) = L2
-# *{E<:Eye}(L1::LinearOperator, L2::E) = L1
-# *{E1<:Eye,E2<:Eye}(L1::E1, L2::E2) = L1
-#
-# *{S<:Scale}(L1::S, L2::LinearOperator) = L1.coeff*(L1.A*L2)
-# *{S<:Scale}(L1::LinearOperator, L2::S) = L2.coeff*(L1*L2.A)
-# *{S1<:Scale,S2<:Scale}(L1::S1, L2::S2) = (L1.coeff*L2.coeff)*(L1.A*L2.A)
-#
-# # redefine .*
-# Base.broadcast(::typeof(*), d::AbstractArray, L::LinearOperator) = DiagOp(codomainType(L), d)*L
-# Base.broadcast(::typeof(*), d::AbstractArray, L::Scale)          = DiagOp(L.coeff*d)
-
 # Mappings
 
 @generated function A_mul_B!{N,M,T1,T2,C,D}(y::C, L::Compose{N,M,T1,T2},b::D)
@@ -88,7 +72,7 @@ end
 
 size(L::Compose) = ( size(L.A[end],1), size(L.A[1],2) )
 
-fun_name(L::Compose) = length(L.A) == 2 ? fun_name(L.A[2])*" * "*fun_name(L.A[1]) : "Composition"
+fun_name(L::Compose) = length(L.A) == 2 ? fun_name(L.A[2])*" * "*fun_name(L.A[1]) : "Π"
 
 domainType(L::Compose)   = domainType(L.A[1])
 codomainType(L::Compose) = codomainType(L.A[end])

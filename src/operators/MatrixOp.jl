@@ -43,7 +43,7 @@ function size(L::MatrixOp)
 	end
 end
 
-fun_name(L::MatrixOp) = "Matrix operator"
+fun_name(L::MatrixOp) = "▒"
 
 is_diagonal(L::MatrixOp) = isdiag(L.A)
 is_full_row_rank(L::MatrixOp) = rank(L.A) == size(L.A, 1)

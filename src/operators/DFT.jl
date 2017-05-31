@@ -23,6 +23,8 @@ immutable IDFT{N,
 end
 
 # Constructors
+#standard constructor
+DFT{N}(dim_in::NTuple{N,Int}) = DFT(zeros(dim_in))
 
 function DFT{N,D<:Real}(x::AbstractArray{D,N})
 	A,At = plan_fft(x), plan_bfft(fft(x))
@@ -34,8 +36,7 @@ function DFT{N,D<:Complex}(x::AbstractArray{D,N})
 	DFT{N,D,D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-DFT(dim_in::Tuple) = DFT(zeros(dim_in))
-DFT(T::Type,dim_in::Tuple) = DFT(zeros(T,dim_in))
+DFT{N}(T::Type,dim_in::NTuple{N,Int}) = DFT(zeros(T,dim_in))
 DFT(dim_in::Vararg{Int}) = DFT(dim_in)
 DFT(T::Type,dim_in::Vararg{Int}) = DFT(T,dim_in)
 
@@ -44,13 +45,15 @@ function IDFT{N,D<:Real}(x::AbstractArray{D,N})
 	IDFT{N,Complex{D},D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
+#standard constructor
+IDFT{N}(T::Type,dim_in::NTuple{N,Int}) = IDFT(zeros(T,dim_in))
+
 function IDFT{N,D<:Complex}(x::AbstractArray{D,N})
 	A,At = plan_ifft(x), plan_fft(ifft(x))
 	IDFT{N,D,D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-IDFT(dim_in::Tuple) = IDFT(zeros(dim_in))
-IDFT(T::Type,dim_in::Tuple) = IDFT(zeros(T,dim_in))
+IDFT{N}(dim_in::NTuple{N,Int}) = IDFT(zeros(dim_in))
 IDFT(dim_in::Vararg{Int}) = IDFT(dim_in)
 IDFT(T::Type,dim_in::Vararg{Int}) = IDFT(T,dim_in)
 
@@ -114,8 +117,8 @@ end
 
 size(L::FourierTransform) = (L.dim_in,L.dim_in)
 
-fun_name(A::DFT) = "Discrete Fourier Transform"
-fun_name(A::IDFT) = "Inverse Discrete Fourier Transform"
+fun_name(A::DFT) = "ℱ"
+fun_name(A::IDFT) = "ℱ^(-1)"
 
 domainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = D
 codomainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = C

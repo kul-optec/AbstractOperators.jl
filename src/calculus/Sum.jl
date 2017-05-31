@@ -36,17 +36,6 @@ function Sum(A::Vararg{LinearOperator})
 	return Sum(A, midC, midD, M, N)
 end
 
-# Syntax (commented for now; does not belong here)
-
-# import Base: +, -
-# -(L::Sum) = Sum((-).(L.A), L.midC, L.midD)
-# +(L1::LinearOperator, L2::LinearOperator) = Sum((L1,  L2 ))
-# -(L1::LinearOperator, L2::LinearOperator) = Sum((L1, -L2 ))
-# +(L1::LinearOperator, L2::Sum)     = Sum((L1,L2.A...))
-# -(L1::LinearOperator, L2::Sum)     = Sum((L1,((-).(L2.A))...))
-# +(L1::Sum, L2::LinearOperator) = L2+L1
-# -(L1::Sum, L2::LinearOperator) = Sum((L1.A..., -L2))
-
 # Mappings
 
 @generated function A_mul_B!{M,N,K,C,D}(y::C, S::Sum{M,N,K,C,D}, b::D)
@@ -104,4 +93,4 @@ fun_domain(S::Sum)   = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])
 
 fun_name(S::Sum) =
-length(S.A) == 2 ? fun_name(S.A[1])" + "fun_name(S.A[2]) : "Sum of linear operators"
+length(S.A) == 2 ? fun_name(S.A[1])"+"fun_name(S.A[2]) : "Σ"

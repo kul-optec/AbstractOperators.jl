@@ -8,7 +8,7 @@ export LinearOperator
 
 abstract type LinearOperator end
 
-import Base: A_mul_B!, Ac_mul_B!, size, ndims, transpose, *, +, -
+import Base: A_mul_B!, Ac_mul_B!, size 
 
 # deep stuff
 
@@ -46,6 +46,9 @@ include("calculus/Scale.jl")
 include("calculus/Sum.jl")
 include("calculus/Transpose.jl")
 
+# Syntax
+include("syntax.jl")
+
 size(L::LinearOperator, i::Int) = size(L)[i]
 ndims(L::LinearOperator) = length(size(L,1)), length(size(L,2))
 ndims(L::LinearOperator, i::Int) = ndims(L)[i]
@@ -58,22 +61,33 @@ is_invertible(L::LinearOperator) = false
 is_full_row_rank(L::LinearOperator) = false
 is_full_column_rank(L::LinearOperator) = false
 
+#printing
 function Base.show(io::IO, L::LinearOperator)
-  print(io, typeof(L))
+	print(io, fun_name(L)" "*fun_space(L) )
 end
 
-# Shorthands
-
-function (*){T <: Union{AbstractArray, Tuple}}(L::LinearOperator, b::T)
-  y = deepzeros(codomainType(L), size(L, 1))
-	A_mul_B!(y, L, b)
-  return y
+function fun_space(L::LinearOperator)  
+	dom = fun_dom(L,2)
+	codom = fun_dom(L,1)
+	return dom*"->"*codom  
 end
 
-(-){T <: LinearOperator}(L::T) = Scale(-1.0, L)
+function fun_dom(L::LinearOperator,n::Int)
+	dm = n == 2? domainType(L) : codomainType(L)
+	sz = size(L,n)
+	return string_dom(dm,sz)
+end
 
-(+){T <: LinearOperator}(L::T) = L
+function string_dom(dm::Type,sz::Tuple)
+	dm_st = dm <: Complex ? " ℂ" : " ℝ"
+	sz_st = length(sz) == 1 ? "$(sz[1]) " : "$sz "
+	return dm_st*"^"*sz_st
+end
 
-transpose{T <: LinearOperator}(L::T) = Transpose(L)
+function string_dom(dm::Tuple,sz::Tuple)
+	s = string_dom.(dm,sz)
+	return *(s...)
+end
+
 
 end

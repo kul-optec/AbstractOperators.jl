@@ -78,7 +78,7 @@ end
 
 size(L::VCAT) = size.(L.A, 1), size(L.A[1],2)
 
-fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*"; "*fun_name(L.A[2])*"]"  :"VCAT operator"
+fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*"; "*fun_name(L.A[2])*"]"  :"VCAT"
 
 function fun_codomain(L::VCAT)
 	str = ""

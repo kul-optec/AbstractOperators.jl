@@ -1,28 +1,35 @@
 export Conv
 
-immutable Conv{N} <: LinearOperator
-	domainType::Type
-	dim_in::NTuple{N,Int}
-	h::AbstractVector
+immutable Conv{T,H <: AbstractVector{T}} <: LinearOperator
+	dim_in::Tuple{Int}
+	h::H
 end
 
 # Constructors
 
-Conv{D1}(dim_in::Int,  h::AbstractVector{D1}) = Conv(eltype(h),(dim_in,), h)
-Conv{D1}(x::AbstractVector{D1}, h::AbstractVector{D1}) = Conv(eltype(x),size(x), h)
+###standard constructor
+function Conv{H<:AbstractVector, N}(DomainType::Type, DomainDim::NTuple{N,Int},  h::H) 
+	eltype(h) != DomainType && error("eltype(h) is $(eltype(h)), should be $(DomainType)")
+	N != 1 && error("Conv treats only SISO, check Filt and MIMOFilt for MIMO")
+	Conv{DomainType,H}(DomainDim,h)
+end
+Conv{H}(x::H, h::H) = Conv(eltype(x), size(x), h)
 
 # Mappings
 
-function A_mul_B!{T}(y::AbstractVector{T},A::Conv,b::AbstractVector{T})
+function A_mul_B!{T,H}(y::H,A::Conv{T,H},b::H)
 		y .= conv(A.h,b)
 end
 
-function Ac_mul_B!{T}(y::AbstractVector{T},A::Conv,b::AbstractVector{T})
+function Ac_mul_B!{T,H}(y::H,A::Conv{T,H},b::H)
 		y .= xcorr(b,A.h)[size(A,1)[1]:end-length(A.h)+1]
 end
 
 # Properties
 
+domainType{T}(L::Conv{T}) = T
+codomainType{T}(L::Conv{T}) = T
+
 size(L::Conv) = (L.dim_in[1]+length(L.h)-1,), L.dim_in
 
-fun_name(A::Conv)  = "Convolution Operator"
+fun_name(A::Conv)  = "★"

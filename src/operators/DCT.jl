@@ -21,26 +21,30 @@ immutable IDCT{N,
 end
 
 # Constructors
+#standard constructor
+DCT{N}(T::Type,dim_in::NTuple{N,Int}) = DCT(zeros(T,dim_in))
+
+DCT{N}(dim_in::NTuple{N,Int}) = DCT(zeros(dim_in))
+DCT(dim_in::Vararg{Int64}) = DCT(dim_in)
+DCT(T::Type, dim_in::Vararg{Int64}) = DCT(T,dim_in)
 
 function DCT{N,C<:RealOrComplex}(x::AbstractArray{C,N})
 	A,At = plan_dct(x), plan_idct(x)
 	DCT{N,C,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-DCT(dim_in::Tuple) = DCT(zeros(dim_in))
-DCT(T::Type,dim_in::Tuple) = DCT(zeros(T,dim_in))
-DCT(dim_in::Vararg{Int64}) = DCT(dim_in)
-DCT(T::Type,dim_in::Vararg{Int64}) = DCT(T,dim_in)
+#standard constructor
+IDCT{N}(T::Type,dim_in::NTuple{N,Int}) = IDCT(zeros(T,dim_in))
+
+IDCT{N}(dim_in::NTuple{N,Int}) = IDCT(zeros(dim_in))
+IDCT(dim_in::Vararg{Int64}) = IDCT(dim_in)
+IDCT(T::Type, dim_in::Vararg{Int64}) = IDCT(T,dim_in)
 
 function IDCT{N,C<:RealOrComplex}(x::AbstractArray{C,N})
 	A,At = plan_idct(x), plan_dct(x)
 	IDCT{N,C,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-IDCT(dim_in::Tuple) = IDCT(zeros(dim_in))
-IDCT(T::Type,dim_in::Tuple) = IDCT(zeros(T,dim_in))
-IDCT(dim_in::Vararg{Int64}) = IDCT(dim_in)
-IDCT(T::Type,dim_in::Vararg{Int64}) = IDCT(T,dim_in)
 
 # Mappings
 
@@ -64,8 +68,8 @@ end
 
 size(L::CosineTransform) = (L.dim_in,L.dim_in)
 
-fun_name(A::DCT)  = "Discrete Cosine Transform"
-fun_name(A::IDCT) = "Inverse Discrete Cosine Transform"
+fun_name(A::DCT)  = "ℱc"
+fun_name(A::IDCT) = "ℱc^(-1)"
 
 domainType{N,C,T1,T2}(L::CosineTransform{N,C,T1,T2}) = C
 codomainType{N,C,T1,T2}(L::CosineTransform{N,C,T1,T2}) = C

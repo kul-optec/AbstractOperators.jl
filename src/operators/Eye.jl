@@ -25,7 +25,7 @@ codomainType{T, N}(L::Eye{T, N}) = T
 
 size(L::Eye) = (L.dim, L.dim)
 
-fun_name(L::Eye) = "Identity"
+fun_name(L::Eye) = "I"
 
 is_eye(L::Eye) = true
 is_diagonal(L::Eye) = true

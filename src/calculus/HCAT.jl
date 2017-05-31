@@ -81,7 +81,7 @@ end
 
 size(L::HCAT) = size(L.A[1],1), size.(L.A, 2)
 
-fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*", "*fun_name(L.A[2])*"]" : "HCAT operator"
+fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*", "*fun_name(L.A[2])*"]" : "HCAT"
 
 function fun_domain(L::HCAT)
 	str = ""

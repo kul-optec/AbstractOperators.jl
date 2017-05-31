@@ -1,12 +1,11 @@
 export Filt
 
-immutable Filt{N} <: LinearOperator
-	domainType::Type
+immutable Filt{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
-	b::AbstractVector
-	a::AbstractVector
-	si::AbstractVector
-	function Filt{N}(domainType,dim_in,b,a) where {N}
+	b::AbstractVector{T}
+	a::AbstractVector{T}
+	si::AbstractVector{T}
+	function Filt{T,N}(dim_in,b,a) where {T,N}
 		isempty(b) && throw(ArgumentError("filter vector b must be non-empty"))
 		isempty(a) && throw(ArgumentError("filter vector a must be non-empty"))
 		a[1] == 0  && throw(ArgumentError("filter vector a[1] must be nonzero"))
@@ -26,29 +25,41 @@ immutable Filt{N} <: LinearOperator
 		1<as<sz && (a = copy!(zeros(eltype(a), sz), a))
 
 		si = zeros(promote_type(eltype(b), eltype(a)), max(length(a), length(b))-1)
-		new(domainType,dim_in,b,a,si)
+		new(dim_in,b,a,si)
 	end
 end
 
 # Constructors
 
-Filt{D1}(dim_in::Int,  b::AbstractVector{D1}, a::AbstractVector{D1}) =
-Filt{1}(eltype(b),(dim_in,), b, a)
+#default constructor
+function Filt{N}(T::Type, dim_in::NTuple{N,Int}, b::AbstractVector, a::AbstractVector)
+	eltype(b) != T && error("eltype of b is $(eltype(b)), should be $T")
+	eltype(a) != T && error("eltype of a is $(eltype(b)), should be $T")
+	Filt{T,N}(dim_in,b,a)
+end
 
-Filt{D1}(dim_in::Tuple,  b::AbstractVector{D1}, a::AbstractVector{D1}) =
-Filt{length(dim_in)}(eltype(b), dim_in, b, a)
+function Filt{N}(T::Type, dim_in::NTuple{N,Int}, b::AbstractVector)
+	eltype(b) != T && error("eltype of b is $(eltype(b)), should be $T")
+	Filt{T,N}(dim_in,b,[convert(T,1.0)])
+end
 
-Filt{D1}(dim_in::Int,  b::AbstractVector{D1}) =
-Filt{1}(eltype(b),(dim_in,), b, [1.0])
+Filt(dim_in::Int,  b::AbstractVector, a::AbstractVector) =
+Filt(eltype(b),(dim_in,), b, a)
 
-Filt{D1}(dim_in::Tuple,  b::AbstractVector{D1}) =
-Filt{length(dim_in)}(eltype(b), dim_in, b, [1.0])
+Filt(dim_in::Tuple,  b::AbstractVector, a::AbstractVector) =
+Filt(eltype(b), dim_in, b, a)
 
-Filt{D1}(x::AbstractArray{D1}, b::AbstractVector{D1}, a::AbstractVector{D1}) =
-Filt{ndims(x)}(eltype(x),size(x), b, a)
+Filt(dim_in::Int,  b::AbstractVector) =
+Filt(eltype(b),(dim_in,), b)
 
-Filt{D1}(x::AbstractArray{D1}, b::AbstractVector{D1}) =
-Filt(x, b, [1.])
+Filt(dim_in::Tuple,  b::AbstractVector) =
+Filt(eltype(b), dim_in, b)
+
+Filt(x::AbstractArray, b::AbstractVector, a::AbstractVector) =
+Filt(eltype(x),size(x), b, a)
+
+Filt(x::AbstractArray, b::AbstractVector) =
+Filt(size(x), b)
 
 # Mappings
 
@@ -123,6 +134,9 @@ function fir_rev!(y, b, x, si, coly, colx)
 end
 
 # Properties
+
+domainType{T, N}(L::Filt{T, N}) = T
+codomainType{T, N}(L::Filt{T, N}) = T
 
 size(L::Filt) = L.dim_in, L.dim_in
 

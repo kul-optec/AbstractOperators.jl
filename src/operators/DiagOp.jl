@@ -37,7 +37,7 @@ codomainType{T,N,D}(L::DiagOp{T,N,D}) = T
 
 size(L::DiagOp) = (size(L.d), size(L.d))
 
-fun_name(L::DiagOp) = "Diagonal Operator"
+fun_name(L::DiagOp) = "╲"
 
 is_diagonal(L::DiagOp) = true
 
