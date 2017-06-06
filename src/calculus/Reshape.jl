@@ -1,43 +1,38 @@
 export Reshape
 
-immutable Reshape{N,M,C<:AbstractArray,D<:AbstractArray,L<:LinearOperator} <: LinearOperator
-	dim_out::NTuple{N,Int}
-	dim_in::NTuple{M,Int}
+immutable Reshape{N,L<:LinearOperator} <: LinearOperator
 	A::L
+	dim_out::NTuple{N,Int}
 end
 
 # Constructors
 
-Reshape(L::LinearOperator, dim_out...) =
-Reshape{length(dim_out),
-	length(size(L,2)),
-	Array{codomainType(L),length(dim_out)},
-	Array{domainType(L),ndims(L,2)},
-	typeof(L)}( dim_out, size(L,2), L)
+Reshape{N,L<:LinearOperator}(A::L, dim_out::Vararg{Int,N}) =
+Reshape{N,L}(A, dim_out)
 
 # Mappings
 
-function A_mul_B!{N,M,C,D,T}(y::C, L::Reshape{N,M,C,D,T}, b::D)
-	y_res = reshape(y,size(L.A,1))
-	b_res = reshape(b,size(L.A,2))
-	A_mul_B!(y_res, L.A, b_res)
+function A_mul_B!{N,L,C,D}(y::C, R::Reshape{N,L}, b::D)
+	y_res = reshape(y,size(R.A,1))
+	b_res = reshape(b,size(R.A,2))
+	A_mul_B!(y_res, R.A, b_res)
 end
 
-function Ac_mul_B!{N,M,C,D,T}(y::D, L::Reshape{N,M,C,D,T}, b::C)
-	y_res = reshape(y,size(L.A,2))
-	b_res = reshape(b,size(L.A,1))
-	Ac_mul_B!(y_res, L.A, b_res)
+function Ac_mul_B!{N,L,C,D}(y::D, R::Reshape{N,L}, b::C)
+	y_res = reshape(y,size(R.A,2))
+	b_res = reshape(b,size(R.A,1))
+	Ac_mul_B!(y_res, R.A, b_res)
 end
 
 # Properties
 
-size(L::Reshape) = (L.dim_out, L.dim_in)
+size(R::Reshape) = (R.dim_out, size(R.A,2))
 
-  domainType(  L::Reshape) =   domainType(L.A)
-codomainType(  L::Reshape) = codomainType(L.A)
+  domainType(  R::Reshape) =   domainType(R.A)
+codomainType(  R::Reshape) = codomainType(R.A)
 
-is_diagonal(    L::Reshape) = is_diagonal(L.A)
-is_gram_diagonal(L::Reshape) = is_gram_diagonal(L.A)
-is_invertible(  L::Reshape) = is_invertible(L.A)
+is_diagonal(    R::Reshape) = is_diagonal(R.A)
+is_gram_diagonal(R::Reshape) = is_gram_diagonal(R.A)
+is_invertible(  R::Reshape) = is_invertible(R.A)
 
-fun_name(L::Reshape) = "Reshaped "*fun_name(L.A)
+fun_name(R::Reshape) = "¶"*fun_name(R.A)

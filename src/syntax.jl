@@ -1,4 +1,4 @@
-import Base: transpose, *, +, -
+import Base: transpose, *, +, -, getindex
 
 ###### ' ######
 transpose{T <: LinearOperator}(L::T) = Transpose(L)
@@ -13,6 +13,10 @@ transpose{T <: LinearOperator}(L::T) = Transpose(L)
 (-)(L1::LinearOperator, L2::Sum           ) = Sum((L1,((-).(L2.A))...))
 (+)(L1::Sum,            L2::LinearOperator) = L2+L1
 (-)(L1::Sum,            L2::LinearOperator) = Sum((L1.A..., -L2))
+(+)(L1::VCAT, L2::VCAT) = VCAT(L1.A.+ L2.A, L1.mid)
+(-)(L1::VCAT, L2::VCAT) = VCAT(L1.A.-L2.A, L1.mid)
+(+)(L1::HCAT, L2::HCAT) = HCAT(L1.A.+ L2.A, L1.mid)
+(-)(L1::HCAT, L2::HCAT) = HCAT(L1.A.-L2.A, L1.mid)
 
 ###### * ######
 function (*){T <: Union{AbstractArray, Tuple}}(L::LinearOperator, b::T)
@@ -34,3 +38,13 @@ end
 # redefine .*
 Base.broadcast(::typeof(*), d::AbstractArray, L::LinearOperator) = DiagOp(codomainType(L), d)*L
 Base.broadcast(::typeof(*), d::AbstractArray, L::Scale)          = DiagOp(L.coeff*d)
+
+# getindex
+getindex(A::LinearOperator,idx...) = GetIndex(codomainType(A),size(A,1),idx)*A
+
+import Base: hcat
+hcat(L::Vararg{LinearOperator}) = HCAT(L...)
+
+import Base: vcat
+vcat(L::Vararg{LinearOperator}) = VCAT(L...)
+

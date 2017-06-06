@@ -1,26 +1,25 @@
 export Variation
 
-immutable Variation{N} <: LinearOperator
-	domainType::Type
+immutable Variation{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
-	dim_out::Tuple{Int,Int}
-	Variation{N}(domainType, dim_in) where {N} =
-	new(domainType, dim_in, (prod(dim_in), length(dim_in)) )
 end
 
 # Constructors
+#default constructor
+function Variation{N}(domainType::Type, dim_in::NTuple{N,Int}) 
+	N > 3 && error("Variation is currently implemented only for Arrays of ndims of 2 or 3")
+	N == 1 && error("use FiniteDiff instead!")
+	Variation{domainType,N}(dim_in)
+end
 
-Variation(domainType::Type, dim_in::Tuple) = Variation{length(dim_in),dir}(domainType, dim_in)
 Variation(domainType::Type, dim_in::Vararg{Int}) = Variation(domainType, dim_in)
-
-Variation(dim_in::Tuple) = Variation{length(dim_in)}(Float64, dim_in)
+Variation{N}(dim_in::NTuple{N,Int}) = Variation(Float64, dim_in)
 Variation(dim_in::Vararg{Int}) = Variation(dim_in)
-
-Variation{T,N}(x::AbstractArray{T,N})  = Variation{N}(eltype(x), size(x) )
+Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 
 # Mappings
 
-function A_mul_B!{T}(y::AbstractArray{T,2}, A::Variation{2}, b::AbstractArray{T,2})
+function A_mul_B!{T}(y::AbstractArray{T,2}, A::Variation{T,2}, b::AbstractArray{T,2})
 	cnt = 0
 	for m = 1:size(b,2), l = 1:size(b,1)
 		cnt += 1
@@ -29,7 +28,7 @@ function A_mul_B!{T}(y::AbstractArray{T,2}, A::Variation{2}, b::AbstractArray{T,
 	end
 end
 
-function Ac_mul_B!{T}(y::AbstractArray{T,2}, A::Variation{2}, b::AbstractArray{T,2})
+function Ac_mul_B!{T}(y::AbstractArray{T,2}, A::Variation{T,2}, b::AbstractArray{T,2})
 
 	cnt = 0
 	Nx, Ny = size(y,1), size(y,2)
@@ -46,7 +45,7 @@ function Ac_mul_B!{T}(y::AbstractArray{T,2}, A::Variation{2}, b::AbstractArray{T
 	end
 end
 
-function A_mul_B!{T}(y::AbstractArray{T,2},A::Variation{3},b::AbstractArray{T,3})
+function A_mul_B!{T}(y::AbstractArray{T,2},A::Variation{T,3},b::AbstractArray{T,3})
 	cnt = 0
 	for n = 1:size(b,3), m = 1:size(b,2), l = 1:size(b,1)
 		cnt += 1
@@ -56,7 +55,7 @@ function A_mul_B!{T}(y::AbstractArray{T,2},A::Variation{3},b::AbstractArray{T,3}
 	end
 end
 
-function Ac_mul_B!{T}(y::AbstractArray{T,3},A::Variation{3},b::AbstractArray{T,2})
+function Ac_mul_B!{T}(y::AbstractArray{T,3},A::Variation{T,3},b::AbstractArray{T,2})
 	cnt = 0
 	Nx, Ny, Nz = size(y,1), size(y,2), size(y,3)
 	Nxy = Nx*Ny
@@ -80,6 +79,9 @@ end
 
 # Properties
 
-size(L::Variation) = (L.dim_out, L.dim_in)
+domainType{T,N}(L::Variation{T,N}) = T
+codomainType{T,N}(L::Variation{T,N}) = T
 
-fun_name(L::Variation)  = "Variation Operator"
+size{T,N}(L::Variation{T,N}) = ((prod(L.dim_in), N), L.dim_in)
+
+fun_name(L::Variation)  = "Ʋ"

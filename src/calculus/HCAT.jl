@@ -15,6 +15,7 @@ function HCAT{N, C<:Union{Tuple,AbstractArray}, L <:NTuple{N,LinearOperator}}(A:
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
 	if any([codomainType(A[1]) != codomainType(a) for a in A])
+		println("operators must all share the same codomainType!")
 		throw(DomainError())
 	end
 	domType = domainType.(A)
@@ -33,14 +34,6 @@ end
 
 create_mid{N}(t::NTuple{N,DataType},s::NTuple{N,NTuple}) = zeros.(t,s), N
 create_mid{N}(t::Type,s::NTuple{N,Int}) = zeros(t,s), 1
-
-# Syntax (commented for now; does not belong here)
-
-# import Base: hcat
-# hcat(L::Vararg{LinearOperator}) = HCAT(L...)
-# hcat(L::LinearOperator) = L
-# (+)(L1::HCAT, L2::HCAT) = HCAT(L1.A.+ L2.A, L1.mid)
-# (-)(L1::HCAT, L2::HCAT) = HCAT(L1.A.-L2.A, L1.mid)
 
 # Mappings
 
@@ -81,18 +74,7 @@ end
 
 size(L::HCAT) = size(L.A[1],1), size.(L.A, 2)
 
-fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*", "*fun_name(L.A[2])*"]" : "HCAT"
-
-function fun_domain(L::HCAT)
-	str = ""
-	for i in eachindex(L.A)
-		str *= fun_domain(L.A[i])
-		i != length(L.A) && (str *= ", ")
-	end
-	return str
-end
-
-fun_codomain(L::HCAT) = fun_codomain(L.A[1])
+fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*","*fun_name(L.A[2])*"]" : "HCAT"
 
 domainType(L::HCAT) = domainType.(L.A)
 codomainType(L::HCAT) = codomainType.(L.A[1])

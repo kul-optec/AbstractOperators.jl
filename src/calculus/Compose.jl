@@ -72,7 +72,7 @@ end
 
 size(L::Compose) = ( size(L.A[end],1), size(L.A[1],2) )
 
-fun_name(L::Compose) = length(L.A) == 2 ? fun_name(L.A[2])*" * "*fun_name(L.A[1]) : "Π"
+fun_name(L::Compose) = length(L.A) == 2 ? fun_name(L.A[2])*"*"*fun_name(L.A[1]) : "Π"
 
 domainType(L::Compose)   = domainType(L.A[1])
 codomainType(L::Compose) = codomainType(L.A[end])

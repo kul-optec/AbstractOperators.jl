@@ -20,8 +20,7 @@ size(L::Transpose) = size(L.A,2), size(L.A,1)
 domainType(L::Transpose) = codomainType(L.A)
 codomainType(L::Transpose) = domainType(L.A)
 
-fun_name(L::Transpose)  = "$(fun_name(L.A)) (adjoint)"
-fun_type(L::Transpose) = fun_codomain(L.A)*" → "*fun_domain(L.A)
+fun_name(L::Transpose)  = fun_name(L.A)*"ᵃ"
 
 is_diagonal(L::Transpose) = is_diagonal(L.A)
 is_invertible(L::Transpose) = is_invertible(L.A)

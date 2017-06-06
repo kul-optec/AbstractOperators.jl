@@ -17,11 +17,6 @@ end
 GetIndex(dim_in::Tuple, idx::Tuple) = GetIndex(Float64, dim_in, idx)
 GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
 
-# Syntax (commented for now; doesn't belong here)
-
-# import Base: getindex
-# getindex(A::LinearOperator,idx...) = GetIndex(codomainType(A),size(A,1),idx)*A
-
 # Mappings
 
 function A_mul_B!{T1,N,M,T2}(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M})
@@ -34,10 +29,12 @@ function Ac_mul_B!{T1,N,M,T2}(y::Array{T1,M},L::GetIndex{N,M,T2},b::AbstractArra
 end
 
 # Properties
+domainType(L::GetIndex) = L.domainType
+codomainType(L::GetIndex) = L.domainType
 
 size(L::GetIndex) = (L.dim_out,L.dim_in)
 
-fun_name(L::GetIndex) = "Get Index"
+fun_name(L::GetIndex) = "↓"
 is_gram_diagonal(L::GetIndex) = true
 
 # Utils

@@ -15,6 +15,7 @@ function VCAT{M, D<:Union{Tuple,AbstractArray}, L<:NTuple{M,LinearOperator}}(A::
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
 	if any([domainType(A[1]) != domainType(a) for a in A])
+		println("operators must all share the same domainType!")
 		throw(DomainError())
 	end
 	codomType = codomainType.(A)
@@ -30,14 +31,6 @@ function VCAT(A::Vararg{LinearOperator})
 	mid,N  = create_mid(t,s)
 	return VCAT(A, mid, N)
 end
-
-# Syntax (commented for now; does not belong here)
-
-# import Base: vcat
-# vcat(L::Vararg{LinearOperator}) = VCAT(L...)
-# vcat(L::LinearOperator) = L
-# (+)(L1::VCAT, L2::VCAT) = VCAT(L1.A.+ L2.A, L1.mid)
-# (-)(L1::VCAT, L2::VCAT) = VCAT(L1.A.-L2.A, L1.mid)
 
 # Mappings
 
@@ -78,18 +71,7 @@ end
 
 size(L::VCAT) = size.(L.A, 1), size(L.A[1],2)
 
-fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*"; "*fun_name(L.A[2])*"]"  :"VCAT"
-
-function fun_codomain(L::VCAT)
-	str = ""
-	for i in eachindex(L.A)
-		str *= fun_codomain(L.A[i])
-		i != length(L.A) && (str *= ", ")
-	end
-	return str
-end
-
-fun_domain(L::VCAT) = fun_domain(L.A[1])
+fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*";"*fun_name(L.A[2])*"]"  :"VCAT"
 
   domainType(L::VCAT) = domainType(L.A[1])
 codomainType(L::VCAT) = codomainType.(L.A)

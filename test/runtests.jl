@@ -4,6 +4,8 @@ using Base.Profile
 
 srand(0)
 
+include("utils.jl")
+
 include("test_deep.jl")
 include("test_operators.jl")
 include("test_operators_calculus.jl")
