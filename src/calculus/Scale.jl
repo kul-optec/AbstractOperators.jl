@@ -14,14 +14,28 @@ Scale{T <: RealOrComplex, R <: LinearOperator, S <: Scale{T, R}}(coeff::T, L::S)
 
 # Mappings
 
-function A_mul_B!{T, C, D, A <: LinearOperator}(y::C, L::Scale{T, A}, x::D)
+function A_mul_B!{T, C <: AbstractArray, D, A <: LinearOperator}(y::C, L::Scale{T, A}, x::D)
   A_mul_B!(y, L.A, x)
   y .*= L.coeff
 end
 
-function Ac_mul_B!{T, C, D, A <: LinearOperator}(y::D, L::Scale{T, A}, x::C)
+function A_mul_B!{T, C <: Tuple, D, A <: LinearOperator}(y::C, L::Scale{T, A}, x::D)
+  A_mul_B!(y, L.A, x)
+  for k in eachindex(y)
+    y[k] .*= L.coeff
+  end
+end
+
+function Ac_mul_B!{T, C, D <: AbstractArray, A <: LinearOperator}(y::D, L::Scale{T, A}, x::C)
   Ac_mul_B!(y, L.A, x)
   y .*= L.coeff_conj
+end
+
+function Ac_mul_B!{T, C, D <: Tuple, A <: LinearOperator}(y::D, L::Scale{T, A}, x::C)
+  Ac_mul_B!(y, L.A, x)
+  for k in eachindex(y)
+    y[k] .*= L.coeff_conj
+  end
 end
 
 # Properties
