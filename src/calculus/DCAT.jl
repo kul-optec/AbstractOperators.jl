@@ -1,3 +1,5 @@
+export DCAT
+
 immutable DCAT{N,
 	       C <: NTuple{N,AbstractArray},
 	       D <: NTuple{N,AbstractArray},

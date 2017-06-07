@@ -1,6 +1,8 @@
-immutable Sum{M, N, K, 
-	      C <: Union{NTuple{M,AbstractArray}, AbstractArray}, 
-	      D <: Union{NTuple{N,AbstractArray}, AbstractArray}, 
+export Sum
+
+immutable Sum{M, N, K,
+	      C <: Union{NTuple{M,AbstractArray}, AbstractArray},
+	      D <: Union{NTuple{N,AbstractArray}, AbstractArray},
 	      L<:NTuple{K,LinearOperator}} <: LinearOperator
 	A::L
 	midC::C
@@ -34,8 +36,8 @@ function Sum(A::Vararg{LinearOperator})
 	return Sum(A, midC, midD, M, N)
 end
 
-# special cases 
-Sum{M,N,K,C,D}(L1::LinearOperator, L2::Sum{M,N,K,C,D}           ) = 
+# special cases
+Sum{M,N,K,C,D}(L1::LinearOperator, L2::Sum{M,N,K,C,D}           ) =
 Sum((L1,L2.A...),L2.midC,L2.midD, M, N)
 
 # Mappings

@@ -1,3 +1,5 @@
+export Compose
+
 immutable Compose{N, M, L<:NTuple{N,Any}, T<:NTuple{M,Any}} <: LinearOperator
 	A::L
 	mid::T       # memory in the middle of the operators
