@@ -1,5 +1,3 @@
-export Transpose
-
 immutable Transpose{T <: LinearOperator} <: LinearOperator
 	A::T
 end

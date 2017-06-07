@@ -1,5 +1,3 @@
-export HCAT
-
 immutable HCAT{M, N,
 	       C <: Union{NTuple{M,AbstractArray}, AbstractArray},
 	       D <: NTuple{N,AbstractArray},
@@ -26,12 +24,26 @@ end
 HCAT(A::LinearOperator) = A
 
 function HCAT(A::Vararg{LinearOperator})
-	s = size(A[1],1)
-	t = codomainType(A[1])
-	mid,M  = create_mid(t,s)
-	return HCAT(A, mid, M)
+	if any((<:).(typeof.(A), HCAT ))
+		op = ()
+		for a in A
+			if typeof(a) <: HCAT
+				op = (op...,a.A...)
+			else
+				op = (op...,a)
+			end
+		end
+		h = A[findfirst((<:).(typeof.(A), HCAT ))]
+		return HCAT(op, h.mid, get_M(h))
+	else
+		s = size(A[1],1)
+		t = codomainType(A[1])
+		mid,M  = create_mid(t,s)
+		return HCAT(A, mid, M)
+	end
 end
 
+get_M{M}(H::HCAT{M}) = M
 create_mid{N}(t::NTuple{N,DataType},s::NTuple{N,NTuple}) = zeros.(t,s), N
 create_mid{N}(t::Type,s::NTuple{N,Int}) = zeros(t,s), 1
 

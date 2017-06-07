@@ -8,10 +8,15 @@ immutable GetIndex{N,M,T<:Tuple} <: LinearOperator
 end
 
 # Constructors
-
+# default 
 function GetIndex{M,T<:Tuple}(domainType::Type,dim_in::NTuple{M,Int},idx::T)
+	length(idx) > M && error("cannot slice object of dimension $dim_in with $idx")
 	dim_out = get_dim_out(dim_in,idx...)
-	GetIndex{length(dim_out),M,T}(domainType,dim_out,dim_in,idx)
+	if dim_out == dim_in
+		return Eye(domainType,dim_in)
+	else
+		return GetIndex{length(dim_out),M,T}(domainType,dim_out,dim_in,idx)
+	end
 end
 
 GetIndex(dim_in::Tuple, idx::Tuple) = GetIndex(Float64, dim_in, idx)
@@ -43,12 +48,16 @@ get_idx(L::GetIndex) = L.idx
 
 function get_dim_out(dim,args...)
 	if length(args) != 1
-		dim2 = [dim...]
+		dim2 = [dim[1:length(args)]...]
 		for i = 1:length(args)
 			if args[i] != Colon() dim2[i] = length(args[i]) end
 		end
 		return tuple(dim2...)
 	else
-		return tuple(length(args[1]))
+		if args[1] == Colon()
+			return dim
+		else
+			return tuple(length(args[1]))
+		end
 	end
 end

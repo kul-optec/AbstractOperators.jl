@@ -1,5 +1,3 @@
-export VCAT
-
 immutable VCAT{M, N,
 	       C <: NTuple{M,AbstractArray},
 	       D <: Union{NTuple{N,AbstractArray}, AbstractArray},
@@ -26,11 +24,25 @@ end
 VCAT(A::LinearOperator) = A
 
 function VCAT(A::Vararg{LinearOperator})
-	s = size(A[1],2)
-	t = domainType(A[1])
-	mid,N  = create_mid(t,s)
-	return VCAT(A, mid, N)
+	if any((<:).(typeof.(A), VCAT ))
+		op = ()
+		for a in A
+			if typeof(a) <: VCAT
+				op = (op...,a.A...)
+			else
+				op = (op...,a)
+			end
+		end
+		v = A[findfirst((<:).(typeof.(A), VCAT ))]
+		return VCAT(op, v.mid, get_N(v))
+	else
+		s = size(A[1],2)
+		t = domainType(A[1])
+		mid,N  = create_mid(t,s)
+		return VCAT(A, mid, N)
+	end
 end
+get_N{M,N}(H::VCAT{M,N}) = N
 
 # Mappings
 
@@ -76,4 +88,4 @@ fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*";"*fun_name(L.A[2])*
   domainType(L::VCAT) = domainType(L.A[1])
 codomainType(L::VCAT) = codomainType.(L.A)
 
-is_full_column_rank(L::HCAT) = any(is_full_column_rank.(L.A))
+is_full_column_rank(L::VCAT) = any(is_full_column_rank.(L.A))

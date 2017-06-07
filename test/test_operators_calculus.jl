@@ -1,4 +1,5 @@
 @printf("\nTesting linear operators calculus rules\n")
+import AbstractOperators: Compose, DCAT, HCAT, Reshape, Scale, Sum, Transpose, VCAT
 
 verb = true
 
@@ -68,9 +69,9 @@ y1 = test_op(opD, (x1, x2, x3), (randn(m1),randn(m2),randn(m3)), verb)
 y2 = (A1*x1, A2*x2, A3*x3)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-############################
-####### test HCAT    #######
-############################
+###########################
+###### test HCAT    #######
+###########################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -101,10 +102,22 @@ y1 = test_op(opH, (x1, x2, x3), randn(m), verb)
 y2 = A1*x1 + A2*x2 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
+# test HCAT of HCAT
+opHH = HCAT(opH, opA2, opA3)
+y1 = test_op(opHH, (x1, x2, x3, x2, x3), randn(m), verb)
+y2 = A1*x1 + A2*x2 + A3*x3 + A2*x2 + A3*x3  
+@test vecnorm(y1-y2) <= 1e-12
+
+opHH = HCAT(opH, opH, opA3)
+y1 = test_op(opHH, (x1, x2, x3, x1, x2, x3, x3), randn(m), verb)
+y2 = A1*x1 + A2*x2 + A3*x3 + A1*x1 + A2*x2 + A3*x3 + A3*x3  
+@test vecnorm(y1-y2) <= 1e-12
+
 opA3 = MatrixOp(randn(n1,n1))
 @test_throws Exception HCAT(opA1,opA2,opA3)
 opF = DFT(Complex{Float64},(m,))
 @test_throws Exception HCAT(opA1,opF,opA2)
+
 
 ###########################
 ###### test Reshape #######
@@ -216,14 +229,25 @@ y1 = test_op(opV, x1, (randn(m1), randn(m2), randn(m3)), verb)
 y2 = (A1*x1, A2*x1, A3*x1)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
+#test VCAT of VCAT
+opVV = VCAT(opV,opA3)
+y1 = test_op(opVV, x1, (randn(m1), randn(m2), randn(m3), randn(m3)), verb)
+y2 = (A1*x1, A2*x1, A3*x1, A3*x1)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+opVV = VCAT(opA1,opV,opA3)
+y1 = test_op(opVV, x1, (randn(m1), randn(m1), randn(m2), randn(m3), randn(m3)), verb)
+y2 = (A1*x1, A1*x1, A2*x1, A3*x1, A3*x1)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
 opA3 = MatrixOp(randn(m1,m1))
 @test_throws Exception VCAT(opA1,opA2,opA3)
 opF = DFT(Complex{Float64},(n,))
 @test_throws Exception VCAT(opA1,opF,opA2)
 
-############################
-####### test combin. #######
-############################
+#############################
+######## test combin. #######
+#############################
 
 ## test Compose of HCAT
 m1, m2, m3, m4 = 4, 7, 3, 2
@@ -329,4 +353,4 @@ y2 = (A1*x + B1*x +C1*x, A2*x + B2*x + C2*x)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 
-#
+

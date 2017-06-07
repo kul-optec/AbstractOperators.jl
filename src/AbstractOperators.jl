@@ -86,7 +86,7 @@ end
 
 function string_dom(dm::Tuple,sz::Tuple)
 	s = string_dom.(dm,sz)
-	return *(s...)
+	length(s) > 3 ? s[1]*"..."s[end]  : *(s...)
 end
 
 

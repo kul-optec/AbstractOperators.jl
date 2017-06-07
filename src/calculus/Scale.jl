@@ -1,5 +1,3 @@
-export Scale
-
 immutable Scale{T1 <: RealOrComplex, T2 <: RealOrComplex, L <: LinearOperator} <: LinearOperator
   coeff::T1
   coeff_conj::T2

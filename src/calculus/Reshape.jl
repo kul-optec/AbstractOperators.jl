@@ -1,5 +1,3 @@
-export Reshape
-
 immutable Reshape{N,L<:LinearOperator} <: LinearOperator
 	A::L
 	dim_out::NTuple{N,Int}

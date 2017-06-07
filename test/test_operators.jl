@@ -2,7 +2,7 @@
 
 verb = true
 
-######### Conv ############
+######## Conv ############
 n,m = 5, 6
 h = randn(m)
 op = Conv(Float64,(n,),h)
@@ -207,6 +207,10 @@ y1 = test_op(op, x1, randn(k,m), verb)
 # other constructors
 GetIndex((n,m), (1:k,:))
 GetIndex(x1, (1:k,:)) 
+
+@test_throws ErrorException op = GetIndex(Float64,(n,m),(1:k,:,:))
+op = GetIndex(Float64,(n,m),(1:n,1:m))
+@test typeof(op) <: Eye
 
 ######### MatrixOp ############
 
