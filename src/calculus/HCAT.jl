@@ -15,8 +15,7 @@ function HCAT{N, C<:Union{Tuple,AbstractArray}, L <:NTuple{N,LinearOperator}}(A:
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
 	if any([codomainType(A[1]) != codomainType(a) for a in A])
-		println("operators must all share the same codomainType!")
-		throw(DomainError())
+		throw(error("operators must all share the same codomainType!"))
 	end
 	domType = domainType.(A)
 	D = Tuple{[Array{domType[i],ndims(A[i],2)} for i in eachindex(domType)]...}

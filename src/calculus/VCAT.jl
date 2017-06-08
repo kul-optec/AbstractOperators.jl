@@ -15,8 +15,7 @@ function VCAT{M, D<:Union{Tuple,AbstractArray}, L<:NTuple{M,LinearOperator}}(A::
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
 	if any([domainType(A[1]) != domainType(a) for a in A])
-		println("operators must all share the same domainType!")
-		throw(DomainError())
+		throw(error("operators must all share the same domainType!"))
 	end
 	codomType = codomainType.(A)
 	C = Tuple{[Array{codomType[i],ndims(A[i],1)} for i in eachindex(codomType)]...}

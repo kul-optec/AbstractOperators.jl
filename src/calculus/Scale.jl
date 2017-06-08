@@ -10,7 +10,11 @@ end
 
 Scale{T <: RealOrComplex, R <: LinearOperator}(coeff::T, L::R) = Scale{T, R}(coeff, conj(coeff), L)
 
-Scale{T <: RealOrComplex, R <: LinearOperator, S <: Scale{T, R}}(coeff::T, L::S) = Scale(coeff.*L.coeff, L.A)
+# Special Constructors
+# scale of scale
+Scale{T1 <: RealOrComplex, T2 <: RealOrComplex, R <: LinearOperator, S <: Scale{T1, R}}(coeff::T2, L::S) = 
+Scale(*(promote(coeff,L.coeff)...), L.A)
+
 
 # Mappings
 

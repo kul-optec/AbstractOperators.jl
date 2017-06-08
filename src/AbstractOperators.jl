@@ -37,12 +37,12 @@ include("operators/utils.jl")
 
 # Calculus rules
 
+include("calculus/Scale.jl")
 include("calculus/DCAT.jl")
 include("calculus/HCAT.jl")
 include("calculus/VCAT.jl")
 include("calculus/Compose.jl")
 include("calculus/Reshape.jl")
-include("calculus/Scale.jl")
 include("calculus/Sum.jl")
 include("calculus/Transpose.jl")
 

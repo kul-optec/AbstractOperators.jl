@@ -17,6 +17,9 @@ function Compose(L1::LinearOperator, L2::LinearOperator)
 	Compose( L1, L2, Array{domainType(L1)}(size(L2,1)) )
 end
 
+Compose{N,M}(A::NTuple{N,Any},mid::NTuple{M,Any}) =
+Compose{N,M,typeof(A),typeof(mid)}(A,mid)
+
 Compose(L1::LinearOperator,L2::LinearOperator,mid::AbstractArray) =
 Compose( (L2,L1), (mid,))
 
@@ -29,8 +32,10 @@ Compose((L2.A...,L1), (L2.mid...,mid))
 Compose(L1::Compose,       L2::Compose,       mid::AbstractArray) =
 Compose((L2.A...,L1.A...), (L2.mid...,mid,L1.mid...))
 
-Compose{N,M}(A::NTuple{N,Any},mid::NTuple{M,Any}) =
-Compose{N,M,typeof(A),typeof(mid)}(A,mid)
+#special cases
+Compose(L1::Scale,L2::LinearOperator) = Scale(L1.coeff,L1.A*L2)
+Compose(L1::LinearOperator,L2::Scale) = Scale(L2.coeff,L1*L2.A)
+Compose(L1::Scale,L2::Scale) = Scale(*(promote(L1.coeff,L2.coeff)...),L1.A*L2.A)
 
 Compose(L1::LinearOperator, L2::Eye) = L1
 Compose(L1::Eye, L2::LinearOperator) = L2

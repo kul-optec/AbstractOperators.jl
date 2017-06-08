@@ -20,16 +20,7 @@ function (*){T <: Union{AbstractArray, Tuple}}(L::LinearOperator, b::T)
 end
 
 *{T<:Number}(coeff::T, L::LinearOperator) = Scale(coeff,L)
-
-*{S<:Scale}(L1::S, L2::LinearOperator) = L1.coeff*(L1.A*L2)
-*{S<:Scale}(L1::LinearOperator, L2::S) = L2.coeff*(L1*L2.A)
-*{S1<:Scale,S2<:Scale}(L1::S1, L2::S2) = (L1.coeff*L2.coeff)*(L1.A*L2.A)
-
 *(L1::LinearOperator, L2::LinearOperator) = Compose(L1,L2)
-
-*{E<:Eye}(L1::E, L2::LinearOperator) = L2
-*{E<:Eye}(L1::LinearOperator, L2::E) = L1
-*{E1<:Eye,E2<:Eye}(L1::E1, L2::E2) = L1
 
 # redefine .*
 Base.broadcast(::typeof(*), d::AbstractArray, L::LinearOperator) = DiagOp(codomainType(L), d)*L
