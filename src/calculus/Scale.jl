@@ -1,28 +1,41 @@
-immutable Scale{T1 <: RealOrComplex, T2 <: RealOrComplex, L <: LinearOperator} <: LinearOperator
-  coeff::T1
-  coeff_conj::T2
+export Scale
+
+immutable Scale{T <: RealOrComplex, L <: LinearOperator} <: LinearOperator
+  coeff::T
+  coeff_conj::T
   A::L
 end
 
 # Constructors
 
-Scale{T1 <: Number, T2<:LinearOperator}(coeff::T1, L::T2) =
-Scale{codomainType(L), domainType(L), typeof(L)}(convert(codomainType(L), coeff), 
-						 conj(convert(domainType(L), coeff)), 
-						 L)
+Scale{T <: RealOrComplex, R <: LinearOperator}(coeff::T, L::R) = Scale{T, R}(coeff, conj(coeff), L)
 
-Scale{T <: Number}(coeff::T, L::Scale) = Scale(coeff.*L.coeff, L.A)
+Scale{T <: RealOrComplex, R <: LinearOperator, S <: Scale{T, R}}(coeff::T, L::S) = Scale(coeff.*L.coeff, L.A)
 
 # Mappings
 
-function A_mul_B!{T1, T2, C, D, A <: LinearOperator}(y::C, L::Scale{T1, T2, A}, x::D)
+function A_mul_B!{T, C <: AbstractArray, D, A <: LinearOperator}(y::C, L::Scale{T, A}, x::D)
   A_mul_B!(y, L.A, x)
   y .*= L.coeff
 end
 
-function Ac_mul_B!{T1, T2, C, D, A <: LinearOperator}(y::D, L::Scale{T1, T2, A}, x::C)
+function A_mul_B!{T, C <: Tuple, D, A <: LinearOperator}(y::C, L::Scale{T, A}, x::D)
+  A_mul_B!(y, L.A, x)
+  for k in eachindex(y)
+    y[k] .*= L.coeff
+  end
+end
+
+function Ac_mul_B!{T, C, D <: AbstractArray, A <: LinearOperator}(y::D, L::Scale{T, A}, x::C)
   Ac_mul_B!(y, L.A, x)
   y .*= L.coeff_conj
+end
+
+function Ac_mul_B!{T, C, D <: Tuple, A <: LinearOperator}(y::D, L::Scale{T, A}, x::C)
+  Ac_mul_B!(y, L.A, x)
+  for k in eachindex(y)
+    y[k] .*= L.coeff_conj
+  end
 end
 
 # Properties

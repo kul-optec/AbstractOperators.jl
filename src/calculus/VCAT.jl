@@ -1,3 +1,5 @@
+export VCAT
+
 immutable VCAT{M, N,
 	       C <: NTuple{M,AbstractArray},
 	       D <: Union{NTuple{N,AbstractArray}, AbstractArray},

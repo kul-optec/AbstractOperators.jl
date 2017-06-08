@@ -105,12 +105,12 @@ y2 = A1*x1 + A2*x2 + A3*x3
 # test HCAT of HCAT
 opHH = HCAT(opH, opA2, opA3)
 y1 = test_op(opHH, (x1, x2, x3, x2, x3), randn(m), verb)
-y2 = A1*x1 + A2*x2 + A3*x3 + A2*x2 + A3*x3  
+y2 = A1*x1 + A2*x2 + A3*x3 + A2*x2 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
 opHH = HCAT(opH, opH, opA3)
 y1 = test_op(opHH, (x1, x2, x3, x1, x2, x3, x3), randn(m), verb)
-y2 = A1*x1 + A2*x2 + A3*x3 + A1*x1 + A2*x2 + A3*x3 + A3*x3  
+y2 = A1*x1 + A2*x2 + A3*x3 + A1*x1 + A2*x2 + A3*x3 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
 opA3 = MatrixOp(randn(n1,n1))
@@ -139,7 +139,7 @@ y2 = reshape(A1*x1, dim_out)
 ###########################
 
 m, n = 8, 4
-alpha = 2.
+alpha = 2.0
 A1 = randn(m, n)
 opA1 = MatrixOp(A1)
 opS = Scale(alpha, opA1)
@@ -148,7 +148,7 @@ y1 = test_op(opS, x1, randn(m), verb)
 y2 = alpha*A1*x1
 @test vecnorm(y1-y2) <= 1e-12
 
-alpha2 = 3.
+alpha2 = 3.0
 opS2 = Scale(alpha2, opS)
 y1 = test_op(opS2, x1, randn(m), verb)
 y2 = alpha2*alpha*A1*x1
@@ -351,6 +351,3 @@ y1 = test_op(opS, x, (randn(m1), randn(m2)), verb)
 y2 = (A1*x + B1*x +C1*x, A2*x + B2*x + C2*x)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
-
-
-

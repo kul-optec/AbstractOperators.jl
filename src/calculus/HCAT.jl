@@ -1,3 +1,5 @@
+export HCAT
+
 immutable HCAT{M, N,
 	       C <: Union{NTuple{M,AbstractArray}, AbstractArray},
 	       D <: NTuple{N,AbstractArray},
