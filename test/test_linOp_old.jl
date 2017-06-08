@@ -1,4 +1,4 @@
-@printf("\nTesting linear operators\n")
+# @printf("\nTesting linear operators\n")
 
 ##test linear operators
 

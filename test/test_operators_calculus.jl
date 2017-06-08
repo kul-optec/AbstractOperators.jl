@@ -1,7 +1,4 @@
-@printf("\nTesting linear operators calculus rules\n")
-import AbstractOperators: Compose, DCAT, HCAT, Reshape, Scale, Sum, Transpose, VCAT
-
-verb = true
+# @printf("\nTesting linear operators calculus rules\n")
 
 ##########################
 ##### test Compose #######
@@ -351,3 +348,54 @@ y1 = test_op(opS, x, (randn(m1), randn(m2)), verb)
 y2 = (A1*x + B1*x +C1*x, A2*x + B2*x + C2*x)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+# test Scale of DCAT
+
+m1, n1 = 4, 7
+m2, n2 = 3, 5
+A1 = randn(m1, n1)
+A2 = randn(m2, n2)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opD = DCAT(opA1, opA2)
+coeff = randn()
+opS = Scale(coeff, opD)
+x1 = randn(n1)
+x2 = randn(n2)
+y = test_op(opS, (x1, x2), (randn(m1), randn(m2)), verb)
+z = (coeff*A1*x1, coeff*A2*x2)
+
+@test all(vecnorm.(y .- z) .<= 1e-12)
+
+# test Scale of VCAT
+
+m1, m2, n = 4, 3, 7
+A1 = randn(m1, n)
+A2 = randn(m2, n)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opV = VCAT(opA1, opA2)
+coeff = randn()
+opS = Scale(coeff, opV)
+x = randn(n)
+y = test_op(opS, x, (randn(m1), randn(m2)), verb)
+z = (coeff*A1*x, coeff*A2*x)
+
+@test all(vecnorm.(y .- z) .<= 1e-12)
+
+# test Scale of HCAT
+
+m, n1, n2 = 4, 3, 7
+A1 = randn(m, n1)
+A2 = randn(m, n2)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opH = HCAT(opA1, opA2)
+coeff = randn()
+opS = Scale(coeff, opH)
+x1 = randn(n1)
+x2 = randn(n2)
+y = test_op(opS, (x1, x2), randn(m), verb)
+z = coeff*(A1*x1 + A2*x2)
+
+@test all(vecnorm.(y .- z) .<= 1e-12)

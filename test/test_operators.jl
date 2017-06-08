@@ -1,6 +1,4 @@
-@printf("\nTesting linear operators\n")
-
-verb = true
+# @printf("\nTesting linear operators\n")
 
 ######## Conv ############
 n,m = 5, 6
@@ -24,9 +22,9 @@ y2 = dct(x1)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
-op = DCT((n,)) 
-op = DCT(n,n) 
-op = DCT(Complex{Float64}, n,n) 
+op = DCT((n,))
+op = DCT(n,n)
+op = DCT(Complex{Float64}, n,n)
 
 ######### IDCT ############
 n = 4
@@ -38,9 +36,9 @@ y2 = idct(x1)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
-op = IDCT((n,)) 
-op = IDCT(n,n) 
-op = IDCT(Complex{Float64}, n,n) 
+op = IDCT((n,))
+op = IDCT(n,n)
+op = IDCT(Complex{Float64}, n,n)
 
 ######### DFT ############
 n = 4
@@ -59,9 +57,9 @@ y2 = fft(x1)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
-op = DFT((n,)) 
-op = DFT(n,n) 
-op = DFT(Complex{Float64}, n,n) 
+op = DFT((n,))
+op = DFT(n,n)
+op = DFT(Complex{Float64}, n,n)
 
 ######### IDFT ############
 n = 4
@@ -80,9 +78,9 @@ y2 = ifft(x1)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
-op = IDFT((n,)) 
-op = IDFT(n,n) 
-op = IDFT(Complex{Float64}, n,n) 
+op = IDFT((n,))
+op = IDFT(n,n)
+op = IDFT(Complex{Float64}, n,n)
 
 ######### DiagOp ############
 n = 4
@@ -95,7 +93,7 @@ y2 = d.*x1
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
-op = DiagOp(d) 
+op = DiagOp(d)
 op = DiagOp(Float64, d)
 
 ######### Eye ############
@@ -108,8 +106,8 @@ y1 = test_op(op, x1, randn(n), verb)
 
 # other constructors
 op = Eye(Float64, (n,))
-op = Eye((n,)) 
-op = Eye(n) 
+op = Eye((n,))
+op = Eye(n)
 
 ######### Filt ############
 n,m = 15,2
@@ -131,11 +129,11 @@ y2 = filt(h, [1.], x1)
 
 # other constructors
 Filt(n,  b, a)
-Filt((n,m),  b, a) 
-Filt(n,  h) 
-Filt((n,),  h) 
-Filt(x1, b, a) 
-Filt(x1, b) 
+Filt((n,m),  b, a)
+Filt(n,  h)
+Filt((n,),  h)
+Filt(x1, b, a)
+Filt(x1, b)
 
 ######### FiniteDiff ############
 n= 10
@@ -184,7 +182,7 @@ y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 @test_throws ErrorException op = FiniteDiff(Float64,(n,m,l), 4)
 
 ## other constructors
-FiniteDiff((n,m)) 
+FiniteDiff((n,m))
 FiniteDiff(x1)
 
 ######### GetIndex ############
@@ -206,7 +204,7 @@ y1 = test_op(op, x1, randn(k,m), verb)
 
 # other constructors
 GetIndex((n,m), (1:k,:))
-GetIndex(x1, (1:k,:)) 
+GetIndex(x1, (1:k,:))
 
 @test_throws ErrorException op = GetIndex(Float64,(n,m),(1:k,:,:))
 op = GetIndex(Float64,(n,m),(1:n,1:m))
@@ -232,9 +230,9 @@ y2 = A*x1
 
 # other constructors
 op = MatrixOp(A)
-op = MatrixOp(Float64, A) 
+op = MatrixOp(Float64, A)
 op = MatrixOp(A, c)
-op = MatrixOp(Float64, A, c) 
+op = MatrixOp(Float64, A, c)
 
 ######### MIMOFilt ############
 m,n = 10,2
@@ -272,9 +270,9 @@ y2 = [filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2])+filt(b[3],a[3],x1[:,3]) fi
 
 ## other constructors
 MIMOFilt((10,3),  b, a)
-MIMOFilt((10,3),  b) 
-MIMOFilt(x1,  b, a) 
-MIMOFilt(x1,  b) 
+MIMOFilt((10,3),  b)
+MIMOFilt(x1,  b, a)
+MIMOFilt(x1,  b)
 
 #errors
 @test_throws ErrorException op = MIMOFilt(Float64, (10,3,2) ,b,a)
@@ -311,9 +309,9 @@ y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 
 ### other constructors
 Variation(Float64, n,m)
-Variation((n,m)) 
+Variation((n,m))
 Variation(n,m)
-Variation(x1) 
+Variation(x1)
 
 ##errors
 @test_throws ErrorException op = Variation(Float64,(n,m,l,4))
@@ -359,10 +357,10 @@ y2[1:n[1],1:n[2],1:n[3]] = x1
 
 # other constructors
 ZeroPad(n, z...)
-ZeroPad(Float64, n, z...) 
-ZeroPad(n, z...) 
-ZeroPad(x1, z) 
-ZeroPad(x1, z...) 
+ZeroPad(Float64, n, z...)
+ZeroPad(n, z...)
+ZeroPad(x1, z)
+ZeroPad(x1, z...)
 
 #errors
 @test_throws ErrorException op = ZeroPad(Float64,n,(1,2))

@@ -4,12 +4,31 @@ using Base.Profile
 
 srand(0)
 
-include("utils.jl")
+verb = false
 
-include("test_deep.jl")
-include("test_operators.jl")
-include("test_operators_calculus.jl")
-include("test_syntax.jl")
+@testset "AbstractOperators" begin
+
+@testset "Utilities" begin
+  include("utils.jl")
+end
+
+@testset "Tuple operations" begin
+  include("test_deep.jl")
+end
+
+@testset "Basic operators" begin
+  include("test_operators.jl")
+end
+
+@testset "Calculus rules" begin
+  include("test_operators_calculus.jl")
+end
+
+@testset "Syntax shorthands" begin
+  include("test_syntax.jl")
+end
+
 #include("test_lbfgs.jl")
 #include("test_lbfgs_larger.jl")
 
+end

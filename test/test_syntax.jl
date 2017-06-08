@@ -1,4 +1,4 @@
-@printf("\nTesting linear operators syntax\n")
+# @printf("\nTesting linear operators syntax\n")
 
 ##### blkdiag ####
 n1,m1 = 2,3
@@ -127,13 +127,13 @@ y2 = x1
 ###### .* ######
 d = randn(n)
 
-opd = d.*opA 
+opd = d.*opA
 y1 = opd*x1
 y2 = d.*(A*x1)
 @test norm(y1-y2) < 1e-9
 
 ops = alpha*opA
-opd = d.*ops 
+opd = d.*ops
 y1 = opd*x1
 y2 = d.*(alpha*A*x1)
 @test norm(y1-y2) < 1e-9
@@ -226,7 +226,7 @@ y2 = (A*x1, A*x1, B*x1)
 ###### reshape ######
 n,m =  10,5
 A = randn(n,m)
-x1 = randn(m) 
+x1 = randn(m)
 opA = MatrixOp(A)
 opR = reshape(opA,2,5)
 opR = reshape(opA,(2,5))

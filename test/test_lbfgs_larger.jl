@@ -1,4 +1,4 @@
-@printf("\nTesting L-BFGS routines on a larger problem\n")
+# @printf("\nTesting L-BFGS routines on a larger problem\n")
 
 n = 10000
 dens = 100/n
