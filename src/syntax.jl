@@ -44,6 +44,22 @@ function getindex{L<:Compose}(A::L,idx...)
 	end
 end
 
+#slicing an HCAT gives an HCAT
+function getindex{M,N,L<:HCAT{M,N}}(A::L,idx) 
+	HCAT(A.A[idx],A.mid,M)
+end
+#or the operator at idx
+getindex{L<:HCAT}(A::L,idx::Int) = A.A[idx]
+
+#slicing an VCAT gives a VCAT
+function getindex{M,N,L<:VCAT{M,N}}(A::L,idx) 
+	VCAT(A.A[idx],A.mid,N)
+end
+#or the operator at idx
+getindex{L<:VCAT}(A::L,idx::Int) = A.A[idx]
+
+#TODO slicing DCAT
+
 hcat(L::Vararg{LinearOperator}) = HCAT(L...)
 vcat(L::Vararg{LinearOperator}) = VCAT(L...)
 
