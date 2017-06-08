@@ -43,6 +43,7 @@ x = zeros(10)
 
 A = LBFGS(Float64,size(x),mem)
 A = LBFGS(x,mem)
+println(A)
 x_old = 0;
 grad_old = 0;
 
@@ -50,7 +51,7 @@ for i = 1:5
     x = xs[:,i]
     grad = Q*x + q
     if i > 1
-	    update!(A, x, x_old, grad, grad_old)
+	    @time update!(A, x, x_old, grad, grad_old)
 			A_mul_B!(dir,A,grad)
     else
 	    copy!(dir, -grad)

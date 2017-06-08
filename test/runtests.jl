@@ -4,7 +4,7 @@ using Base.Profile
 
 srand(0)
 
-verb = false
+verb = true
 
 @testset "AbstractOperators" begin
 
