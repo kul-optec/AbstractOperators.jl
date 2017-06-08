@@ -33,6 +33,17 @@ y3 = A3*A2*A1*x
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 @test all(vecnorm.(y3 .- y2) .<= 1e-12)
 
+#test Compose special cases
+@test typeof(opA1*Eye(m1)) == typeof(opA1) 
+@test typeof(Eye(m2)*opA1) == typeof(opA1) 
+@test typeof(Eye(m2)*Eye(m2)) == typeof(Eye(m2)) 
+
+opS1 = Scale(pi,opA1)
+opS2 = Scale(pi,opA2)
+@test typeof(opS2*opA1) <: Scale
+@test typeof(opA2*opS1) <: Scale
+@test typeof(opS2*opS1) <: Scale
+
 ###########################
 ###### test DCAT    #######
 ###########################
@@ -131,34 +142,36 @@ y1 = test_op(opR, x1, randn(dim_out), verb)
 y2 = reshape(A1*x1, dim_out)
 @test vecnorm(y1-y2) <= 1e-12
 
-###########################
-###### test Scale   #######
-###########################
+##########################
+##### test Scale   #######
+##########################
 
 m, n = 8, 4
-alpha = pi
+coeff = pi
 A1 = randn(m, n)
 opA1 = MatrixOp(A1)
-opS = Scale(alpha, opA1)
+opS = Scale(coeff, opA1)
 x1 = randn(n)
 y1 = test_op(opS, x1, randn(m), verb)
-y2 = alpha*A1*x1
+y2 = coeff*A1*x1
 @test vecnorm(y1-y2) <= 1e-12
 
-alpha2 = 3.0
-opS2 = Scale(alpha2, opS)
+coeff2 = 3
+opS2 = Scale(coeff2, opS)
 y1 = test_op(opS2, x1, randn(m), verb)
-y2 = alpha2*alpha*A1*x1
+y2 = coeff2*coeff*A1*x1
 @test vecnorm(y1-y2) <= 1e-12
 
 opF = DFT(m,n)
-opS = Scale(alpha, opF)
+opS = Scale(coeff, opF)
 x1 = randn(m,n)
 y1 = test_op(opS, x1, fft(randn(m,n)), verb)
+y2 = coeff*(fft(x1))
+@test vecnorm(y1-y2) <= 1e-12
 
 #########################
 #### test Sum     #######
-##########################
+#########################
 
 m,n = 5,7
 A1 = randn(m,n)
@@ -404,3 +417,34 @@ y = test_op(opS, (x1, x2), randn(m), verb)
 z = coeff*(A1*x1 + A2*x2)
 
 @test all(vecnorm.(y .- z) .<= 1e-12)
+
+# test Scale of Sum
+
+m,n = 5,7
+A1 = randn(m,n)
+A2 = randn(m,n)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opS = Sum(opA1,opA2)
+coeff = pi
+opSS = Scale(coeff,opS)
+x1 = randn(n)
+y1 = test_op(opSS, x1, randn(m), verb)
+y2 = coeff*(A1*x1+A2*x1)
+@test vecnorm(y1-y2) <= 1e-12
+
+# test Scale of Compose
+
+m1, m2, m3 = 4, 7, 3
+A1 = randn(m2, m1)
+A2 = randn(m3, m2)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+
+coeff = pi
+opC = Compose(opA2,opA1)
+opS = Scale(coeff,opC)
+x = randn(m1)
+y1 = test_op(opS, x, randn(m3), verb)
+y2 = coeff*(A2*A1*x)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
