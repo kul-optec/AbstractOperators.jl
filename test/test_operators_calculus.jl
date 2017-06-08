@@ -136,7 +136,7 @@ y2 = reshape(A1*x1, dim_out)
 ###########################
 
 m, n = 8, 4
-alpha = 2.0
+alpha = pi
 A1 = randn(m, n)
 opA1 = MatrixOp(A1)
 opS = Scale(alpha, opA1)
@@ -151,9 +151,14 @@ y1 = test_op(opS2, x1, randn(m), verb)
 y2 = alpha2*alpha*A1*x1
 @test vecnorm(y1-y2) <= 1e-12
 
+opF = DFT(m,n)
+opS = Scale(alpha, opF)
+x1 = randn(m,n)
+y1 = test_op(opS, x1, fft(randn(m,n)), verb)
+
+#########################
+#### test Sum     #######
 ##########################
-##### test Sum     #######
-###########################
 
 m,n = 5,7
 A1 = randn(m,n)

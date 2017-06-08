@@ -2,15 +2,12 @@ using AbstractOperators
 using Base.Test
 using Base.Profile
 
+include("utils.jl")
 srand(0)
 
-verb = false
+verb = true
 
 @testset "AbstractOperators" begin
-
-@testset "Utilities" begin
-  include("utils.jl")
-end
 
 @testset "Tuple operations" begin
   include("test_deep.jl")

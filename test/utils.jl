@@ -18,10 +18,10 @@ function test_op(A::LinearOperator, x, y, verb::Bool = false)
 
   @test AbstractOperators.deepvecnorm(Acy .- Acy2) <= 1e-8
 
-	s1 = AbstractOperators.deepvecdot(Ax2, y)
-	s2 = AbstractOperators.deepvecdot(x, Acy2)
+  s1 = AbstractOperators.deepvecdot(Ax2, y)
+  s2 = AbstractOperators.deepvecdot(x, Acy2)
 
-	@test abs( s1 - s2 ) < 1e-8
+  @test abs( s1 - s2 ) < 1e-8
 
   return Ax
 end
