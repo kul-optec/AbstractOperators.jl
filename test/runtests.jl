@@ -28,7 +28,9 @@ end
   include("test_syntax.jl")
 end
 
-#include("test_lbfgs.jl")
-#include("test_lbfgs_larger.jl")
+@testset "L-BFGS" begin
+  include("test_lbfgs.jl")
+  include("test_lbfgs_larger.jl")
+end
 
 end
