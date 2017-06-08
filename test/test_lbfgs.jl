@@ -41,6 +41,7 @@ mem = 3;
 # H0 = 1.0
 x = zeros(10)
 
+A = LBFGS(Float64,size(x),mem)
 A = LBFGS(x,mem)
 println(A)
 x_old = 0;

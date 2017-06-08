@@ -1,6 +1,5 @@
-#TODO make this a LinearOperator
 
-type BlkDiagLBFGS{M, N2, A <:NTuple{N2,Any}, B <:NTuple{M,A}}
+type BlkDiagLBFGS{M, N, R<:Real, A <:NTuple{N,AbstractArray}, B <:NTuple{M,A}} <: LinearOperator
 	currmem::Int
 	curridx::Int
 	s::A
@@ -9,24 +8,27 @@ type BlkDiagLBFGS{M, N2, A <:NTuple{N2,Any}, B <:NTuple{M,A}}
 	y_m::B
 	ys_m::Array{Float64,1}
 	alphas::Array{Float64,1}
-	H::Float64
+	H::R
 end
 
-function LBFGS{N}(x::NTuple{N,Any},mem::Int64)
-
-	s_m = ([deepsimilar(x) for i = 1:mem]...)
-	y_m = ([deepsimilar(x) for i = 1:mem]...)
-
-	s = deepsimilar(x)
-	y = deepsimilar(x)
-
-	ys_m = zeros(Float64,mem)
-	alphas = zeros(Float64,mem)
-
-	BlkDiagLBFGS{mem,N,typeof(x),typeof(s_m)}(0, 0, s, y, s_m, y_m, ys_m, alphas, 1.) 
+#constructors
+#default
+function LBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,NTuple}, M::Int)
+	s_m = tuple([deepzeros(T,dim) for i = 1:M]...)
+	y_m = tuple([deepzeros(T,dim) for i = 1:M]...)
+	s = deepzeros(T,dim)
+	y = deepzeros(T,dim)
+	R = real(T[1])
+	ys_m = zeros(R, M)
+	alphas = zeros(R, M)
+	BlkDiagLBFGS{M,N,R,typeof(s),typeof(s_m)}(0, 0, s, y, s_m, y_m, ys_m, alphas, 1.) 
 end
 
-@generated function update!{M,N,A,B}(L::BlkDiagLBFGS{M,N,A,B}, 
+LBFGS{N}(x::NTuple{N,AbstractArray},M::Int64) = LBFGS(eltype.(x),size.(x),M)
+
+#mappings
+
+@generated function update!{M,N,R,A,B}(L::BlkDiagLBFGS{M,N,R,A,B}, 
 				     x::A, 
 				     x_prev::A, 
 				     gradx::A, 
@@ -73,7 +75,7 @@ function update_s_m_y_m{A}(s_m::A,y_m::A,s::A,y::A)
 	return yty
 end
 
-function A_mul_B!{M, N, A, B}(d::A, L::BlkDiagLBFGS{M,N,A,B}, gradx::A)
+function A_mul_B!{M, N, R, A, B}(d::A, L::BlkDiagLBFGS{M,N,R,A,B}, gradx::A)
 	for i = 1:N
 		d[i] .= (-).(gradx[i])
 	end
@@ -84,7 +86,7 @@ function A_mul_B!{M, N, A, B}(d::A, L::BlkDiagLBFGS{M,N,A,B}, gradx::A)
 	d = loop2!(d,idx,L)
 end
 
-function loop1!{M, N, A, B}(d::A, L::BlkDiagLBFGS{M,N,A,B})
+function loop1!{M, N, R, A, B}(d::A, L::BlkDiagLBFGS{M,N,R,A,B})
 	idx = L.curridx
 	for i=1:L.currmem
 		L.alphas[idx] = sum(real.(vecdot.(L.s_m[idx], d)))
@@ -99,7 +101,7 @@ function loop1!{M, N, A, B}(d::A, L::BlkDiagLBFGS{M,N,A,B})
 	return idx
 end
 
-function loop2!{M, N, A, B}(d::A, idx::Int, L::BlkDiagLBFGS{M,N,A,B})
+function loop2!{M, N, R, A, B}(d::A, idx::Int, L::BlkDiagLBFGS{M,N,R,A,B})
 	for i=1:L.currmem
 		idx += 1
 		if idx > M idx = 1 end
@@ -116,3 +118,11 @@ function reset(L::BlkDiagLBFGS)
 	L.currmem = 0
 	L.curridx = 0
 end
+
+# Properties
+
+domainType(L::BlkDiagLBFGS) = eltype.(L.s)
+codomainType(L::BlkDiagLBFGS) = eltype.(L.s)
+
+fun_name(A::BlkDiagLBFGS) = "LBFGS"
+size(A::BlkDiagLBFGS) = (size.(A.s), size.(A.s))

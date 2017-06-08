@@ -23,26 +23,8 @@ Ac_mul_B!{N,C,D,L}(y::D, S::DCAT{N,C,D,L}, b::C) = Ac_mul_B!.(y,S.A,b)
 # Properties
 size(L::DCAT) = size.(L.A,1), size.(L.A, 2)
 
-fun_name(L::DCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*",0;0"*fun_name(L.A[2])*"]" :
+fun_name(L::DCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*" 0;0 "*fun_name(L.A[2])*"]" :
 "DCAT"
-
-function fun_domain(L::DCAT)
-	str = ""
-	for i in eachindex(L.A)
-		str *= fun_domain(L.A[i])
-		i != length(L.A) && (str *= ", ")
-	end
-	return str
-end
-
-function fun_codomain(L::DCAT)
-	str = ""
-	for i in eachindex(L.A)
-		str *= fun_codomain(L.A[i])
-		i != length(L.A) && (str *= ", ")
-	end
-	return str
-end
 
 domainType(L::DCAT)   = domainType.(L.A)
 codomainType(L::DCAT) = codomainType.(L.A)

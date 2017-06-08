@@ -1,38 +1,38 @@
 export LBFGS, update!
 
 # TODO make Ac_mul_B!
-# Edit: Ac_mul_B! is not really needed for this operator
+# Edit: Ac_mul_B! is not really needed for this operator 
+# Edit2: you nver known! anyway for completeness would be cool to have it!
 
-type LBFGS{M, R <: Real, T <: Union{R, Complex{R}}, A <: AbstractArray N} <: LinearOperator
-	domainType::Type
-	dim::NTuple{N, Int}
+type LBFGS{M, N, R <: Real, T <: Union{R, Complex{R}}, A<:AbstractArray{T,N}} <: LinearOperator
 	currmem::Int
 	curridx::Int
-	s::AbstractArray
-	y::AbstractArray
-	s_m::NTuple{M, AbstractArray}
-	y_m::NTuple{M, AbstractArray}
+	s::A
+	y::A
+	s_m::NTuple{M, A}
+	y_m::NTuple{M, A}
 	ys_m::Array{R, 1}
 	alphas::Array{R, 1}
 	H::R
 end
 
 # Constructors
-
-function LBFGS{R <: Real, T <: Union{R, Complex{R}}, A <: AbstractArray}(x::A{T}, mem::Int)
-	s_m = ([similar(x) for i = 1:mem]...)
-	y_m = ([similar(x) for i = 1:mem]...)
-	s = similar(x)
-	y = similar(x)
-	ys_m = zeros(Float64, mem)
-	alphas = zeros(Float64, mem)
-	return LBFGS{mem, T, A, ndims(x)}(eltype(x), size(x), 0, 0, s, y, s_m, y_m, ys_m, alphas, 1.)
+#default
+function LBFGS{N}(T::Type, dim::NTuple{N,Int}, M::Int)
+	s_m = tuple([deepzeros(T,dim) for i = 1:M]...)
+	y_m = tuple([deepzeros(T,dim) for i = 1:M]...)
+	s = deepzeros(T,dim)
+	y = deepzeros(T,dim)
+	R = real(T)
+	ys_m = zeros(R, M)
+	alphas = zeros(R, M)
+	LBFGS{M,N,R,T,typeof(s)}(0, 0, s, y, s_m, y_m, ys_m, alphas, zero(R))
 end
 
-function update!{M,
-		 T<:RealOrComplex,
-		 A<:AbstractArray{T},N}(
-			L::LBFGS{M,T,A,N},
+LBFGS(x::AbstractArray,M::Int) = LBFGS(eltype(x),size(x),M)
+
+function update!{M,N,R,T,A}(
+			L::LBFGS{M,N,R,T,A},
 			x::A,
 			x_prev::A,
 			gradx::A,
@@ -55,14 +55,14 @@ function update!{M,
 	return L
 end
 
-function update_s_y{M,T,A,N}(L::LBFGS{M,T,A,N}, x::A, x_prev::A, gradx::A, gradx_prev::A)
+function update_s_y{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}, x::A, x_prev::A, gradx::A, gradx_prev::A)
 	L.s .= (-).(x, x_prev)
 	L.y .= (-).(gradx, gradx_prev)
 	ys = real(vecdot(L.s,L.y))
 	return ys
 end
 
-function update_s_m_y_m{M,T,A,N}(L::LBFGS{M,T,A,N}, curridx::Int)
+function update_s_m_y_m{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}, curridx::Int)
 	L.s_m[curridx] .=  L.s
 	L.y_m[curridx] .=  L.y
 
@@ -70,14 +70,14 @@ function update_s_m_y_m{M,T,A,N}(L::LBFGS{M,T,A,N}, curridx::Int)
 	return yty
 end
 
-function A_mul_B!{M, T<:RealOrComplex, A<:AbstractArray{T},N}(d::A, L::LBFGS{M,T,A,N}, gradx::A)
+function A_mul_B!{M,N,R,T,A}(d::A, L::LBFGS{M,N,R,T,A}, gradx::A)
 	d .= (-).(gradx)
 	idx = loop1!(d,L)
 	d .= (*).(L.H, d)
 	d = loop2!(d,idx,L)
 end
 
-function loop1!{M,T,A,N}(d::A, L::LBFGS{M,T,A,N})
+function loop1!{M,N,R,T,A}(d::A, L::LBFGS{M,N,R,T,A})
 	idx = L.curridx
 	for i=1:L.currmem
 		L.alphas[idx] = real(vecdot(L.s_m[idx], d))/L.ys_m[idx]
@@ -88,7 +88,7 @@ function loop1!{M,T,A,N}(d::A, L::LBFGS{M,T,A,N})
 	return idx
 end
 
-function loop2!{M,T,A,N}(d::A, idx::Int, L::LBFGS{M,T,A,N})
+function loop2!{M,N,R,T,A}(d::A, idx::Int, L::LBFGS{M,N,R,T,A})
 	for i=1:L.currmem
 		idx += 1
 		if idx > M idx = 1 end
@@ -99,7 +99,9 @@ function loop2!{M,T,A,N}(d::A, idx::Int, L::LBFGS{M,T,A,N})
 end
 
 # Properties
+  domainType{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}) = T
+codomainType{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}) = T
 
-size(A::LBFGS) = (A.dim, A.dim)
+size(A::LBFGS) = (size(A.s), size(A.s))
 
-fun_name(A::LBFGS) = "LBFGS Operator"
+fun_name(A::LBFGS) = "LBFGS"

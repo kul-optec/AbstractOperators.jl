@@ -31,8 +31,8 @@ include("operators/Filt.jl")
 include("operators/MIMOFilt.jl")
 include("operators/ZeroPad.jl")
 include("operators/Xcorr.jl")
-# include("operators/LBFGS.jl")
-# include("operators/BlkDiagLBFGS.jl")
+include("operators/LBFGS.jl")
+include("operators/BlkDiagLBFGS.jl")
 include("operators/utils.jl")
 
 # Calculus rules
