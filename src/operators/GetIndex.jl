@@ -19,6 +19,8 @@ function GetIndex{M,T<:Tuple}(domainType::Type,dim_in::NTuple{M,Int},idx::T)
 	end
 end
 
+GetIndex(domainType::Type,dim_in::Tuple, idx...) = GetIndex(domainType, dim_in, idx)
+GetIndex(dim_in::Tuple, idx...) = GetIndex(Float64, dim_in, idx)
 GetIndex(dim_in::Tuple, idx::Tuple) = GetIndex(Float64, dim_in, idx)
 GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
 
