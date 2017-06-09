@@ -8,7 +8,8 @@ export LinearOperator
 
 abstract type LinearOperator end
 
-import Base: A_mul_B!, Ac_mul_B!, size 
+import Base: A_mul_B!, Ac_mul_B!, size, ndims 
+export ndoms
 
 # deep stuff
 
@@ -50,8 +51,33 @@ include("calculus/Transpose.jl")
 include("syntax.jl")
 
 size(L::LinearOperator, i::Int) = size(L)[i]
-ndims(L::LinearOperator) = length(size(L,1)), length(size(L,2))
+ndims(L::LinearOperator) = count_dims(size(L,1)), count_dims(size(L,2))
 ndims(L::LinearOperator, i::Int) = ndims(L)[i]
+
+count_dims{N}(dims::NTuple{N,Int}) = N
+count_dims{N}(dims::NTuple{N,Tuple}) = count_dims.(dims)
+
+"""
+`ndoms(L::LinearOperator, [dom::Int]) -> (number of codomains, number of domains)`
+
+Returns the number of codomains and domains  of a `LinearOperator`. Optionally you can specify the codomain (with `dom = 1`) or the domain (with `dom = 2`)
+
+```julia
+julia > ndoms(DFT(10,10))
+(1,1)
+
+julia> ndoms(hcat(DFT(10,10),DFT(10,10)))
+(1, 2)
+
+julia> ndoms(hcat(DFT(10,10),DFT(10,10)),2)
+2
+
+julia> ndoms(blkdiag(DFT(10,10),DFT(10,10))
+(2,2)
+```
+"""
+ndoms(L::LinearOperator) = length.(ndims(L))
+ndoms(L::LinearOperator, i::Int) = ndoms(L)[i]
 
 is_null(L::LinearOperator) = false
 is_eye(L::LinearOperator) = false

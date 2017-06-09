@@ -277,3 +277,20 @@ opR = reshape(opA,(2,5))
 y1 = opR*x1
 y2 = reshape(A*x1,2,5)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+# testing ndims & ndoms
+L = Variation((3,4,5))
+@test ndims(L) == (2,3)
+@test ndims(L,1) == 2
+@test ndims(L,2) == 3
+@test ndoms(L) == (1,1)
+H = hcat(L,L)
+@test ndims(H) == (2,(3,3))
+@test ndims(H,1) == 2
+@test ndims(H,2) == (3,3)
+@test ndoms(H) == (1,2)
+@test ndoms(H,1) == 1
+@test ndoms(H,2) == 2
+D = blkdiag(L,L)
+@test ndims(D) == ((2,2),(3,3))
+@test ndoms(D) == (2,2)
