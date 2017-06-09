@@ -165,26 +165,28 @@ y1 = ops*x3
 y2 = (opV*x3)[1:4]
 @test vecnorm(y1-y2) < 1e-9
 
-opF = DCT(n,m,l)
-x3 = randn(n,m,l)
-in_slice = (1:n-1,2:m)
-out_slice = (1:n,)
-ops = opF[in_slice...][out_slice...]
-y1 = ops*(x3[1:n])
-x4 = zeros(x3)
-x4[1:n] = x3[1:n]
-y2 = dct(x4)[1:n-1,2:m]
-@test vecnorm(y1-y2) < 1e-9
+#commented for the moment
+#opF = DCT(n,m,l)
+#x3 = randn(n,m,l)
+#in_slice = (1:n-1,2:m)
+#out_slice = (1:n,)
+#ops = opF[in_slice...][out_slice...]
+#y1 = ops*(x3[1:n])
+#x4 = zeros(x3)
+#x4[1:n] = x3[1:n]
+#y2 = dct(x4)[1:n-1,2:m]
+#@test vecnorm(y1-y2) < 1e-9
 
 ops = (opB*opA)[1:l-1]
 y1 = ops*x1
 y2 = (B*A*x1)[1:l-1]
 @test norm(y1-y2) < 1e-9
 
-ops = (opB*opA)[1:l-1][2:m]
-y1 = ops*x1[2:m]
-y2 = (B*A*[0.;x1[2:m]])[1:l-1]
-@test norm(y1-y2) < 1e-9
+#commented for the moment
+#ops = (opB*opA)[1:l-1][2:m]
+#y1 = ops*x1[2:m]
+#y2 = (B*A*[0.;x1[2:m]])[1:l-1]
+#@test norm(y1-y2) < 1e-9
 
 #slicing HCAT
 
