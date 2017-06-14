@@ -4,8 +4,6 @@ module AbstractOperators
 
 const RealOrComplex{T<:Real} = Union{T, Complex{T}}
 
-export LinearOperator
-
 abstract type LinearOperator end
 
 import Base: A_mul_B!, Ac_mul_B!, size, ndims 
@@ -114,6 +112,17 @@ function string_dom(dm::Tuple,sz::Tuple)
 	s = string_dom.(dm,sz)
 	length(s) > 3 ? s[1]*"..."s[end]  : *(s...)
 end
+
+export LinearOperator,
+       domainType, 
+       codomainType,
+       is_eye,
+       is_null,
+       is_diagonal,
+       is_gram_diagonal,
+       is_invertible,
+       is_full_row_rank,
+       is_full_column_rank
 
 
 end

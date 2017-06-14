@@ -92,5 +92,11 @@ fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*","*fun_name(L.A[2])*
 domainType(L::HCAT) = domainType.(L.A)
 codomainType(L::HCAT) = codomainType.(L.A[1])
 
-is_gram_diagonal(L::HCAT) = all(is_gram_diagonal.(L.A))
+function is_gram_diagonal{M,N}(L::HCAT{M,N})
+	if countnz(is_null.(L.A)) == 1
+		return is_gram_diagonal(L.A[findfirst((!).(is_null.(L.A)))])
+	else
+		return false
+	end
+end
 is_full_row_rank(L::HCAT) = any(is_full_row_rank.(L.A))

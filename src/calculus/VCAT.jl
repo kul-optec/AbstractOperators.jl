@@ -89,4 +89,5 @@ fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*";"*fun_name(L.A[2])*
   domainType(L::VCAT) = domainType(L.A[1])
 codomainType(L::VCAT) = codomainType.(L.A)
 
+is_gram_diagonal(L::VCAT) = all(is_gram_diagonal.(L.A))
 is_full_column_rank(L::VCAT) = any(is_full_column_rank.(L.A))
