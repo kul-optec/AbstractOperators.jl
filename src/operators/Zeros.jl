@@ -30,5 +30,3 @@ size(L::Zeros) = (L.dim_out, L.dim_in)
 fun_name(A::Zeros)  = "0"
 
 is_null(L::Zeros) = true
-is_diagonal(L::Zeros) = true
-is_gram_diagonal(L::Zeros) = true

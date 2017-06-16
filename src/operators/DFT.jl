@@ -123,4 +123,5 @@ fun_name(A::IDFT) = "ℱ^(-1)"
 domainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = D
 codomainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = C
 
-is_gram_diagonal(L::FourierTransform) = true
+is_AcA_diagonal(L::FourierTransform) = true
+is_AAc_diagonal(L::FourierTransform) = true

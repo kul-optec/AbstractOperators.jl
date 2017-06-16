@@ -48,5 +48,3 @@ fun_name(L::MatrixOp) = "▒"
 is_diagonal(L::MatrixOp) = isdiag(L.A)
 is_full_row_rank(L::MatrixOp) = rank(L.A) == size(L.A, 1)
 is_full_column_rank(L::MatrixOp) = rank(L.A) == size(L.A, 2)
-# the following is O(n^3): I would assume for now no matrix is Gram diagonal
-# is_gram_diagonal(L::MatrixOp)   = isdiag(L.A'*L.A)

@@ -42,7 +42,8 @@ codomainType(L::GetIndex) = L.domainType
 size(L::GetIndex) = (L.dim_out,L.dim_in)
 
 fun_name(L::GetIndex) = "↓"
-is_gram_diagonal(L::GetIndex) = true
+is_AcA_diagonal(L::GetIndex) = true
+is_AAc_diagonal(L::GetIndex) = true
 
 # Utils
 

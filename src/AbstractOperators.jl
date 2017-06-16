@@ -80,7 +80,9 @@ ndoms(L::LinearOperator, i::Int) = ndoms(L)[i]
 is_null(L::LinearOperator) = false
 is_eye(L::LinearOperator) = false
 is_diagonal(L::LinearOperator) = false
-is_gram_diagonal(L::LinearOperator) = is_diagonal(L)
+is_AcA_diagonal(L::LinearOperator) = is_diagonal(L)
+is_AAc_diagonal(L::LinearOperator) = is_diagonal(L)
+is_orthogonal(L::LinearOperator) = false
 is_invertible(L::LinearOperator) = false
 is_full_row_rank(L::LinearOperator) = false
 is_full_column_rank(L::LinearOperator) = false
@@ -119,7 +121,9 @@ export LinearOperator,
        is_eye,
        is_null,
        is_diagonal,
-       is_gram_diagonal,
+       is_AcA_diagonal,
+       is_AAc_diagonal,
+       is_orthogonal,
        is_invertible,
        is_full_row_rank,
        is_full_column_rank

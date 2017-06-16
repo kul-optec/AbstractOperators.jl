@@ -50,8 +50,9 @@ domainType(L::Scale) = domainType(L.A)
 codomainType(L::Scale) = codomainType(L.A)
 
 is_diagonal(L::Scale) = is_diagonal(L.A)
-is_gram_diagonal(L::Scale) = is_gram_diagonal(L.A)
 is_invertible(L::Scale) = L.coeff == 0 ? false : is_invertible(L.A)
+is_AcA_diagonal(L::Scale) = is_AcA_diagonal(L.A) 
+is_AAc_diagonal(L::Scale) = is_AAc_diagonal(L.A)
 is_full_row_rank(L::Scale) = is_full_row_rank(L.A)
 is_full_column_rank(L::Scale) = is_full_column_rank(L.A)
 

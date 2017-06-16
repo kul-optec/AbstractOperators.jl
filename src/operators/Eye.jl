@@ -29,7 +29,9 @@ fun_name(L::Eye) = "I"
 
 is_eye(L::Eye) = true
 is_diagonal(L::Eye) = true
-is_gram_diagonal(L::Eye) = true
+is_AcA_diagonal(L::Eye) = true
+is_AAc_diagonal(L::Eye) = true
+is_orthogonal(L::Eye) = true
 is_invertible(L::Eye) = true
 is_full_row_rank(L::Eye) = true
 is_full_column_rank(L::Eye) = true

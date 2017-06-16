@@ -66,4 +66,5 @@ codomainType{T}(L::ZeroPad{T}) = T
 size(L::ZeroPad) = L.dim_in .+ L.zp, L.dim_in
 
 fun_name(L::ZeroPad)       = "[I;0]"
-is_gram_diagonal(L::ZeroPad)  = true
+is_AcA_diagonal(L::ZeroPad) = true
+is_AAc_diagonal(L::ZeroPad) = true

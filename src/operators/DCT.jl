@@ -74,4 +74,5 @@ fun_name(A::IDCT) = "ℱc^(-1)"
 domainType{N,C,T1,T2}(L::CosineTransform{N,C,T1,T2}) = C
 codomainType{N,C,T1,T2}(L::CosineTransform{N,C,T1,T2}) = C
 
-is_gram_diagonal(L::CosineTransform) = true
+is_AcA_diagonal(L::CosineTransform) = true
+is_AAc_diagonal(L::CosineTransform) = true

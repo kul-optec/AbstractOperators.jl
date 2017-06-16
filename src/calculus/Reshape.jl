@@ -32,7 +32,9 @@ size(R::Reshape) = (R.dim_out, size(R.A,2))
 codomainType(  R::Reshape) = codomainType(R.A)
 
 is_diagonal(    R::Reshape) = is_diagonal(R.A)
-is_gram_diagonal(R::Reshape) = is_gram_diagonal(R.A)
+is_AcA_diagonal(R::Reshape) = is_AcA_diagonal(R.A) 
+is_AAc_diagonal(R::Reshape) = is_AAc_diagonal(R.A)
+is_orthogonal(  R::Reshape) = is_orthogonal(  R.A)
 is_invertible(  R::Reshape) = is_invertible(R.A)
 
 fun_name(R::Reshape) = "¶"*fun_name(R.A)
