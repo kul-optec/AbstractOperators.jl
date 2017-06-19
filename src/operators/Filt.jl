@@ -141,3 +141,8 @@ codomainType{T, N}(L::Filt{T, N}) = T
 size(L::Filt) = L.dim_in, L.dim_in
 
 fun_name(L::Filt)  = size(L.a,1) != 1 ? "IIR" : "FIR"
+
+#TODO find out a way to verify this, 
+# probably for IIR it means zeros inside unit circle
+is_full_row_rank(L::Filt)    = true
+is_full_column_rank(L::Filt) = true

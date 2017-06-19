@@ -123,5 +123,14 @@ fun_name(A::IDFT) = "ℱ^(-1)"
 domainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = D
 codomainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = C
 
-is_AcA_diagonal(L::FourierTransform) = true
-is_AAc_diagonal(L::FourierTransform) = true
+is_AcA_diagonal(L::FourierTransform)     = true
+is_AAc_diagonal(L::FourierTransform)     = true
+is_invertible(L::FourierTransform)       = true
+is_full_row_rank(L::FourierTransform)    = true
+is_full_column_rank(L::FourierTransform) = true
+
+diag_AcA(L::DFT) = prod(size(L,1))
+diag_AAc(L::DFT) = prod(size(L,1))
+
+diag_AcA(L::IDFT) = 1/prod(size(L,1))
+diag_AAc(L::IDFT) = 1/prod(size(L,1))

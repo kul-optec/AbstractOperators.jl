@@ -1,4 +1,4 @@
-# @printf("\nTesting linear operators\n")
+ @printf("\nTesting linear operators\n")
 
 ######## Conv ############
 n,m = 5, 6
@@ -9,8 +9,20 @@ y1 = test_op(op, x1, randn(n+m-1), verb)
 y2 = conv(x1,h)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
 # other constructors
 op = Conv(x1,h)
+
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
 
 ######### DCT ############
 n = 4
@@ -26,6 +38,25 @@ op = DCT((n,))
 op = DCT(n,n)
 op = DCT(Complex{Float64}, n,n)
 
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == true
+@test is_invertible(op)       == true
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
+m = 10
+op = DCT(n,m)
+x1 = randn(n,m)
+
+@test vecnorm(op'*(op*x1) - x1) <= 1e-12
+@test diag_AAc(op) == 1.
+@test diag_AcA(op) == 1.
+
 ######### IDCT ############
 n = 4
 op = IDCT(Float64,(n,))
@@ -40,7 +71,26 @@ op = IDCT((n,))
 op = IDCT(n,n)
 op = IDCT(Complex{Float64}, n,n)
 
-######### DFT ############
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == true
+@test is_invertible(op)       == true
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
+m = 10
+op = IDCT(n,m)
+x1 = randn(n,m)
+
+@test vecnorm(op'*(op*x1) - x1) <= 1e-12
+@test diag_AAc(op) == 1.
+@test diag_AcA(op) == 1.
+
+######## DFT ############
 n = 4
 op = DFT(Float64,(n,))
 x1 = randn(n)
@@ -60,6 +110,24 @@ y2 = fft(x1)
 op = DFT((n,))
 op = DFT(n,n)
 op = DFT(Complex{Float64}, n,n)
+
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == true
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
+m = 10
+op = DFT(n,m)
+x1 = randn(n,m)
+y1 = op*x1
+@test vecnorm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
+@test vecnorm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
 
 ######### IDFT ############
 n = 4
@@ -82,6 +150,24 @@ op = IDFT((n,))
 op = IDFT(n,n)
 op = IDFT(Complex{Float64}, n,n)
 
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == true
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
+m = 10
+op = IDFT(n,m)
+x1 = randn(n,m)
+y1 = op*x1
+@test vecnorm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
+@test vecnorm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
+
 ######### DiagOp ############
 n = 4
 d = randn(n)
@@ -96,7 +182,25 @@ y2 = d.*x1
 op = DiagOp(d)
 op = DiagOp(Float64, d)
 
-######### Eye ############
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == true
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == false
+@test is_invertible(DiagOp(ones(10)))       == true
+@test is_invertible(DiagOp([ones(5);0]))    == false
+@test is_full_row_rank(op)    == true
+@test is_full_row_rank(DiagOp([ones(5);0]))    == false
+@test is_full_column_rank(op) == true
+@test is_full_column_rank(DiagOp([ones(5);0]))    == false
+
+@test diag(op) == d
+@test vecnorm(op'*(op*x1) - diag_AcA(op).*x1) <= 1e-12
+@test vecnorm(op*(op'*x1) - diag_AAc(op).*x1) <= 1e-12
+
+########## Eye ############
 n = 4
 op = Eye(Float64,(n,))
 x1 = randn(n)
@@ -109,7 +213,22 @@ op = Eye(Float64, (n,))
 op = Eye((n,))
 op = Eye(n)
 
-######### Filt ############
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == true
+@test is_diagonal(op)         == true
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == true
+@test is_invertible(op)       == true
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
+@test diag(op) == 1
+@test diag_AcA(op) == 1
+@test diag_AAc(op) == 1
+
+######## Filt ############
 n,m = 15,2
 b,a = [1.;0.;1.;0.;0.], [1.;1.;1.]
 op = Filt(Float64,(n,),b,a)
@@ -135,6 +254,17 @@ Filt((n,),  h)
 Filt(x1, b, a)
 Filt(x1, b)
 
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
 ######### FiniteDiff ############
 n= 10
 op = FiniteDiff(Float64,(n,))
@@ -142,6 +272,10 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 y1 = op*collect(linspace(0,1,n))
 @test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
+
+B = spdiagm(ones(n),0,n,n)-spdiagm(ones(n-1),-1,n,n)
+B[1,1],B[1,2] = -1,1 
+@test norm(B*x1-op*x1) <= 1e-8
 
 n,m= 10,5
 op = FiniteDiff(Float64,(n,m))
@@ -185,6 +319,17 @@ y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 FiniteDiff((n,m))
 FiniteDiff(x1)
 
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == false
+@test is_full_column_rank(op) == false
+
 ######### GetIndex ############
 n,m = 5,4
 k = 3
@@ -210,7 +355,22 @@ GetIndex(x1, (1:k,:))
 op = GetIndex(Float64,(n,m),(1:n,1:m))
 @test typeof(op) <: Eye
 
-######### MatrixOp ############
+op = GetIndex(Float64,(n,),(1:k,))
+
+##properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == false
+
+@test diag_AAc(op) == 1
+
+########## MatrixOp ############
 
 n,m = 5,4
 A = randn(n,m)
@@ -233,6 +393,18 @@ op = MatrixOp(A)
 op = MatrixOp(Float64, A)
 op = MatrixOp(A, c)
 op = MatrixOp(Float64, A, c)
+
+##properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(MatrixOp(randn(srand(0),3,4)))    == true
+@test is_full_column_rank(MatrixOp(randn(srand(0),3,4))) == false
+
 
 ######### MIMOFilt ############
 m,n = 10,2
@@ -286,6 +458,21 @@ push!(b2,randn(Float32,10))
 a[1][1] = 0.
 @test_throws ErrorException op = MIMOFilt(Float64, (m,n) ,b,a)
 
+b = [randn(10),randn(5),randn(10),randn(2),randn(10),randn(10)]
+a = [[1.],[1.],[1.],[1.],[1.],[1.]]
+op = MIMOFilt(Float64, (m,n), b, a)
+
+##properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
+
 ######## Variation ############
 
 n,m = 10,5
@@ -317,7 +504,18 @@ Variation(x1)
 @test_throws ErrorException op = Variation(Float64,(n,m,l,4))
 @test_throws ErrorException op = Variation(Float64,(n,))
 
-######### Xcorr ############
+###properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == false
+@test is_full_column_rank(op) == false
+
+######## Xcorr ############
 n,m = 5, 6
 h = randn(m)
 op = Xcorr(Float64,(n,),h)
@@ -328,6 +526,17 @@ y2 = xcorr(x1, h)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 # other constructors
 op = Xcorr(x1,h)
+
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
 
 ######## ZeroPad ############
 n = (3,)
@@ -367,7 +576,20 @@ ZeroPad(x1, z...)
 @test_throws ErrorException op = ZeroPad(Float64,n,(1,-2,3))
 @test_throws ErrorException op = ZeroPad(Float64,(1,2,3,4),(1,2,3,4))
 
-######### Zeros ############
+#properties
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == true
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == false
+@test is_full_column_rank(op) == true
+
+diag_AcA(op) == 1
+
+########## Zeros ############
 n = (3,4)
 D = Float64
 m = (5,2)
@@ -375,3 +597,14 @@ C = Complex{Float64}
 op = Zeros(D,n,C,m)
 x1 = randn(n)
 y1 = test_op(op, x1, randn(m)+im*randn(m), verb)
+
+#properties
+@test is_null(op)             == true
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == false
+@test is_full_column_rank(op) == false

@@ -30,6 +30,10 @@ end
 domainType{T}(L::Xcorr{T}) = T
 codomainType{T}(L::Xcorr{T}) = T
 
+#TODO find out a way to verify this, 
+is_full_row_rank(L::Xcorr)    = true
+is_full_column_rank(L::Xcorr) = true
+
 size(L::Xcorr) = ( 2*max(L.dim_in[1], length(L.h))-1, ), L.dim_in
 
 fun_name(A::Xcorr)  = "◎"

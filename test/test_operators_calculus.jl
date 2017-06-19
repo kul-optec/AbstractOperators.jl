@@ -1,4 +1,4 @@
-# @printf("\nTesting linear operators calculus rules\n")
+ @printf("\nTesting linear operators calculus rules\n")
 
 ##########################
 ##### test Compose #######
@@ -44,6 +44,17 @@ opS2 = Scale(pi,opA2)
 @test typeof(opA2*opS1) <: Scale
 @test typeof(opS2*opS1) <: Scale
 
+#properties
+@test is_null(opC1)             == false
+@test is_eye(opC1)              == false
+@test is_diagonal(opC1)         == false
+@test is_AcA_diagonal(opC1)     == false
+@test is_AAc_diagonal(opC1)     == false
+@test is_orthogonal(opC1)       == false
+@test is_invertible(opC1)       == false
+@test is_full_row_rank(opC1)    == false
+@test is_full_column_rank(opC1) == false
+
 ###########################
 ###### test DCAT    #######
 ###########################
@@ -77,9 +88,20 @@ y1 = test_op(opD, (x1, x2, x3), (randn(m1),randn(m2),randn(m3)), verb)
 y2 = (A1*x1, A2*x2, A3*x3)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-###########################
-###### test HCAT    #######
-###########################
+#properties
+@test is_null(opD)             == false
+@test is_eye(opD)              == false
+@test is_diagonal(opD)         == false
+@test is_AcA_diagonal(opD)     == false
+@test is_AAc_diagonal(opD)     == false
+@test is_orthogonal(opD)       == false
+@test is_invertible(opD)       == false
+@test is_full_row_rank(opD)    == false
+@test is_full_column_rank(opD) == false
+
+############################
+####### test HCAT    #######
+############################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -126,6 +148,41 @@ opA3 = MatrixOp(randn(n1,n1))
 opF = DFT(Complex{Float64},(m,))
 @test_throws Exception HCAT(opA1,opF,opA2)
 
+#properties
+m, n1, n2, n3 = 4, 7, 5, 6
+A1 = randn(m, n1)
+A2 = randn(m, n2)
+A3 = randn(m, n3)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opA3 = MatrixOp(A3)
+op = HCAT(opA1, opA2, opA3)
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == false
+
+d = randn(n1)+im*randn(n1)
+op = HCAT(DiagOp(d), DFT(Complex{Float64},n1))
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == true
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == false
+
+@test diag_AAc(op) == d.*conj(d)+n1
+
+y1 = randn(n1)+im*randn(n1)
+@test norm(op*(op'*y1)-diag_AAc(op).*y1) <1e-12
 
 ###########################
 ###### test Reshape #######
@@ -141,6 +198,16 @@ x1 = randn(n)
 y1 = test_op(opR, x1, randn(dim_out), verb)
 y2 = reshape(A1*x1, dim_out)
 @test vecnorm(y1-y2) <= 1e-12
+
+@test is_null(opR)             == is_null(opA1)            
+@test is_eye(opR)              == is_eye(opA1)             
+@test is_diagonal(opR)         == is_diagonal(opA1)        
+@test is_AcA_diagonal(opR)     == is_AcA_diagonal(opA1)    
+@test is_AAc_diagonal(opR)     == is_AAc_diagonal(opA1)    
+@test is_orthogonal(opR)       == is_orthogonal(opA1)      
+@test is_invertible(opR)       == is_invertible(opA1)      
+@test is_full_row_rank(opR)    == is_full_row_rank(opA1)   
+@test is_full_column_rank(opR) == is_full_column_rank(opA1)
 
 ##########################
 ##### test Scale   #######
@@ -169,9 +236,34 @@ y1 = test_op(opS, x1, fft(randn(m,n)), verb)
 y2 = coeff*(fft(x1))
 @test vecnorm(y1-y2) <= 1e-12
 
-#########################
-#### test Sum     #######
-#########################
+opS = Scale(coeff, opA1)
+@test is_null(opS)             == is_null(opA1)            
+@test is_eye(opS)              == is_eye(opA1)             
+@test is_diagonal(opS)         == is_diagonal(opA1)        
+@test is_AcA_diagonal(opS)     == is_AcA_diagonal(opA1)    
+@test is_AAc_diagonal(opS)     == is_AAc_diagonal(opA1)    
+@test is_orthogonal(opS)       == is_orthogonal(opA1)      
+@test is_invertible(opS)       == is_invertible(opA1)      
+@test is_full_row_rank(opS)    == is_full_row_rank(opA1)   
+@test is_full_column_rank(opS) == is_full_column_rank(opA1)
+
+op = Scale(-4.0,DFT(10))
+@test is_AAc_diagonal(op)     == true
+@test diag_AAc(op) == 16*10
+
+op = Scale(-4.0,ZeroPad((10,), 20))
+@test is_AcA_diagonal(op)     == true
+@test diag_AcA(op) == 16
+
+# special case, Scale of DiagOp gets a DiagOp
+d = randn(10)
+op = Scale(3,DiagOp(d))
+@test typeof(op) <: DiagOp
+@test norm(diag(op) - 3.*d) < 1e-12
+
+##########################
+##### test Sum     #######
+##########################
 
 m,n = 5,7
 A1 = randn(m,n)
@@ -202,22 +294,58 @@ opA3 = MatrixOp(randn(m,m))
 opF = DFT(Float64,(m,))
 @test_throws Exception Sum(opF,opA3)
 
-##########################
-##### test Transpose######
-##########################
+@test is_null(opS)             == false
+@test is_eye(opS)              == false 
+@test is_diagonal(opS)         == false
+@test is_AcA_diagonal(opS)     == false
+@test is_AAc_diagonal(opS)     == false
+@test is_orthogonal(opS)       == false
+@test is_invertible(opS)       == false
+@test is_full_row_rank(opS)    == true
+@test is_full_column_rank(opS) == false
+
+d = randn(10)
+op = Sum(Scale(-3.1,Eye(10)),DiagOp(d))
+@test is_diagonal(op)         == true
+@test norm(   diag(op) - (d-3.1)  )<1e-12
+
+###########################
+###### test Transpose######
+###########################
 
 m,n = 5,7
 A1 = randn(m,n)
 opA1 = MatrixOp(A1)
+opA1t = MatrixOp(A1')
 opT = Transpose(opA1)
 x1 = randn(m)
 y1 = test_op(opT, x1, randn(n), verb)
 y2 = A1'*x1
 @test vecnorm(y1-y2) <= 1e-12
 
-############################
-####### test VCAT    #######
-############################
+@test is_null(opT)             == is_null(opA1t)            
+@test is_eye(opT)              == is_eye(opA1t)             
+@test is_diagonal(opT)         == is_diagonal(opA1t)        
+@test is_AcA_diagonal(opT)     == is_AcA_diagonal(opA1t)    
+@test is_AAc_diagonal(opT)     == is_AAc_diagonal(opA1t)    
+@test is_orthogonal(opT)       == is_orthogonal(opA1t)      
+@test is_invertible(opT)       == is_invertible(opA1t)      
+@test is_full_row_rank(opT)    == is_full_row_rank(opA1t)   
+@test is_full_column_rank(opT) == is_full_column_rank(opA1t)
+
+d = randn(3)
+op = Transpose(DiagOp(d))
+@test is_diagonal(op) == true
+@test diag(op) == d
+
+op = Transpose(ZeroPad((10,),5))
+@test is_AcA_diagonal(op) == false
+@test is_AAc_diagonal(op) == true
+@test diag_AAc(op) == 1
+
+#############################
+######## test VCAT    #######
+#############################
 
 m1, m2, n = 4, 7, 5
 A1 = randn(m1, n)
@@ -259,6 +387,29 @@ opA3 = MatrixOp(randn(m1,m1))
 @test_throws Exception VCAT(opA1,opA2,opA3)
 opF = DFT(Complex{Float64},(n,))
 @test_throws Exception VCAT(opA1,opF,opA2)
+
+###properties
+m1, m2, m3, n = 4, 7, 3, 5
+A1 = randn(m1, n)
+A2 = randn(m2, n)
+A3 = randn(m3, n)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opA3 = MatrixOp(A3)
+op = VCAT(opA1, opA2, opA3)
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == false
+@test is_full_column_rank(op) == true
+
+op = VCAT(DFT(Complex{Float64},10), Eye(Complex{Float64},10) )
+@test is_AcA_diagonal(op)     == true
+@test diag_AcA(op) == 11
 
 #############################
 ######## test combin. #######

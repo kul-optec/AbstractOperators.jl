@@ -30,6 +30,10 @@ end
 domainType{T}(L::Conv{T}) = T
 codomainType{T}(L::Conv{T}) = T
 
+#TODO find out a way to verify this, 
+is_full_row_rank(L::Conv)    = true
+is_full_column_rank(L::Conv) = true
+
 size(L::Conv) = (L.dim_in[1]+length(L.h)-1,), L.dim_in
 
 fun_name(A::Conv)  = "★"

@@ -90,5 +90,6 @@ fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*";"*fun_name(L.A[2])*
 codomainType(L::VCAT) = codomainType.(L.A)
 
 is_AcA_diagonal(L::VCAT) = all(is_AcA_diagonal.(L.A))
-is_AAc_diagonal(L::VCAT) = false
 is_full_column_rank(L::VCAT) = any(is_full_column_rank.(L.A))
+
+diag_AcA(L::VCAT) = sum(diag_AcA.(L.A))

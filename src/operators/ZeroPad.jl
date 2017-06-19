@@ -67,4 +67,6 @@ size(L::ZeroPad) = L.dim_in .+ L.zp, L.dim_in
 
 fun_name(L::ZeroPad)       = "[I;0]"
 is_AcA_diagonal(L::ZeroPad) = true
-is_AAc_diagonal(L::ZeroPad) = true
+diag_AcA(L::ZeroPad) = 1
+
+is_full_column_rank(L::ZeroPad) = true

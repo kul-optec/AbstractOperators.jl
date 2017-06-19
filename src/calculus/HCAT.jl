@@ -92,6 +92,7 @@ fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*","*fun_name(L.A[2])*
 domainType(L::HCAT) = domainType.(L.A)
 codomainType(L::HCAT) = codomainType.(L.A[1])
 
-is_AcA_diagonal(L::HCAT) = false 
 is_AAc_diagonal(L::HCAT) = all(is_AAc_diagonal.(L.A))
 is_full_row_rank(L::HCAT) = any(is_full_row_rank.(L.A))
+
+diag_AAc(L::HCAT) = sum(diag_AAc.(L.A))

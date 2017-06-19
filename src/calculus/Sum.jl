@@ -98,3 +98,13 @@ fun_codomain(S::Sum) = fun_codomain(S.A[1])
 
 fun_name(S::Sum) =
 length(S.A) == 2 ? fun_name(S.A[1])"+"fun_name(S.A[2]) : "Σ"
+
+
+is_null(L::Sum)          = all(is_null.(L.A))            
+is_diagonal(L::Sum)      = all(is_diagonal.(L.A))        
+is_full_row_rank(L::Sum) = any(is_full_row_rank.(L.A))
+is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
+
+diag(L::Sum) = sum(diag.(L.A))
+
+

@@ -6,8 +6,8 @@ const RealOrComplex{T<:Real} = Union{T, Complex{T}}
 
 abstract type LinearOperator end
 
-import Base: A_mul_B!, Ac_mul_B!, size, ndims 
-export ndoms
+import Base: A_mul_B!, Ac_mul_B!, size, ndims, diag 
+export ndoms, diag_AcA, diag_AAc
 
 # deep stuff
 
@@ -76,6 +76,9 @@ julia> ndoms(blkdiag(DFT(10,10),DFT(10,10))
 """
 ndoms(L::LinearOperator) = length.(ndims(L))
 ndoms(L::LinearOperator, i::Int) = ndoms(L)[i]
+
+diag_AcA(L::LinearOperator) = error("is_AAc_diagonal($L) == false")
+diag_AAc(L::LinearOperator) = error("is_AcA_diagonal($L) == false")
 
 is_null(L::LinearOperator) = false
 is_eye(L::LinearOperator) = false

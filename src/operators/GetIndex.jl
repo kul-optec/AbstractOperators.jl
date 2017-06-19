@@ -36,14 +36,18 @@ function Ac_mul_B!{T1,N,M,T2}(y::Array{T1,M},L::GetIndex{N,M,T2},b::AbstractArra
 end
 
 # Properties
+diag_AAc(L::GetIndex) = 1.
+
 domainType(L::GetIndex) = L.domainType
 codomainType(L::GetIndex) = L.domainType
 
 size(L::GetIndex) = (L.dim_out,L.dim_in)
 
 fun_name(L::GetIndex) = "↓"
-is_AcA_diagonal(L::GetIndex) = true
-is_AAc_diagonal(L::GetIndex) = true
+
+is_AAc_diagonal(L::GetIndex)   = true
+is_full_row_rank(L::GetIndex)  = true
+
 
 # Utils
 

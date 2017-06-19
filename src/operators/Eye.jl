@@ -19,6 +19,9 @@ A_mul_B!{T, N}(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) = y
 Ac_mul_B!{T, N}(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) = A_mul_B!(y, L, b)
 
 # Properties
+diag(L::Eye) = 1.
+diag_AcA(L::Eye) = 1.
+diag_AAc(L::Eye) = 1.
 
 domainType{T, N}(L::Eye{T, N}) = T
 codomainType{T, N}(L::Eye{T, N}) = T

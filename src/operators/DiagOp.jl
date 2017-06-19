@@ -32,6 +32,10 @@ end
 
 # Properties
 
+diag(L::DiagOp) = L.d
+diag_AAc(L::DiagOp) = L.d.*conj.(L.d)
+diag_AcA(L::DiagOp) = conj.(L.d).*L.d
+
 domainType{T,N,D}(L::DiagOp{T,N,D}) = T
 codomainType{T,N,D}(L::DiagOp{T,N,D}) = T
 

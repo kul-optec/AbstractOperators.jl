@@ -114,6 +114,11 @@ codomainType{T, M}(L::MIMOFilt{T, M}) = T
 
 size(L::MIMOFilt) = L.dim_out, L.dim_in
 
+#TODO find out a way to verify this, 
+# probably for IIR it means zeros inside unit circle
+is_full_row_rank(L::MIMOFilt)    = true
+is_full_column_rank(L::MIMOFilt) = true
+
 fun_name(L::MIMOFilt)  = "※"
 
 # Utilities

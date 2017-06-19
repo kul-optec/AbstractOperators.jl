@@ -14,6 +14,8 @@ Scale{T <: RealOrComplex, R <: LinearOperator}(coeff::T, L::R) = Scale{T, R}(coe
 # scale of scale
 Scale{T1 <: RealOrComplex, T2 <: RealOrComplex, R <: LinearOperator, S <: Scale{T1, R}}(coeff::T2, L::S) = 
 Scale(*(promote(coeff,L.coeff)...), L.A)
+# scale of DiagOp
+Scale{T<:RealOrComplex}(coeff::T,L::DiagOp) = DiagOp(coeff*diag(L))
 
 
 # Mappings
@@ -49,6 +51,8 @@ size(L::Scale) = size(L.A)
 domainType(L::Scale) = domainType(L.A)
 codomainType(L::Scale) = codomainType(L.A)
 
+is_null(L::Scale) = is_null(L.A)
+is_eye(L::Scale) = is_diagonal(L.A)
 is_diagonal(L::Scale) = is_diagonal(L.A)
 is_invertible(L::Scale) = L.coeff == 0 ? false : is_invertible(L.A)
 is_AcA_diagonal(L::Scale) = is_AcA_diagonal(L.A) 
@@ -58,3 +62,10 @@ is_full_column_rank(L::Scale) = is_full_column_rank(L.A)
 
 fun_name(L::Scale) = "α$(fun_name(L.A))"
 fun_type(L::Scale) = fun_type(L.A)
+
+diag(L::Scale) = L.coeff*diag(L.A)
+diag_AcA(L::Scale) = (L.coeff)^2*diag_AcA(L.A)
+diag_AAc(L::Scale) = (L.coeff)^2*diag_AAc(L.A)
+
+
+

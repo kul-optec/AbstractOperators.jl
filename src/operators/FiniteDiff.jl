@@ -1,5 +1,6 @@
 export FiniteDiff
 
+#TODO add boundary conditions
 immutable FiniteDiff{T,N,D} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	function FiniteDiff{T,N,D}(dim_in) where {T,N,D}

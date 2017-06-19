@@ -22,7 +22,16 @@ codomainType(L::Transpose) = domainType(L.A)
 
 fun_name(L::Transpose)  = fun_name(L.A)*"ᵃ"
 
+is_null(L::Transpose) = is_null(L.A)
+is_eye(L::Transpose) = is_eye(L.A)
 is_diagonal(L::Transpose) = is_diagonal(L.A)
+is_AcA_diagonal(L::Transpose) = is_AAc_diagonal(L.A)
+is_AAc_diagonal(L::Transpose) = is_AcA_diagonal(L.A)
+is_orthogonal(L::Transpose) = is_orthogonal(L.A)
 is_invertible(L::Transpose) = is_invertible(L.A)
 is_full_row_rank(L::Transpose) = is_full_column_rank(L.A)
 is_full_column_rank(L::Transpose) = is_full_row_rank(L.A)
+
+diag(L::Transpose) = diag(L.A)
+diag_AcA(L::Transpose) = diag_AAc(L.A)
+diag_AAc(L::Transpose) = diag_AcA(L.A)
