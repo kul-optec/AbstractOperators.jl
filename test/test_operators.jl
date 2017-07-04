@@ -269,46 +269,45 @@ Filt(x1, b)
 n= 10
 op = FiniteDiff(Float64,(n,))
 x1 = randn(n)
-y1 = test_op(op, x1, randn(n), verb)
+y1 = test_op(op, x1, randn(n-1), verb)
 y1 = op*collect(linspace(0,1,n))
 @test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
 
-B = spdiagm(ones(n),0,n,n)-spdiagm(ones(n-1),-1,n,n)
-B[1,1],B[1,2] = -1,1 
+B = -spdiagm(ones(n-1),0,n-1,n)+spdiagm(ones(n-1),1,n-1,n)
 @test norm(B*x1-op*x1) <= 1e-8
 
 n,m= 10,5
 op = FiniteDiff(Float64,(n,m))
 x1 = randn(n,m)
-y1 = test_op(op, x1, randn(n,m), verb)
+y1 = test_op(op, x1, randn(n-1,m), verb)
 y1 = op*repmat(collect(linspace(0,1,n)),1,m)
 @test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
 
 n,m= 10,5
 op = FiniteDiff(Float64,(n,m),2)
 x1 = randn(n,m)
-y1 = test_op(op, x1, randn(n,m), verb)
+y1 = test_op(op, x1, randn(n,m-1), verb)
 y1 = op*repmat(collect(linspace(0,1,n)),1,m)
 @test all(vecnorm.(y1) .<= 1e-12)
 
 n,m,l= 10,5,7
 op = FiniteDiff(Float64,(n,m,l))
 x1 = randn(n,m,l)
-y1 = test_op(op, x1, randn(n,m,l), verb)
+y1 = test_op(op, x1, randn(n-1,m,l), verb)
 y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 @test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
 
 n,m,l= 10,5,7
 op = FiniteDiff(Float64,(n,m,l),2)
 x1 = randn(n,m,l)
-y1 = test_op(op, x1, randn(n,m,l), verb)
+y1 = test_op(op, x1, randn(n,m-1,l), verb)
 y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 @test all(vecnorm.(y1) .<= 1e-12)
 
 n,m,l= 10,5,7
 op = FiniteDiff(Float64,(n,m,l),3)
 x1 = randn(n,m,l)
-y1 = test_op(op, x1, randn(n,m,l), verb)
+y1 = test_op(op, x1, randn(n,m,l-1), verb)
 y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 @test all(vecnorm.(y1) .<= 1e-12)
 
@@ -327,10 +326,10 @@ FiniteDiff(x1)
 @test is_AAc_diagonal(op)     == false
 @test is_orthogonal(op)       == false
 @test is_invertible(op)       == false
-@test is_full_row_rank(op)    == false
+@test is_full_row_rank(op)    == true
 @test is_full_column_rank(op) == false
 
-######### GetIndex ############
+########## GetIndex ############
 n,m = 5,4
 k = 3
 op = GetIndex(Float64,(n,),(1:k,))

@@ -4,7 +4,8 @@ module AbstractOperators
 
 const RealOrComplex{T<:Real} = Union{T, Complex{T}}
 
-abstract type LinearOperator end
+abstract type LinearOperator    end
+abstract type NonLinearOperator end
 
 import Base: A_mul_B!, Ac_mul_B!, size, ndims, diag 
 export ndoms, diag_AcA, diag_AAc

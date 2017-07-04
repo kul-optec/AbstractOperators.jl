@@ -21,95 +21,34 @@ FiniteDiff(Float64, dim_in, dir)
 FiniteDiff{T,N}(x::AbstractArray{T,N}, dir::Int64 = 1)  = FiniteDiff(eltype(x), size(x), dir)
 
 # Mappings
-# TODO use @generated functions ?
-function A_mul_B!{T}(y::AbstractArray{T,1},L::FiniteDiff{T,1,1},b::AbstractArray{T,1})
-	for l = 1:length(b)
-		y[l] = l == 1 ? b[l+1]-b[l] : b[l]-b[l-1]
+
+@generated function A_mul_B!{T,N,D}(y::AbstractArray{T,N},L::FiniteDiff{T,N,D},b::AbstractArray{T,N})
+	o = ones(Int,N)
+	o[D] = 2
+	I1 = CartesianIndex(o...)
+	z = zeros(Int,N)
+	z[D] = 1
+	idx = CartesianIndex(z...)
+	ex = quote
+		I2 = CartesianIndex(size(b))
+		for I in CartesianRange($I1,I2)
+			y[I-$idx] = b[I]-b[I-$idx]
+		end
+		return y
 	end
 end
 
-function Ac_mul_B!{T}(y::AbstractArray{T,1},L::FiniteDiff{T,1,1},b::AbstractArray{T,1})
-	for l = 1:length(b)
-		y[l] =
-		l == 1 ? -(b[l] + b[l+1]) :
-		l == 2 ?   b[l] + b[l-1] - b[l+1] :
-		l == length(b) ? b[l] : b[l]-b[l+1]
-
-	end
-end
-
-function A_mul_B!{T}(y::AbstractArray{T,2}, L::FiniteDiff{T,2,1}, b::AbstractArray{T,2})
-	for l = 1:size(b,1), m = 1:size(b,2)
-		y[l,m] = l == 1 ? b[l+1,m]-b[l,m] : b[l,m]-b[l-1,m]
-	end
-end
-
-function Ac_mul_B!{T}(y::AbstractArray{T,2}, L::FiniteDiff{T,2,1}, b::AbstractArray{T,2})
-	for l = 1:size(b,1), m = 1:size(b,2)
-		y[l,m] =
-		l == 1 ? -(b[l,m] + b[l+1,m]) :
-		l == 2 ?   b[l,m] + b[l-1,m] - b[l+1,m] :
-		l == size(b,1) ? b[l,m] : b[l,m]-b[l+1,m]
-	end
-end
-
-function A_mul_B!{T}(y::AbstractArray{T,2},L::FiniteDiff{T,2,2},b::AbstractArray{T,2})
-	for l = 1:size(b,1), m = 1:size(b,2)
-		y[l,m] = m == 1 ? b[l,m+1]-b[l,m] : b[l,m]-b[l,m-1]
-	end
-end
-
-function Ac_mul_B!{T}(y::AbstractArray{T,2},L::FiniteDiff{T,2,2},b::AbstractArray{T,2})
-	for l = 1:size(b,1), m = 1:size(b,2)
-		y[l,m] =
-		m == 1 ? -(b[l,m] + b[l,m+1]) :
-		m == 2 ?   b[l,m] + b[l,m-1] - b[l,m+1] :
-		m == size(b,2) ? b[l,m] : b[l,m]-b[l,m+1]
-	end
-end
-
-function A_mul_B!{T}(y::AbstractArray{T,3},L::FiniteDiff{T,3,1},b::AbstractArray{T,3})
-	for l = 1:size(b,1), m = 1:size(b,2), n = 1:size(b,3)
-		y[l,m,n] = l == 1 ? b[l+1,m,n]-b[l,m,n] : b[l,m,n]-b[l-1,m,n]
-	end
-end
-
-function Ac_mul_B!{T}(y::AbstractArray{T,3},L::FiniteDiff{T,3,1},b::AbstractArray{T,3})
-	for l = 1:size(b,1), m = 1:size(b,2), n = 1:size(b,3)
-		y[l,m,n] =
-		l == 1 ? -(b[l,m,n] + b[l+1,m,n]) :
-		l == 2 ?   b[l,m,n] + b[l-1,m,n] - b[l+1,m,n] :
-		l == size(b,1) ? b[l,m,n] : b[l,m,n]-b[l+1,m,n]
-	end
-end
-
-function A_mul_B!{T}(y::AbstractArray{T,3},L::FiniteDiff{T,3,2},b::AbstractArray{T,3})
-	for l = 1:size(b,1), m = 1:size(b,2), n = 1:size(b,3)
-		y[l,m,n] = m == 1 ? b[l,m+1,n]-b[l,m,n] : b[l,m,n]-b[l,m-1,n]
-	end
-end
-
-function Ac_mul_B!{T}(y::AbstractArray{T,3},L::FiniteDiff{T,3,2},b::AbstractArray{T,3})
-	for l = 1:size(b,1), m = 1:size(b,2), n = 1:size(b,3)
-		y[l,m,n] =
-		m == 1 ? -(b[l,m,n] + b[l,m+1,n]) :
-		m == 2 ?   b[l,m,n] + b[l,m-1,n] - b[l,m+1,n] :
-		m == size(b,2) ? b[l,m,n] : b[l,m,n]-b[l,m+1,n]
-	end
-end
-
-function A_mul_B!{T}(y::AbstractArray{T,3},L::FiniteDiff{T,3,3},b::AbstractArray{T,3})
-	for l = 1:size(b,1), m = 1:size(b,2), n = 1:size(b,3)
-		y[l,m,n] = n == 1 ? b[l,m,n+1]-b[l,m,n] : b[l,m,n]-b[l,m,n-1]
-	end
-end
-
-function Ac_mul_B!{T}(y::AbstractArray{T,3},L::FiniteDiff{T,3,3},b::AbstractArray{T,3})
-	for l = 1:size(b,1), m = 1:size(b,2), n = 1:size(b,3)
-		y[l,m,n] =
-		n == 1 ? -(b[l,m,n] + b[l,m,n+1]) :
-		n == 2 ?   b[l,m,n] + b[l,m,n-1] - b[l,m,n+1] :
-		n == size(b,3) ? b[l,m,n] : b[l,m,n]-b[l,m,n+1]
+@generated function Ac_mul_B!{T,N,D}(y::AbstractArray{T,N},L::FiniteDiff{T,N,D},b::AbstractArray{T,N})
+	z = zeros(Int,N)
+	z[D] = 1
+	idx = CartesianIndex(z...)
+	ex = quote
+		for I in CartesianRange(size(y))
+			y[I] = 
+			I[$D] == 1 ? -b[I]  :
+			I[$D] == size(y,$D) ?   b[I-$idx]  : -b[I]+b[I-$idx]
+		end
+		return y
 	end
 end
 
@@ -118,12 +57,17 @@ end
 domainType{T, N}(L::FiniteDiff{T, N}) = T
 codomainType{T, N}(L::FiniteDiff{T, N}) = T
 
-size(L::FiniteDiff) = (L.dim_in, L.dim_in)
+function size{T,N,D}(L::FiniteDiff{T,N,D}) 
+	dim_out = [L.dim_in...]
+	dim_out[D] = dim_out[D]-1
+	return ((dim_out...), L.dim_in)
+end
 
 fun_name{T,N}(L::FiniteDiff{T,N,1})  = "δx"
 fun_name{T,N}(L::FiniteDiff{T,N,2})  = "δy"
 fun_name{T,N}(L::FiniteDiff{T,N,3})  = "δz"
 
 
+is_full_row_rank(L::FiniteDiff) = true
 
 
