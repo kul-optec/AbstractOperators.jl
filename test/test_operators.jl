@@ -1,6 +1,6 @@
  @printf("\nTesting linear operators\n")
 
-######## Conv ############
+####### Conv ############
 n,m = 5, 6
 h = randn(m)
 op = Conv(Float64,(n,),h)
@@ -265,7 +265,7 @@ Filt(x1, b)
 @test is_full_row_rank(op)    == true
 @test is_full_column_rank(op) == true
 
-######### FiniteDiff ############
+######## FiniteDiff ############
 n= 10
 op = FiniteDiff(Float64,(n,))
 x1 = randn(n)
@@ -483,6 +483,18 @@ y1 = op*repmat(collect(linspace(0,1,n)),1,m)
 @test all(vecnorm.(y1[:,1] .- 1/(n-1) ) .<= 1e-12)
 @test all(vecnorm.(y1[:,2] ) .<= 1e-12)
 
+Dx = spdiagm(ones(n),0,n,n)-spdiagm(ones(n-1),-1,n,n)
+Dx[1,1],Dx[1,2] = -1,1 
+Dy = spdiagm(ones(m),0,m,m)-spdiagm(ones(m-1),-1,m,m)
+Dy[1,1],Dy[1,2] = -1,1 
+
+Dxx = kron(eye(m),Dx)
+Dyy = kron(Dy,eye(n))
+TV = [Dxx;Dyy]
+
+x1 = randn(n,m)
+@test vecnorm(op*x1-reshape(TV*(x1[:]),n*m,2))<1e-12
+
 n,m,l = 10,5,3
 op = Variation(Float64,(n,m,l))
 x1 = randn(n,m,l)
@@ -500,7 +512,6 @@ Variation(n,m)
 Variation(x1)
 
 ##errors
-@test_throws ErrorException op = Variation(Float64,(n,m,l,4))
 @test_throws ErrorException op = Variation(Float64,(n,))
 
 ###properties
