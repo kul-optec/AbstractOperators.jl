@@ -3,14 +3,14 @@ export VCAT
 immutable VCAT{M, N,
 	       C <: NTuple{M,AbstractArray},
 	       D <: Union{NTuple{N,AbstractArray}, AbstractArray},
-	       L <: NTuple{M,LinearOperator}} <: LinearOperator
+	       L <: NTuple{M,AbstractOperator}} <: AbstractOperator
 	A::L
 	mid::D
 end
 
 # Constructors
 
-function VCAT{M, D<:Union{Tuple,AbstractArray}, L<:NTuple{M,LinearOperator}}(A::L, mid::D, N::Int)
+function VCAT{M, D<:Union{Tuple,AbstractArray}, L<:NTuple{M,AbstractOperator}}(A::L, mid::D, N::Int)
 	if any([size(A[1],2) != size(a,2) for a in A])
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
@@ -22,9 +22,9 @@ function VCAT{M, D<:Union{Tuple,AbstractArray}, L<:NTuple{M,LinearOperator}}(A::
 	VCAT{M,N,C,D,L}(A, mid)
 end
 
-VCAT(A::LinearOperator) = A
+VCAT(A::AbstractOperator) = A
 
-function VCAT(A::Vararg{LinearOperator})
+function VCAT(A::Vararg{AbstractOperator})
 	if any((<:).(typeof.(A), VCAT ))
 		op = ()
 		for a in A
@@ -80,6 +80,9 @@ end
 	end
 end
 
+# jacobian 
+jacobian{M,N,C,D}(L::VCAT{M,N,C,D},x::D) = VCAT(([jacobian(a,x) for a in L.A]...), L.mid, M) 
+
 # Properties
 
 size(L::VCAT) = size.(L.A, 1), size(L.A[1],2)
@@ -89,6 +92,7 @@ fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*";"*fun_name(L.A[2])*
   domainType(L::VCAT) = domainType(L.A[1])
 codomainType(L::VCAT) = codomainType.(L.A)
 
+is_linear(L::VCAT) = all(is_linear.(L.A))
 is_AcA_diagonal(L::VCAT) = all(is_AcA_diagonal.(L.A))
 is_full_column_rank(L::VCAT) = any(is_full_column_rank.(L.A))
 

@@ -1,13 +1,13 @@
 export Compose
 
-immutable Compose{N, M, L<:NTuple{N,Any}, T<:NTuple{M,Any}} <: LinearOperator
+immutable Compose{N, M, L<:NTuple{N,Any}, T<:NTuple{M,Any}} <: AbstractOperator
 	A::L
 	mid::T       # memory in the middle of the operators
 end
 
 # Constructors
 
-function Compose(L1::LinearOperator, L2::LinearOperator)
+function Compose(L1::AbstractOperator, L2::AbstractOperator)
 	if size(L1,2) != size(L2,1)
 		throw(DimensionMismatch("cannot compose operators"))
 	end
@@ -20,25 +20,25 @@ end
 Compose{N,M}(A::NTuple{N,Any},mid::NTuple{M,Any}) =
 Compose{N,M,typeof(A),typeof(mid)}(A,mid)
 
-Compose(L1::LinearOperator,L2::LinearOperator,mid::AbstractArray) =
+Compose(L1::AbstractOperator,L2::AbstractOperator,mid::AbstractArray) =
 Compose( (L2,L1), (mid,))
 
-Compose(L1::Compose,       L2::LinearOperator,mid::AbstractArray) =
+Compose(L1::Compose,       L2::AbstractOperator,mid::AbstractArray) =
 Compose( (L2,L1.A...), (mid,L1.mid...))
 
-Compose(L1::LinearOperator,L2::Compose,       mid::AbstractArray) =
+Compose(L1::AbstractOperator,L2::Compose,       mid::AbstractArray) =
 Compose((L2.A...,L1), (L2.mid...,mid))
 
 Compose(L1::Compose,       L2::Compose,       mid::AbstractArray) =
 Compose((L2.A...,L1.A...), (L2.mid...,mid,L1.mid...))
 
 #special cases
-Compose(L1::Scale,L2::LinearOperator) = Scale(L1.coeff,L1.A*L2)
-Compose(L1::LinearOperator,L2::Scale) = Scale(L2.coeff,L1*L2.A)
+Compose(L1::Scale,L2::AbstractOperator) = Scale(L1.coeff,L1.A*L2)
+Compose(L1::AbstractOperator,L2::Scale) = Scale(L2.coeff,L1*L2.A)
 Compose(L1::Scale,L2::Scale) = Scale(*(promote(L1.coeff,L2.coeff)...),L1.A*L2.A)
 
-Compose(L1::LinearOperator, L2::Eye) = L1
-Compose(L1::Eye, L2::LinearOperator) = L2
+Compose(L1::AbstractOperator, L2::Eye) = L1
+Compose(L1::Eye, L2::AbstractOperator) = L2
 Compose(L1::Eye, L2::Eye) = L1
 
 # Mappings
@@ -72,6 +72,10 @@ end
 		return y
 	end
 end
+# jacobian 
+function jacobian(L::Compose, x::AbstractArray)  
+	Compose(jacobian.(L.A,(x,L.mid...)),L.mid)
+end
 
 # Properties
 
@@ -82,5 +86,6 @@ fun_name(L::Compose) = length(L.A) == 2 ? fun_name(L.A[2])*"*"*fun_name(L.A[1]) 
 domainType(L::Compose)   = domainType(L.A[1])
 codomainType(L::Compose) = codomainType(L.A[end])
 
+is_linear(L::Compose) = all(is_linear.(L.A))
 is_diagonal(L::Compose) = all(is_diagonal.(L.A))
 is_invertible(L::Compose) = all(is_invertible.(L.A))

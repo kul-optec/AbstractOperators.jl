@@ -3,14 +3,14 @@ export HCAT
 immutable HCAT{M, N,
 	       C <: Union{NTuple{M,AbstractArray}, AbstractArray},
 	       D <: NTuple{N,AbstractArray},
-	       L <: NTuple{N,LinearOperator}} <: LinearOperator
+	       L <: NTuple{N,AbstractOperator}} <: AbstractOperator
 	A::L
 	mid::C
 end
 
 # Constructors
 
-function HCAT{N, C<:Union{Tuple,AbstractArray}, L <:NTuple{N,LinearOperator}}(A::L, mid::C, M::Int)
+function HCAT{N, C<:Union{Tuple,AbstractArray}, L <:NTuple{N,AbstractOperator}}(A::L, mid::C, M::Int)
 	if any([size(A[1],1) != size(a,1) for a in A])
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
@@ -22,9 +22,9 @@ function HCAT{N, C<:Union{Tuple,AbstractArray}, L <:NTuple{N,LinearOperator}}(A:
 	HCAT{M,N,C,D,L}(A, mid)
 end
 
-HCAT(A::LinearOperator) = A
+HCAT(A::AbstractOperator) = A
 
-function HCAT(A::Vararg{LinearOperator})
+function HCAT(A::Vararg{AbstractOperator})
 	if any((<:).(typeof.(A), HCAT ))
 		op = ()
 		for a in A
@@ -83,6 +83,9 @@ end
 	end
 end
 
+# jacobian 
+jacobian{M,N,C,D}(L::HCAT{M,N,C,D},x::D) = HCAT(jacobian.(L.A,x), L.mid, M) 
+
 # Properties
 
 size(L::HCAT) = size(L.A[1],1), size.(L.A, 2)
@@ -92,6 +95,7 @@ fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*","*fun_name(L.A[2])*
 domainType(L::HCAT) = domainType.(L.A)
 codomainType(L::HCAT) = codomainType.(L.A[1])
 
+is_linear(L::HCAT) = all(is_linear.(L.A))
 is_AAc_diagonal(L::HCAT) = all(is_AAc_diagonal.(L.A))
 is_full_row_rank(L::HCAT) = any(is_full_row_rank.(L.A))
 

@@ -13,12 +13,16 @@ verb = true
   include("test_deep.jl")
 end
 
-@testset "Basic operators" begin
-  include("test_operators.jl")
+@testset "Linear operators" begin
+  include("test_linear_operators.jl")
+end
+
+@testset "Non-Linear operators" begin
+  include("test_nonlinear_operators.jl")
 end
 
 @testset "Calculus rules" begin
-  include("test_operators_calculus.jl")
+  include("test_linear_operators_calculus.jl")
 end
 
 @testset "Syntax shorthands" begin

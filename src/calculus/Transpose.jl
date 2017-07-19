@@ -1,7 +1,11 @@
 export Transpose
 
-immutable Transpose{T <: LinearOperator} <: LinearOperator
+immutable Transpose{T <: AbstractOperator} <: AbstractOperator
 	A::T
+	function Transpose(A::T) where {T<:AbstractOperator} 
+		is_linear(A) == false && error("Cannot transpose a nonlinear operator. You might use `jacobian`")
+		new{T}(A)
+	end
 end
 
 # Constructors
@@ -10,8 +14,8 @@ Transpose(L::Transpose) = L.A
 
 # Mappings
 
-A_mul_B!{T<:LinearOperator}(y, L::Transpose{T}, x) = Ac_mul_B!(y, L.A, x)
-Ac_mul_B!{T<:LinearOperator}(y, L::Transpose{T}, x) = A_mul_B!(y, L.A, x)
+A_mul_B!{T<:AbstractOperator}(y, L::Transpose{T}, x) = Ac_mul_B!(y, L.A, x)
+Ac_mul_B!{T<:AbstractOperator}(y, L::Transpose{T}, x) = A_mul_B!(y, L.A, x)
 
 # Properties
 
@@ -22,6 +26,7 @@ codomainType(L::Transpose) = domainType(L.A)
 
 fun_name(L::Transpose)  = fun_name(L.A)*"ᵃ"
 
+is_linear(L::Transpose) = is_linear(L.A)
 is_null(L::Transpose) = is_null(L.A)
 is_eye(L::Transpose) = is_eye(L.A)
 is_diagonal(L::Transpose) = is_diagonal(L.A)

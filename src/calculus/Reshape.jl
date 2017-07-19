@@ -1,13 +1,13 @@
 export Reshape
 
-immutable Reshape{N,L<:LinearOperator} <: LinearOperator
+immutable Reshape{N,L<:AbstractOperator} <: AbstractOperator
 	A::L
 	dim_out::NTuple{N,Int}
 end
 
 # Constructors
 
-Reshape{N,L<:LinearOperator}(A::L, dim_out::Vararg{Int,N}) =
+Reshape{N,L<:AbstractOperator}(A::L, dim_out::Vararg{Int,N}) =
 Reshape{N,L}(A, dim_out)
 
 # Mappings
@@ -24,6 +24,9 @@ function Ac_mul_B!{N,L,C,D}(y::D, R::Reshape{N,L}, b::C)
 	Ac_mul_B!(y_res, R.A, b_res)
 end
 
+#jacobian
+jacobian{N,L}(R::Reshape{N,L},x::AbstractArray) = Reshape(jacobian(R.A,x),R.dim_out) 
+
 # Properties
 
 size(R::Reshape) = (R.dim_out, size(R.A,2))
@@ -31,6 +34,7 @@ size(R::Reshape) = (R.dim_out, size(R.A,2))
   domainType(  R::Reshape) =   domainType(R.A)
 codomainType(  R::Reshape) = codomainType(R.A)
 
+is_linear(      R::Reshape) = is_linear(R.A)
 is_null(        R::Reshape) = is_null(R.A)
 is_eye(        R::Reshape)  = is_eye(R.A)
 is_diagonal(    R::Reshape) = is_diagonal(R.A)

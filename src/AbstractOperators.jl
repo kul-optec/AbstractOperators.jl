@@ -4,8 +4,10 @@ module AbstractOperators
 
 const RealOrComplex{T<:Real} = Union{T, Complex{T}}
 
-abstract type LinearOperator    end
-abstract type NonLinearOperator end
+abstract type AbstractOperator end
+
+abstract type LinearOperator    <: AbstractOperator end
+abstract type NonLinearOperator <: AbstractOperator end
 
 import Base: A_mul_B!, Ac_mul_B!, size, ndims, diag 
 export ndoms, diag_AcA, diag_AAc
@@ -14,26 +16,29 @@ export ndoms, diag_AcA, diag_AAc
 
 include("utilities/deep.jl")
 
-# Basic operators
+# Linear operators
 
-include("operators/MyOperator.jl")
-include("operators/Zeros.jl")
-include("operators/Eye.jl")
-include("operators/DiagOp.jl")
-include("operators/GetIndex.jl")
-include("operators/MatrixOp.jl")
-include("operators/DFT.jl")
-include("operators/DCT.jl")
-include("operators/FiniteDiff.jl")
-include("operators/Variation.jl")
-include("operators/Conv.jl")
-include("operators/Filt.jl")
-include("operators/MIMOFilt.jl")
-include("operators/ZeroPad.jl")
-include("operators/Xcorr.jl")
-include("operators/LBFGS.jl")
-include("operators/BlkDiagLBFGS.jl")
-include("operators/utils.jl")
+include("linearoperators/MyLinOp.jl")
+include("linearoperators/Zeros.jl")
+include("linearoperators/Eye.jl")
+include("linearoperators/DiagOp.jl")
+include("linearoperators/GetIndex.jl")
+include("linearoperators/MatrixOp.jl")
+include("linearoperators/DFT.jl")
+include("linearoperators/DCT.jl")
+include("linearoperators/FiniteDiff.jl")
+include("linearoperators/Variation.jl")
+include("linearoperators/Conv.jl")
+include("linearoperators/Filt.jl")
+include("linearoperators/MIMOFilt.jl")
+include("linearoperators/ZeroPad.jl")
+include("linearoperators/Xcorr.jl")
+include("linearoperators/LBFGS.jl")
+include("linearoperators/BlkDiagLBFGS.jl")
+include("linearoperators/utils.jl")
+
+# Non-Linear operators
+include("nonlinearoperators/Sigmoid.jl")
 
 # Calculus rules
 
@@ -49,17 +54,17 @@ include("calculus/Transpose.jl")
 # Syntax
 include("syntax.jl")
 
-size(L::LinearOperator, i::Int) = size(L)[i]
-ndims(L::LinearOperator) = count_dims(size(L,1)), count_dims(size(L,2))
-ndims(L::LinearOperator, i::Int) = ndims(L)[i]
+size(L::AbstractOperator, i::Int) = size(L)[i]
+ndims(L::AbstractOperator) = count_dims(size(L,1)), count_dims(size(L,2))
+ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
 count_dims{N}(dims::NTuple{N,Int}) = N
 count_dims{N}(dims::NTuple{N,Tuple}) = count_dims.(dims)
 
 """
-`ndoms(L::LinearOperator, [dom::Int]) -> (number of codomains, number of domains)`
+`ndoms(L::AbstractOperator, [dom::Int]) -> (number of codomains, number of domains)`
 
-Returns the number of codomains and domains  of a `LinearOperator`. Optionally you can specify the codomain (with `dom = 1`) or the domain (with `dom = 2`)
+Returns the number of codomains and domains  of a `AbstractOperator`. Optionally you can specify the codomain (with `dom = 1`) or the domain (with `dom = 2`)
 
 ```julia
 julia > ndoms(DFT(10,10))
@@ -75,34 +80,41 @@ julia> ndoms(blkdiag(DFT(10,10),DFT(10,10))
 (2,2)
 ```
 """
-ndoms(L::LinearOperator) = length.(ndims(L))
-ndoms(L::LinearOperator, i::Int) = ndoms(L)[i]
+ndoms(L::AbstractOperator) = length.(ndims(L))
+ndoms(L::AbstractOperator, i::Int) = ndoms(L)[i]
 
-diag_AcA(L::LinearOperator) = error("is_AAc_diagonal($L) == false")
-diag_AAc(L::LinearOperator) = error("is_AcA_diagonal($L) == false")
+diag_AcA(L::AbstractOperator) = error("is_AAc_diagonal($L) == false")
+diag_AAc(L::AbstractOperator) = error("is_AcA_diagonal($L) == false")
 
-is_null(L::LinearOperator) = false
-is_eye(L::LinearOperator) = false
-is_diagonal(L::LinearOperator) = false
-is_AcA_diagonal(L::LinearOperator) = is_diagonal(L)
-is_AAc_diagonal(L::LinearOperator) = is_diagonal(L)
-is_orthogonal(L::LinearOperator) = false
-is_invertible(L::LinearOperator) = false
-is_full_row_rank(L::LinearOperator) = false
-is_full_column_rank(L::LinearOperator) = false
+is_linear(          L::LinearOperator  ) = true
+
+is_linear(          L::AbstractOperator) = false
+is_null(            L::AbstractOperator) = false
+is_eye(             L::AbstractOperator) = false
+is_diagonal(        L::AbstractOperator) = false
+is_AcA_diagonal(    L::AbstractOperator) = is_diagonal(L)
+is_AAc_diagonal(    L::AbstractOperator) = is_diagonal(L)
+is_orthogonal(      L::AbstractOperator) = false
+is_invertible(      L::AbstractOperator) = false
+is_full_row_rank(   L::AbstractOperator) = false
+is_full_column_rank(L::AbstractOperator) = false
+
+export jacobian
+
+jacobian(A::LinearOperator, x::AbstractArray) = A
 
 #printing
-function Base.show(io::IO, L::LinearOperator)
+function Base.show(io::IO, L::AbstractOperator)
 	print(io, fun_name(L)" "*fun_space(L) )
 end
 
-function fun_space(L::LinearOperator)  
+function fun_space(L::AbstractOperator)  
 	dom = fun_dom(L,2)
 	codom = fun_dom(L,1)
 	return dom*"->"*codom  
 end
 
-function fun_dom(L::LinearOperator,n::Int)
+function fun_dom(L::AbstractOperator,n::Int)
 	dm = n == 2? domainType(L) : codomainType(L)
 	sz = size(L,n)
 	return string_dom(dm,sz)
@@ -120,8 +132,11 @@ function string_dom(dm::Tuple,sz::Tuple)
 end
 
 export LinearOperator,
+       NonLinearOperator,
+       AbstractOperator,
        domainType, 
        codomainType,
+       is_linear,
        is_eye,
        is_null,
        is_diagonal,

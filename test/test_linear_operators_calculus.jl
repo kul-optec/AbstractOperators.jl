@@ -45,6 +45,7 @@ opS2 = Scale(pi,opA2)
 @test typeof(opS2*opS1) <: Scale
 
 #properties
+@test is_linear(opC1)           == true
 @test is_null(opC1)             == false
 @test is_eye(opC1)              == false
 @test is_diagonal(opC1)         == false
@@ -89,6 +90,7 @@ y2 = (A1*x1, A2*x2, A3*x3)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 #properties
+@test is_linear(opD)           == true
 @test is_null(opD)             == false
 @test is_eye(opD)              == false
 @test is_diagonal(opD)         == false
@@ -157,6 +159,7 @@ opA1 = MatrixOp(A1)
 opA2 = MatrixOp(A2)
 opA3 = MatrixOp(A3)
 op = HCAT(opA1, opA2, opA3)
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -397,6 +400,7 @@ opA1 = MatrixOp(A1)
 opA2 = MatrixOp(A2)
 opA3 = MatrixOp(A3)
 op = VCAT(opA1, opA2, opA3)
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false

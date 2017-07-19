@@ -6,7 +6,7 @@ Abstract operators package for Julia.
 
 Abstract operators are linear mappings like matrices. Unlike matrices however, abstract operators apply the linear mappings with specific algorithms that minimize the memory requirements while maximizing their efficiency.
 
-> #### Example: Convolution
+> #### Example I: Convolution
 >
 > Convolution operator can be represented by a [Toeplitz matrix](https://en.wikipedia.org/wiki/Toeplitz_matrix):
 > ```julia
@@ -42,8 +42,8 @@ Abstract operators are linear mappings like matrices. Unlike matrices however, a
 > ```
 > and reduced memory requirements:
 >```julia
-> julia> sizeof(A)+sizeof(x)
-> 16016
+> julia> sizeof(A)+sizeof(h)
+> 8016
 >
 > julia> sizeof(T)
 > 47984000
@@ -51,12 +51,44 @@ Abstract operators are linear mappings like matrices. Unlike matrices however, a
 
 These are particularly useful in iterative (optimization) algorithms where the direct and adjoint application of linear mappings are needed at every iteration.
 
+> #### Example II: Deconvolution
+>
+> Deconvolution seeks to find the input signal `x` given the impulse response `h` and the output `y` and can be formulated as the following optimization problem:
+> 
+> > x* = argmin_x | T*x - y |_2^2               (1)
+>
+> This is the well-known Least Squares (LS) problem and can be solved using a pseudo-inverse:
+>
+> ```julia
+> julia> x0 = T\y;
+> ```
+>
+> When the size of `T` and `y` are large, solving the LS problem in such a manner can become intractable. 
+> A simple alternative is the Gradient Descent algorithm which uses the gradient of the cost function of (1) and solves the optimization problem iteratively:
+> 
+> > x^k+1 = x^k - gamma* T^t ( T*x^k - y )      (2)
+> 
+> A _trivial_ (sub-optimal choice of step-size `gamma` and inefficient memory management) implementation of the Gradient Descent in Julia is the following: 
+>
+> ```julia
+> julia> x0, gamma = zeros(x), 1e-4; # initialization, step-size gamma
+> 
+> julia> for i = 1:4000 x0 =  x0 -1e-4 * A'*(A*x0-y) end;
+>
+> ```
+>
+ 
+In this example it can be seen that the transpose of `A` can be performed using the same syntax of matrices. Nevertheless the transpose still uses a specific efficient algorithm (in this case the transpose of convolution is cross-correlation) with minimal memory requirements. 
+
+Additionally, abstract operators can be applied using _in-place_ functions as `A_mul_B` and `Ac_mul_B`. 
+
+
 ## Installation
 
-To install the package, use the following in the Julia command line
+To install the package, use the following in the Julia command line:
 
 ```julia
-Pkg.add("AbstractOperators")
+Pkg.clone("https://github.com/kul-forbes/AbstractOperators.jl")
 ```
 
 Remember to `Pkg.update()` to keep the package up to date.

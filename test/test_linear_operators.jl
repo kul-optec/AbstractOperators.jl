@@ -14,6 +14,7 @@ y2 = conv(x1,h)
 op = Conv(x1,h)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -39,6 +40,7 @@ op = DCT(n,n)
 op = DCT(Complex{Float64}, n,n)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -72,6 +74,7 @@ op = IDCT(n,n)
 op = IDCT(Complex{Float64}, n,n)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -112,6 +115,7 @@ op = DFT(n,n)
 op = DFT(Complex{Float64}, n,n)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -151,6 +155,7 @@ op = IDFT(n,n)
 op = IDFT(Complex{Float64}, n,n)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -183,6 +188,7 @@ op = DiagOp(d)
 op = DiagOp(Float64, d)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == true
@@ -214,6 +220,7 @@ op = Eye((n,))
 op = Eye(n)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == true
 @test is_diagonal(op)         == true
@@ -255,6 +262,7 @@ Filt(x1, b, a)
 Filt(x1, b)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -319,6 +327,7 @@ FiniteDiff((n,m))
 FiniteDiff(x1)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -357,6 +366,7 @@ op = GetIndex(Float64,(n,m),(1:n,1:m))
 op = GetIndex(Float64,(n,),(1:k,))
 
 ##properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -394,6 +404,7 @@ op = MatrixOp(A, c)
 op = MatrixOp(Float64, A, c)
 
 ##properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -403,6 +414,18 @@ op = MatrixOp(Float64, A, c)
 @test is_invertible(op)       == false
 @test is_full_row_rank(MatrixOp(randn(srand(0),3,4)))    == true
 @test is_full_column_rank(MatrixOp(randn(srand(0),3,4))) == false
+
+######### MyLinOp ############
+
+n,m = 5,4
+A = randn(n,m)
+op = MyLinOp(Float64, (m,),(n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
+x1 = randn(m)
+y1 = test_op(op, x1, randn(n), verb)
+y2 = A*x1
+
+# other constructors
+op = MyLinOp(Float64, (m,), Float64, (n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
 
 
 ######### MIMOFilt ############
@@ -462,6 +485,7 @@ a = [[1.],[1.],[1.],[1.],[1.],[1.]]
 op = MIMOFilt(Float64, (m,n), b, a)
 
 ##properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -515,6 +539,7 @@ Variation(x1)
 @test_throws ErrorException op = Variation(Float64,(n,))
 
 ###properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -538,6 +563,7 @@ y2 = xcorr(x1, h)
 op = Xcorr(x1,h)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -587,6 +613,7 @@ ZeroPad(x1, z...)
 @test_throws ErrorException op = ZeroPad(Float64,(1,2,3,4),(1,2,3,4))
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
@@ -609,6 +636,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(m)+im*randn(m), verb)
 
 #properties
+@test is_linear(op)           == true
 @test is_null(op)             == true
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false

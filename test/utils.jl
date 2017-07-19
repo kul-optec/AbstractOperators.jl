@@ -1,4 +1,4 @@
-function test_op(A::LinearOperator, x, y, verb::Bool = false)
+function test_op(A::AbstractOperator, x, y, verb::Bool = false)
 
   verb && (println(); show(A); println())
 

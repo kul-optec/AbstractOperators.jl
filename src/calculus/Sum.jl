@@ -3,7 +3,7 @@ export Sum
 immutable Sum{M, N, K,
 	      C <: Union{NTuple{M,AbstractArray}, AbstractArray},
 	      D <: Union{NTuple{N,AbstractArray}, AbstractArray},
-	      L<:NTuple{K,LinearOperator}} <: LinearOperator
+	      L<:NTuple{K,AbstractOperator}} <: AbstractOperator
 	A::L
 	midC::C
 	midD::D
@@ -11,7 +11,7 @@ end
 
 # Constructors
 
-function Sum{C, D, K, L <: NTuple{K,LinearOperator}}(A::L, midC::C, midD::D, M::Int, N::Int)
+function Sum{C, D, K, L <: NTuple{K,AbstractOperator}}(A::L, midC::C, midD::D, M::Int, N::Int)
 	if any([size(a) != size(A[1]) for a in A])
 		throw(DimensionMismatch("cannot sum operator of different sizes"))
 	end
@@ -22,9 +22,9 @@ function Sum{C, D, K, L <: NTuple{K,LinearOperator}}(A::L, midC::C, midD::D, M::
 	Sum{M, N, K, C, D, L}(A, midC, midD)
 end
 
-Sum(A::LinearOperator) = A
+Sum(A::AbstractOperator) = A
 
-function Sum(A::Vararg{LinearOperator})
+function Sum(A::Vararg{AbstractOperator})
 	s = size(A[1],1)
 	t = codomainType(A[1])
 	midC,M  = create_mid(t,s)
@@ -37,7 +37,7 @@ function Sum(A::Vararg{LinearOperator})
 end
 
 # special cases
-Sum{M,N,K,C,D}(L1::LinearOperator, L2::Sum{M,N,K,C,D}           ) =
+Sum{M,N,K,C,D}(L1::AbstractOperator, L2::Sum{M,N,K,C,D}           ) =
 Sum((L1,L2.A...),L2.midC,L2.midD, M, N)
 
 # Mappings
@@ -84,6 +84,9 @@ end
 	end
 end
 
+# jacobian
+jacobian{M,N,K,C,D}(S::Sum{M,N,K,C,D},x::D) = Sum(([jacobian(a,x) for a in S.A]...),S.midC,S.midD,M,N)
+
 # Properties
 
 size(L::Sum) = size(L.A[1])
@@ -100,6 +103,7 @@ fun_name(S::Sum) =
 length(S.A) == 2 ? fun_name(S.A[1])"+"fun_name(S.A[2]) : "Σ"
 
 
+is_linear(L::Sum)        = all(is_linear.(L.A))            
 is_null(L::Sum)          = all(is_null.(L.A))            
 is_diagonal(L::Sum)      = all(is_diagonal.(L.A))        
 is_full_row_rank(L::Sum) = any(is_full_row_rank.(L.A))
