@@ -37,9 +37,6 @@ include("linearoperators/LBFGS.jl")
 include("linearoperators/BlkDiagLBFGS.jl")
 include("linearoperators/utils.jl")
 
-# Non-Linear operators
-include("nonlinearoperators/Sigmoid.jl")
-
 # Calculus rules
 
 include("calculus/Scale.jl")
@@ -50,6 +47,10 @@ include("calculus/Compose.jl")
 include("calculus/Reshape.jl")
 include("calculus/Sum.jl")
 include("calculus/Transpose.jl")
+include("calculus/Jacobian.jl")
+
+# Non-Linear operators
+include("nonlinearoperators/Sigmoid.jl")
 
 # Syntax
 include("syntax.jl")
@@ -98,10 +99,6 @@ is_orthogonal(      L::AbstractOperator) = false
 is_invertible(      L::AbstractOperator) = false
 is_full_row_rank(   L::AbstractOperator) = false
 is_full_column_rank(L::AbstractOperator) = false
-
-export jacobian
-
-jacobian(A::LinearOperator, x::AbstractArray) = A
 
 #printing
 function Base.show(io::IO, L::AbstractOperator)

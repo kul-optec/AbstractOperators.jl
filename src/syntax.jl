@@ -1,4 +1,5 @@
-import Base: blkdiag, transpose, *, +, -, getindex, hcat, vcat, reshape
+import Base: blkdiag, transpose, *, +, -, getindex, hcat, vcat, reshape 
+export jacobian
 
 ###### blkdiag ######
 blkdiag(L::Vararg{AbstractOperator}) = DCAT(L...)
@@ -67,3 +68,7 @@ vcat(L::Vararg{AbstractOperator}) = VCAT(L...)
 ###### reshape ######
 reshape{N,A<:AbstractOperator}(L::A, idx::NTuple{N,Int}) = Reshape(L,idx)
 reshape{A<:AbstractOperator}(L::A, idx::Vararg{Int}) = Reshape(L,idx)
+
+###### jacobian ######
+jacobian = Jacobian
+

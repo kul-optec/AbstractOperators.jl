@@ -84,9 +84,6 @@ end
 	end
 end
 
-# jacobian
-jacobian{M,N,K,C,D}(S::Sum{M,N,K,C,D},x::D) = Sum(([jacobian(a,x) for a in S.A]...),S.midC,S.midD,M,N)
-
 # Properties
 
 size(L::Sum) = size(L.A[1])

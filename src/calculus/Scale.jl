@@ -43,9 +43,6 @@ function Ac_mul_B!{T, C, D <: Tuple, A <: AbstractOperator}(y::D, L::Scale{T, A}
   end
 end
 
-# jacobian
-jacobian{T,L}(S::Scale{T,L},x::AbstractArray) = Scale(S.coeff,jacobian(S.A,x)) 
-
 # Properties
 
 size(L::Scale) = size(L.A)

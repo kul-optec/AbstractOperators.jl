@@ -22,9 +22,6 @@ A_mul_B!{N,C,D,L}(y::C, S::DCAT{N,C,D,L}, b::D) = A_mul_B!.(y,S.A,b)
 
 Ac_mul_B!{N,C,D,L}(y::D, S::DCAT{N,C,D,L}, b::C) = Ac_mul_B!.(y,S.A,b)
 
-# jacobian 
-jacobian{N,C,D}(L::DCAT{N,C,D},x::D) = DCAT(jacobian.(L.A,x)...) 
-
 # Properties
 size(L::DCAT) = size.(L.A,1), size.(L.A, 2)
 

@@ -24,9 +24,6 @@ function Ac_mul_B!{N,L,C,D}(y::D, R::Reshape{N,L}, b::C)
 	Ac_mul_B!(y_res, R.A, b_res)
 end
 
-#jacobian
-jacobian{N,L}(R::Reshape{N,L},x::AbstractArray) = Reshape(jacobian(R.A,x),R.dim_out) 
-
 # Properties
 
 size(R::Reshape) = (R.dim_out, size(R.A,2))

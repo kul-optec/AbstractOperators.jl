@@ -83,9 +83,6 @@ end
 	end
 end
 
-# jacobian 
-jacobian{M,N,C,D}(L::HCAT{M,N,C,D},x::D) = HCAT(jacobian.(L.A,x), L.mid, M) 
-
 # Properties
 
 size(L::HCAT) = size(L.A[1],1), size.(L.A, 2)

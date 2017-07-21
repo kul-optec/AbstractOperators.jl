@@ -294,3 +294,10 @@ H = hcat(L,L)
 D = blkdiag(L,L)
 @test ndims(D) == ((2,2),(3,3))
 @test ndoms(D) == (2,2)
+
+###### jacobian ######
+n,m =  10,5
+A = MatrixOp(randn(n,m))
+B = Sigmoid(Float64,(n,),100.)
+op = B*A
+J = jacobian(op,randn(m))

@@ -72,10 +72,6 @@ end
 		return y
 	end
 end
-# jacobian 
-function jacobian(L::Compose, x::AbstractArray)  
-	Compose(jacobian.(L.A,(x,L.mid...)),L.mid)
-end
 
 # Properties
 

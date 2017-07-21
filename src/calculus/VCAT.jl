@@ -80,9 +80,6 @@ end
 	end
 end
 
-# jacobian 
-jacobian{M,N,C,D}(L::VCAT{M,N,C,D},x::D) = VCAT(([jacobian(a,x) for a in L.A]...), L.mid, M) 
-
 # Properties
 
 size(L::VCAT) = size.(L.A, 1), size(L.A[1],2)
