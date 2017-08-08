@@ -6,7 +6,7 @@ immutable Hadamard{N,
 		  L  <:NTuple{N,AbstractOperator},
 		  L2 <:NTuple{N,LinearOperator},
 		  T1 <:NTuple{N,AbstractArray},
-		  T2 <:NTuple{N,AbstractArray}
+		  T2 <:AbstractArray
 		  } <: NonLinearOperator
 	A::L
 	J::L2
@@ -19,7 +19,7 @@ function Hadamard{N}(L1::AbstractOperator,L2::AbstractOperator,x::NTuple{N,Abstr
 	A = (L1,L2)
 	J = Jacobian.(A,x)
 	mid  = zeros.(codomainType.(A), size.(A,1))
-	mid2 = zeros.(  domainType.(A), size.(A,1))
+	mid2 = zeros(  codomainType(A[1]), size(A[1],1))
 	Hadamard{2,typeof(A),typeof(J),typeof(mid),typeof(mid2)}(A,J,mid,mid2)
 end
 
@@ -35,15 +35,15 @@ function Ac_mul_B!{N,
 		   L  <: NTuple{N,AbstractOperator},
 		   L2 <: NTuple{N,LinearOperator},
 		   T1 <: NTuple{N,AbstractArray},
-		   T2 <: NTuple{N,AbstractArray},
+		   T2 <: AbstractArray,
 		   A  <: Hadamard{N,L,L2,T1,T2}
 		   }(y, J::Jacobian{A}, b)
 
-        J.A.mid2[1] .= J.A.mid[2].*b 
-	Ac_mul_B!(y[1], J.A.J[1], J.A.mid2[1])
+        J.A.mid2 .= J.A.mid[2].*b 
+	Ac_mul_B!(y[1], J.A.J[1], J.A.mid2)
 
-        J.A.mid2[2] .= J.A.mid[1].*b 
-	Ac_mul_B!(y[2], J.A.J[2], J.A.mid2[2])
+        J.A.mid2 .= J.A.mid[1].*b 
+	Ac_mul_B!(y[2], J.A.J[2], J.A.mid2)
 
 end
 
