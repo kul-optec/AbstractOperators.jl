@@ -2,7 +2,7 @@ export MatrixOp
 
 immutable MatrixOp{T, M <: AbstractMatrix{T}} <: LinearOperator
 	A::M
-	n_columns_input::Integer
+	n_col_in::Integer
 end
 
 # Constructors
@@ -25,6 +25,10 @@ MatrixOp{M <: AbstractMatrix}(T::Type, A::M) = MatrixOp{T, M}(A, 1)
 MatrixOp{M <: AbstractMatrix}(A::M, n::Integer) = MatrixOp{eltype(A), M}(A, n)
 MatrixOp{M <: AbstractMatrix}(T::Type, A::M, n::Integer) = MatrixOp{T, M}(A, n)
 
+import Base: convert
+convert{T,M<:AbstractMatrix{T}}(::Type{LinearOperator}, L::M) = MatrixOp{T,M}(L,1)
+convert{T,M<:AbstractMatrix{T}}(::Type{LinearOperator}, L::M, n::Integer) = MatrixOp{T,M}(L, n)
+
 # Mappings
 
 A_mul_B!{M, T}(y::AbstractArray, L::MatrixOp{M, T}, b::AbstractArray) = A_mul_B!(y, L.A, b)
@@ -36,10 +40,10 @@ domainType{T, M}(L::MatrixOp{T, M}) = T
 codomainType{T, M}(L::MatrixOp{T, M}) = T
 
 function size(L::MatrixOp)
-	if L.n_columns_input == 1
+	if L.n_col_in == 1
 		( (size(L.A, 1),), (size(L.A, 2),) )
 	else
-		( (size(L.A, 1), L.n_columns_input), (size(L.A, 2), L.n_columns_input) )
+		( (size(L.A, 1), L.n_col_in), (size(L.A, 2), L.n_col_in) )
 	end
 end
 

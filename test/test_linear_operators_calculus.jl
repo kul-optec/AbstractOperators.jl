@@ -1,5 +1,6 @@
  @printf("\nTesting linear operators calculus rules\n")
 
+
 ##########################
 ##### test Compose #######
 ##########################

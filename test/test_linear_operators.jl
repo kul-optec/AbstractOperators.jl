@@ -379,7 +379,7 @@ op = GetIndex(Float64,(n,),(1:k,))
 
 @test diag_AAc(op) == 1
 
-########## MatrixOp ############
+######## MatrixOp ############
 
 n,m = 5,4
 A = randn(n,m)
@@ -393,6 +393,7 @@ y2 = A*x1
 c = 3
 op = MatrixOp(Float64,(m,c),A)
 @test_throws ErrorException op = MatrixOp(Float64,(m,c,3),A)
+@test_throws MethodError op = MatrixOp(Float64,(m,c),randn(n,m,2))
 x1 = randn(m,c)
 y1 = test_op(op, x1, randn(n,c), verb)
 y2 = A*x1
@@ -402,6 +403,9 @@ op = MatrixOp(A)
 op = MatrixOp(Float64, A)
 op = MatrixOp(A, c)
 op = MatrixOp(Float64, A, c)
+
+op = convert(LinearOperator,A)
+op = convert(LinearOperator,A,c)
 
 ##properties
 @test is_linear(op)           == true
@@ -414,6 +418,79 @@ op = MatrixOp(Float64, A, c)
 @test is_invertible(op)       == false
 @test is_full_row_rank(MatrixOp(randn(srand(0),3,4)))    == true
 @test is_full_column_rank(MatrixOp(randn(srand(0),3,4))) == false
+
+
+####### MatrixOp ############
+
+n,m = 5,6
+b = randn(m)
+op = MatrixMul(Float64,(n,m),b,n)
+x1 = randn(n,m)
+y1 = test_op(op, x1, randn(n), verb)
+y2 = x1*b
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n,m = 5,6
+b = randn(m)+im*randn(m)
+op = MatrixMul(Complex{Float64},(n,m),b,n)
+x1 = randn(n,m)+im*randn(n,m)
+y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y2 = x1*b
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+## other constructors
+op = MatrixMul(b,n)
+
+##properties
+@test is_linear(op)           == true
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == false
+@test is_full_column_rank(op) == false
+
+
+######### RowVectorOp ############
+n = 5
+A = randn(n)
+op = RowVectorOp(Float64,(n,),A)
+x1 = randn(n)
+y1 = test_op(op, x1, [randn()], verb)
+
+n,c = 5,10
+A = randn(n)
+op = RowVectorOp(Float64,(n,c),A)
+x1 = randn(n,c)
+y1 = test_op(op, x1, randn(1,c), verb)
+
+# other constructors
+op = RowVectorOp(A)
+op = RowVectorOp(Float64, A)
+op = RowVectorOp(A, c)
+op = RowVectorOp(Float64, A, c)
+
+op = convert(LinearOperator,A)
+op = convert(LinearOperator,A,c)
+op = convert(LinearOperator,A',c)
+op = convert(LinearOperator,A')
+
+##properties
+@test is_linear(op)           == true
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == false
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == true
 
 ######### MyLinOp ############
 
