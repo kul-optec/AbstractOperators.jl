@@ -279,5 +279,59 @@ gradfd = Jfd'*y
 @test norm(grad[2]-gradfd[m1+1:m1+m2])<1e-6
 @test norm(grad[3]-gradfd[m1+m2+1:end])<1e-6
 
+##testing NonLinearCompose
+n,m = 3,4
+x = (randn(1,m),randn(n))
+A = randn(m,n)
+
+Y = x[1]*(A*x[2])
+
+P = NonLinearCompose( Eye(1,m), MatrixOp(A) )
+println(P)
+y = P*x
+
+@test norm(Y - y) <= 1e-12
+J = Jacobian(P,x)
+Jfd = jacobian_fd(P,x)
+
+y = [randn()]
+grad = J'*y
+gradfd = Jfd'*y
+
+@test norm(grad[1]'-gradfd[1:m])<1e-6
+@test norm(grad[2]-gradfd[m+1:end])<1e-6
+
+l,m1,m2,n1,n2 = 2,3,4,5,6
+X = (randn(m1,m2),randn(n1,n2))
+A = randn(l,m1)
+B = randn(m2,n1)
+
+Y = A*X[1]*B*X[2]
+P = NonLinearCompose( MatrixOp(A,m2), MatrixOp(B,n2) )
+println(P)
+y = P*X
+
+@test norm(Y - y) <= 1e-12
+
+J = Jacobian(P,X)
+grad = J'*y
+grad2 =  ((B*X[2])*(A'*Y)')', B'*(A*X[1])'*Y
+
+@test vecnorm(grad[1]-grad2[1]) <1e-7
+@test vecnorm(grad[2]-grad2[2]) <1e-7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

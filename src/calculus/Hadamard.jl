@@ -47,7 +47,6 @@ end
 
 function Hadamard(L::Vararg{AbstractOperator})
 
-	M = sum(ndoms.(L,2))
 	Z  = Zeros.(domainType.(L),size.(L,2),codomainType.(L),size.(L,1))
 	Op = [(Z[1:i-1]...,L[i], Z[i+1:end]...) for i in eachindex(L)]
 	hcats = [HCAT(op...) for op in Op ]

@@ -23,6 +23,8 @@ function Zeros{NN}(domainType::Type, dim_in::Tuple,
 	VCAT([Zeros(domainType, dim_in, codomainType[i], dim_out[i]) for i =1:NN]...)
 end
 
+Zeros(A::AbstractOperator) = Zeros(domainType(A),size(A,2),codomainType(A),size(A,1))
+
 # Mappings
 
 A_mul_B!{C,N,D,M}(y::AbstractArray{C,N}, A::Zeros{C,N,D,M}, b::AbstractArray{D,M}) = fill!(y,zero(C))
