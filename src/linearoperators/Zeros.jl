@@ -10,15 +10,23 @@ end
 Zeros{N,M}(domainType::Type, dim_in::NTuple{M,Int}, codomainType::Type, dim_out::NTuple{N,Int}) = 
 Zeros{codomainType,N,domainType,M}(dim_out,dim_in)
 
+Zeros{N,M}(domainType::Type, dim_in::NTuple{M,Int}, dim_out::NTuple{N,Int}) = 
+Zeros{domainType,N,domainType,M}(dim_out,dim_in)
+
+function Zeros{NN}(domainType::NTuple{NN,Type}, dim_in::NTuple{NN,Tuple}, 
+		   codomainType::Type, dim_out::Tuple) 
+	HCAT([Zeros(domainType[i], dim_in[i], codomainType, dim_out) for i =1:NN]...)
+end
+
+function Zeros{NN}(domainType::Type, dim_in::Tuple, 
+		   codomainType::NTuple{NN,Type}, dim_out::NTuple{NN,Tuple}) 
+	VCAT([Zeros(domainType, dim_in, codomainType[i], dim_out[i]) for i =1:NN]...)
+end
+
 # Mappings
 
-function A_mul_B!{C,N,D,M}(y::AbstractArray{C,N}, A::Zeros{C,N,D,M}, b::AbstractArray{D,M})
-	y .= zero(C)
-end
-
-function Ac_mul_B!{C,N,D,M}(y::AbstractArray{D,M}, A::Zeros{C,N,D,M}, b::AbstractArray{C,N})
-	y .= zero(D)
-end
+A_mul_B!{C,N,D,M}(y::AbstractArray{C,N}, A::Zeros{C,N,D,M}, b::AbstractArray{D,M}) = fill!(y,zero(C))
+Ac_mul_B!{C,N,D,M}(y::AbstractArray{D,M}, A::Zeros{C,N,D,M}, b::AbstractArray{C,N}) = fill!(y,zero(D))
 
 # Properties
 

@@ -64,13 +64,13 @@ function jacobian_fd{M,N}(op::HCAT{M,N}, x0::NTuple{N,AbstractArray}) # need to 
 	return J
 end
 
-function jacobian_fd{N}(op::Hadamard{N}, x0::NTuple{N,AbstractArray}) # need to have vector input-output
+function jacobian_fd{N,M}(op::Hadamard{N}, x0::NTuple{M,AbstractArray}) # need to have vector input-output
 	
 	y0 = vcat((op*x0)...)
 	J =  zeros(length(y0),length(vcat(x0...)))
 	h = sqrt(eps())
 	c = 1
-	for k = 1:N
+	for k = 1:M
 		for i = 1:length(x0[k])
 			x = deepcopy(x0)
 			x[k][i] = x[k][i]+h

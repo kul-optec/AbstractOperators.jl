@@ -14,7 +14,7 @@ Jacobian{N,C,D}(L::DCAT{N,C,D},x::D) = DCAT(Jacobian.(L.A,x)...)
 #Jacobian of HCAT
 Jacobian{M,N,C,D}(L::HCAT{M,N,C,D},x::D) = HCAT(Jacobian.(L.A,x), L.mid, M) 
 #Jacobian of VCAT
-Jacobian{M,N,C,D}(L::VCAT{M,N,C,D},x::D) = VCAT(([Jacobian(a,x) for a in L.A]...), L.mid, M) 
+Jacobian{M,N,C,D}(L::VCAT{M,N,C,D},x::D) = VCAT(([Jacobian(a,x) for a in L.A]...), L.mid, N) 
 #Jacobian of Compose 
 function Jacobian{X<:Union{AbstractArray,NTuple}}(L::Compose, x::X)  
 	Compose(Jacobian.(L.A,(x,L.mid...)),L.mid)

@@ -51,6 +51,39 @@ J = Jacobian(op,x)
 
 @test vecnorm(Jfd*x-vcat((J*x)...))<1e-6
 
+#testing HCAT of VCAT
+n,m1,m2,m3 = 4,3,2,7
+x1 = randn(m1)
+x2 = randn(m2)
+x3 = randn(m3)
+x = (x1,x2,x3)
+op1 = VCAT(MatrixOp(randn(n,m1)),Sigmoid(Float64,(m1,),2))
+op2 = VCAT(MatrixOp(randn(n,m2)),MatrixOp(randn(m1,m2)))
+op3 = VCAT(MatrixOp(randn(n,m3)),MatrixOp(randn(m1,m3)))
+op = HCAT(op1,op2,op3)
+println(op)
+@test_throws ErrorException op'
+
+J = Jacobian(op,x)
+println(J)
+#TODO finite diff test
+
+#testing VCAT of HCAT
+m1,m2,m3,n1,n2 = 3,4,5,6,7
+x1 = randn(m1)
+x2 = randn(n1)
+x3 = randn(m3)
+x = (x1,x2,x3)
+op1 = HCAT(MatrixOp(randn(n1,m1)),Sigmoid(Float64,(n1,),2),MatrixOp(randn(n1,m3)))
+op2 = HCAT(MatrixOp(randn(n2,m1)),MatrixOp(randn(n2,n1)),MatrixOp(randn(n2,m3)))
+op = VCAT(op1,op2)
+println(op)
+@test_throws ErrorException op'
+
+J = Jacobian(op,x)
+println(J)
+#TODO finite diff test
+
 #testing Compose
 l,n,m = 5,4,3
 x = randn(m)
@@ -96,16 +129,12 @@ J = Jacobian(op,x)
 
 @test vecnorm(Jfd*x-J*x)<1e-6
 
-
-
-
-
-##testing Hadamard
+#testing Hadamard
 n,m,l = 4,5,6
 A = randn(n,m)
 B = randn(n,l)
 x = (randn(m),randn(l))
-P = Hadamard(MatrixOp(A),MatrixOp(B),x)
+P = Hadamard(MatrixOp(A),MatrixOp(B))
 println(P)
 y = P*x
 @test norm((A*x[1]).*(B*x[2]) - y) <= 1e-12
@@ -124,7 +153,7 @@ n,m = 4,5
 A = randn(n,m)
 opS = Sigmoid(Float64,(n,),6)
 x = (randn(n),randn(m))
-P = Hadamard(opS,MatrixOp(A),x)
+P = Hadamard(opS,MatrixOp(A))
 println(P)
 y = P*x
 @test norm((opS*x[1]).*(A*x[2]) - y) <= 1e-12
@@ -143,7 +172,7 @@ n= 4
 opS1 = Sigmoid(Float64,(n,),6)
 opS2 = Sigmoid(Float64,(n,),10)
 x = (randn(n),randn(n))
-P = Hadamard(opS1,opS2,x)
+P = Hadamard(opS1,opS2)
 println(P)
 y = P*x
 @test norm((opS1*x[1]).*(opS2*x[2]) - y) <= 1e-12
@@ -158,20 +187,97 @@ gradfd = Jfd'*y
 @test norm(grad[1]-gradfd[1:n])<1e-6
 @test norm(grad[2]-gradfd[n+1:end])<1e-6
 
-
 n,m,l = 4,5,6
 a = randn(m)
 b = randn(n)
 opA = MatrixMul(a,l)
 opB = MatrixMul(b,l)
 X = (randn(l,m),randn(l,n))
-P = Hadamard(opA,opB,X)
+P = Hadamard(opA,opB)
 println(P)
 y = P*X
 
 @test norm(X[1]*a.*X[2]*b-y)<1e-6
 
-J = Jacobian(P,x)
+J = Jacobian(P,X)
 y = randn(l)
 
 grad = J'*y
+
+n,m1,m2,m3 = 4,5,6,7
+A1 = zeros(n,m1)
+A2 = randn(n,m2)
+A3 = randn(n,m3)
+B1 = randn(n,m1)
+B2 = zeros(n,m2)
+B3 = zeros(n,m3)
+x = (randn(m1),randn(m2),randn(m3))
+
+Y = (A1*x[1]+A2*x[2]+A3*x[3]).*(B1*x[1]+B2*x[2]+B3*x[3])
+
+HA = HCAT(Zeros(Float64,(m1,),(n,)),MatrixOp(A2),MatrixOp(A3)) 
+HB = HCAT(MatrixOp(B1),Zeros(Float64,(m2,),(n,)),Zeros(Float64,(m3,),(n,))) 
+
+P = Hadamard(HA,HB)
+println(P)
+y = P*x
+@test norm(Y - y) <= 1e-12
+
+J = Jacobian(P,x)
+Jfd = jacobian_fd(P,x)
+y = randn(n)
+
+grad = J'*y
+gradfd = Jfd'*y
+
+@test norm(grad[1]-gradfd[1:m1])<1e-6
+@test norm(grad[2]-gradfd[m1+1:m1+m2])<1e-6
+@test norm(grad[3]-gradfd[m1+m2+1:end])<1e-6
+
+n,m1,m2,m3 = 4,5,6,7
+A1 = randn(n,m1)
+A2 = randn(n,m2)
+A3 = randn(n,m3)
+P = Hadamard(MatrixOp(A1),MatrixOp(A2),MatrixOp(A3))
+x = (randn(m1),randn(m2),randn(m3))
+
+Y = (A1*x[1]).*(A2*x[2]).*(A3*x[3])
+y = P*x
+@test norm(Y - y) <= 1e-12
+
+J = Jacobian(P,x)
+Jfd = jacobian_fd(P,x)
+y = randn(n)
+
+grad = J'*y
+gradfd = Jfd'*y
+
+@test norm(grad[1]-gradfd[1:m1])<1e-6
+@test norm(grad[2]-gradfd[m1+1:m1+m2])<1e-6
+@test norm(grad[3]-gradfd[m1+m2+1:end])<1e-6
+
+n,m1,m2,m3 = 4,5,6,7
+A1 = randn(n,m1)
+A2 = randn(n,m2)
+A3 = randn(n,m3)
+P = Hadamard(HCAT(MatrixOp(A1),MatrixOp(A2)),MatrixOp(A3))
+x = (randn(m1),randn(m2),randn(m3))
+println(P)
+
+Y = (A1*x[1]+A2*x[2]).*(A3*x[3])
+y = P*x
+@test norm(Y - y) <= 1e-12
+
+J = Jacobian(P,x)
+Jfd = jacobian_fd(P,x)
+y = randn(n)
+
+grad = J'*y
+gradfd = Jfd'*y
+
+@test norm(grad[1]-gradfd[1:m1])<1e-6
+@test norm(grad[2]-gradfd[m1+1:m1+m2])<1e-6
+@test norm(grad[3]-gradfd[m1+m2+1:end])<1e-6
+
+
+
