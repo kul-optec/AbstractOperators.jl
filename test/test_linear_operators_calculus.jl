@@ -102,9 +102,9 @@ y2 = (A1*x1, A2*x2, A3*x3)
 @test is_full_row_rank(opD)    == false
 @test is_full_column_rank(opD) == false
 
-############################
-####### test HCAT    #######
-############################
+##########################
+##### test HCAT    #######
+##########################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -187,6 +187,7 @@ op = HCAT(DiagOp(d), DFT(Complex{Float64},n1))
 
 y1 = randn(n1)+im*randn(n1)
 @test norm(op*(op'*y1)-diag_AAc(op).*y1) <1e-12
+
 
 ###########################
 ###### test Reshape #######

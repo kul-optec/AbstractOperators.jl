@@ -188,47 +188,47 @@ y2 = (B*A*x1)[1:l-1]
 #y2 = (B*A*[0.;x1[2:m]])[1:l-1]
 #@test norm(y1-y2) < 1e-9
 
-#slicing HCAT
-
-n,m1,m2,m3 = 5,6,7,8
-A = randn(n,m1)
-B = randn(n,m2)
-C = randn(n,m3)
-x1 = randn(m1)
-x2 = randn(m2)
-x3 = randn(m3)
-opA = MatrixOp(A)
-opB = MatrixOp(B)
-opC = MatrixOp(C)
-opH = HCAT(opA,opB,opC)
-opH2 = opH[1:2]
-y1 = opH2*(x1,x2)
-y2 = A*x1+B*x2
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-opH3 = opH[3]
-y1 = opH3*x3
-y2 = C*x3
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-
-#slicing VCAT
-
-n1,n2,n3,m = 5,6,7,8
-A = randn(n1,m)
-B = randn(n2,m)
-C = randn(n3,m)
-x1 = randn(m)
-opA = MatrixOp(A)
-opB = MatrixOp(B)
-opC = MatrixOp(C)
-opV = VCAT(opA,opB,opC)
-opV2 = opV[1:2]
-y1 = opV2*x1
-y2 = (A*x1,B*x1)
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-opV3 = opV[3]
-y1 = opV3*x3
-y2 = C*x3
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+##slicing HCAT
+#
+#n,m1,m2,m3 = 5,6,7,8
+#A = randn(n,m1)
+#B = randn(n,m2)
+#C = randn(n,m3)
+#x1 = randn(m1)
+#x2 = randn(m2)
+#x3 = randn(m3)
+#opA = MatrixOp(A)
+#opB = MatrixOp(B)
+#opC = MatrixOp(C)
+#opH = HCAT(opA,opB,opC)
+#opH2 = opH[1:2]
+#y1 = opH2*(x1,x2)
+#y2 = A*x1+B*x2
+#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+#opH3 = opH[3]
+#y1 = opH3*x3
+#y2 = C*x3
+#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+#
+##slicing VCAT
+#
+#n1,n2,n3,m = 5,6,7,8
+#A = randn(n1,m)
+#B = randn(n2,m)
+#C = randn(n3,m)
+#x1 = randn(m)
+#opA = MatrixOp(A)
+#opB = MatrixOp(B)
+#opC = MatrixOp(C)
+#opV = VCAT(opA,opB,opC)
+#opV2 = opV[1:2]
+#y1 = opV2*x1
+#y2 = (A*x1,B*x1)
+#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+#opV3 = opV[3]
+#y1 = opV3*x3
+#y2 = C*x3
+#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 ###### hcat ######
 
@@ -295,9 +295,9 @@ D = blkdiag(L,L)
 @test ndims(D) == ((2,2),(3,3))
 @test ndoms(D) == (2,2)
 
-###### jacobian ######
-n,m =  10,5
-A = MatrixOp(randn(n,m))
-B = Sigmoid(Float64,(n,),100.)
-op = B*A
-J = jacobian(op,randn(m))
+####### jacobian ######
+#n,m =  10,5
+#A = MatrixOp(randn(n,m))
+#B = Sigmoid(Float64,(n,),100.)
+#op = B*A
+#J = jacobian(op,randn(m))

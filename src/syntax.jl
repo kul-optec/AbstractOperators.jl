@@ -46,22 +46,22 @@ end
 #	end
 #end
 
-#slicing an HCAT gives an HCAT
-function getindex{M,N,L<:HCAT{M,N}}(A::L,idx) 
-	HCAT(A.A[idx],A.mid,M)
-end
-#or the operator at idx
-getindex{L<:HCAT}(A::L,idx::Int) = A.A[idx]
-
-#slicing an VCAT gives a VCAT
-function getindex{M,N,L<:VCAT{M,N}}(A::L,idx) 
-	VCAT(A.A[idx],A.mid,N)
-end
-#or the operator at idx
-getindex{L<:VCAT}(A::L,idx::Int) = A.A[idx]
-
-#TODO slicing DCAT
-
+##slicing an HCAT gives an HCAT
+#function getindex{M,N,L<:HCAT{M,N}}(A::L,idx) 
+#	HCAT(A.A[idx],A.mid,M)
+#end
+##or the operator at idx
+#getindex{L<:HCAT}(A::L,idx::Int) = A.A[idx]
+#
+##slicing an VCAT gives a VCAT
+#function getindex{M,N,L<:VCAT{M,N}}(A::L,idx) 
+#	VCAT(A.A[idx],A.mid,N)
+#end
+##or the operator at idx
+#getindex{L<:VCAT}(A::L,idx::Int) = A.A[idx]
+#
+##TODO slicing DCAT
+#
 hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
 vcat(L::Vararg{AbstractOperator}) = VCAT(L...)
 
@@ -70,5 +70,5 @@ reshape{N,A<:AbstractOperator}(L::A, idx::NTuple{N,Int}) = Reshape(L,idx)
 reshape{A<:AbstractOperator}(L::A, idx::Vararg{Int}) = Reshape(L,idx)
 
 ###### jacobian ######
-jacobian = Jacobian
+#jacobian = Jacobian
 
