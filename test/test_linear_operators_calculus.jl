@@ -102,9 +102,9 @@
 #@test is_full_row_rank(opD)    == false
 #@test is_full_column_rank(opD) == false
 #
-##########################
-##### test HCAT    #######
-##########################
+#########################
+#### test HCAT    #######
+#########################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -142,7 +142,8 @@ y2 = A1*x1 + A2*x2 + A3*x3 + A2*x2 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
 opHH = HCAT(opH, opH, opA3)
-y1 = test_op(opHH, (x1, x2, x3, x1, x2, x3, x3), randn(m), verb)
+x = (x1, x2, x3, x1, x2, x3, x3)
+y1 = test_op(opHH, x, randn(m), verb)
 y2 = A1*x1 + A2*x2 + A3*x3 + A1*x1 + A2*x2 + A3*x3 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
@@ -155,53 +156,54 @@ opF = DFT(Complex{Float64},(m,))
 
 # permutation
 p = randperm(ndoms(opHH,2))
-opHHp = permute(opHH,p)
+opHP = permute(opHH,p)
 
-x = (x1, x2, x3, x1, x2, x3, x3)
 xp = x[p] 
 
-y1 = test_op(opHHp, xp, randn(m), verb)
+y1 = test_op(opHP, xp, randn(m), verb)
 
-#properties
-m, n1, n2, n3 = 4, 7, 5, 6
-A1 = randn(m, n1)
-A2 = randn(m, n2)
-A3 = randn(m, n3)
-opA1 = MatrixOp(A1)
-opA2 = MatrixOp(A2)
-opA3 = MatrixOp(A3)
-op = HCAT(opA1, opA2, opA3)
-@test is_linear(op)           == true
-@test is_null(op)             == false
-@test is_eye(op)              == false
-@test is_diagonal(op)         == false
-@test is_AcA_diagonal(op)     == false
-@test is_AAc_diagonal(op)     == false
-@test is_orthogonal(op)       == false
-@test is_invertible(op)       == false
-@test is_full_row_rank(op)    == true
-@test is_full_column_rank(op) == false
+pp = randperm(ndoms(opHH,2))
+opHPP = permute(opHH,pp)
+xpp = x[pp] 
+y1 = test_op(opHPP, xpp, randn(m), verb)
 
-d = randn(n1)+im*randn(n1)
-op = HCAT(DiagOp(d), DFT(Complex{Float64},n1))
-@test is_null(op)             == false
-@test is_eye(op)              == false
-@test is_diagonal(op)         == false
-@test is_AcA_diagonal(op)     == false
-@test is_AAc_diagonal(op)     == true
-@test is_orthogonal(op)       == false
-@test is_invertible(op)       == false
-@test is_full_row_rank(op)    == true
-@test is_full_column_rank(op) == false
-
-@test diag_AAc(op) == d.*conj(d)+n1
-
-y1 = randn(n1)+im*randn(n1)
-@test norm(op*(op'*y1)-diag_AAc(op).*y1) <1e-12
-
-
-
-
+##properties
+#m, n1, n2, n3 = 4, 7, 5, 6
+#A1 = randn(m, n1)
+#A2 = randn(m, n2)
+#A3 = randn(m, n3)
+#opA1 = MatrixOp(A1)
+#opA2 = MatrixOp(A2)
+#opA3 = MatrixOp(A3)
+#op = HCAT(opA1, opA2, opA3)
+#@test is_linear(op)           == true
+#@test is_null(op)             == false
+#@test is_eye(op)              == false
+#@test is_diagonal(op)         == false
+#@test is_AcA_diagonal(op)     == false
+#@test is_AAc_diagonal(op)     == false
+#@test is_orthogonal(op)       == false
+#@test is_invertible(op)       == false
+#@test is_full_row_rank(op)    == true
+#@test is_full_column_rank(op) == false
+#
+#d = randn(n1)+im*randn(n1)
+#op = HCAT(DiagOp(d), DFT(Complex{Float64},n1))
+#@test is_null(op)             == false
+#@test is_eye(op)              == false
+#@test is_diagonal(op)         == false
+#@test is_AcA_diagonal(op)     == false
+#@test is_AAc_diagonal(op)     == true
+#@test is_orthogonal(op)       == false
+#@test is_invertible(op)       == false
+#@test is_full_row_rank(op)    == true
+#@test is_full_column_rank(op) == false
+#
+#@test diag_AAc(op) == d.*conj(d)+n1
+#
+#y1 = randn(n1)+im*randn(n1)
+#@test norm(op*(op'*y1)-diag_AAc(op).*y1) <1e-12
+#
 ############################
 ####### test Reshape #######
 ############################
@@ -434,20 +436,45 @@ y1 = randn(n1)+im*randn(n1)
 ######### test combin. #######
 ##############################
 #
-### test Compose of HCAT
-#m1, m2, m3, m4 = 4, 7, 3, 2
-#A1 = randn(m3, m1)
-#A2 = randn(m3, m2)
-#A3 = randn(m4, m3)
-#opA1 = MatrixOp(A1)
-#opA2 = MatrixOp(A2)
-#opA3 = MatrixOp(A3)
-#opH = HCAT(opA1,opA2)
-#opC = Compose(opA3,opH)
-#x1, x2 = randn(m1), randn(m2)
-#y1 = test_op(opC, (x1,x2), randn(m4), verb)
-#
-#y2 = A3*(A1*x1+A2*x2)
+## test Compose of HCAT
+m1, m2, m3, m4 = 4, 7, 3, 2
+A1 = randn(m3, m1)
+A2 = randn(m3, m2)
+A3 = randn(m4, m3)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opA3 = MatrixOp(A3)
+opH = HCAT(opA1,opA2)
+opC = Compose(opA3,opH)
+x1, x2 = randn(m1), randn(m2)
+y1 = test_op(opC, (x1,x2), randn(m4), verb)
+
+y2 = A3*(A1*x1+A2*x2)
+
+@test vecnorm(y1-y2) < 1e-9
+
+## test HCAT of Compose of HCAT
+m5 = 10
+A4 = randn(m4,m5)
+x3 = randn(m5)
+opHC = HCAT(opC,MatrixOp(A4))
+x = (x1,x2,x3)
+y1 = test_op(opHC, x, randn(m4), verb)
+
+@test vecnorm(y1-(y2+A4*x3)) < 1e-9
+
+p = randperm(ndoms(opHC,2))
+opHP = permute(opHC,p)
+
+xp = x[p] 
+
+y1 = test_op(opHP, xp, randn(m4), verb)
+
+pp = randperm(ndoms(opHC,2))
+opHPP = permute(opHC,pp)
+xpp = x[pp] 
+y1 = test_op(opHPP, xpp, randn(m4), verb)
+
 #
 ## test VCAT of HCAT's
 #m1, m2, n1 = 4, 7, 3
@@ -587,6 +614,7 @@ y1 = randn(n1)+im*randn(n1)
 #z = coeff*(A1*x1 + A2*x2)
 #
 #@test all(vecnorm.(y .- z) .<= 1e-12)
+#
 #
 ## test Scale of Sum
 #

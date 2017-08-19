@@ -1,66 +1,67 @@
 
 export HCAT
 
-immutable HCAT{M, N, K,
+immutable HCAT{M, N, 
 	       L <: NTuple{N,AbstractOperator},
-	       S <: NTuple{K,Tuple},
-	       P <: NTuple{N,Any},
-	       D <: NTuple{K,Type},
+	       P <: NTuple{N,Union{Int,Tuple}},
 	       C <: Union{NTuple{M,AbstractArray}, AbstractArray},
 	       } <: AbstractOperator
 	A::L
-	size_in::S
-	partitions::P
-	domain::D
+	idxs::P
 	mid::C
 end
 
 # Constructors
 
-function HCAT{N, K, 
+function HCAT{N,  
 	      L <: NTuple{N,AbstractOperator},
-	      S <: NTuple{K,Tuple},
-	      P <: NTuple{N,Any},
-	      D <: NTuple{K,Type},
+	      P <: NTuple{N,Union{Int,Tuple}},
 	      C
-	      }(A::L, size_in::S, partitions::P, domain::D, mid::C, M::Int)
+	      }(A::L, idxs::P, mid::C, M::Int)
 	if any([size(A[1],1) != size(a,1) for a in A])
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
 	if any([codomainType(A[1]) != codomainType(a) for a in A])
 		throw(error("operators must all share the same codomainType!"))
 	end
-	HCAT{M,N,K,L,S,P,D,C}(A, size_in, partitions, domain, mid)
+	HCAT{M,N,L,P,C}(A, idxs, mid)
 end
 
 function HCAT(A::Vararg{AbstractOperator})
 
+	if any((<:).(typeof.(A),HCAT)) #fuse HCATS
+		AA = ()
+		for a in A
+			if typeof(a) <: HCAT
+				AA = (AA...,a.A...)
+			else
+				AA = (AA...,a)
+			end
+		end
+		mid = A[findfirst( (<:).(typeof.(A),HCAT) ) ].mid
+		M = get_M( A[findfirst( (<:).(typeof.(A),HCAT) ) ]) 
+	else
+		AA = A
+		s = size(AA[1],1)
+		t = codomainType(AA[1])
+		mid, M  = create_mid(t,s)
+	end
+
 	K = 0
-	partitions = ()
-	domain     = ()
-	size_in = []
-	for i in eachindex(ndoms.(A,2))
-		if ndoms(A[i],2) == 1
+	idxs = []
+	for i in eachindex(ndoms.(AA,2))
+		if ndoms(AA[i],2) == 1
 			K += 1
-			partitions = (partitions...,(K,))
-			domain     = (domain...    ,domainType(A[i]))
-			push!(size_in,size(A[i],2))
+			push!(idxs,K)
 		else
-			partitions = (partitions...,(collect(K+1:K+ndoms(A[i],2))...))
-			for ii = 1:ndoms(A[i],2)
+			idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],2))...) )
+			for ii = 1:ndoms(AA[i],2)
 				K += 1
-				domain     = (domain...    ,domainType(A[i])[ii])
-				push!(size_in,size(A[i],2)[ii])
 			end
 		end
 	end
-	size_in = (size_in...)
 
-	s = size(A[1],1)
-	t = codomainType(A[1])
-	mid, M  = create_mid(t,s)
-
-	return HCAT(A, size_in, partitions, domain, mid, M)
+	return HCAT(AA, (idxs...), mid, M)
 end
 
 HCAT(A::AbstractOperator) = A
@@ -71,26 +72,33 @@ create_mid{N}(t::Type,s::NTuple{N,Int}) = zeros(t,s), 1
 
 # Mappings
 
-@generated function A_mul_B!{M,N,K,L,S,P,D,C,DD}(y::C, H::HCAT{M,N,K,L,S,P,D,C}, b::DD)
+@generated function A_mul_B!{M,N,L,P,C,DD}(y::C, H::HCAT{M,N,L,P,C}, b::DD)
 
 	ex = :()
 
-	bb = ""
-	for ii in eachindex(fieldnames(fieldtype(P,1)))
-		bb = bb*"b[H.partitions[1][$ii]]"*(
-			length(fieldnames(fieldtype(P,1))) > 1 ? "," : "" )
+	if fieldtype(P,1) <: Int 
+		bb = :(b[H.idxs[1]])
+	else
+		bb = ""
+		for ii in eachindex(fieldnames(fieldtype(P,1)))
+			bb *= "b[H.idxs[1][$ii]],"
+		end
+		bb = parse(bb)
 	end
-	bb = parse(bb)
 	ex = :($ex; A_mul_B!(y,H.A[1],$bb))
 
 	for i = 2:N
 
-		bb = ""
-		for ii in eachindex(fieldnames(fieldtype(P,i)))
-			bb = bb*"b[H.partitions[$i][$ii]]"*(
-			length(fieldnames(fieldtype(P,i))) > 1 ? "," : "" )
+		if fieldtype(P,i) <: Int 
+			bb = :(b[H.idxs[$i]])
+		else
+			bb = ""
+			for ii in eachindex(fieldnames(fieldtype(P,i)))
+				bb *= "b[H.idxs[$i][$ii]],"
+			end
+			bb = parse(bb)
 		end
-		bb = parse(bb)
+
 		ex = :($ex; A_mul_B!(H.mid,H.A[$i],$bb))
 		
 		if C <: AbstractArray
@@ -107,18 +115,22 @@ create_mid{N}(t::Type,s::NTuple{N,Int}) = zeros(t,s), 1
 
 end
 
-@generated function Ac_mul_B!{M,N,K,L,S,P,D,C,DD}(y::DD, H::HCAT{M,N,K,L,S,P,D,C}, b::C)
+@generated function Ac_mul_B!{M,N,L,P,C,DD}(y::DD, H::HCAT{M,N,L,P,C}, b::C)
 
 	ex = :()
 
 	for i = 1:N
-		
-		yy = ""
-		for ii in eachindex(fieldnames(fieldtype(P,i)))
-			yy = yy*"y[H.partitions[$i][$ii]]"*(
-			length(fieldnames(fieldtype(P,i))) > 1 ? "," : "" )
+
+		if fieldtype(P,i) <: Int 
+			yy = :(y[H.idxs[$i]])
+		else
+			yy = ""
+			for ii in eachindex(fieldnames(fieldtype(P,i)))
+				yy *= "y[H.idxs[$i][$ii]],"
+			end
+			yy = parse(yy)
 		end
-		yy = parse(yy)
+		
 		ex = :($ex; Ac_mul_B!($yy,H.A[$i],b))
 
 	end
@@ -129,11 +141,25 @@ end
 
 # Properties
 
-size(L::HCAT) = size(L.A[1],1), L.size_in
+function size(H::HCAT) 
+	size_in = []
+	for s in size.(H.A,2)
+		eltype(s) <: Int ? push!(size_in,s) : push!(size_in,s...) 
+	end
+	p = vcat([[idx... ] for idx in H.idxs]...)
+	ipermute!(size_in,p)
+
+	size(H.A[1],1), (size_in...)
+end
 
 fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*","*fun_name(L.A[2])*"]" : "HCAT"
 
-domainType(L::HCAT) = L.domain
+function domainType(H::HCAT) 
+	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
+	p = vcat([[idx... ] for idx in H.idxs]...)
+	ipermute!(domain,p)
+	return (domain...)
+end
 codomainType(L::HCAT) = codomainType.(L.A[1])
 
 is_linear(L::HCAT) = all(is_linear.(L.A))
@@ -145,22 +171,20 @@ diag_AAc(L::HCAT) = sum(diag_AAc.(L.A))
 # utils
 import Base: permute
 
-function permute{M,N,K,L,S,P,D,C}(H::HCAT{M,N,K,L,S,P,D,C}, p::AbstractVector{Int})
+function permute{M,N,L,P,C}(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int})
 
 
-	unfolded = vcat([[idx... ] for idx in H.partitions]...) 
+	unfolded = vcat([[idx... ] for idx in H.idxs]...) 
 	ipermute!(unfolded,p)
 
 	new_part = ()
 	cnt = 0
-	for z in length.(H.partitions)
-		new_part = (new_part...,(unfolded[cnt+1:z+cnt]...))
+	for z in length.(H.idxs)
+		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...))
 		cnt += z
 	end
 
-	HCAT{M,N,K,L,S,P,D,C}(H.A,
-				([H.size_in...][p]...),
+	HCAT{M,N,L,P,C}(H.A,
 				new_part,
-				([H.domain...][p]...),
 				H.mid)
 end
