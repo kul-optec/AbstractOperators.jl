@@ -12,9 +12,19 @@ Jacobian{T,L,T2<:Scale{T,L}}(S::T2,x::AbstractArray) = Scale(S.coeff,Jacobian(S.
 #Jacobian of DCAT
 Jacobian{N,C,D}(L::DCAT{N,C,D},x::D) = DCAT(Jacobian.(L.A,x)...) 
 #Jacobian of HCAT
-Jacobian{M,N,C,D}(L::HCAT{M,N,C,D},x::D) = HCAT(Jacobian.(L.A,x), L.mid, M) 
+function Jacobian{M,N,L,P,C,D}(H::HCAT{M,N,L,P,C},x::D)  
+	A = ()
+	c = 0
+	for i = 1:N
+		A = length(H.idxs[i]) == 1 ?
+		(A...,jacobian(H.A[i],x[c+1])) :
+		(A...,jacobian(H.A[i],x[c+1:c+length(H.idxs[i])])) 
+		c += length(H.idxs[i])
+	end
+	HCAT(A,H.idxs,H.mid,M)
+end
 #Jacobian of VCAT
-Jacobian{M,N,C,D}(L::VCAT{M,N,C,D},x::D) = VCAT(([Jacobian(a,x) for a in L.A]...), L.mid, N) 
+Jacobian{M,N,L,P,C,D}(V::VCAT{M,N,L,P,C},x::D) = VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.mid, M) 
 #Jacobian of Compose 
 function Jacobian{X<:Union{AbstractArray,NTuple}}(L::Compose, x::X)  
 	Compose(Jacobian.(L.A,(x,L.mid...)),L.mid)

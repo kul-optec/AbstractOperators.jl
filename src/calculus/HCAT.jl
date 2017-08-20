@@ -184,7 +184,5 @@ function permute{M,N,L,P,C}(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int})
 		cnt += z
 	end
 
-	HCAT{M,N,L,P,C}(H.A,
-				new_part,
-				H.mid)
+	HCAT{M,N,L,P,C}(H.A,new_part,H.mid)
 end

@@ -49,12 +49,12 @@ include("calculus/Compose.jl")
 include("calculus/Reshape.jl")
 include("calculus/Sum.jl")
 include("calculus/Transpose.jl")
-#include("calculus/Jacobian.jl")
+include("calculus/Jacobian.jl")
 #include("calculus/Hadamard.jl")
 #include("calculus/NonLinearCompose.jl")
 
 # Non-Linear operators
-#include("nonlinearoperators/Sigmoid.jl")
+include("nonlinearoperators/Sigmoid.jl")
 
 # Syntax
 include("syntax.jl")

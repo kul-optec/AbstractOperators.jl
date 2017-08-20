@@ -34,34 +34,6 @@ function getindex(A::AbstractOperator,idx...)
 	return Gout*A
 end
 
-# commented for the moment, maybe doesn't make sense and prone to errors
-## slice output and input e.g. G[idx_out...][idx_in...] 
-#function getindex{L<:Compose}(A::L,idx...) 
-#	if typeof(A.A[end]) <: GetIndex
-#		Gin = GetIndex(codomainType(A.A[1]),size(A.A[1],2),idx)
-#		return A*Gin'
-#	else
-#		Gout = GetIndex(codomainType(A),size(A,1),idx)
-#		return Gout*A
-#	end
-#end
-
-##slicing an HCAT gives an HCAT
-#function getindex{M,N,L<:HCAT{M,N}}(A::L,idx) 
-#	HCAT(A.A[idx],A.mid,M)
-#end
-##or the operator at idx
-#getindex{L<:HCAT}(A::L,idx::Int) = A.A[idx]
-#
-##slicing an VCAT gives a VCAT
-#function getindex{M,N,L<:VCAT{M,N}}(A::L,idx) 
-#	VCAT(A.A[idx],A.mid,N)
-#end
-##or the operator at idx
-#getindex{L<:VCAT}(A::L,idx::Int) = A.A[idx]
-#
-##TODO slicing DCAT
-#
 hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
 vcat(L::Vararg{AbstractOperator}) = VCAT(L...)
 
@@ -70,5 +42,5 @@ reshape{N,A<:AbstractOperator}(L::A, idx::NTuple{N,Int}) = Reshape(L,idx)
 reshape{A<:AbstractOperator}(L::A, idx::Vararg{Int}) = Reshape(L,idx)
 
 ###### jacobian ######
-#jacobian = Jacobian
+jacobian = Jacobian
 
