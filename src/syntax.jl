@@ -46,25 +46,15 @@ function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,I
 	if length(idx) == length(unfolded)
 		return permute(H,idx)
 	else
-		idx2 = unfolded[idx]
 		new_H = ()
-		for i in eachindex(H.idxs)
-			z = Int[]
-			for id in idx2
-				if id in H.idxs[i]
-					if typeof(H.idxs[i]) <: Int 
-						new_H = (new_H...,H.A[i]) 
-						break
+		for i in idx
+			for ii in eachindex(H.idxs)
+				if i in H.idxs[ii]
+					if typeof(H.idxs[ii]) <: Int
+						new_H = (new_H...,H.A[ii]) 
 					else
-						push!(z,id)
+					error("cannot split operator") 
 					end
-				end
-			end
-			if !isempty(z)
-				if length(z) == length(H.idxs[i]) 
-					new_H = (new_H...,H.A[i][z]) 
-				else
-				error("cannot split operator of type $(typeof(H.A[i]))") 
 				end
 			end
 		end
@@ -80,25 +70,15 @@ function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,I
 	if length(idx) == length(unfolded)
 		return permute(H,idx)
 	else
-		idx2 = unfolded[idx]
 		new_H = ()
-		for i in eachindex(H.idxs)
-			z = []
-			for id in idx2
-				if id in H.idxs[i]
-					if typeof(H.idxs[i]) <: Int 
-						new_H = (new_H...,H.A[i]) 
-						break
+		for i in idx
+			for ii in eachindex(H.idxs)
+				if i in H.idxs[ii]
+					if typeof(H.idxs[ii]) <: Int
+						new_H = (new_H...,H.A[ii]) 
 					else
-						push!(z,id)
+					error("cannot split operator") 
 					end
-				end
-			end
-			if !isempty(z)
-				if length(z) == length(H.idxs[i]) 
-					new_H = (new_H...,H.A[i][z]) 
-				else
-				error("cannot split operator of type $(typeof(H.A[i]))") 
 				end
 			end
 		end

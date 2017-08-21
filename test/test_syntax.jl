@@ -197,8 +197,16 @@ y1 = opH3*x3
 y2 = C*x3
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-opHperm = opH[[3,2,1]]
-@test norm(opH*(x1,x2,x3) - opHperm*(x3,x2,x1)) <1e-12
+opHperm = opH[[3,1,2]]
+@test norm(opH*(x1,x2,x3) - opHperm*(x3,x1,x2)) <1e-12
+
+@test opHperm[1] == opC
+@test opHperm[2] == opA
+@test opHperm[3] == opB
+
+opHperm = opH[[3,1]]
+@test norm(opC*x3+opA*x1 - opHperm*(x3,x1)) <1e-12
+
 
 m4 = 9
 x4 = randn(m4)
@@ -210,16 +218,8 @@ opCH = opD*opH
 
 opHCH = HCAT(opCH,opE)
 
-opCH2 = opHCH[1:3]
-@test opCH2 == opCH
-
-opCH2 = opHCH[3:-1:1]
-@test vecnorm(opCH2*(x3,x2,x1)-D*(opH*(x1,x2,x3))) <1e-12
-
 opH4 = opHCH[4]
 @test opH4 == opE
-opHCHperm = opHCH[4:-1:1]
-@test norm(opHCH*(x1,x2,x3,x4) - opHCHperm*(x4,x3,x2,x1)) <1e-12
 @test_throws ErrorException  opHCH[1] 
 @test_throws ErrorException  opHCH[1:2]  
 
