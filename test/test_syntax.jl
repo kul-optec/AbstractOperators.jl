@@ -165,70 +165,83 @@ y1 = ops*x3
 y2 = (opV*x3)[1:4]
 @test vecnorm(y1-y2) < 1e-9
 
-#commented for the moment
-#opF = DCT(n,m,l)
-#x3 = randn(n,m,l)
-#in_slice = (1:n-1,2:m)
-#out_slice = (1:n,)
-#ops = opF[in_slice...][out_slice...]
-#y1 = ops*(x3[1:n])
-#x4 = zeros(x3)
-#x4[1:n] = x3[1:n]
-#y2 = dct(x4)[1:n-1,2:m]
-#@test vecnorm(y1-y2) < 1e-9
-
 ops = (opB*opA)[1:l-1]
 y1 = ops*x1
 y2 = (B*A*x1)[1:l-1]
 @test norm(y1-y2) < 1e-9
 
-#commented for the moment
-#ops = (opB*opA)[1:l-1][2:m]
-#y1 = ops*x1[2:m]
-#y2 = (B*A*[0.;x1[2:m]])[1:l-1]
-#@test norm(y1-y2) < 1e-9
+ops = (10.0*opA)[1:n-1]
+y1 = ops*x1
+y2 = (10*A*x1)[1:n-1]
+@test norm(y1-y2) < 1e-9
 
-##slicing HCAT
-#
-#n,m1,m2,m3 = 5,6,7,8
-#A = randn(n,m1)
-#B = randn(n,m2)
-#C = randn(n,m3)
-#x1 = randn(m1)
-#x2 = randn(m2)
-#x3 = randn(m3)
-#opA = MatrixOp(A)
-#opB = MatrixOp(B)
-#opC = MatrixOp(C)
-#opH = HCAT(opA,opB,opC)
-#opH2 = opH[1:2]
-#y1 = opH2*(x1,x2)
-#y2 = A*x1+B*x2
-#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-#opH3 = opH[3]
-#y1 = opH3*x3
-#y2 = C*x3
-#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-#
-##slicing VCAT
-#
-#n1,n2,n3,m = 5,6,7,8
-#A = randn(n1,m)
-#B = randn(n2,m)
-#C = randn(n3,m)
-#x1 = randn(m)
-#opA = MatrixOp(A)
-#opB = MatrixOp(B)
-#opC = MatrixOp(C)
-#opV = VCAT(opA,opB,opC)
-#opV2 = opV[1:2]
-#y1 = opV2*x1
-#y2 = (A*x1,B*x1)
-#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-#opV3 = opV[3]
-#y1 = opV3*x3
-#y2 = C*x3
-#@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+#slicing HCAT
+
+n,m1,m2,m3 = 5,6,7,8
+A = randn(n,m1)
+B = randn(n,m2)
+C = randn(n,m3)
+x1 = randn(m1)
+x2 = randn(m2)
+x3 = randn(m3)
+opA = MatrixOp(A)
+opB = MatrixOp(B)
+opC = MatrixOp(C)
+opH = HCAT(opA,opB,opC)
+opH2 = opH[1:2]
+y1 = opH2*(x1,x2)
+y2 = A*x1+B*x2
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+opH3 = opH[3]
+y1 = opH3*x3
+y2 = C*x3
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+opHperm = opH[[3,2,1]]
+@test norm(opH*(x1,x2,x3) - opHperm*(x3,x2,x1)) <1e-12
+
+m4 = 9
+x4 = randn(m4)
+D = randn(n,n)
+E = randn(n,m4)
+opD = MatrixOp(D)
+opE = MatrixOp(E)
+opCH = opD*opH 
+
+opHCH = HCAT(opCH,opE)
+
+opCH2 = opHCH[1:3]
+@test opCH2 == opCH
+
+opCH2 = opHCH[3:-1:1]
+@test vecnorm(opCH2*(x3,x2,x1)-D*(opH*(x1,x2,x3))) <1e-12
+
+opH4 = opHCH[4]
+@test opH4 == opE
+opHCHperm = opHCH[4:-1:1]
+@test norm(opHCH*(x1,x2,x3,x4) - opHCHperm*(x4,x3,x2,x1)) <1e-12
+@test_throws ErrorException  opHCH[1] 
+@test_throws ErrorException  opHCH[1:2]  
+
+#slicing VCAT
+
+n1,n2,n3,m = 5,6,7,8
+A = randn(n1,m)
+B = randn(n2,m)
+C = randn(n3,m)
+x1 = randn(m)
+opA = MatrixOp(A)
+opB = MatrixOp(B)
+opC = MatrixOp(C)
+opV = VCAT(opA,opB,opC)
+opV2 = opV[1:2]
+y1 = opV2*x1
+y2 = (A*x1,B*x1)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+opV3 = opV[3]
+y1 = opV3*x3
+y2 = C*x3
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 ###### hcat ######
 
@@ -295,9 +308,9 @@ D = blkdiag(L,L)
 @test ndims(D) == ((2,2),(3,3))
 @test ndoms(D) == (2,2)
 
-####### jacobian ######
-#n,m =  10,5
-#A = MatrixOp(randn(n,m))
-#B = Sigmoid(Float64,(n,),100.)
-#op = B*A
-#J = jacobian(op,randn(m))
+###### jacobian ######
+n,m =  10,5
+A = MatrixOp(randn(n,m))
+B = Sigmoid(Float64,(n,),100.)
+op = B*A
+J = jacobian(op,randn(m))

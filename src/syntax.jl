@@ -28,11 +28,86 @@ Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codo
 Base.broadcast(::typeof(*), d::AbstractArray, L::Scale)          = DiagOp(L.coeff*d)*L.A
 
 # getindex
-# slice only output 
 function getindex(A::AbstractOperator,idx...) 
-	Gout = GetIndex(codomainType(A),size(A,1),idx)
-	return Gout*A
+	if ndoms(A,2) == 1
+		Gout = GetIndex(codomainType(A),size(A,1),idx)
+		return Gout*A
+	elseif length(idx) == 1  && ndoms(A,2) == length(idx[1]) 
+		return permute(A,idx[1])
+	else
+		error("cannot split operator of type $(typeof(H.A[i]))") 
+	end
 end
+
+#get index of HCAT returns HCAT (or Operator)
+function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
+
+	unfolded = vcat([[i... ] for i in H.idxs]...) 
+	if length(idx) == length(unfolded)
+		return permute(H,idx)
+	else
+		idx2 = unfolded[idx]
+		new_H = ()
+		for i in eachindex(H.idxs)
+			z = Int[]
+			for id in idx2
+				if id in H.idxs[i]
+					if typeof(H.idxs[i]) <: Int 
+						new_H = (new_H...,H.A[i]) 
+						break
+					else
+						push!(z,id)
+					end
+				end
+			end
+			if !isempty(z)
+				if length(z) == length(H.idxs[i]) 
+					new_H = (new_H...,H.A[i][z]) 
+				else
+				error("cannot split operator of type $(typeof(H.A[i]))") 
+				end
+			end
+		end
+		return HCAT(new_H,H.mid)
+	end
+end
+
+
+#get index of HCAT returns HCAT (or Operator)
+function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
+
+	unfolded = vcat([[i... ] for i in H.idxs]...) 
+	if length(idx) == length(unfolded)
+		return permute(H,idx)
+	else
+		idx2 = unfolded[idx]
+		new_H = ()
+		for i in eachindex(H.idxs)
+			z = []
+			for id in idx2
+				if id in H.idxs[i]
+					if typeof(H.idxs[i]) <: Int 
+						new_H = (new_H...,H.A[i]) 
+						break
+					else
+						push!(z,id)
+					end
+				end
+			end
+			if !isempty(z)
+				if length(z) == length(H.idxs[i]) 
+					new_H = (new_H...,H.A[i][z]) 
+				else
+				error("cannot split operator of type $(typeof(H.A[i]))") 
+				end
+			end
+		end
+		return VCAT(new_H,H.mid)
+	end
+end
+
+# get index of scale
+getindex{T, L, S <:Scale{T,L}}(A::S,idx...) = Scale(A.coeff,A.coeff_conj,getindex(A.A,idx...))
 
 hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
 vcat(L::Vararg{AbstractOperator}) = VCAT(L...)

@@ -85,3 +85,14 @@ codomainType(L::Compose) = codomainType(L.A[end])
 is_linear(L::Compose) = all(is_linear.(L.A))
 is_diagonal(L::Compose) = all(is_diagonal.(L.A))
 is_invertible(L::Compose) = all(is_invertible.(L.A))
+
+# utils
+import Base: permute
+function permute{N,M,L,T}(C::Compose{N,M,L,T}, p::AbstractVector{Int})
+
+	i = findfirst( x -> ndoms(x,2) > 1 , C.A)
+	P = permute(C.A[i],p)
+	AA = (C.A[1:i-1]..., P, C.A[i+1:end]...)
+	Compose(AA,C.mid)
+
+end

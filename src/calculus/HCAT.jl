@@ -64,6 +64,28 @@ function HCAT(A::Vararg{AbstractOperator})
 	return HCAT(AA, (idxs...), mid, M)
 end
 
+function HCAT{N,C}(AA::NTuple{N,AbstractOperator}, mid::C) #regenerate indices but keep memory
+	if N == 1
+		return AA[1]
+	else
+		M = C <: AbstractArray ? 1 : length(mid)
+		K = 0
+		idxs = []
+		for i in eachindex(ndoms.(AA,2))
+			if ndoms(AA[i],2) == 1
+				K += 1
+				push!(idxs,K)
+			else
+				idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],2))...) )
+				for ii = 1:ndoms(AA[i],2)
+					K += 1
+				end
+			end
+		end
+		return HCAT(AA, (idxs...), mid, M)
+	end
+end
+
 HCAT(A::AbstractOperator) = A
 
 get_M{M}(H::HCAT{M}) = M

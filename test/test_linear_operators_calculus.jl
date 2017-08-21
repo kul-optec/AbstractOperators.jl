@@ -435,7 +435,7 @@ op = VCAT(DFT(Complex{Float64},10), Eye(Complex{Float64},10) )
 ##############################
 ######### test combin. #######
 ##############################
-#
+
 ## test Compose of HCAT
 m1, m2, m3, m4 = 4, 7, 3, 2
 A1 = randn(m3, m1)
@@ -450,6 +450,11 @@ x1, x2 = randn(m1), randn(m2)
 y1 = test_op(opC, (x1,x2), randn(m4), verb)
 
 y2 = A3*(A1*x1+A2*x2)
+
+@test vecnorm(y1-y2) < 1e-9
+
+opCp = permute(opC,[2,1])
+y1 = test_op(opCp, (x2,x1), randn(m4), verb)
 
 @test vecnorm(y1-y2) < 1e-9
 

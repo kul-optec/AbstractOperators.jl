@@ -65,6 +65,29 @@ function VCAT(A::Vararg{AbstractOperator})
 	return VCAT(AA, (idxs...), mid, M)
 end
 
+function VCAT{N,C}(AA::NTuple{N,AbstractOperator}, mid::C) #regenerate indices but keep memory
+	if N == 1
+		return AA[1]
+	else
+		M = C <: AbstractArray ? 1 : length(mid)
+		K = 0
+		idxs = []
+		for i in eachindex(ndoms.(AA,1))
+			if ndoms(AA[i],1) == 1
+				K += 1
+				push!(idxs,K)
+			else
+				idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],1))...) )
+				for ii = 1:ndoms(AA[i],1)
+					K += 1
+				end
+			end
+		end
+
+		return VCAT(AA, (idxs...), mid, M)
+	end
+end
+
 VCAT(A::AbstractOperator) = A
 
 get_M{M}(H::VCAT{M}) = M
