@@ -26,7 +26,11 @@ end
 #Jacobian of VCAT
 Jacobian{M,N,L,P,C,D}(V::VCAT{M,N,L,P,C},x::D) = VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.mid, M) 
 #Jacobian of Compose 
-function Jacobian{X<:Union{AbstractArray,NTuple}}(L::Compose, x::X)  
+function Jacobian{X<:AbstractArray}(L::Compose, x::X)  
+	Compose(Jacobian.(L.A,(x,L.mid...)),L.mid)
+end
+
+function Jacobian{N,X<:NTuple{N,AbstractArray}}(L::Compose, x::X)  
 	Compose(Jacobian.(L.A,(x,L.mid...)),L.mid)
 end
 #Jacobian of Reshape

@@ -161,6 +161,77 @@ end
 
 end
 
+@generated function A_mul_B_skipZeros!{M,N,L,P,C,DD}(y::C, H::HCAT{M,N,L,P,C}, b::DD)
+
+	ex = :()
+
+	if fieldtype(P,1) <: Int 
+		bb = :(b[H.idxs[1]])
+	else
+		bb = ""
+		for ii in eachindex(fieldnames(fieldtype(P,1)))
+			bb *= "b[H.idxs[1][$ii]],"
+		end
+		bb = parse(bb)
+	end
+	ex = :($ex; A_mul_B!(y,H.A[1],$bb))
+
+	for i = 2:N
+		if !(fieldtype(L,i) <: Zeros)
+
+			if fieldtype(P,i) <: Int 
+				bb = :(b[H.idxs[$i]])
+			else
+				bb = ""
+				for ii in eachindex(fieldnames(fieldtype(P,i)))
+					bb *= "b[H.idxs[$i][$ii]],"
+				end
+				bb = parse(bb)
+			end
+
+			ex = :($ex; A_mul_B!(H.mid,H.A[$i],$bb))
+			
+			if C <: AbstractArray
+				ex = :($ex; y .+= H.mid)
+			else
+				for ii = 1:M
+					ex = :($ex; y[$ii] .+= H.mid[$ii])
+				end
+			end
+		end
+
+	end
+	ex = :($ex; return y)
+	return ex
+
+end
+
+@generated function Ac_mul_B_skipZeros!{M,N,L,P,C,DD}(y::DD, H::HCAT{M,N,L,P,C}, b::C)
+
+	ex = :()
+
+	for i = 1:N
+
+		if !(fieldtype(L,i) <: Zeros)
+			if fieldtype(P,i) <: Int 
+				yy = :(y[H.idxs[$i]])
+			else
+				yy = ""
+				for ii in eachindex(fieldnames(fieldtype(P,i)))
+					yy *= "y[H.idxs[$i][$ii]],"
+				end
+				yy = parse(yy)
+			end
+			
+			ex = :($ex; Ac_mul_B!($yy,H.A[$i],b))
+		end
+
+	end
+	ex = :($ex; return y)
+	return ex
+
+end
+
 # Properties
 
 function size(H::HCAT) 

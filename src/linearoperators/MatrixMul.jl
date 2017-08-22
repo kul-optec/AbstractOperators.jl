@@ -28,7 +28,7 @@ end
 domainType{T, A}(L::MatrixMul{T, A}) = T
 codomainType{T, A}(L::MatrixMul{T, A}) = T
 
-fun_name(L::MatrixMul) = "(⋅)⋅b"
+fun_name(L::MatrixMul) = "(⋅)b"
 
 size(L::MatrixMul) = (L.n_row_in,),(L.n_row_in, length(L.b))
 

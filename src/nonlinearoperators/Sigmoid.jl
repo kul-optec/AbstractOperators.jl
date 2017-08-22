@@ -5,7 +5,7 @@ immutable Sigmoid{T,N,G<:Real} <: NonLinearOperator
 	gamma::G
 end
 
-function Sigmoid{N, G <: Real}(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G)  
+function Sigmoid{N, G <: Real}(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G=100)  
 	Sigmoid{DomainType,N,G}(DomainDim,gamma)
 end
 
@@ -13,12 +13,12 @@ function A_mul_B!{T,N,G}(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractAr
 	y .= (1.+exp.(-L.gamma.*x)).^(-1)
 end
 
-function A_mul_B!{T,N,G, A <: Sigmoid{T,N,G}}(y::AbstractArray{T,N}, L::Jacobian{A}, b::AbstractArray{T,N})
-	y .= (L.A.gamma.*(1.+exp.(-L.A.gamma*L.x)).^(-2).*exp.(-L.A.gamma.*L.x)).*b
-end
 
 function Ac_mul_B!{T,N,G, A<: Sigmoid{T,N,G}}(y::AbstractArray{T,N}, L::Jacobian{A}, b::AbstractArray{T,N})
-	y .= conj.(L.A.gamma.*(1.+exp.(-L.A.gamma*L.x)).^(-2).*exp.(-L.A.gamma.*L.x)).*b
+	y .= exp.(-L.A.gamma.*L.x)
+	y ./= (1.+y).^2 
+	y .= conj.(L.A.gamma.*y)
+	y .*= b
 end
 
 fun_name(L::Sigmoid) = "σ"

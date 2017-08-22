@@ -3,16 +3,11 @@
 
 n = 4
 x = randn(n)
-b = randn(n)
+r = randn(n)
 op = Sigmoid(Float64,(n,),2)
-println(op)
 
-@test_throws ErrorException op'
+y, grad = test_NLop(op,x,r,verb)
 
 Jfd = jacobian_fd(op,x)
-
-J = Jacobian(op,x)
-println(J)
-
-@test vecnorm(J*x-Jfd*x)<1e-6
+@test vecnorm(grad-Jfd'*r)<1e-6
 
