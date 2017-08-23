@@ -55,95 +55,107 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 
 	@test AbstractOperators.deepvecnorm(grad .- grad2) < 1e-8
 
+	grad3 = gradient_fd(A,Ax,x,y) #calculate gradient using finite differences
+
+	@test AbstractOperators.deepvecnorm(grad .- grad3) < 1e-4
+
 	return Ax, grad
 end
 
 ############# Finite Diff for Jacobian tests
 
-function jacobian_fd{A<:AbstractOperator}(op::A, x0::AbstractArray) # need to have vector input-output
+
+function gradient_fd{A<:AbstractOperator}(op::A, 
+					  y0::AbstractArray, 
+					  x0::AbstractArray, 
+					  r::AbstractArray) 
 	
-	y0 = op*x0
-	if size(y0,2) != 1 error("fd jacobian implemented only vectors input-output operators ") end
-	J =  zeros(size(op,1)[1],size(op,2)[1])
+	y = copy(y0)
+	J =  zeros(*(size(op,1)...),*(size(op,2)...))
 	h = sqrt(eps())
 	for i = 1:size(J,2)
 		x = copy(x0)
 		x[i] = x[i]+h
-		y = op*x
-		J[:,i] = (y-y0)/h
+		A_mul_B!(y,op,x)
+		J[:,i] .= ((y.-y0)./h)[:]
 	end
-	return J
+	return reshape(J'*r[:],size(op,2))
 end
 
-jacobian_fd{N,A<:DCAT{N}}(op::A, x0::NTuple{N,AbstractArray}) = jacobian_fd.(op.A,x0) 
-
-function jacobian_fd{M,N}(op::HCAT{M,N}, x0::NTuple{N,AbstractArray}) # need to have vector input-output
+function gradient_fd{N, A<:AbstractOperator}(op::A, 
+					     y0::AbstractArray, 
+					     x0::NTuple{N,AbstractArray},
+					     r::AbstractArray) 
 	
-	y0 = vcat((op*x0)...)
-	J =  zeros(length(y0),length(vcat(x0...)))
+
+	y = copy(y0)
+	grad = zeros.(x0)
+	J =  [ zeros(*(size(op,1)...),*(sz2...)) for sz2 in size(op,2)]
+
 	h = sqrt(eps())
-	c = 1
-	for k = 1:N
-		for i = 1:length(x0[k])
+	for ii in eachindex(J)
+		for i = 1:size(J[ii],2)
 			x = deepcopy(x0)
-			x[k][i] = x[k][i]+h
-			y = op*x
-			J[:,c] = (vcat(y...)-y0)/h
-			c += 1
+			x[ii][i] = x[ii][i]+h
+			A_mul_B!(y,op,x)
+			J[ii][:,i] .= ((y.-y0)./h)[:]
 		end
+		grad[ii] .= reshape(J[ii]'*r[:],size(op,2)[ii])
 	end
-	return J
+	return grad
 end
 
-#function jacobian_fd{N,M}(op::Hadamard{N}, x0::NTuple{M,AbstractArray}) # need to have vector input-output
-#	
-#	y0 = vcat((op*x0)...)
-#	J =  zeros(length(y0),length(vcat(x0...)))
-#	h = sqrt(eps())
-#	c = 1
-#	for k = 1:M
-#		for i = 1:length(x0[k])
-#			x = deepcopy(x0)
-#			x[k][i] = x[k][i]+h
-#			y = op*x
-#			J[:,c] = (vcat(y...)-y0)/h
-#			c += 1
-#		end
-#	end
-#	return J
-#end
-#
-function jacobian_fd(op::NonLinearCompose, x0) # need to have vector input-output
+function gradient_fd{N, A<:AbstractOperator}(op::A, 
+					     y0::NTuple{N,AbstractArray}, 
+					     x0::AbstractArray, 
+					     r::NTuple{N,AbstractArray}) 
 	
-	y0 = vcat((op*x0)...)
-	J =  zeros(length(y0),sum(length.(x0)) )
-	h = sqrt(eps())
-	c = 1
-	for k = 1:length(x0)
-		for i = 1:length(x0[k])
-			x = deepcopy(x0)
-			x[k][i] = x[k][i]+h
-			y = op*x
-			J[:,c] = (vcat(y...)-y0)/h
-			c += 1
-		end
-	end
-	return J
-end
+	y = zeros.(y0)
+	grad = zeros(x0)
+	J = [ zeros(*(sz1...),*(size(op,2)...)) for sz1 in size(op,1)]
 
-function jacobian_fd{A<:VCAT}(op::A, x0::AbstractArray) # need to have vector input-output
-	
-	y0 = vcat((op*x0)...)
-	J =  zeros(length(y0),length(vcat(x0...)))
 	h = sqrt(eps())
-	c = 1
-		
-	for i = 1:length(x0)
+	for i in eachindex(x0)
 		x = deepcopy(x0)
 		x[i] = x[i]+h
-		y = op*x
-		J[:,c] = (vcat(y...)-y0)/h
-		c += 1
+		A_mul_B!(y,op,x)
+		for ii in eachindex(J)
+			J[ii][:,i] .= ((y[ii].-y0[ii])./h)[:]
+		end
 	end
-	return J
+	for ii in eachindex(J)
+		grad .+= reshape(J[ii]'*r[ii],size(op,2))
+	end
+	return grad
 end
+
+function gradient_fd{N,M, A<:AbstractOperator}(op::A, 
+					       y0::NTuple{N,AbstractArray}, 
+					       x0::NTuple{M,AbstractArray}, 
+					       r::NTuple{N,AbstractArray}) 
+	grad = zeros.(x0)
+	y    = zeros.(y0)
+	J = [ zeros(*(size(op,1)[i]...),*(size(op,2)[ii]...)) for ii = 1:M, i = 1:N ]
+				
+
+	h = sqrt(eps())
+	for i = 1:M
+		for iii in eachindex(x[i])
+			x = deepcopy(x0)
+			x[i][iii] = x[i][iii]+h
+			A_mul_B!(y,op,x)
+
+			for ii = 1:N
+				J[i,ii][:,iii] .= ((y[ii].-y0[ii])./h)[:]
+			end
+		end
+	end
+
+	for ii = 1:N, i = 1:M
+		grad[i] .+= reshape(J[i,ii]'*r[ii],size(op,2)[i])
+	end
+	return grad
+
+	
+end
+

@@ -12,9 +12,6 @@ y, grad = test_NLop(op,x,r,verb)
 Y = 30*(A*x)
 @test vecnorm(Y-y) <1e-8
 
-Jfd = jacobian_fd(op,x)
-@test vecnorm(grad-Jfd'*r)<1e-6
-
 #testing DCAT
 n,m = 4,3
 x = (randn(n),randn(m))
@@ -29,10 +26,6 @@ Y = (A*x[1],B*x[2])
 @test vecnorm(Y[1]-y[1]) <1e-8
 @test vecnorm(Y[2]-y[2]) <1e-8
 
-Jfd = jacobian_fd(op,x)
-@test vecnorm(grad[1]-Jfd[1]'*r[1])<1e-6
-@test vecnorm(grad[2]-Jfd[2]'*r[2])<1e-6
-
 #testing HCAT
 n,m = 4,3
 x = (randn(n),randn(m))
@@ -45,11 +38,6 @@ y, grad = test_NLop(op,x,r,verb)
 
 Y = A*x[1]+B*x[2]
 @test vecnorm(Y-y) <1e-8
-
-Jfd = jacobian_fd(op,x)
-grad2 = Jfd'*r
-@test vecnorm(grad2[1:n] - grad[1])<1e-6
-@test vecnorm(grad2[n+1:end] - grad[2])<1e-6
 
 #testing VCAT
 n,m = 4,3
@@ -64,9 +52,6 @@ y, grad = test_NLop(op,x,r,verb)
 Y = (A*x,B*x)
 @test vecnorm(Y[1]-y[1]) <1e-8
 @test vecnorm(Y[2]-y[2]) <1e-8
-
-Jfd = jacobian_fd(op,x)
-@test vecnorm(Jfd'*vcat(r...)-grad)<1e-6
 
 #testing HCAT of VCAT
 n,m1,m2,m3 = 4,3,2,7
@@ -87,7 +72,7 @@ op3 = VCAT(MatrixOp(A3),MatrixOp(B3))
 op = HCAT(op1,op2,op3)
 
 y, grad = test_NLop(op,x,r,verb)
-#TODO finite diff test
+
 Y = (A1*x1+A2*x2+A3*x3,B1*x1+B2*x2+B3*x3)
 @test vecnorm(Y[1]-y[1]) <1e-8
 @test vecnorm(Y[2]-y[2]) <1e-8
@@ -112,8 +97,6 @@ op = VCAT(op1,op2)
 
 y, grad = test_NLop(op,x,r,verb)
 
-#TODO finite diff test
-
 Y = (A1*x1+B1*x2+C1*x3,A2*x1+B2*x2+C2*x3)
 @test vecnorm(Y[1]-y[1]) <1e-8
 @test vecnorm(Y[2]-y[2]) <1e-8
@@ -135,9 +118,6 @@ y, grad = test_NLop(op,x,r,verb)
 
 Y = A*(opB*(opC*x)) 
 @test vecnorm(Y-y) <1e-8
-
-Jfd = jacobian_fd(op,x)
-@test vecnorm(Jfd'*r-grad)<1e-6
 
 ## NN
 m,n,l = 4,7,5
@@ -163,9 +143,6 @@ y, grad = test_NLop(op,x,r,verb)
 Y = reshape(opS*x,2,2)
 @test vecnorm(Y-y) <1e-8
 
-Jfd = jacobian_fd(Sigmoid(Float64,(n,),2),x)
-@test vecnorm(grad[:]-Jfd*r)<1e-6
-
 ##testing Sum
 m = 5
 x = randn(m)
@@ -179,9 +156,6 @@ y, grad = test_NLop(op,x,r,verb)
 
 Y = A*x+opB*x
 @test vecnorm(Y-y) <1e-8
-
-Jfd = jacobian_fd(op,x)
-@test vecnorm(Jfd'*r-grad)<1e-6
 
 ##testing Hadamard
 #n,m,l = 4,5,6
@@ -347,11 +321,6 @@ y, grad = test_NLop(P,x,r,verb)
 Y = x[1]*(A*x[2])
 @test norm(Y - y) <= 1e-12
 
-Jfd = jacobian_fd(P,x)
-gradfd = Jfd'*r
-@test norm(grad[1]'-gradfd[1:m])<1e-6
-@test norm(grad[2]-gradfd[m+1:end])<1e-6
-
 #with matrices
 l,m1,m2,n1,n2 = 2,3,4,5,6
 x = (randn(m1,m2),randn(n1,n2))
@@ -365,6 +334,7 @@ y, grad = test_NLop(P,x,r,verb)
 Y = A*x[1]*B*x[2]
 @test norm(Y - y) <= 1e-12
 
+#further test on gradient with analytical formulas
 grad2 =  ((B*x[2])*(A'*r)')', B'*(A*x[1])'*r
 @test vecnorm(grad[1]-grad2[1]) <1e-7
 @test vecnorm(grad[2]-grad2[2]) <1e-7
@@ -384,6 +354,7 @@ y, grad = test_NLop(P,x,r,verb)
 Y = A*x[1]*B*x[2]*C*x[3]
 @test norm(Y - y) <= 1e-12
 
+#further test on gradient with analytical formulas
 grad2 =  A'*(r*(B*x[2]*C*x[3])'), B'*((r'*A*x[1])'*(C*x[3])'), C'*(B*x[2])'*(A*x[1])'*r
 @test vecnorm(grad[1]-grad2[1]) <1e-7
 @test vecnorm(grad[2]-grad2[2]) <1e-7
@@ -411,7 +382,6 @@ y, grad = test_NLop(L3,x,r,verb)
 Y = opS3*(x[1]*(opS2*(x[2]*(opS1*(x[3]*b+x[4])))))
 @test norm(Y - y) <= 1e-12
 
-#TODO test that this gradient is correct!
 
 
 

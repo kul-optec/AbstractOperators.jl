@@ -8,6 +8,11 @@ op = Sigmoid(Float64,(n,),2)
 
 y, grad = test_NLop(op,x,r,verb)
 
-Jfd = jacobian_fd(op,x)
-@test vecnorm(grad-Jfd'*r)<1e-6
+n,m,l = 4,5,6
+x = randn(n,m,l)
+r = randn(n,m,l)
+op = Sigmoid(Float64,(n,m,l),2)
+
+y, grad = test_NLop(op,x,r,verb)
+
 
