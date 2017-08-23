@@ -360,6 +360,10 @@ grad2 =  A'*(r*(B*x[2]*C*x[3])'), B'*((r'*A*x[1])'*(C*x[3])'), C'*(B*x[2])'*(A*x
 @test vecnorm(grad[2]-grad2[2]) <1e-7
 @test vecnorm(grad[3]-grad2[3]) <1e-7
 
+p = randperm(length(x))
+Pp = permute(P,p)
+y, grad = test_NLop(Pp,x[p],r,verb)
+
 ## DNN
 m,n,l = 4,7,5
 b = randn(l)
@@ -381,6 +385,10 @@ y, grad = test_NLop(L3,x,r,verb)
 
 Y = opS3*(x[1]*(opS2*(x[2]*(opS1*(x[3]*b+x[4])))))
 @test norm(Y - y) <= 1e-12
+
+p = randperm(length(x))
+L3p = permute(L3,p)
+y, grad = test_NLop(L3p,x[p],r,verb)
 
 
 
