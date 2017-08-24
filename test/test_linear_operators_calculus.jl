@@ -620,6 +620,36 @@ z = coeff*(A1*x1 + A2*x2)
 
 @test all(vecnorm.(y .- z) .<= 1e-12)
 
+# test DCAT of HCATs
+
+m1, m2, n1, n2, l1, l2, l3 = 2,3,4,5,6,7,8
+A1 = randn(m1, n1)
+A2 = randn(m1, n2)
+B1 = randn(m2, n1)
+B2 = randn(m2, n2)
+B3 = randn(m2, n2)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+opH1 = HCAT(opA1, opA2)
+opB1 = MatrixOp(B1)
+opB2 = MatrixOp(B2)
+opB3 = MatrixOp(B3)
+opH2 = HCAT(opB1, opB2, opB3)
+
+op = DCAT(opA1, opH2)
+x =  randn.(size(op,2))
+y0 = randn.(size(op,1))
+y = test_op(op, x, y0, verb)
+
+op = DCAT(opH1, opH2)
+x =  randn.(size(op,2))
+y0 = randn.(size(op,1))
+y = test_op(op, x, y0, verb)
+
+p = randperm(ndoms(op,2))
+y2 = op[p]*x[p]
+
+@test AbstractOperators.deepvecnorm(y .- y2) <= 1e-8
 
 # test Scale of Sum
 

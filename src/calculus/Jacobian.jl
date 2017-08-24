@@ -9,8 +9,18 @@ end
 Jacobian{T<:LinearOperator,X<:Union{AbstractArray,NTuple}}(L::T,x::X) = L
 #Jacobian of Scale
 Jacobian{T,L,T2<:Scale{T,L}}(S::T2,x::AbstractArray) = Scale(S.coeff,Jacobian(S.A,x)) 
-#Jacobian of DCAT
-Jacobian{N,C,D}(L::DCAT{N,C,D},x::D) = DCAT(Jacobian.(L.A,x)...) 
+##Jacobian of DCAT
+function Jacobian{N,L,P1,P2}(H::DCAT{N,L,P1,P2},x)  
+	A = ()
+	c = 0
+	for i = 1:N
+		A = length(H.idxD[i]) == 1 ?
+		(A...,jacobian(H.A[i],x[c+1])) :
+		(A...,jacobian(H.A[i],x[c+1:c+length(H.idxD[i])])) 
+		c += length(H.idxD[i])
+	end
+	DCAT(A,H.idxD,H.idxC)
+end
 #Jacobian of HCAT
 function Jacobian{M,N,L,P,C,D}(H::HCAT{M,N,L,P,C},x::D)  
 	A = ()

@@ -112,7 +112,7 @@ HCAT(A::AbstractOperator) = A
 			bb = :(b[H.idxs[$i]])
 		else
 		# staked operator 
-		# build A_mul_B!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[1][2]] ...  ))
+		# build A_mul_B!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
 			bb = ""
 			for ii in eachindex(fieldnames(fieldtype(P,i)))
 				bb *= "b[H.idxs[$i][$ii]],"
@@ -149,7 +149,7 @@ end
 			yy = :(y[H.idxs[$i]])
 		else
 		# staked operator 
-		# build Ac_mul_B!(( y[H.idxs[i][1]], y[H.idxs[1][2]] ...  ), H.A[i], b)
+		# build Ac_mul_B!(( y[H.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i], b)
 			yy = ""
 			for ii in eachindex(fieldnames(fieldtype(P,i)))
 				yy *= "y[H.idxs[$i][$ii]],"
