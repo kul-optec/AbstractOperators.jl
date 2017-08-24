@@ -19,7 +19,7 @@ Remember to `Pkg.update()` to keep the package up to date.
 
 ## Usage
 
-With `using AbstractOperators` the package imports several methods like multiplication `*`  and transposition `'` (and their in-place version `A_mul_B!`).
+With `using AbstractOperators` the package imports several methods like multiplication `*`  and transposition `'` (and their in-place versions `A_mul_B!`, `Ac_mul_B!`).
 
 For example, one can create a 2-D Discrete Fourier Transform as follows:
 
@@ -59,7 +59,7 @@ It is also possible to combine multiple `AbstractOperators` using different calc
 
 For example `AbstractOperators` can be concatenated horizontally: 
 
-```
+```julia
 julia> B = Eye(Complex{Float64},(3,4))
 I  ℂ^(3, 4) -> ℂ^(3, 4)
 
@@ -69,7 +69,7 @@ julia> H = [A B]
 
 Evaluation of `AbstractOperators` that have multiple domains is performed using `Tuple`s of `AbstractArray`s, for example: 
 
-```
+```julia
 julia> H*(x, complex(x))
 3×4 Array{Complex{Float64},2}:
  -16.3603+0.0im      52.4946-8.69342im  -129.014+0.0im      44.6712+8.69342im
