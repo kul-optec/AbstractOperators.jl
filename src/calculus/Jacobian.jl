@@ -21,22 +21,22 @@ function Jacobian{M,N,L,P,C,D}(H::HCAT{M,N,L,P,C},x::D)
 		(A...,jacobian(H.A[i],x[c+1:c+length(H.idxs[i])])) 
 		c += length(H.idxs[i])
 	end
-	HCAT(A,H.idxs,H.mid,M)
+	HCAT(A,H.idxs,H.buf,M)
 end
 #Jacobian of VCAT
-Jacobian{M,N,L,P,C,D}(V::VCAT{M,N,L,P,C},x::D) = VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.mid, M) 
+Jacobian{M,N,L,P,C,D}(V::VCAT{M,N,L,P,C},x::D) = VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.buf, M) 
 #Jacobian of Compose 
 function Jacobian{X<:AbstractArray}(L::Compose, x::X)  
-	Compose(Jacobian.(L.A,(x,L.mid...)),L.mid)
+	Compose(Jacobian.(L.A,(x,L.buf...)),L.buf)
 end
 
 function Jacobian{N,X<:NTuple{N,AbstractArray}}(L::Compose, x::X)  
-	Compose(Jacobian.(L.A,(x,L.mid...)),L.mid)
+	Compose(Jacobian.(L.A,(x,L.buf...)),L.buf)
 end
 #Jacobian of Reshape
 Jacobian{N,L}(R::Reshape{N,L},x::AbstractArray) = Reshape(Jacobian(R.A,x),R.dim_out) 
 #Jacobian of Sum
-Jacobian{M,N,K,C,D}(S::Sum{M,N,K,C,D},x::D) = Sum(([Jacobian(a,x) for a in S.A]...),S.midC,S.midD,M,N)
+Jacobian{M,N,K,C,D}(S::Sum{M,N,K,C,D},x::D) = Sum(([Jacobian(a,x) for a in S.A]...),S.bufC,S.bufD,M,N)
 
 # Properties
 

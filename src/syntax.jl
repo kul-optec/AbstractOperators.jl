@@ -58,7 +58,7 @@ function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,I
 				end
 			end
 		end
-		return HCAT(new_H,H.mid)
+		return HCAT(new_H,H.buf)
 	end
 end
 
@@ -82,7 +82,7 @@ function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,I
 				end
 			end
 		end
-		return VCAT(new_H,H.mid)
+		return VCAT(new_H,H.buf)
 	end
 end
 

@@ -10,15 +10,15 @@ immutable NonLinearCompose{N,
 			   } <: NonLinearOperator
 	A::L1
 	B::L2
-	mid::C
-	midx::D
-	function NonLinearCompose(A::L1, B::L2, mid::C, midx::D) where {L1,L2,C,D}
+	buf::C
+	bufx::D
+	function NonLinearCompose(A::L1, B::L2, buf::C, bufx::D) where {L1,L2,C,D}
 		(ndoms(A,1) > 1 || ndoms(B,1) > 1) ||
 		(ndims(A,1) > 2 || ndims(B,1) > 2) ||
 		(size(A,1)[2] != size(B,1)[1]) && 
 		throw(DimensionMismatch("cannot compose operators"))
-		N = length(midx)
-		new{N,L1,L2,C,D}(A,B,mid,midx)
+		N = length(bufx)
+		new{N,L1,L2,C,D}(A,B,buf,bufx)
 	end
 end
 
@@ -30,10 +30,10 @@ immutable NonLinearComposeJac{N,
 			      } <: LinearOperator
 	A::L1
 	B::L2
-	mid::C
-	midx::D
-	function NonLinearComposeJac{N}(A::L1, B::L2, mid::C, midx::D) where {N,L1,L2,C,D}
-		new{N,L1,L2,C,D}(A,B,mid,midx)
+	buf::C
+	bufx::D
+	function NonLinearComposeJac{N}(A::L1, B::L2, buf::C, bufx::D) where {N,L1,L2,C,D}
+		new{N,L1,L2,C,D}(A,B,buf,bufx)
 	end
 end
 
@@ -43,10 +43,10 @@ function NonLinearCompose(L1::AbstractOperator,L2::AbstractOperator)
 	A = HCAT(L1, Zeros( domainType(L2), size(L2,2), codomainType(L1), size(L1,1) ))
 	B = HCAT(Zeros( domainType(L1), size(L1,2), codomainType(L2), size(L2,1) ), L2 )
 
-	mid  = zeros(codomainType(A),size(A,1)),zeros(codomainType(B),size(B,1))
-	midx = zeros(codomainType(L1),size(L1,1)), zeros(codomainType(L2),size(L2,1))
+	buf  = zeros(codomainType(A),size(A,1)),zeros(codomainType(B),size(B,1))
+	bufx = zeros(codomainType(L1),size(L1,1)), zeros(codomainType(L2),size(L2,1))
 
-	NonLinearCompose(A,B,mid,midx)
+	NonLinearCompose(A,B,buf,bufx)
 end
 
 # Jacobian
@@ -54,23 +54,23 @@ function Jacobian{M,N,L,C,
 		  D  <: NTuple{N,Union{AbstractArray,Tuple}},
 		  DD <: NTuple{M,AbstractArray},
 		  }(P::NonLinearCompose{N,L,C,D},x::DD)  
-	NonLinearComposeJac{N}(Jacobian(P.A,x),Jacobian(P.B,x),P.mid,P.midx)
+	NonLinearComposeJac{N}(Jacobian(P.A,x),Jacobian(P.B,x),P.buf,P.bufx)
 end
 
 # Mappings
 function A_mul_B!{N,L,C,D}(y, P::NonLinearCompose{N,L,C,D}, b)
-	A_mul_B_skipZeros!(P.mid[1],P.A,b)
-	A_mul_B_skipZeros!(P.mid[2],P.B,b)
-	A_mul_B!(y,P.mid[1],P.mid[2])
+	A_mul_B_skipZeros!(P.buf[1],P.A,b)
+	A_mul_B_skipZeros!(P.buf[2],P.B,b)
+	A_mul_B!(y,P.buf[1],P.buf[2])
 end
 
 function Ac_mul_B!{N,L,C,D}(y, P::NonLinearComposeJac{N,L,C,D}, b)
 
-	A_mul_Bc!(P.midx[1],b,P.mid[2])
-	Ac_mul_B_skipZeros!(y,P.A,P.midx[1])
+	A_mul_Bc!(P.bufx[1],b,P.buf[2])
+	Ac_mul_B_skipZeros!(y,P.A,P.bufx[1])
 
-	Ac_mul_B!(P.midx[2],P.mid[1],b)
-	Ac_mul_B_skipZeros!(y,P.B,P.midx[2])
+	Ac_mul_B!(P.bufx[2],P.buf[1],b)
+	Ac_mul_B_skipZeros!(y,P.B,P.bufx[2])
 
 end
 
@@ -100,7 +100,7 @@ codomainType(L::NonLinearComposeJac) = codomainType(L.A)
 import Base: permute
 
 function permute{N,L,C,D}(P::NonLinearCompose{N,L,C,D}, p::AbstractVector{Int})
-	NonLinearCompose(permute(P.A,p),permute(P.B,p),P.mid,P.midx)
+	NonLinearCompose(permute(P.A,p),permute(P.B,p),P.buf,P.bufx)
 end
 
 

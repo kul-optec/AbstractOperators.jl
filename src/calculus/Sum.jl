@@ -5,13 +5,13 @@ immutable Sum{M, N, K,
 	      D <: Union{NTuple{N,AbstractArray}, AbstractArray},
 	      L<:NTuple{K,AbstractOperator}} <: AbstractOperator
 	A::L
-	midC::C
-	midD::D
+	bufC::C
+	bufD::D
 end
 
 # Constructors
 
-function Sum{C, D, K, L <: NTuple{K,AbstractOperator}}(A::L, midC::C, midD::D, M::Int, N::Int)
+function Sum{C, D, K, L <: NTuple{K,AbstractOperator}}(A::L, bufC::C, bufD::D, M::Int, N::Int)
 	if any([size(a) != size(A[1]) for a in A])
 		throw(DimensionMismatch("cannot sum operator of different sizes"))
 	end
@@ -19,7 +19,7 @@ function Sum{C, D, K, L <: NTuple{K,AbstractOperator}}(A::L, midC::C, midD::D, M
 	   any([codomainType(A[1]) != codomainType(a) for a in A])
 		throw(DomainError())
 	end
-	Sum{M, N, K, C, D, L}(A, midC, midD)
+	Sum{M, N, K, C, D, L}(A, bufC, bufD)
 end
 
 Sum(A::AbstractOperator) = A
@@ -27,18 +27,18 @@ Sum(A::AbstractOperator) = A
 function Sum(A::Vararg{AbstractOperator})
 	s = size(A[1],1)
 	t = codomainType(A[1])
-	midC,M  = create_mid(t,s)
+	(bufC, M) = eltype(s) <: Int ? (zeros(t,s), 1) : (zeros.(t,s), length(s))
 
 	s = size(A[1],2)
 	t = domainType(A[1])
-	midD,N  = create_mid(t,s)
+	(bufD, N) = eltype(s) <: Int ? (zeros(t,s), 1) : (zeros.(t,s), length(s))
 
-	return Sum(A, midC, midD, M, N)
+	return Sum(A, bufC, bufD, M, N)
 end
 
 # special cases
 Sum{M,N,K,C,D}(L1::AbstractOperator, L2::Sum{M,N,K,C,D}           ) =
-Sum((L1,L2.A...),L2.midC,L2.midD, M, N)
+Sum((L1,L2.A...),L2.bufC,L2.bufD, M, N)
 
 # Mappings
 
@@ -47,13 +47,13 @@ Sum((L1,L2.A...),L2.midC,L2.midD, M, N)
 	for i = 2:K
 		ex = quote
 			$ex
-			A_mul_B!(S.midC,S.A[$i],b)
+			A_mul_B!(S.bufC,S.A[$i],b)
 		end
 		if C <: AbstractArray
-			ex = :($ex; y .+= S.midC)
+			ex = :($ex; y .+= S.bufC)
 		else
 			for ii = 1:M
-				ex = :($ex; y[$ii] .+= S.midC[$ii])
+				ex = :($ex; y[$ii] .+= S.bufC[$ii])
 			end
 		end
 	end
@@ -68,13 +68,13 @@ end
 	for i = 2:K
 		ex = quote
 			$ex
-			Ac_mul_B!(S.midD,S.A[$i],b)
+			Ac_mul_B!(S.bufD,S.A[$i],b)
 		end
 		if D <: AbstractArray
-			ex = :($ex; y .+= S.midD)
+			ex = :($ex; y .+= S.bufD)
 		else
 			for ii = 1:N
-				ex = :($ex; y[$ii] .+= S.midD[$ii])
+				ex = :($ex; y[$ii] .+= S.bufD[$ii])
 			end
 		end
 	end
