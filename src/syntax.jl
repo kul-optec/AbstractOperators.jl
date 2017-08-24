@@ -28,39 +28,66 @@ Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codo
 Base.broadcast(::typeof(*), d::AbstractArray, L::Scale)          = DiagOp(L.coeff*d)*L.A
 
 # getindex
-# slice only output 
 function getindex(A::AbstractOperator,idx...) 
-	Gout = GetIndex(codomainType(A),size(A,1),idx)
-	return Gout*A
+	if ndoms(A,2) == 1
+		Gout = GetIndex(codomainType(A),size(A,1),idx)
+		return Gout*A
+	elseif length(idx) == 1  && ndoms(A,2) == length(idx[1]) 
+		return permute(A,idx[1])
+	else
+		error("cannot split operator of type $(typeof(H.A[i]))") 
+	end
 end
 
-# commented for the moment, maybe doesn't make sense and prone to errors
-## slice output and input e.g. G[idx_out...][idx_in...] 
-#function getindex{L<:Compose}(A::L,idx...) 
-#	if typeof(A.A[end]) <: GetIndex
-#		Gin = GetIndex(codomainType(A.A[1]),size(A.A[1],2),idx)
-#		return A*Gin'
-#	else
-#		Gout = GetIndex(codomainType(A),size(A,1),idx)
-#		return Gout*A
-#	end
-#end
+#get index of HCAT returns HCAT (or Operator)
+function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
 
-#slicing an HCAT gives an HCAT
-function getindex{M,N,L<:HCAT{M,N}}(A::L,idx) 
-	HCAT(A.A[idx],A.mid,M)
+	unfolded = vcat([[i... ] for i in H.idxs]...) 
+	if length(idx) == length(unfolded)
+		return permute(H,idx)
+	else
+		new_H = ()
+		for i in idx
+			for ii in eachindex(H.idxs)
+				if i in H.idxs[ii]
+					if typeof(H.idxs[ii]) <: Int
+						new_H = (new_H...,H.A[ii]) 
+					else
+					error("cannot split operator") 
+					end
+				end
+			end
+		end
+		return HCAT(new_H,H.buf)
+	end
 end
-#or the operator at idx
-getindex{L<:HCAT}(A::L,idx::Int) = A.A[idx]
 
-#slicing an VCAT gives a VCAT
-function getindex{M,N,L<:VCAT{M,N}}(A::L,idx) 
-	VCAT(A.A[idx],A.mid,N)
+
+#get index of HCAT returns HCAT (or Operator)
+function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
+
+	unfolded = vcat([[i... ] for i in H.idxs]...) 
+	if length(idx) == length(unfolded)
+		return permute(H,idx)
+	else
+		new_H = ()
+		for i in idx
+			for ii in eachindex(H.idxs)
+				if i in H.idxs[ii]
+					if typeof(H.idxs[ii]) <: Int
+						new_H = (new_H...,H.A[ii]) 
+					else
+					error("cannot split operator") 
+					end
+				end
+			end
+		end
+		return VCAT(new_H,H.buf)
+	end
 end
-#or the operator at idx
-getindex{L<:VCAT}(A::L,idx::Int) = A.A[idx]
 
-#TODO slicing DCAT
+# get index of scale
+getindex{T, L, S <:Scale{T,L}}(A::S,idx...) = Scale(A.coeff,A.coeff_conj,getindex(A.A,idx...))
 
 hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
 vcat(L::Vararg{AbstractOperator}) = VCAT(L...)

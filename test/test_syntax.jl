@@ -165,28 +165,15 @@ y1 = ops*x3
 y2 = (opV*x3)[1:4]
 @test vecnorm(y1-y2) < 1e-9
 
-#commented for the moment
-#opF = DCT(n,m,l)
-#x3 = randn(n,m,l)
-#in_slice = (1:n-1,2:m)
-#out_slice = (1:n,)
-#ops = opF[in_slice...][out_slice...]
-#y1 = ops*(x3[1:n])
-#x4 = zeros(x3)
-#x4[1:n] = x3[1:n]
-#y2 = dct(x4)[1:n-1,2:m]
-#@test vecnorm(y1-y2) < 1e-9
-
 ops = (opB*opA)[1:l-1]
 y1 = ops*x1
 y2 = (B*A*x1)[1:l-1]
 @test norm(y1-y2) < 1e-9
 
-#commented for the moment
-#ops = (opB*opA)[1:l-1][2:m]
-#y1 = ops*x1[2:m]
-#y2 = (B*A*[0.;x1[2:m]])[1:l-1]
-#@test norm(y1-y2) < 1e-9
+ops = (10.0*opA)[1:n-1]
+y1 = ops*x1
+y2 = (10*A*x1)[1:n-1]
+@test norm(y1-y2) < 1e-9
 
 #slicing HCAT
 
@@ -209,6 +196,32 @@ opH3 = opH[3]
 y1 = opH3*x3
 y2 = C*x3
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+opHperm = opH[[3,1,2]]
+@test norm(opH*(x1,x2,x3) - opHperm*(x3,x1,x2)) <1e-12
+
+@test opHperm[1] == opC
+@test opHperm[2] == opA
+@test opHperm[3] == opB
+
+opHperm = opH[[3,1]]
+@test norm(opC*x3+opA*x1 - opHperm*(x3,x1)) <1e-12
+
+
+m4 = 9
+x4 = randn(m4)
+D = randn(n,n)
+E = randn(n,m4)
+opD = MatrixOp(D)
+opE = MatrixOp(E)
+opCH = opD*opH 
+
+opHCH = HCAT(opCH,opE)
+
+opH4 = opHCH[4]
+@test opH4 == opE
+@test_throws ErrorException  opHCH[1] 
+@test_throws ErrorException  opHCH[1:2]  
 
 #slicing VCAT
 

@@ -102,9 +102,9 @@ y2 = (A1*x1, A2*x2, A3*x3)
 @test is_full_row_rank(opD)    == false
 @test is_full_column_rank(opD) == false
 
-############################
-####### test HCAT    #######
-############################
+########################
+### test HCAT    #######
+########################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -142,7 +142,8 @@ y2 = A1*x1 + A2*x2 + A3*x3 + A2*x2 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
 opHH = HCAT(opH, opH, opA3)
-y1 = test_op(opHH, (x1, x2, x3, x1, x2, x3, x3), randn(m), verb)
+x = (x1, x2, x3, x1, x2, x3, x3)
+y1 = test_op(opHH, x, randn(m), verb)
 y2 = A1*x1 + A2*x2 + A3*x3 + A1*x1 + A2*x2 + A3*x3 + A3*x3
 @test vecnorm(y1-y2) <= 1e-12
 
@@ -150,6 +151,21 @@ opA3 = MatrixOp(randn(n1,n1))
 @test_throws Exception HCAT(opA1,opA2,opA3)
 opF = DFT(Complex{Float64},(m,))
 @test_throws Exception HCAT(opA1,opF,opA2)
+
+# test utilities
+
+# permutation
+p = randperm(ndoms(opHH,2))
+opHP = permute(opHH,p)
+
+xp = x[p] 
+
+y1 = test_op(opHP, xp, randn(m), verb)
+
+pp = randperm(ndoms(opHH,2))
+opHPP = permute(opHH,pp)
+xpp = x[pp] 
+y1 = test_op(opHPP, xpp, randn(m), verb)
 
 #properties
 m, n1, n2, n3 = 4, 7, 5, 6
@@ -416,9 +432,9 @@ op = VCAT(DFT(Complex{Float64},10), Eye(Complex{Float64},10) )
 @test is_AcA_diagonal(op)     == true
 @test diag_AcA(op) == 11
 
-#############################
-######## test combin. #######
-#############################
+##############################
+######### test combin. #######
+##############################
 
 ## test Compose of HCAT
 m1, m2, m3, m4 = 4, 7, 3, 2
@@ -434,6 +450,36 @@ x1, x2 = randn(m1), randn(m2)
 y1 = test_op(opC, (x1,x2), randn(m4), verb)
 
 y2 = A3*(A1*x1+A2*x2)
+
+@test vecnorm(y1-y2) < 1e-9
+
+opCp = permute(opC,[2,1])
+y1 = test_op(opCp, (x2,x1), randn(m4), verb)
+
+@test vecnorm(y1-y2) < 1e-9
+
+## test HCAT of Compose of HCAT
+m5 = 10
+A4 = randn(m4,m5)
+x3 = randn(m5)
+opHC = HCAT(opC,MatrixOp(A4))
+x = (x1,x2,x3)
+y1 = test_op(opHC, x, randn(m4), verb)
+
+@test vecnorm(y1-(y2+A4*x3)) < 1e-9
+
+p = randperm(ndoms(opHC,2))
+opHP = permute(opHC,p)
+
+xp = x[p] 
+
+y1 = test_op(opHP, xp, randn(m4), verb)
+
+pp = randperm(ndoms(opHC,2))
+opHPP = permute(opHC,pp)
+xpp = x[pp] 
+y1 = test_op(opHPP, xpp, randn(m4), verb)
+
 
 # test VCAT of HCAT's
 m1, m2, n1 = 4, 7, 3
@@ -573,6 +619,7 @@ y = test_op(opS, (x1, x2), randn(m), verb)
 z = coeff*(A1*x1 + A2*x2)
 
 @test all(vecnorm.(y .- z) .<= 1e-12)
+
 
 # test Scale of Sum
 
