@@ -4,84 +4,8 @@ Abstract operators package for Julia.
 
 ## Description
 
-Abstract operators are linear mappings like matrices. Unlike matrices however, abstract operators apply the linear mappings with specific algorithms that minimize the memory requirements while maximizing their efficiency.
-
-> #### Example I: Convolution
->
-> Convolution operator can be represented by a [Toeplitz matrix](https://en.wikipedia.org/wiki/Toeplitz_matrix):
-> ```julia
-> julia> Nh,Nx = 1000,2000; #filter and input taps
->
-> julia> h = randn(Nh);   #impulse response
->
-> julia> x = randn(Nx);   #input signal
->
-> julia> T = hcat([
->            [zeros(i);h;zeros(Nx-1-i)] for i = 0:Nx-1
->                 ]...); #Toeplitz matrix
->
-> julia> y = T*x; #convolution
-> ```
->  However, it is well known the convolution operation can be efficiently performed using `fft` or `fir`/`iir` filters.
-> Abstract operators exploits such operators to avoid unnecessary memory allocations and perform convolution efficiently.
-> ```julia
-> julia> using AbstractOperators
->
-> julia> A = Conv(x,h) # Abstract convolution
-> ★ ℝ^200 -> ℝ^299
->
-> julia> y = A*x
-> ```
-> While [matrix multiplication has `O(Nh*Nx)` complexity](https://en.wikipedia.org/wiki/Computational_complexity_of_mathematical_operations#Matrix_algebra), `Conv` utilizes `fft` based algorithm with `O(Nx log Nx)` with evident speed-ups:
-> ```julia
->julia> @elapsed A*x
-> 0.000819312
-> 
-> julia> @elapsed T*x
-> 0.002508488
-> ```
-> and reduced memory requirements:
->```julia
-> julia> sizeof(A)+sizeof(h)
-> 8016
->
-> julia> sizeof(T)
-> 47984000
->```
-
-These are particularly useful in iterative (optimization) algorithms where the direct and adjoint application of linear mappings are needed at every iteration.
-
-> #### Example II: Deconvolution
->
-> Deconvolution seeks to find the input signal `x` given the impulse response `h` and the output `y` and can be formulated as the following optimization problem:
-> 
-> > x* = argmin_x | T*x - y |_2^2               (1)
->
-> This is the well-known Least Squares (LS) problem and can be solved using a pseudo-inverse:
->
-> ```julia
-> julia> x0 = T\y;
-> ```
->
-> When the size of `T` and `y` are large, solving the LS problem in such a manner can become intractable. 
-> A simple alternative is the Gradient Descent algorithm which uses the gradient of the cost function of (1) and solves the optimization problem iteratively:
-> 
-> > x^k+1 = x^k - gamma* T^t ( T*x^k - y )      (2)
-> 
-> A _trivial_ (sub-optimal choice of step-size `gamma` and inefficient memory management) implementation of the Gradient Descent in Julia is the following: 
->
-> ```julia
-> julia> x0, gamma = zeros(x), 1e-4; # initialization, step-size gamma
-> 
-> julia> for i = 1:4000 x0 =  x0 -1e-4 * A'*(A*x0-y) end;
->
-> ```
->
- 
-In this example it can be seen that the transpose of `A` can be performed using the same syntax of matrices. Nevertheless the transpose still uses a specific efficient algorithm (in this case the transpose of convolution is cross-correlation) with minimal memory requirements. 
-
-Additionally, abstract operators can be applied using _in-place_ functions as `A_mul_B` and `Ac_mul_B`. 
-
+Abstract operators generalize matrices by including linear mappings of arrays of any dimensions and nonlinear functions. Unlike matrices however, abstract operators apply the linear mappings with specific algorithms that minimize the memory requirements while maximizing their efficiency. 
+This is particularly useful in iterative algorithms and in first order large-scale optimization algorithms.
 
 ## Installation
 
@@ -92,3 +16,70 @@ Pkg.clone("https://github.com/kul-forbes/AbstractOperators.jl")
 ```
 
 Remember to `Pkg.update()` to keep the package up to date.
+
+## Usage
+
+With `using AbstractOperators` the package imports several methods like multiplication `*`  and transposition `'` (and their in-place version `A_mul_B!`).
+
+For example, one can create a 2-D Discrete Fourier Transform as follows:
+
+```julia
+julia> A = DFT(3,4)
+ℱ  ℝ^(3, 4) -> ℂ^(3, 4)
+```
+
+This linear transformation can be evaluated with the same syntax used for matrices: 
+
+```julia
+julia> x = randn(3,4); #input matrix
+
+julia> y = A*x
+3×4 Array{Complex{Float64},2}:
+  -1.11412+0.0im       3.58654-0.724452im  -9.10125+0.0im       3.58654+0.724452im
+ -0.905575+1.98446im  0.441199-0.913338im  0.315788+3.29666im  0.174273+0.318065im
+ -0.905575-1.98446im  0.174273-0.318065im  0.315788-3.29666im  0.441199+0.913338im
+
+julia> A_mul_B!(y,A,x) == A*x #in-place evaluation
+true
+
+julia> all(A'*y - *(size(x)...)*x .< 1e-12) 
+true
+
+julia> Ac_mul_B!(x,A,y) #in-place evaluation
+3×4 Array{Float64,2}:
+  -2.99091   9.45611  -19.799     1.6327 
+ -11.1841   11.2365   -26.3614   11.7261 
+   5.04815   7.61552   -6.00498   6.25586
+
+```
+
+Notice that inputs and outputs are not necessarily `AbstractVectors`.
+
+It is also possible to combine multiple `AbstractOperators` using different calculus rules. 
+
+For example `AbstractOperators` can be concatenated horizontally: 
+
+```
+julia> B = Eye(Complex{Float64},(3,4))
+I  ℂ^(3, 4) -> ℂ^(3, 4)
+
+julia> H = [A B]
+[ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -> ℂ^(3, 4)
+```
+
+Evaluation of `AbstractOperators` that have multiple domains is performed using `Tuple`s of `AbstractArray`s, for example: 
+
+```
+julia> H*(x, complex(x))
+3×4 Array{Complex{Float64},2}:
+ -16.3603+0.0im      52.4946-8.69342im  -129.014+0.0im      44.6712+8.69342im
+  -22.051+23.8135im  16.5309-10.9601im  -22.5719+39.5599im  13.8174+3.81678im
+ -5.81874-23.8135im  9.70679-3.81678im  -2.21552-39.5599im  11.5502+10.9601im
+```
+
+## Credits
+
+AbstractOperators.jl is developed by
+[Niccolò Antonello](https://nantonel.github.io)
+and [Lorenzo Stella](https://lostella.github.io)
+at [KU Leuven, ESAT/Stadius](https://www.esat.kuleuven.be/stadius/),
