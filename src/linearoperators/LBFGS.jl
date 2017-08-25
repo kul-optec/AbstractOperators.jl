@@ -2,7 +2,27 @@ export LBFGS, update!
 
 # TODO make Ac_mul_B!
 # Edit: Ac_mul_B! is not really needed for this operator 
-# Edit2: you nver known! anyway for completeness would be cool to have it!
+# Edit2: you never known! anyway for completeness would be cool to have it!
+"""
+`LBFGS(T::Type, dim::Tuple, Memory::Int)`
+
+`LBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,Tuple}, M::Int)`
+
+`LBFGS(x::AbstractArray, Memory::Int)`
+
+Construct a Limited-Memory BFGS `LinearOperator` with memory `M`. The memory of `LBFGS` can be updated using the function `update!`, where the current iteration variable and gradient (`x`, `grad`) and the previous ones (`x_prev` and `grad_prev`) are needed: 
+
+```
+julia> L = LBFGS(Float64,(4,),5)
+LBFGS  ℝ^4 -> ℝ^4
+
+julia> update!(L,x,x_prev,grad,grad_prev); #update memory
+
+julia> d = L*x;                            #compute new direction
+
+```
+
+"""
 
 type LBFGS{M, N, R <: Real, T <: Union{R, Complex{R}}, A<:AbstractArray{T,N}} <: LinearOperator
 	currmem::Int
@@ -30,6 +50,13 @@ function LBFGS{N}(T::Type, dim::NTuple{N,Int}, M::Int)
 end
 
 LBFGS(x::AbstractArray,M::Int) = LBFGS(eltype(x),size(x),M)
+
+"""
+`update!(L::LBFGS, x, x_prex, grad, grad_prev)`
+
+See `LBFGS` documentation.
+
+"""
 
 function update!{M,N,R,T,A}(
 			L::LBFGS{M,N,R,T,A},

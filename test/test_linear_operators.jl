@@ -185,7 +185,6 @@ y2 = d.*x1
 
 # other constructors
 op = DiagOp(d)
-op = DiagOp(Float64, d)
 
 #properties
 @test is_linear(op)           == true
@@ -273,7 +272,7 @@ Filt(x1, b)
 @test is_full_row_rank(op)    == true
 @test is_full_column_rank(op) == true
 
-######## FiniteDiff ############
+####### FiniteDiff ############
 n= 10
 op = FiniteDiff(Float64,(n,))
 x1 = randn(n)
@@ -319,7 +318,20 @@ y1 = test_op(op, x1, randn(n,m,l-1), verb)
 y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
 @test all(vecnorm.(y1) .<= 1e-12)
 
-@test_throws ErrorException op = FiniteDiff(Float64,(n,m,l,3))
+n,m,l,i = 5,6,2,3
+op = FiniteDiff(Float64,(n,m,l,i),1)
+x1 = randn(n,m,l,i)
+y1 = test_op(op, x1, randn(n-1,m,l,i), verb)
+y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l*i),n,m,l,i)
+@test all(vecnorm.(y1 .- 1/(n-1)) .<= 1e-12)
+
+n,m,l,i = 5,6,2,3
+op = FiniteDiff(Float64,(n,m,l,i),4)
+x1 = randn(n,m,l,i)
+y1 = test_op(op, x1, randn(n,m,l,i-1), verb)
+y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l*i),n,m,l,i)
+@test vecnorm(y1) <= 1e-12
+
 @test_throws ErrorException op = FiniteDiff(Float64,(n,m,l), 4)
 
 ## other constructors
@@ -420,11 +432,11 @@ op = convert(LinearOperator,A,c)
 @test is_full_column_rank(MatrixOp(randn(srand(0),3,4))) == false
 
 
-####### MatrixOp ############
+####### MatrixMul ############
 
 n,m = 5,6
 b = randn(m)
-op = MatrixMul(Float64,(n,m),b,n)
+op = MatrixMul(Float64,(n,m),b)
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = x1*b
@@ -433,7 +445,7 @@ y2 = x1*b
 
 n,m = 5,6
 b = randn(m)+im*randn(m)
-op = MatrixMul(Complex{Float64},(n,m),b,n)
+op = MatrixMul(Complex{Float64},(n,m),b)
 x1 = randn(n,m)+im*randn(n,m)
 y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
 y2 = x1*b
@@ -455,47 +467,10 @@ op = MatrixMul(b,n)
 @test is_full_row_rank(op)    == false
 @test is_full_column_rank(op) == false
 
-
-######### RowVectorOp ############
-n = 5
-A = randn(n)
-op = RowVectorOp(Float64,(n,),A)
-x1 = randn(n)
-y1 = test_op(op, x1, [randn()], verb)
-
-n,c = 5,10
-A = randn(n)
-op = RowVectorOp(Float64,(n,c),A)
-x1 = randn(n,c)
-y1 = test_op(op, x1, randn(1,c), verb)
-
-# other constructors
-op = RowVectorOp(A)
-op = RowVectorOp(Float64, A)
-op = RowVectorOp(A, c)
-op = RowVectorOp(Float64, A, c)
-
-op = convert(LinearOperator,A)
-op = convert(LinearOperator,A,c)
-op = convert(LinearOperator,A',c)
-op = convert(LinearOperator,A')
-
-##properties
-@test is_linear(op)           == true
-@test is_null(op)             == false
-@test is_eye(op)              == false
-@test is_diagonal(op)         == false
-@test is_AcA_diagonal(op)     == false
-@test is_AAc_diagonal(op)     == false
-@test is_orthogonal(op)       == false
-@test is_invertible(op)       == false
-@test is_full_row_rank(op)    == true
-@test is_full_column_rank(op) == true
-
 ######### MyLinOp ############
 
-n,m = 5,4
-A = randn(n,m)
+n,m = 5,4;
+A = randn(n,m);
 op = MyLinOp(Float64, (m,),(n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
 x1 = randn(m)
 y1 = test_op(op, x1, randn(n), verb)
@@ -517,14 +492,14 @@ y2 = filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2])
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-m,n = 10,2
-b = [[1.;0.;1.;0.;0.],[1.;0.;1.;0.;0.],[1.;0.;1.;0.;0.],[1.;0.;1.;0.;0.] ]
-a = [[1.;1.;1.],[2.;2.;2.],[1.],[1.]]
+m,n = 10,3; #time samples, number of inputs
+b = [[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.], ];
+a = [[1.;1.;1.],[2.;2.;2.],[      3.],[      4.],[      5.],[      6.], ];
 op = MIMOFilt(Float64, (m,n), b, a)
 
 x1 = randn(m,n)
 y1 = test_op(op, x1, randn(m,2), verb)
-y2 = [filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2]) filt(b[3],a[3],x1[:,1])+filt(b[4],a[4],x1[:,2])]
+y2 = [filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2])+filt(b[3],a[3],x1[:,3]) filt(b[4],a[4],x1[:,1])+filt(b[5],a[5],x1[:,2])+filt(b[6],a[6],x1[:,3])]
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
@@ -687,7 +662,6 @@ ZeroPad(x1, z...)
 #errors
 @test_throws ErrorException op = ZeroPad(Float64,n,(1,2))
 @test_throws ErrorException op = ZeroPad(Float64,n,(1,-2,3))
-@test_throws ErrorException op = ZeroPad(Float64,(1,2,3,4),(1,2,3,4))
 
 #properties
 @test is_linear(op)           == true

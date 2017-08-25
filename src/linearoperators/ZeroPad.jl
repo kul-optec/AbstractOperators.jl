@@ -1,5 +1,26 @@
 export ZeroPad
 
+
+"""
+`ZeroPad([domainType::Type,] dim_in::Tuple, zp::Tuple)`
+
+`ZeroPad(x::AbstractArray, zp::Tuple)`
+
+Create a `LinearOperator` which, when multiplied to an array `x` of size `dim_in`, returns an expanded array `y` of size `dim_in .+ zp` where `y[1:dim_in[1], 1:dim_in[2] ... ] = x` and zero elsewhere.  
+
+```julia
+julia> Z = ZeroPad((2,2),(0,2))
+[I;0]  ℝ^(2, 2) -> ℝ^(2, 4)
+
+julia> Z*ones(2,2)
+2×4 Array{Float64,2}:
+ 1.0  1.0  0.0  0.0
+ 1.0  1.0  0.0  0.0
+
+```
+
+"""
+
 immutable ZeroPad{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	zp::NTuple{N,Int}
@@ -10,7 +31,6 @@ end
 function ZeroPad{N,M}(domainType::Type, dim_in::NTuple{N,Int}, zp::NTuple{M,Int})
 	M != N && error("dim_in and zp must have the same length")
 	any([zp...].<0) && error("zero padding cannot be negative")
-	N > 3 && error("currently ZeroPad not implemented for Arrays with ndims > 3")
 	ZeroPad{domainType,N}(dim_in,zp)
 end
 
@@ -21,41 +41,63 @@ ZeroPad{N}(x::AbstractArray, zp::NTuple{N,Int}) = ZeroPad(eltype(x), size(x), zp
 ZeroPad{N}(x::AbstractArray, zp::Vararg{Int,N}) = ZeroPad(eltype(x), size(x), zp)
 
 # Mappings
+@generated function A_mul_B!{T,N}(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N})
 
-function A_mul_B!{T}(y::AbstractVector{T}, L::ZeroPad{T,1}, b::AbstractVector{T})
-	for i in eachindex(y)
-		y[i] = i <= length(b) ? b[i] : 0.
-	end
+
+	# builds
+	#for i1 =1:size(y,1), i2 =1:size(y,2) 
+	#	y[i1,i2] = i1 <= size(b,1) && i2 <= size(b,2)  ?  b[i1,i2] : 0. 
+	#end
+
+	ex = "for "
+	for i = 1:N ex *= "i$i =1:size(y,$i)," end
+
+	ex = ex[1:end-1] #remove ,
+
+	ex *= " y[" 
+	for i = 1:N ex *= "i$i," end
+
+	ex = ex[1:end-1] #remove ,
+
+	ex *= "] = " 
+	for i = 1:N ex *= " i$i <= size(b,$i) &&" end
+
+	ex = ex[1:end-2] #remove &&
+
+	ex *= " ?  b[" 
+	for i = 1:N ex *= "i$i," end
+
+	ex = ex[1:end-1] #remove ,
+	ex *= "] : 0. end" 
+
+	ex = parse(ex)
+
 end
 
-function Ac_mul_B!{T}(y::AbstractVector{T}, L::ZeroPad{T,1}, b::AbstractVector{T})
-	for i in eachindex(y)
-		y[i] = b[i]
-	end
-end
+@generated function Ac_mul_B!{T,N}(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N})
 
-function A_mul_B!{T}(y::AbstractArray{T,2}, L::ZeroPad{T,2}, b::AbstractArray{T,2})
-	for l = 1:size(y,1), m = 1:size(y,2)
-		y[l,m] = l <= size(b,1) && m <= size(b,2) ? b[l,m] : 0.
-	end
-end
+	#builds
+	#for l = 1:size(y,1), m = 1:size(y,2)
+	#	y[l,m] = b[l,m]
+	#end
 
-function Ac_mul_B!{T}(y::AbstractArray{T,2}, L::ZeroPad{T,2}, b::AbstractArray{T,2})
-	for l = 1:size(y,1), m = 1:size(y,2)
-		y[l,m] = b[l,m]
-	end
-end
+	ex = "for "
+	for i = 1:N ex *= "i$i =1:size(y,$i)," end
 
-function A_mul_B!{T}(y::AbstractArray{T,3}, L::ZeroPad{T,3}, b::AbstractArray{T,3})
-	for l = 1:size(y,1), m = 1:size(y,2), n = 1:size(y,3)
-		y[l,m,n] = l <= size(b,1) && m <= size(b,2) && n <= size(b,3) ? b[l,m,n] : 0.
-	end
-end
+	ex *= " y[" 
+	idx = ""
+	for i = 1:N idx *= "i$i," end
 
-function Ac_mul_B!{T}(y::AbstractArray{T,3}, L::ZeroPad{T,3}, b::AbstractArray{T,3})
-	for l = 1:size(y,1), m = 1:size(y,2), n = 1:size(y,3)
-		y[l,m,n] = b[l,m,n]
-	end
+	idx = idx[1:end-1] #remove ,
+
+	ex *= idx 
+
+	ex *= "] = b[" 
+	ex *= idx 
+	ex *= "] end" 
+
+	ex = parse(ex)
+
 end
 
 # Properties

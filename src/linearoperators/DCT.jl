@@ -2,6 +2,35 @@ export DCT, IDCT
 
 abstract type CosineTransform{N,C,T1,T2} <: LinearOperator end
 
+"""
+`DCT([domainType=Float64::Type,] dim_in::Tuple)`
+
+`DCT(dim_in...)`
+
+`DCT(x::AbstractArray)`
+
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Cosine Transform of `x`. 
+
+```julia
+julia> DCT(Complex{Float64},(10,10))
+ℱc  ℂ^(10, 10) -> ℂ^(10, 10) 
+
+julia> DCT(10,10)
+ℱc  ℝ^(10, 10) -> ℂ^(10, 10) 
+
+julia> A = DCT(ones(3))
+ℱc  ℝ^3 -> ℝ^3
+
+julia> A*ones(3)
+3-element Array{Float64,1}:
+ 1.73205
+ 0.0
+ 0.0
+
+```
+
+"""
+
 immutable DCT{N,
 	      C<:RealOrComplex,
 	      T1<:Base.DFT.Plan,
@@ -10,6 +39,35 @@ immutable DCT{N,
 	A::T1
 	At::T2
 end
+
+"""
+`IDCT([domainType=Float64::Type,] dim_in::Tuple)`
+
+`IDCT(dim_in...)`
+
+`IDCT(x::AbstractArray)`
+
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Cosine Transform of `x`. 
+
+```julia
+julia> IDCT(Complex{Float64},(10,10))
+ℱc^(-1)  ℂ^(10, 10) -> ℂ^(10, 10) 
+
+julia> IDCT(10,10)
+ℱc^(-1)  ℝ^(10, 10) -> ℂ^(10, 10) 
+
+julia> A = IDCT(ones(3))
+ℱc^(-1)  ℝ^3 -> ℝ^3
+
+julia> A*[1.;0.;0.]
+3-element Array{Float64,1}:
+ 0.57735
+ 0.57735
+ 0.57735
+
+```
+
+"""
 
 immutable IDCT{N,
 	       C<:RealOrComplex,

@@ -24,7 +24,7 @@ end
 *(L1::AbstractOperator, L2::AbstractOperator) = Compose(L1,L2)
 
 # redefine .*
-Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codomainType(L), d)*L
+Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codomainType(L), size(d), d)*L
 Base.broadcast(::typeof(*), d::AbstractArray, L::Scale)          = DiagOp(L.coeff*d)*L.A
 
 # getindex

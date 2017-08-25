@@ -1,11 +1,33 @@
 export FiniteDiff
 
 #TODO add boundary conditions
+
+"""
+`FiniteDiff([domainType=Float64::Type,] dim_in::Tuple, direction = 1)`
+
+`FiniteDiff(x::AbstractArray, direction = 1)`
+
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the discretized gradient over the specified `direction` obtained using forward finite differences. 
+
+```julia
+julia> FiniteDiff(Float64,(3,))
+δx  ℝ^3 -> ℝ^2
+
+julia> FiniteDiff((3,4),2)
+δy  ℝ^(3, 4) -> ℝ^(3, 3)
+
+julia> all(FiniteDiff(ones(2,2,2,3),1)*ones(2,2,2,3) .== 0)
+true
+
+```
+
+"""
+
+
 immutable FiniteDiff{T,N,D} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	function FiniteDiff{T,N,D}(dim_in) where {T,N,D}
-		N > 3 && error("currently FiniteDiff is supported only for Arrays with ndims <= 3 ")
-		D > N && error("dir > $N")
+		D > N && error("direction is bigger the number of dimension $N")
 		new{T,N,D}(dim_in)
 	end
 end
@@ -66,6 +88,7 @@ end
 fun_name{T,N}(L::FiniteDiff{T,N,1})  = "δx"
 fun_name{T,N}(L::FiniteDiff{T,N,2})  = "δy"
 fun_name{T,N}(L::FiniteDiff{T,N,3})  = "δz"
+fun_name{T,N,D}(L::FiniteDiff{T,N,D})  = "δx$D"
 
 
 is_full_row_rank(L::FiniteDiff) = true

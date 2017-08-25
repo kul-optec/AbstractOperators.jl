@@ -1,5 +1,14 @@
 export Conv
 
+"""
+`Conv([domainType=Float64::Type,] dim_in::Tuple, h::AbstractVector)`
+
+`Conv(x::AbstractVector, h::AbstractVector)`
+
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the convolution between `x` and `h`. Uses `conv` and hence FFT algorithm. 
+
+"""
+
 immutable Conv{T,H <: AbstractVector{T}} <: LinearOperator
 	dim_in::Tuple{Int}
 	h::H
@@ -13,6 +22,8 @@ function Conv{H<:AbstractVector, N}(DomainType::Type, DomainDim::NTuple{N,Int}, 
 	N != 1 && error("Conv treats only SISO, check Filt and MIMOFilt for MIMO")
 	Conv{DomainType,H}(DomainDim,h)
 end
+
+Conv{H<:AbstractVector, N}(DomainDim::NTuple{N,Int},  h::H) =  Conv(eltype(h), DomainDim, h)
 Conv{H}(x::H, h::H) = Conv(eltype(x), size(x), h)
 
 # Mappings
