@@ -2,6 +2,31 @@
 
 export NonLinearCompose
 
+"""
+`NonLinearCompose(A::AbstractOperator,B::AbstractOperator)`
+
+Compose opeators in such fashion:
+
+`A(⋅)*B(⋅)`
+
+# Example: Matrix multiplication
+
+```julia
+m,n1a,n1b,n2b,n = 2,3,4,5,6
+x = (randn(n1a,n1b),randn(n2b,n)); #inputs
+A = randn(m,nA1)                   #matrix A
+B = randn(n1b,n2b)                    #matrix B
+
+C = NonLinearCompose( MatrixOp(A,n1b), MatrixOp(B,n) )
+
+Y = A*x[1]*B*x[2]
+
+julia> C*x ≈ Y
+true
+
+```
+"""
+
 immutable NonLinearCompose{N,
 			   L1 <: HCAT{1},
 			   L2 <: HCAT{1},
