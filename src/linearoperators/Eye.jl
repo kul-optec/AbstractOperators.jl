@@ -5,7 +5,7 @@ export Eye
 
 `Eye([domainType=Float64::Type,] dims...)`
 
-Creates the Identity operator.
+Create the identity operator.
 
 ```julia
 julia> op = Eye(Float64,(4,))

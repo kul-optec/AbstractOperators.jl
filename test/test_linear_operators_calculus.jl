@@ -1,6 +1,5 @@
  @printf("\nTesting linear operators calculus rules\n")
 
-
 ##########################
 ##### test Compose #######
 ##########################
@@ -204,9 +203,9 @@ op = HCAT(DiagOp(d), DFT(Complex{Float64},n1))
 y1 = randn(n1)+im*randn(n1)
 @test norm(op*(op'*y1)-diag_AAc(op).*y1) <1e-12
 
-###########################
-###### test Reshape #######
-###########################
+##########################
+##### test Reshape #######
+##########################
 
 m, n = 8, 4
 dim_out = (2, 2, 2)
@@ -218,6 +217,8 @@ x1 = randn(n)
 y1 = test_op(opR, x1, randn(dim_out), verb)
 y2 = reshape(A1*x1, dim_out)
 @test vecnorm(y1-y2) <= 1e-12
+
+@test_throws Exception Reshape(opA1,(2,2,1))
 
 @test is_null(opR)             == is_null(opA1)            
 @test is_eye(opR)              == is_eye(opA1)             

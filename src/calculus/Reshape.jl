@@ -23,25 +23,30 @@ julia> R = reshape(Conv((19,),randn(10)),7,2,2)
 immutable Reshape{N,L<:AbstractOperator} <: AbstractOperator
 	A::L
 	dim_out::NTuple{N,Int}
+
+	function Reshape(A::L,dim_out::NTuple{N,Int}) where {N, L<:AbstractOperator}
+		if prod(size(A,1)) != prod(dim_out)
+			throw(DimensionMismatch("new dimensions $(dim_out) must be consistent with AbstractOperator codomain size $(size(A,1))"))
+		end
+		new{N,L}(A,dim_out)
+	end
 end
 
 # Constructors
 
 Reshape{N,L<:AbstractOperator}(A::L, dim_out::Vararg{Int,N}) =
-Reshape{N,L}(A, dim_out)
+Reshape(A, dim_out)
 
 # Mappings
 
 function A_mul_B!{N,L,C,D}(y::C, R::Reshape{N,L}, b::D)
 	y_res = reshape(y,size(R.A,1))
-	b_res = reshape(b,size(R.A,2))
-	A_mul_B!(y_res, R.A, b_res)
+	A_mul_B!(y_res, R.A, b)
 end
 
 function Ac_mul_B!{N,L,C,D}(y::D, R::Reshape{N,L}, b::C)
-	y_res = reshape(y,size(R.A,2))
 	b_res = reshape(b,size(R.A,1))
-	Ac_mul_B!(y_res, R.A, b_res)
+	Ac_mul_B!(y, R.A, b_res)
 end
 
 # Properties

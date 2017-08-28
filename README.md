@@ -1,10 +1,8 @@
 # AbstractOperators.jl
 
-Abstract operators package for Julia.
-
 ## Description
 
-Abstract operators generalize matrices by including linear mappings of arrays of any dimensions and nonlinear functions. Unlike matrices however, abstract operators apply the linear mappings with specific algorithms that minimize the memory requirements while maximizing their efficiency. 
+Abstract operators extend the syntax typically used for matrices to linear mappings of arbitrary dimensions and nonlinear functions. Unlike matrices however, abstract operators apply the mappings with specific efficient algorithms that minimize memory requirements. 
 This is particularly useful in iterative algorithms and in first order large-scale optimization algorithms.
 
 ## Installation
@@ -19,7 +17,7 @@ Remember to `Pkg.update()` to keep the package up to date.
 
 ## Usage
 
-With `using AbstractOperators` the package imports several methods like multiplication `*`  and transposition `'` (and their in-place versions `A_mul_B!`, `Ac_mul_B!`).
+With `using AbstractOperators` the package imports several methods like multiplication `*`  and transposition `'` (and their in-place methods `A_mul_B!`, `Ac_mul_B!`).
 
 For example, one can create a 2-D Discrete Fourier Transform as follows:
 
@@ -27,8 +25,9 @@ For example, one can create a 2-D Discrete Fourier Transform as follows:
 julia> A = DFT(3,4)
 ℱ  ℝ^(3, 4) -> ℂ^(3, 4)
 ```
+Here, it can be seen that `A` has a domain of dimensions `size(A,2) = (3,4)` and of type `domainType(A) = Float64` and a codomain of dimensions `size(A,1) = (3,4)` and type `codomainType(A) = Complex{Float64}`.
 
-This linear transformation can be evaluated with the same syntax used for matrices: 
+This linear transformation can be evaluated as follows: 
 
 ```julia
 julia> x = randn(3,4); #input matrix
@@ -53,7 +52,7 @@ julia> Ac_mul_B!(x,A,y) #in-place evaluation
 
 ```
 
-Notice that inputs and outputs are not necessarily `AbstractVectors`.
+Notice that inputs and outputs are not necessarily `Vectors`.
 
 It is also possible to combine multiple `AbstractOperators` using different calculus rules. 
 
@@ -67,7 +66,9 @@ julia> H = [A B]
 [ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -> ℂ^(3, 4)
 ```
 
-Evaluation of `AbstractOperators` that have multiple domains is performed using `Tuple`s of `AbstractArray`s, for example: 
+In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domainType(H) = (Float64, Complex{Float64})`.
+
+When an `AbstractOperators` have multiple domains, this must be multiplied using a `Tuple`s of `AbstractArray`s with corresponding `size(H,2)` and `domainType(H)`, for example: 
 
 ```julia
 julia> H*(x, complex(x))
@@ -76,6 +77,19 @@ julia> H*(x, complex(x))
   -22.051+23.8135im  16.5309-10.9601im  -22.5719+39.5599im  13.8174+3.81678im
  -5.81874-23.8135im  9.70679-3.81678im  -2.21552-39.5599im  11.5502+10.9601im
 ```
+
+Similarly, when an `AbstractOperators` have multiple codomains, this will return a `Tuple` of `AbstractArray`s with corresponding `size(H,1)` and `codomainType(H)`, for example: 
+```julia
+julia> V = VCAT(Eye(3,3),FiniteDiff((3,3)))
+[I;δx]  ℝ^(3, 3) -> ℝ^(3, 3)  ℝ^(2, 3)
+
+julia> V*ones(3,3)
+([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0], [0.0 0.0 0.0; 0.0 0.0 0.0])
+
+```
+
+A list of the available `AbstractOperators` and calculus rules can be found in the [documentation](https://kul-forbes.github.io/AbstractOperators.jl/latest).
+
 
 ## Credits
 

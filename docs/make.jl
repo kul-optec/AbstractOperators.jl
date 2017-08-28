@@ -3,13 +3,13 @@ using Documenter, AbstractOperators
 makedocs(
   modules = [AbstractOperators],
   format = :html,
-  sitename = "ProximalOperators.jl",
+  sitename = "AbstractOperators.jl",
   authors = "Niccolò Antonello and Lorenzo Stella",
   pages = Any[
-  "Home" => "index.md",
+  "Home"               => "index.md",
   "Abstract Operators" => "operators.md",
-  "Calculus rules" => "calculus.md",
-  "Properties" => "properties.md",
+  "Calculus rules"     => "calculus.md",
+  "Properties"         => "properties.md",
   ],
 )
 

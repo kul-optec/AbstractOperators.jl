@@ -12,14 +12,14 @@ Compose opeators in such fashion:
 # Example: Matrix multiplication
 
 ```julia
-m,n1a,n1b,n2b,n = 2,3,4,5,6
-x = (randn(n1a,n1b),randn(n2b,n)); #inputs
-A = randn(m,nA1)                   #matrix A
-B = randn(n1b,n2b)                    #matrix B
+julia> n1,m1,n2,m2 = 3,4,4,6 
 
-C = NonLinearCompose( MatrixOp(A,n1b), MatrixOp(B,n) )
+julia> x = (randn(n1,m1),randn(n2,m2)); #inputs
 
-Y = A*x[1]*B*x[2]
+julia> C = NonLinearCompose( Eye(n1,n2), Eye(m1,m2) )
+# i.e. `I(⋅)*I(⋅)`
+
+julia> Y = x[1]*x[2]
 
 julia> C*x ≈ Y
 true

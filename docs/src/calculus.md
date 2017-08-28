@@ -20,6 +20,6 @@ NonLinearCompose
 ```@docs
 Scale
 Transpose
-Jacobian
 Reshape
+Jacobian
 ```
