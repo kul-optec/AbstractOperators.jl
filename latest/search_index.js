@@ -277,7 +277,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.Sigmoid",
     "category": "Type",
-    "text": "Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 100.)\n\nCreates the sigmoid non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = rac11+e^-gamma mathbfx  \n\n\n\n"
+    "text": "Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 100.)\n\nCreates the sigmoid non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = frac11+e^-gamma mathbfx  \n\n\n\n"
 },
 
 {
