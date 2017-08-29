@@ -14,7 +14,7 @@ makedocs(
 )
 
 deploydocs(
-  repo   = "github.com/nantonel/AbstractOperators.jl.git",
+  repo   = "github.com/kul-forbes/AbstractOperators.jl.git",
   julia  = "0.6",
   osname = "linux",
   target = "build",

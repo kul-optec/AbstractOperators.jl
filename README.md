@@ -1,5 +1,9 @@
 # AbstractOperators.jl
 
+[![Build Status](https://travis-ci.org/kul-forbes/AbstractOperators.jl.svg?branch=master)](https://travis-ci.org/kul-forbes/AbstractOperators.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/lfrmkg2s1awyxtk8/branch/master?svg=true)](https://ci.appveyor.com/project/nantonel/abstractoperators-jl/branch/master)
+[![codecov](https://codecov.io/gh/kul-forbes/ProximalOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/kul-forbes/ProximalOperators.jl)
+
 ## Description
 
 Abstract operators extend the syntax typically used for matrices to linear mappings of arbitrary dimensions and nonlinear functions. Unlike matrices however, abstract operators apply the mappings with specific efficient algorithms that minimize memory requirements. 
