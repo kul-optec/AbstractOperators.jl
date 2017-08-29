@@ -367,6 +367,20 @@ y1 = test_op(op, x1, randn(k,m), verb)
 
 @test all(vecnorm.(y1 .- x1[1:k,:]) .<= 1e-12)
 
+n,m = 5,4
+op = GetIndex(Float64,(n,m),(:,2))
+x1 = randn(n,m)
+y1 = test_op(op, x1, randn(n), verb)
+
+@test all(vecnorm.(y1 .- x1[:,2]) .<= 1e-12)
+
+n,m,l = 5,4,3
+op = GetIndex(Float64,(n,m,l),(1:3,2,:))
+x1 = randn(n,m,l)
+y1 = test_op(op, x1, randn(3,3), verb)
+
+@test all(vecnorm.(y1 .- x1[1:3,2,:]) .<= 1e-12)
+
 # other constructors
 GetIndex((n,m), (1:k,:))
 GetIndex(x1, (1:k,:))

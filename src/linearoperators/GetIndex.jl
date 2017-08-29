@@ -57,7 +57,7 @@ function A_mul_B!{T1,N,M,T2}(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M})
 end
 
 function Ac_mul_B!{T1,N,M,T2}(y::Array{T1,M},L::GetIndex{N,M,T2},b::AbstractArray{T1,N})
-	y .= 0.
+	fill!(y,0.)
 	setindex!(y,b,L.idx...)
 end
 
@@ -79,13 +79,17 @@ is_full_row_rank(L::GetIndex)  = true
 
 get_idx(L::GetIndex) = L.idx
 
-function get_dim_out(dim,args...)
+function get_dim_out(dim, args...)
 	if length(args) != 1
-		dim2 = [dim[1:length(args)]...]
-		for i = 1:length(args)
-			if args[i] != Colon() dim2[i] = length(args[i]) end
+		dim2 = ()
+		for i in eachindex(args)
+			if args[i] != Colon() 
+				!(typeof(args[i]) <: Int) && ( dim2 = (dim2..., length(args[i]) ) )
+			else
+				dim2 = (dim2..., dim[i])
+			end
 		end
-		return tuple(dim2...)
+		return dim2
 	else
 		if args[1] == Colon()
 			return dim
