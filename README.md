@@ -14,10 +14,10 @@ This is particularly useful in iterative algorithms and in first order large-sca
 
 ## Installation
 
-To install the package, use the following in the Julia command line:
+To install the package, use the following in the Julia command line
 
 ```julia
-Pkg.clone("https://github.com/kul-forbes/AbstractOperators.jl")
+Pkg.add("AbstractOperators")
 ```
 
 Remember to `Pkg.update()` to keep the package up to date.
