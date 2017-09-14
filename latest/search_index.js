@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Installation",
     "category": "section",
-    "text": "To install the package, use the following in the Julia command line:Pkg.clone(\"https://github.com/kul-forbes/AbstractOperators.jl\")Remember to Pkg.update() to keep the package up to date."
+    "text": "To install the package, use the following in the Julia command linePkg.add(\"AbstractOperators\")Remember to Pkg.update() to keep the package up to date."
 },
 
 {
