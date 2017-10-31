@@ -161,6 +161,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "operators.html#AbstractOperators.RDFT",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.RDFT",
+    "category": "Type",
+    "text": "RDFT([domainType=Float64::Type,] dim_in::Tuple [,dims=1])\n\nRDFT(dim_in...)\n\nRDFT(x::AbstractArray [,dims=1])\n\nCreates a LinearOperator which, when multiplied with a real array x, returns the DFT over the dimension dims, exploiting Hermitian symmetry. \n\njulia> RDFT(Float64,(10,10))\nℱ  ℝ^(10, 10) -> ℂ^(6, 10)\n\njulia> RDFT((10,10,10),2)\nℱ  ℝ^(10, 10, 10) -> ℂ^(10, 6, 10)\n\n\n\n\n"
+},
+
+{
     "location": "operators.html#AbstractOperators.DCT",
     "page": "Abstract Operators",
     "title": "AbstractOperators.DCT",
@@ -181,7 +189,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Transformations",
     "category": "section",
-    "text": "DFT\nIDFT\nDCT\nIDCT"
+    "text": "DFT\nIDFT\nRDFT\nDCT\nIDCT"
 },
 
 {
