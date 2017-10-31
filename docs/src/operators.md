@@ -21,6 +21,7 @@ MyLinOp
 ```@docs
 DFT
 IDFT
+RDFT
 DCT
 IDCT
 ```
