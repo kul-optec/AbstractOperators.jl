@@ -173,7 +173,7 @@ y1 = op*x1
 @test vecnorm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
 @test vecnorm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
 
-######## RDFT ############
+####### RDFT ############
 n = 4
 op = RDFT(Float64,(n,))
 x1 = randn(n)
@@ -193,6 +193,38 @@ y2 = rfft(x1,2)
 # other constructors
 op = RDFT((n,))
 op = RDFT(n,n)
+
+#properties
+@test is_linear(op)           == true
+@test is_null(op)             == false
+@test is_eye(op)              == false
+@test is_diagonal(op)         == false
+@test is_AcA_diagonal(op)     == false
+@test is_AAc_diagonal(op)     == false 
+@test is_orthogonal(op)       == false
+@test is_invertible(op)       == true
+@test is_full_row_rank(op)    == true
+@test is_full_column_rank(op) == false
+
+####### IRDFT ############
+n = 10
+op = IRDFT(Complex{Float64},(n,),19)
+x1 = randn(n)+im*randn(n)
+y1 = test_op(op, x1,irfft(randn(n),19), verb)
+y2 = irfft(x1,19)
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n,m,l = 4,10,5
+op = IRDFT(Complex{Float64},(n,m,l),19,2)
+x1 = randn(n,m,l)+im*randn(n,m,l)
+y1 = test_op(op, x1, irfft(randn(n,m,l),19,2), verb)
+y2 = irfft(x1,19,2)
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+## other constructors
+op = IRDFT((10,),19)
 
 #properties
 @test is_linear(op)           == true

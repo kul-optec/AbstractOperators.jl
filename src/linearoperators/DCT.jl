@@ -51,13 +51,13 @@ Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArra
 
 ```julia
 julia> IDCT(Complex{Float64},(10,10))
-ℱc^(-1)  ℂ^(10, 10) -> ℂ^(10, 10) 
+ℱc⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) 
 
 julia> IDCT(10,10)
-ℱc^(-1)  ℝ^(10, 10) -> ℂ^(10, 10) 
+ℱc⁻¹  ℝ^(10, 10) -> ℂ^(10, 10) 
 
 julia> A = IDCT(ones(3))
-ℱc^(-1)  ℝ^3 -> ℝ^3
+ℱc⁻¹  ℝ^3 -> ℝ^3
 
 julia> A*[1.;0.;0.]
 3-element Array{Float64,1}:
@@ -127,7 +127,7 @@ end
 size(L::CosineTransform) = (L.dim_in,L.dim_in)
 
 fun_name(A::DCT)  = "ℱc"
-fun_name(A::IDCT) = "ℱc^(-1)"
+fun_name(A::IDCT) = "ℱc⁻¹"
 
 domainType{N,C,T1,T2}(L::CosineTransform{N,C,T1,T2}) = C
 codomainType{N,C,T1,T2}(L::CosineTransform{N,C,T1,T2}) = C

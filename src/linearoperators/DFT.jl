@@ -52,13 +52,13 @@ Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArra
 
 ```julia
 julia> IDFT(Complex{Float64},(10,10))
-ℱ  ℂ^(10, 10) -> ℂ^(10, 10) 
+ℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) 
 
 julia> IDFT(10,10)
-ℱ  ℝ^(10, 10) -> ℂ^(10, 10) 
+ℱ⁻¹ ℝ^(10, 10) -> ℂ^(10, 10) 
 
 julia> A = IDFT(ones(3))
-ℱ  ℝ^(10, 10) -> ℂ^(10, 10)
+ℱ⁻¹  ℝ^3 -> ℂ^3
 
 julia> A*ones(3)
 3-element Array{Complex{Float64},1}:
@@ -175,7 +175,7 @@ end
 size(L::FourierTransform) = (L.dim_in,L.dim_in)
 
 fun_name(A::DFT) = "ℱ"
-fun_name(A::IDFT) = "ℱ^(-1)"
+fun_name(A::IDFT) = "ℱ⁻¹"
 
 domainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = D
 codomainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = C

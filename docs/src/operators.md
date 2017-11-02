@@ -22,6 +22,7 @@ MyLinOp
 DFT
 IDFT
 RDFT
+IRDFT
 DCT
 IDCT
 ```
