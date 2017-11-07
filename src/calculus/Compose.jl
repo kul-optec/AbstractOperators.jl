@@ -19,7 +19,7 @@ julia> MatrixOp(randn(20,10))*DCT(10)
 ```
 
 """
-immutable Compose{N, M, L<:NTuple{N,Any}, T<:NTuple{M,Any}} <: AbstractOperator
+struct Compose{N, M, L<:NTuple{N,Any}, T<:NTuple{M,Any}} <: AbstractOperator
 	A::L
 	buf::T       # memory in the bufdle of the operators
 end
@@ -36,7 +36,7 @@ function Compose(L1::AbstractOperator, L2::AbstractOperator)
 	Compose( L1, L2, Array{domainType(L1)}(size(L2,1)) )
 end
 
-Compose{N,M}(A::NTuple{N,Any},buf::NTuple{M,Any}) =
+Compose(A::NTuple{N,Any},buf::NTuple{M,Any}) where {N,M} =
 Compose{N,M,typeof(A),typeof(buf)}(A,buf)
 
 Compose(L1::AbstractOperator,L2::AbstractOperator,buf::AbstractArray) =
@@ -64,7 +64,7 @@ Compose(L1::Eye, L2::Eye) = L1
 
 # Mappings
 
-@generated function A_mul_B!{N,M,T1,T2,C,D}(y::C, L::Compose{N,M,T1,T2},b::D)
+@generated function A_mul_B!(y::C, L::Compose{N,M,T1,T2},b::D) where {N,M,T1,T2,C,D}
 	ex = :(A_mul_B!(L.buf[1],L.A[1],b))
 	for i = 2:M
 		ex = quote
@@ -79,7 +79,7 @@ Compose(L1::Eye, L2::Eye) = L1
 	end
 end
 
-@generated function Ac_mul_B!{N,M,T1,T2,C,D}(y::D, L::Compose{N,M,T1,T2},b::C)
+@generated function Ac_mul_B!(y::D, L::Compose{N,M,T1,T2},b::C) where {N,M,T1,T2,C,D}
 	ex = :(Ac_mul_B!(L.buf[M],L.A[N],b))
 	for i = M:-1:2
 		ex = quote
@@ -109,7 +109,7 @@ is_invertible(L::Compose) = all(is_invertible.(L.A))
 
 # utils
 import Base: permute
-function permute{N,M,L,T}(C::Compose{N,M,L,T}, p::AbstractVector{Int})
+function permute(C::Compose{N,M,L,T}, p::AbstractVector{Int}) where {N,M,L,T}
 
 	i = findfirst( x -> ndoms(x,2) > 1 , C.A)
 	P = permute(C.A[i],p)

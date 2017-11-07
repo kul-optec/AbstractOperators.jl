@@ -26,11 +26,11 @@ julia> D*(ones(2),ones(2),ones(3))
 ```
 
 """
-immutable DCAT{N,
-	       L  <: NTuple{N,AbstractOperator},
-	       P1 <: NTuple{N,Union{Int,Tuple}},
-	       P2 <: NTuple{N,Union{Int,Tuple}}
-	       } <: AbstractOperator
+struct DCAT{N,
+	    L  <: NTuple{N,AbstractOperator},
+	    P1 <: NTuple{N,Union{Int,Tuple}},
+	    P2 <: NTuple{N,Union{Int,Tuple}}
+	    } <: AbstractOperator
 	A::L
 	idxD::P1
 	idxC::P2
@@ -66,7 +66,7 @@ function DCAT(A::Vararg{AbstractOperator})
 end
 
 # Mappings
-@generated function A_mul_B!{N,L,P1,P2}(y, H::DCAT{N,L,P1,P2}, b)  
+@generated function A_mul_B!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
 
 	ex = :()
 
@@ -108,7 +108,7 @@ end
 
 end
 
-@generated function Ac_mul_B!{N,L,P1,P2}(y, H::DCAT{N,L,P1,P2}, b)  
+@generated function Ac_mul_B!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
 
 	ex = :()
 
@@ -193,7 +193,7 @@ is_full_column_rank(L::DCAT) = all(is_full_column_rank.(L.A))
 # utils
 import Base: permute
 
-function permute{N,L,P1,P2}(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int})
+function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 
 
 	unfolded = vcat([[idx... ] for idx in H.idxD]...) 

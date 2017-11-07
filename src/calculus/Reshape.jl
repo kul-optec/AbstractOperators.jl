@@ -20,7 +20,7 @@ julia> R = reshape(Conv((19,),randn(10)),7,2,2)
 ```
 
 """
-immutable Reshape{N,L<:AbstractOperator} <: AbstractOperator
+struct Reshape{N,L<:AbstractOperator} <: AbstractOperator
 	A::L
 	dim_out::NTuple{N,Int}
 
@@ -34,17 +34,17 @@ end
 
 # Constructors
 
-Reshape{N,L<:AbstractOperator}(A::L, dim_out::Vararg{Int,N}) =
+Reshape(A::L, dim_out::Vararg{Int,N}) where {N,L<:AbstractOperator} =
 Reshape(A, dim_out)
 
 # Mappings
 
-function A_mul_B!{N,L,C,D}(y::C, R::Reshape{N,L}, b::D)
+function A_mul_B!(y::C, R::Reshape{N,L}, b::D) where {N,L,C,D}
 	y_res = reshape(y,size(R.A,1))
 	A_mul_B!(y_res, R.A, b)
 end
 
-function Ac_mul_B!{N,L,C,D}(y::D, R::Reshape{N,L}, b::C)
+function Ac_mul_B!(y::D, R::Reshape{N,L}, b::C) where {N,L,C,D}
 	b_res = reshape(b,size(R.A,1))
 	Ac_mul_B!(y, R.A, b_res)
 end

@@ -1,5 +1,5 @@
 
-type BlkDiagLBFGS{M, N, R<:Real, A <:NTuple{N,AbstractArray}, B <:NTuple{M,A}} <: LinearOperator
+mutable struct BlkDiagLBFGS{M, N, R<:Real, A <:NTuple{N,AbstractArray}, B <:NTuple{M,A}} <: LinearOperator
 	currmem::Int
 	curridx::Int
 	s::A
@@ -13,7 +13,7 @@ end
 
 #constructors
 #default
-function LBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,NTuple}, M::Int)
+function LBFGS(T::NTuple{N,Type}, dim::NTuple{N,NTuple}, M::Int) where {N}
 	s_m = tuple([deepzeros(T,dim) for i = 1:M]...)
 	y_m = tuple([deepzeros(T,dim) for i = 1:M]...)
 	s = deepzeros(T,dim)
@@ -24,15 +24,15 @@ function LBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,NTuple}, M::Int)
 	BlkDiagLBFGS{M,N,R,typeof(s),typeof(s_m)}(0, 0, s, y, s_m, y_m, ys_m, alphas, 1.) 
 end
 
-LBFGS{N}(x::NTuple{N,AbstractArray},M::Int64) = LBFGS(eltype.(x),size.(x),M)
+LBFGS(x::NTuple{N,AbstractArray},M::Int64) where {N} = LBFGS(eltype.(x),size.(x),M)
 
 #mappings
 
-@generated function update!{M,N,R,A,B}(L::BlkDiagLBFGS{M,N,R,A,B}, 
-				     x::A, 
-				     x_prev::A, 
-				     gradx::A, 
-				     gradx_prev::A)
+@generated function update!(L::BlkDiagLBFGS{M,N,R,A,B}, 
+			    x::A, 
+			    x_prev::A, 
+			    gradx::A, 
+			    gradx_prev::A) where {M,N,R,A,B}
 
 	ex = :(ys = 0.)
 	for i = 1:N
@@ -60,14 +60,14 @@ LBFGS{N}(x::NTuple{N,AbstractArray},M::Int64) = LBFGS(eltype.(x),size.(x),M)
 	end
 end
 
-function update_s_y{A}(s::A, y::A, x::A, x_prev::A, gradx::A, gradx_prev::A) 
+function update_s_y(s::A, y::A, x::A, x_prev::A, gradx::A, gradx_prev::A) where {A} 
 	s .= (-).(x, x_prev)
 	y .= (-).(gradx, gradx_prev)
 	ys = real(vecdot(s,y))
 	return ys
 end
 
-function update_s_m_y_m{A}(s_m::A,y_m::A,s::A,y::A) 
+function update_s_m_y_m(s_m::A,y_m::A,s::A,y::A) where {A} 
 	s_m .=  s
 	y_m .=  y
 
@@ -75,7 +75,7 @@ function update_s_m_y_m{A}(s_m::A,y_m::A,s::A,y::A)
 	return yty
 end
 
-function A_mul_B!{M, N, R, A, B}(d::A, L::BlkDiagLBFGS{M,N,R,A,B}, gradx::A)
+function A_mul_B!(d::A, L::BlkDiagLBFGS{M,N,R,A,B}, gradx::A) where {M, N, R, A, B}
 	for i = 1:N
 		d[i] .= (-).(gradx[i])
 	end
@@ -86,7 +86,7 @@ function A_mul_B!{M, N, R, A, B}(d::A, L::BlkDiagLBFGS{M,N,R,A,B}, gradx::A)
 	d = loop2!(d,idx,L)
 end
 
-function loop1!{M, N, R, A, B}(d::A, L::BlkDiagLBFGS{M,N,R,A,B})
+function loop1!(d::A, L::BlkDiagLBFGS{M,N,R,A,B}) where {M, N, R, A, B}
 	idx = L.curridx
 	for i=1:L.currmem
 		L.alphas[idx] = sum(real.(vecdot.(L.s_m[idx], d)))
@@ -101,7 +101,7 @@ function loop1!{M, N, R, A, B}(d::A, L::BlkDiagLBFGS{M,N,R,A,B})
 	return idx
 end
 
-function loop2!{M, N, R, A, B}(d::A, idx::Int, L::BlkDiagLBFGS{M,N,R,A,B})
+function loop2!(d::A, idx::Int, L::BlkDiagLBFGS{M,N,R,A,B}) where {M, N, R, A, B}
 	for i=1:L.currmem
 		idx += 1
 		if idx > M idx = 1 end

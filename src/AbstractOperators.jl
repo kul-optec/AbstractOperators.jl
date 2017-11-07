@@ -44,7 +44,6 @@ include("linearoperators/MIMOFilt.jl")
 include("linearoperators/Xcorr.jl")
 include("linearoperators/LBFGS.jl")
 include("linearoperators/BlkDiagLBFGS.jl")
-include("linearoperators/utils.jl")
 
 # Calculus rules
 

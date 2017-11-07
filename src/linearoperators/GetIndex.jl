@@ -26,7 +26,7 @@ julia> GetIndex(randn(10,20,30),(1:2,1:4))
 
 """
 
-immutable GetIndex{N,M,T<:Tuple} <: LinearOperator
+struct GetIndex{N,M,T<:Tuple} <: LinearOperator
 	domainType::Type
 	dim_out::NTuple{N,Int}
 	dim_in::NTuple{M,Int}
@@ -35,7 +35,7 @@ end
 
 # Constructors
 # default 
-function GetIndex{M,T<:Tuple}(domainType::Type,dim_in::NTuple{M,Int},idx::T)
+function GetIndex(domainType::Type,dim_in::NTuple{M,Int},idx::T) where {M,T<:Tuple}
 	length(idx) > M && error("cannot slice object of dimension $dim_in with $idx")
 	dim_out = get_dim_out(dim_in,idx...)
 	if dim_out == dim_in
@@ -52,11 +52,11 @@ GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
 
 # Mappings
 
-function A_mul_B!{T1,N,M,T2}(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M})
+function A_mul_B!(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M}) where {T1,N,M,T2}
 	y .= view(b,L.idx...)
 end
 
-function Ac_mul_B!{T1,N,M,T2}(y::Array{T1,M},L::GetIndex{N,M,T2},b::AbstractArray{T1,N})
+function Ac_mul_B!(y::Array{T1,M},L::GetIndex{N,M,T2},b::AbstractArray{T1,N}) where {T1,N,M,T2}
 	fill!(y,0.)
 	setindex!(y,b,L.idx...)
 end

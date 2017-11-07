@@ -27,26 +27,26 @@ julia> Variation(ones(2,2))*[1. 2.; 1. 2.]
 
 """
 
-immutable Variation{T,N} <: LinearOperator
+struct Variation{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
 end
 
 # Constructors
 #default constructor
-function Variation{N}(domainType::Type, dim_in::NTuple{N,Int}) 
+function Variation(domainType::Type, dim_in::NTuple{N,Int}) where {N} 
 	N == 1 && error("use FiniteDiff instead!")
 	Variation{domainType,N}(dim_in)
 end
 
 Variation(domainType::Type, dim_in::Vararg{Int}) = Variation(domainType, dim_in)
-Variation{N}(dim_in::NTuple{N,Int}) = Variation(Float64, dim_in)
+Variation(dim_in::NTuple{N,Int}) where {N} = Variation(Float64, dim_in)
 Variation(dim_in::Vararg{Int}) = Variation(dim_in)
 Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 
 # Mappings
 
-#TODO use @generated
-@generated function A_mul_B!{T,N}(y::AbstractArray{T,2}, A::Variation{T,N}, b::AbstractArray{T,N})
+@generated function A_mul_B!(y::AbstractArray{T,2}, 
+			     A::Variation{T,N}, b::AbstractArray{T,N}) where {T,N}
 
 	ex = :()
 
@@ -68,7 +68,8 @@ Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 	end
 end
 
-@generated function Ac_mul_B!{T,N}(y::AbstractArray{T,N}, A::Variation{T,N}, b::AbstractArray{T,2})
+@generated function Ac_mul_B!(y::AbstractArray{T,N}, 
+			      A::Variation{T,N}, b::AbstractArray{T,2}) where {T,N}
 
 	ex = :(y[I] = I[1] == 1  ? -(b[cnt,1] + b[cnt+1,1]) :
 	              I[1] == 2  ?   b[cnt,1] + b[cnt-1,1] - b[cnt+1,1] :
@@ -98,9 +99,9 @@ end
 
 # Properties
 
-domainType{T,N}(L::Variation{T,N}) = T
-codomainType{T,N}(L::Variation{T,N}) = T
+  domainType(L::Variation{T,N}) where {T,N} = T
+codomainType(L::Variation{T,N}) where {T,N} = T
 
-size{T,N}(L::Variation{T,N}) = ((prod(L.dim_in), N), L.dim_in)
+size(L::Variation{T,N}) where {T,N} = ((prod(L.dim_in), N), L.dim_in)
 
 fun_name(L::Variation)  = "Ʋ"

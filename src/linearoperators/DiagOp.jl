@@ -20,7 +20,7 @@ julia> D*ones(2,2)
 
 """
 
-immutable DiagOp{T,N,D <: AbstractArray{T,N}} <: LinearOperator
+struct DiagOp{T,N,D <: AbstractArray{T,N}} <: LinearOperator
 	d::D
 end
 
@@ -29,21 +29,21 @@ end
 
 ##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-function DiagOp{N, D <: AbstractArray}(DomainType::Type, DomainDim::NTuple{N,Int}, d::D)  
+function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::D) where {N, D <: AbstractArray} 
 	size(d) != DomainDim && error("dimension of d must coincide with DomainDim")
 	DiagOp{DomainType, N, D}(d)
 end
 ###
 
-DiagOp{A <: AbstractArray}(d::A) = DiagOp(eltype(d),size(d),d)
+DiagOp(d::A) where {A <: AbstractArray} = DiagOp(eltype(d),size(d),d)
 
 # Mappings
 
-function A_mul_B!{T,N,D}(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N})
+function A_mul_B!(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N}) where {T,N,D}
 	y .= (*).(L.d, b)
 end
 
-function Ac_mul_B!{T,N,D}(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N})
+function Ac_mul_B!(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N}) where {T,N,D}
 	y .= (*).(conj.(L.d), b)
 end
 
@@ -56,8 +56,8 @@ diag(L::DiagOp) = L.d
 diag_AAc(L::DiagOp) = L.d.*conj.(L.d)
 diag_AcA(L::DiagOp) = conj.(L.d).*L.d
 
-domainType{T,N,D}(L::DiagOp{T,N,D}) = T
-codomainType{T,N,D}(L::DiagOp{T,N,D}) = T
+domainType(L::DiagOp{T,N,D}) where {T,N,D} = T
+codomainType(L::DiagOp{T,N,D}) where {T,N,D} = T
 
 size(L::DiagOp) = (size(L.d), size(L.d))
 

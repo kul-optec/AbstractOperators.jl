@@ -30,7 +30,7 @@ julia> A*ones(3)
 
 """
 
-immutable DFT{N,
+struct DFT{N,
 	      C<:RealOrComplex,
 	      D<:RealOrComplex,
 	      T1<:Base.DFT.Plan,
@@ -69,7 +69,7 @@ julia> A*ones(3)
 
 """
 
-immutable IDFT{N,
+struct IDFT{N,
 	       C<:RealOrComplex,
 	       D<:RealOrComplex,
 	       T1<:Base.DFT.Plan,
@@ -81,89 +81,89 @@ end
 
 # Constructors
 #standard constructor
-DFT{N}(dim_in::NTuple{N,Int}) = DFT(zeros(dim_in))
+DFT(dim_in::NTuple{N,Int}) where {N} = DFT(zeros(dim_in))
 
-function DFT{N,D<:Real}(x::AbstractArray{D,N})
+function DFT(x::AbstractArray{D,N}) where {N,D<:Real}
 	A,At = plan_fft(x), plan_bfft(fft(x))
 	DFT{N,Complex{D},D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-function DFT{N,D<:Complex}(x::AbstractArray{D,N})
+function DFT(x::AbstractArray{D,N}) where {N,D<:Complex}
 	A,At = plan_fft(x), plan_bfft(fft(x))
 	DFT{N,D,D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-DFT{N}(T::Type,dim_in::NTuple{N,Int}) = DFT(zeros(T,dim_in))
+DFT(T::Type,dim_in::NTuple{N,Int}) where {N} = DFT(zeros(T,dim_in))
 DFT(dim_in::Vararg{Int}) = DFT(dim_in)
 DFT(T::Type,dim_in::Vararg{Int}) = DFT(T,dim_in)
 
-function IDFT{N,D<:Real}(x::AbstractArray{D,N})
+function IDFT(x::AbstractArray{D,N}) where {N,D<:Real}
 	A,At = plan_ifft(x), plan_fft(ifft(x))
 	IDFT{N,Complex{D},D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
 #standard constructor
-IDFT{N}(T::Type,dim_in::NTuple{N,Int}) = IDFT(zeros(T,dim_in))
+IDFT(T::Type,dim_in::NTuple{N,Int}) where {N} = IDFT(zeros(T,dim_in))
 
-function IDFT{N,D<:Complex}(x::AbstractArray{D,N})
+function IDFT(x::AbstractArray{D,N}) where {N,D<:Complex}
 	A,At = plan_ifft(x), plan_fft(ifft(x))
 	IDFT{N,D,D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-IDFT{N}(dim_in::NTuple{N,Int}) = IDFT(zeros(dim_in))
+IDFT(dim_in::NTuple{N,Int}) where {N} = IDFT(zeros(dim_in))
 IDFT(dim_in::Vararg{Int}) = IDFT(dim_in)
 IDFT(T::Type,dim_in::Vararg{Int}) = IDFT(T,dim_in)
 
 # Mappings
 
-function A_mul_B!{N,C<:Complex,T1,T2}(y::AbstractArray{C,N},
-				      L::DFT{N,C,C,T1,T2},
-				      b::AbstractArray{C,N})
+function A_mul_B!(y::AbstractArray{C,N},
+		  L::DFT{N,C,C,T1,T2},
+		  b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
 	A_mul_B!(y,L.A,b)
 end
 
-function A_mul_B!{N,C<:Complex,D<:Real,T1,T2}(y::AbstractArray{C,N},
-					      L::DFT{N,C,D,T1,T2},
-					      b::AbstractArray{D,N})
+function A_mul_B!(y::AbstractArray{C,N},
+		  L::DFT{N,C,D,T1,T2},
+		  b::AbstractArray{D,N}) where {N,C<:Complex,D<:Real,T1,T2}
 	A_mul_B!(y,L.A,complex(b))
 end
 
-function Ac_mul_B!{N,C<:Complex,T1,T2}(y::AbstractArray{C,N},
-				       L::DFT{N,C,C,T1,T2},
-				       b::AbstractArray{C,N})
+function Ac_mul_B!(y::AbstractArray{C,N},
+		   L::DFT{N,C,C,T1,T2},
+		   b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
 	A_mul_B!(y,L.At,b)
 end
 
-function Ac_mul_B!{N,C<:Complex,D<:Real,T1,T2}(y::AbstractArray{D,N},
-					      L::DFT{N,C,D,T1,T2},
-					      b::AbstractArray{C,N})
+function Ac_mul_B!(y::AbstractArray{D,N},
+		   L::DFT{N,C,D,T1,T2},
+		   b::AbstractArray{C,N}) where {N,C<:Complex,D<:Real,T1,T2}
 	y2 = complex(y)
 	A_mul_B!(y2,L.At,b)
 	y .= real.(y2)
 end
 
-function A_mul_B!{N,C<:Complex,T1,T2}(y::AbstractArray{C,N},
-				      L::IDFT{N,C,C,T1,T2},
-				      b::AbstractArray{C,N})
+function A_mul_B!(y::AbstractArray{C,N},
+		  L::IDFT{N,C,C,T1,T2},
+		  b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
 	A_mul_B!(y,L.A,b)
 end
 
-function A_mul_B!{N,C<:Complex,D<:Real,T1,T2}(y::AbstractArray{C,N},
-					      L::IDFT{N,C,D,T1,T2},
-					      b::AbstractArray{D,N})
+function A_mul_B!(y::AbstractArray{C,N},
+		  L::IDFT{N,C,D,T1,T2},
+		  b::AbstractArray{D,N}) where {N,C<:Complex,D<:Real,T1,T2}
 	A_mul_B!(y,L.A,complex(b))
 end
 
-function Ac_mul_B!{N,C<:Complex,T1,T2}(y::AbstractArray{C,N},
-				       L::IDFT{N,C,C,T1,T2},
-				       b::AbstractArray{C,N})
+function Ac_mul_B!(y::AbstractArray{C,N},
+		   L::IDFT{N,C,C,T1,T2},
+		   b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
 	A_mul_B!(y,L.At,b)
 	y ./= length(b)
 end
 
-function Ac_mul_B!{N,C<:Complex,D<:Real,T1,T2}(y::AbstractArray{D,N},
-					       L::IDFT{N,C,D,T1,T2},
-					       b::AbstractArray{C,N})
+function Ac_mul_B!(y::AbstractArray{D,N},
+		   L::IDFT{N,C,D,T1,T2},
+		   b::AbstractArray{C,N}) where {N,C<:Complex,D<:Real,T1,T2}
 
 	y2 = complex(y)
 	A_mul_B!(y2,L.At,b)
@@ -177,8 +177,8 @@ size(L::FourierTransform) = (L.dim_in,L.dim_in)
 fun_name(A::DFT) = "ℱ"
 fun_name(A::IDFT) = "ℱ⁻¹"
 
-domainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = D
-codomainType{N,C,D,T1,T2}(L::FourierTransform{N,C,D,T1,T2}) = C
+domainType(L::FourierTransform{N,C,D,T1,T2}) where {N,C,D,T1,T2} = D
+codomainType(L::FourierTransform{N,C,D,T1,T2}) where {N,C,D,T1,T2} = C
 
 is_AcA_diagonal(L::FourierTransform)     = true
 is_AAc_diagonal(L::FourierTransform)     = true

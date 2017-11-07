@@ -20,7 +20,7 @@ A  ℝ^4 -> ℝ^5
 
 """
 
-immutable MyLinOp{N,M,C,D} <: LinearOperator
+struct MyLinOp{N,M,C,D} <: LinearOperator
 	dim_out::NTuple{N,Int}
 	dim_in::NTuple{M,Int}
 	Fwd!::Function
@@ -29,18 +29,18 @@ end
 
 # Constructors
 
-MyLinOp{N,M}(domainType::Type, dim_in::NTuple{N,Int}, dim_out::NTuple{M,Int},
-	   Fwd!::Function, Adj!::Function ) =
+MyLinOp(domainType::Type, dim_in::NTuple{N,Int}, dim_out::NTuple{M,Int},
+	Fwd!::Function, Adj!::Function ) where {N,M} =
 MyLinOp{N,M, domainType, domainType}(dim_out, dim_in, Fwd!, Adj! )
 
-MyLinOp{N,M}(domainType::Type, dim_in::NTuple{N,Int}, codomainType::Type, dim_out::NTuple{M,Int},
-	   Fwd!::Function, Adj!::Function ) =
+MyLinOp(domainType::Type, dim_in::NTuple{N,Int}, codomainType::Type, dim_out::NTuple{M,Int},
+	Fwd!::Function, Adj!::Function ) where {N,M} =
 MyLinOp{N,M, domainType, codomainType}(dim_out, dim_in, Fwd!, Adj! )
 
 # Mappings
 
-A_mul_B!{N,M,C,D}( y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) = L.Fwd!(y,b)
-Ac_mul_B!{N,M,C,D}(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) = L.Adj!(y,b)
+ A_mul_B!(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) where {N,M,C,D} = L.Fwd!(y,b)
+Ac_mul_B!(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) where {N,M,C,D} = L.Adj!(y,b)
 
 # Properties
 

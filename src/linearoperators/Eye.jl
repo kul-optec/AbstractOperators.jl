@@ -21,31 +21,31 @@ true
 
 """
 
-immutable Eye{T, N} <: LinearOperator
+struct Eye{T, N} <: LinearOperator
 	dim::NTuple{N, Integer}
 end
 
 # Constructors
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-Eye{N}(DomainType::Type, DomainDim::NTuple{N,Int}) = Eye{DomainType,N}(DomainDim)  
+Eye(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} = Eye{DomainType,N}(DomainDim)  
 ###
 
 Eye(t::Type, dims::Vararg{Integer}) = Eye(t,dims)
-Eye{N}(dims::NTuple{N, Integer}) = Eye(Float64,dims)
+Eye(dims::NTuple{N, Integer}) where {N} = Eye(Float64,dims)
 Eye(dims::Vararg{Integer}) = Eye(Float64,dims)
 
 # Mappings
 
-A_mul_B!{T, N}(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) = y .= b
-Ac_mul_B!{T, N}(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) = A_mul_B!(y, L, b)
+A_mul_B!(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) where {T, N} = y .= b
+Ac_mul_B!(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) where {T, N} = A_mul_B!(y, L, b)
 
 # Properties
 diag(L::Eye) = 1.
 diag_AcA(L::Eye) = 1.
 diag_AAc(L::Eye) = 1.
 
-domainType{T, N}(L::Eye{T, N}) = T
-codomainType{T, N}(L::Eye{T, N}) = T
+domainType(L::Eye{T, N}) where {T, N} = T
+codomainType(L::Eye{T, N}) where {T, N} = T
 
 size(L::Eye) = (L.dim, L.dim)
 

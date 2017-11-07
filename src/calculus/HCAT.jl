@@ -36,12 +36,12 @@ julia> H*(ones(3),ones(3))
 ```
 
 """
-immutable HCAT{M, # number of codomains  
-	       N, # number of AbstractOperator 
-	       L <: NTuple{N,AbstractOperator},
-	       P <: NTuple{N,Union{Int,Tuple}},
-	       C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-	       } <: AbstractOperator
+struct HCAT{M, # number of codomains  
+	    N, # number of AbstractOperator 
+	    L <: NTuple{N,AbstractOperator},
+	    P <: NTuple{N,Union{Int,Tuple}},
+	    C <: Union{NTuple{M,AbstractArray}, AbstractArray},
+	    } <: AbstractOperator
 	A::L     # tuple of AbstractOperators
 	idxs::P  # indices 
 	         # H = HCAT(Eye(n),HCAT(Eye(n),Eye(n))) has H.idxs = (1,2,3) 
@@ -54,11 +54,11 @@ end
 
 # Constructors
 
-function HCAT{N,  
-	      L <: NTuple{N,AbstractOperator},
-	      P <: NTuple{N,Union{Int,Tuple}},
-	      C
-	      }(A::L, idxs::P, buf::C, M::Int)
+function HCAT(A::L, idxs::P, buf::C, M::Int) where {N,  
+						    L <: NTuple{N,AbstractOperator},
+						    P <: NTuple{N,Union{Int,Tuple}},
+						    C}
+
 	if any([size(A[1],1) != size(a,1) for a in A])
 		throw(DimensionMismatch("operators must have the same codomain dimension!"))
 	end
@@ -92,7 +92,7 @@ function HCAT(A::Vararg{AbstractOperator})
 	return HCAT(AA, buf)
 end
 
-function HCAT{N,C}(AA::NTuple{N,AbstractOperator}, buf::C) 
+function HCAT(AA::NTuple{N,AbstractOperator}, buf::C) where {N,C} 
 	if N == 1
 		return AA[1]
 	else
@@ -120,7 +120,7 @@ HCAT(A::AbstractOperator) = A
 
 # Mappings
 
-@generated function A_mul_B!{M,N,L,P,C,DD}(y::C, H::HCAT{M,N,L,P,C}, b::DD)
+@generated function A_mul_B!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -172,7 +172,7 @@ HCAT(A::AbstractOperator) = A
 
 end
 
-@generated function Ac_mul_B!{M,N,L,P,C,DD}(y::DD, H::HCAT{M,N,L,P,C}, b::C)
+@generated function Ac_mul_B!(y::DD, H::HCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -201,7 +201,7 @@ end
 end
 
 # same as A_mul_B but skips `Zeros`
-@generated function A_mul_B_skipZeros!{M,N,L,P,C,DD}(y::C, H::HCAT{M,N,L,P,C}, b::DD)
+@generated function A_mul_B_skipZeros!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -247,7 +247,7 @@ end
 end
 
 # same as Ac_mul_B but skips `Zeros`
-@generated function Ac_mul_B_skipZeros!{M,N,L,P,C,DD}(y::DD, H::HCAT{M,N,L,P,C}, b::C)
+@generated function Ac_mul_B_skipZeros!(y::DD, H::HCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -305,7 +305,7 @@ diag_AAc(L::HCAT) = sum(diag_AAc.(L.A))
 # utils
 import Base: permute
 
-function permute{M,N,L,P,C}(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int})
+function permute(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 
 
 	unfolded = vcat([[idx... ] for idx in H.idxs]...) 

@@ -17,7 +17,7 @@ julia> [DFT(10); DCT(10)]'
 [ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10
 ```
 """
-immutable Transpose{T <: AbstractOperator} <: AbstractOperator
+struct Transpose{T <: AbstractOperator} <: AbstractOperator
 	A::T
 	function Transpose(A::T) where {T<:AbstractOperator} 
 		is_linear(A) == false && error("Cannot transpose a nonlinear operator. You might use `jacobian`")
@@ -31,8 +31,8 @@ Transpose(L::Transpose) = L.A
 
 # Mappings
 
-A_mul_B!{T<:AbstractOperator}(y, L::Transpose{T}, x) = Ac_mul_B!(y, L.A, x)
-Ac_mul_B!{T<:AbstractOperator}(y, L::Transpose{T}, x) = A_mul_B!(y, L.A, x)
+ A_mul_B!(y, L::Transpose{T}, x) where {T<:AbstractOperator} = Ac_mul_B!(y, L.A, x)
+Ac_mul_B!(y, L::Transpose{T}, x) where {T<:AbstractOperator} = A_mul_B!(y, L.A, x)
 
 # Properties
 

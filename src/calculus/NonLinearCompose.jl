@@ -27,12 +27,12 @@ true
 ```
 """
 
-immutable NonLinearCompose{N,
-			   L1 <: HCAT{1},
-			   L2 <: HCAT{1},
-			   C <: Tuple{AbstractArray,AbstractArray},
-			   D <: NTuple{N,Union{AbstractArray,Tuple}}
-			   } <: NonLinearOperator
+struct NonLinearCompose{N,
+			L1 <: HCAT{1},
+			L2 <: HCAT{1},
+			C <: Tuple{AbstractArray,AbstractArray},
+			D <: NTuple{N,Union{AbstractArray,Tuple}}
+			} <: NonLinearOperator
 	A::L1
 	B::L2
 	buf::C
@@ -47,12 +47,12 @@ immutable NonLinearCompose{N,
 	end
 end
 
-immutable NonLinearComposeJac{N,
-			      L1 <: HCAT{1},
-			      L2 <: HCAT{1},
-			      C <: Tuple{AbstractArray,AbstractArray},
-			      D <: NTuple{N,Union{AbstractArray,Tuple}}
-			      } <: LinearOperator
+struct NonLinearComposeJac{N,
+			   L1 <: HCAT{1},
+			   L2 <: HCAT{1},
+			   C <: Tuple{AbstractArray,AbstractArray},
+			   D <: NTuple{N,Union{AbstractArray,Tuple}}
+			   } <: LinearOperator
 	A::L1
 	B::L2
 	buf::C
@@ -75,21 +75,21 @@ function NonLinearCompose(L1::AbstractOperator,L2::AbstractOperator)
 end
 
 # Jacobian
-function Jacobian{M,N,L,C,
-		  D  <: NTuple{N,Union{AbstractArray,Tuple}},
-		  DD <: NTuple{M,AbstractArray},
-		  }(P::NonLinearCompose{N,L,C,D},x::DD)  
+function Jacobian(P::NonLinearCompose{N,L,C,D},x::DD) where  {M,N,L,C,
+							      D<: NTuple{N,Union{AbstractArray,Tuple}},
+							      DD<: NTuple{M,AbstractArray},
+							      }
 	NonLinearComposeJac{N}(Jacobian(P.A,x),Jacobian(P.B,x),P.buf,P.bufx)
 end
 
 # Mappings
-function A_mul_B!{N,L,C,D}(y, P::NonLinearCompose{N,L,C,D}, b)
+function A_mul_B!(y, P::NonLinearCompose{N,L,C,D}, b) where {N,L,C,D}
 	A_mul_B_skipZeros!(P.buf[1],P.A,b)
 	A_mul_B_skipZeros!(P.buf[2],P.B,b)
 	A_mul_B!(y,P.buf[1],P.buf[2])
 end
 
-function Ac_mul_B!{N,L,C,D}(y, P::NonLinearComposeJac{N,L,C,D}, b)
+function Ac_mul_B!(y, P::NonLinearComposeJac{N,L,C,D}, b) where {N,L,C,D}
 
 	A_mul_Bc!(P.bufx[1],b,P.buf[2])
 	Ac_mul_B_skipZeros!(y,P.A,P.bufx[1])
@@ -124,7 +124,7 @@ codomainType(L::NonLinearComposeJac) = codomainType(L.A)
 # utils
 import Base: permute
 
-function permute{N,L,C,D}(P::NonLinearCompose{N,L,C,D}, p::AbstractVector{Int})
+function permute(P::NonLinearCompose{N,L,C,D}, p::AbstractVector{Int}) where {N,L,C,D}
 	NonLinearCompose(permute(P.A,p),permute(P.B,p),P.buf,P.bufx)
 end
 

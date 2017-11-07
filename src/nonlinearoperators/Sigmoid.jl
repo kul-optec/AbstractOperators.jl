@@ -9,23 +9,25 @@ Creates the sigmoid non-linear operator with input dimensions `dim_in`.
 ```
 
 """
-immutable Sigmoid{T,N,G<:Real} <: NonLinearOperator
+struct Sigmoid{T,N,G<:Real} <: NonLinearOperator
 	dim::NTuple{N,Int}
 	gamma::G
 end
 
-function Sigmoid{N, G <: Real}(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G=100.)  
+function Sigmoid(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G=100.) where {N, G <: Real} 
 	Sigmoid{DomainType,N,G}(DomainDim,gamma)
 end
 
-Sigmoid{N,G}(DomainDim::NTuple{N,Int}, gamma::G=100) = Sigmoid{Float64,N,G}(DomainDim,gamma)
+Sigmoid(DomainDim::NTuple{N,Int}, gamma::G=100) where {N,G} = Sigmoid{Float64,N,G}(DomainDim,gamma)
 
-function A_mul_B!{T,N,G}(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractArray{T,N})
+function A_mul_B!(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractArray{T,N}) where {T,N,G}
 	y .= (1.+exp.(-L.gamma.*x)).^(-1)
 end
 
 
-function Ac_mul_B!{T,N,G, A<: Sigmoid{T,N,G}}(y::AbstractArray{T,N}, L::Jacobian{A}, b::AbstractArray{T,N})
+function Ac_mul_B!(y::AbstractArray{T,N}, 
+		   L::Jacobian{A}, 
+		   b::AbstractArray{T,N}) where {T,N,G, A<: Sigmoid{T,N,G}}
 	y .= exp.(-L.A.gamma.*L.x)
 	y ./= (1.+y).^2 
 	y .= conj.(L.A.gamma.*y)
@@ -36,5 +38,5 @@ fun_name(L::Sigmoid) = "σ"
 
 size(L::Sigmoid) = (L.dim, L.dim)
 
-domainType{T,N,D}(L::Sigmoid{T,N,D}) = T
-codomainType{T,N,D}(L::Sigmoid{T,N,D}) = T
+domainType(L::Sigmoid{T,N,D}) where {T,N,D} = T
+codomainType(L::Sigmoid{T,N,D}) where {T,N,D} = T

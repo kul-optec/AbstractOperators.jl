@@ -24,7 +24,7 @@ julia> d = L*x;                            #compute new direction
 
 """
 
-type LBFGS{M, N, R <: Real, T <: Union{R, Complex{R}}, A<:AbstractArray{T,N}} <: LinearOperator
+mutable struct LBFGS{M, N, R <: Real, T <: Union{R, Complex{R}}, A<:AbstractArray{T,N}} <: LinearOperator
 	currmem::Int
 	curridx::Int
 	s::A
@@ -38,7 +38,7 @@ end
 
 # Constructors
 #default
-function LBFGS{N}(T::Type, dim::NTuple{N,Int}, M::Int)
+function LBFGS(T::Type, dim::NTuple{N,Int}, M::Int) where {N}
 	s_m = tuple([deepzeros(T,dim) for i = 1:M]...)
 	y_m = tuple([deepzeros(T,dim) for i = 1:M]...)
 	s = deepzeros(T,dim)
@@ -58,13 +58,11 @@ See `LBFGS` documentation.
 
 """
 
-function update!{M,N,R,T,A}(
-			L::LBFGS{M,N,R,T,A},
-			x::A,
-			x_prev::A,
-			gradx::A,
-			gradx_prev::A)
-
+function update!(L::LBFGS{M,N,R,T,A},
+		 x::A,
+		 x_prev::A,
+		 gradx::A,
+		 gradx_prev::A) where {M,N,R,T,A}
 
 	ys = update_s_y(L,x,x_prev,gradx,gradx_prev)
 
@@ -82,14 +80,14 @@ function update!{M,N,R,T,A}(
 	return L
 end
 
-function update_s_y{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}, x::A, x_prev::A, gradx::A, gradx_prev::A)
+function update_s_y(L::LBFGS{M,N,R,T,A}, x::A, x_prev::A, gradx::A, gradx_prev::A) where {M,N,R,T,A}
 	L.s .= (-).(x, x_prev)
 	L.y .= (-).(gradx, gradx_prev)
 	ys = real(vecdot(L.s,L.y))
 	return ys
 end
 
-function update_s_m_y_m{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}, curridx::Int)
+function update_s_m_y_m(L::LBFGS{M,N,R,T,A}, curridx::Int) where {M,N,R,T,A}
 	L.s_m[curridx] .=  L.s
 	L.y_m[curridx] .=  L.y
 
@@ -97,14 +95,14 @@ function update_s_m_y_m{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}, curridx::Int)
 	return yty
 end
 
-function A_mul_B!{M,N,R,T,A}(d::A, L::LBFGS{M,N,R,T,A}, gradx::A)
+function A_mul_B!(d::A, L::LBFGS{M,N,R,T,A}, gradx::A) where {M,N,R,T,A}
 	d .= (-).(gradx)
 	idx = loop1!(d,L)
 	d .= (*).(L.H, d)
 	d = loop2!(d,idx,L)
 end
 
-function loop1!{M,N,R,T,A}(d::A, L::LBFGS{M,N,R,T,A})
+function loop1!(d::A, L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A}
 	idx = L.curridx
 	for i=1:L.currmem
 		L.alphas[idx] = real(vecdot(L.s_m[idx], d))/L.ys_m[idx]
@@ -115,7 +113,7 @@ function loop1!{M,N,R,T,A}(d::A, L::LBFGS{M,N,R,T,A})
 	return idx
 end
 
-function loop2!{M,N,R,T,A}(d::A, idx::Int, L::LBFGS{M,N,R,T,A})
+function loop2!(d::A, idx::Int, L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A}
 	for i=1:L.currmem
 		idx += 1
 		if idx > M idx = 1 end
@@ -126,8 +124,8 @@ function loop2!{M,N,R,T,A}(d::A, idx::Int, L::LBFGS{M,N,R,T,A})
 end
 
 # Properties
-  domainType{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}) = T
-codomainType{M,N,R,T,A}(L::LBFGS{M,N,R,T,A}) = T
+  domainType(L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A} = T
+codomainType(L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A} = T
 
 size(A::LBFGS) = (size(A.s), size(A.s))
 

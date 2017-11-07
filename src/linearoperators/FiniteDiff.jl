@@ -24,7 +24,7 @@ true
 """
 
 
-immutable FiniteDiff{T,N,D} <: LinearOperator
+struct FiniteDiff{T,N,D} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	function FiniteDiff{T,N,D}(dim_in) where {T,N,D}
 		D > N && error("direction is bigger the number of dimension $N")
@@ -34,17 +34,19 @@ end
 
 # Constructors
 #default constructor
-FiniteDiff{N}(domainType::Type, dim_in::NTuple{N,Int}, dir::Int64 = 1) =
+FiniteDiff(domainType::Type, dim_in::NTuple{N,Int}, dir::Int64 = 1) where {N} =
 FiniteDiff{domainType,N,dir}(dim_in)
 
-FiniteDiff{N}(dim_in::NTuple{N,Int}, dir::Int64 = 1) =
+FiniteDiff(dim_in::NTuple{N,Int}, dir::Int64 = 1) where {N} =
 FiniteDiff(Float64, dim_in, dir)
 
-FiniteDiff{T,N}(x::AbstractArray{T,N}, dir::Int64 = 1)  = FiniteDiff(eltype(x), size(x), dir)
+FiniteDiff(x::AbstractArray{T,N}, dir::Int64 = 1) where {T,N}  = FiniteDiff(eltype(x), size(x), dir)
 
 # Mappings
 
-@generated function A_mul_B!{T,N,D}(y::AbstractArray{T,N},L::FiniteDiff{T,N,D},b::AbstractArray{T,N})
+@generated function A_mul_B!(y::AbstractArray{T,N},
+			     L::FiniteDiff{T,N,D},
+			    b::AbstractArray{T,N}) where {T,N,D}
 	o = ones(Int,N)
 	o[D] = 2
 	I1 = CartesianIndex(o...)
@@ -60,7 +62,9 @@ FiniteDiff{T,N}(x::AbstractArray{T,N}, dir::Int64 = 1)  = FiniteDiff(eltype(x), 
 	end
 end
 
-@generated function Ac_mul_B!{T,N,D}(y::AbstractArray{T,N},L::FiniteDiff{T,N,D},b::AbstractArray{T,N})
+@generated function Ac_mul_B!(y::AbstractArray{T,N},
+			      L::FiniteDiff{T,N,D},
+			     b::AbstractArray{T,N}) where {T,N,D}
 	z = zeros(Int,N)
 	z[D] = 1
 	idx = CartesianIndex(z...)
@@ -76,19 +80,19 @@ end
 
 # Properties
 
-domainType{T, N}(L::FiniteDiff{T, N}) = T
-codomainType{T, N}(L::FiniteDiff{T, N}) = T
+domainType(L::FiniteDiff{T, N}) where {T, N} = T
+codomainType(L::FiniteDiff{T, N}) where {T, N} = T
 
-function size{T,N,D}(L::FiniteDiff{T,N,D}) 
+function size(L::FiniteDiff{T,N,D}) where {T,N,D} 
 	dim_out = [L.dim_in...]
 	dim_out[D] = dim_out[D]-1
 	return ((dim_out...), L.dim_in)
 end
 
-fun_name{T,N}(L::FiniteDiff{T,N,1})  = "δx"
-fun_name{T,N}(L::FiniteDiff{T,N,2})  = "δy"
-fun_name{T,N}(L::FiniteDiff{T,N,3})  = "δz"
-fun_name{T,N,D}(L::FiniteDiff{T,N,D})  = "δx$D"
+fun_name(L::FiniteDiff{T,N,1}) where  {T,N} = "δx"
+fun_name(L::FiniteDiff{T,N,2}) where  {T,N} = "δy"
+fun_name(L::FiniteDiff{T,N,3}) where  {T,N} = "δz"
+fun_name(L::FiniteDiff{T,N,D}) where {T,N,D}  = "δx$D"
 
 
 is_full_row_rank(L::FiniteDiff) = true

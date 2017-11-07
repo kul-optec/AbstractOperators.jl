@@ -21,7 +21,7 @@ julia> RDFT((10,10,10),2)
 
 """
 
-immutable RDFT{T <:Number,
+struct RDFT{T <:Number,
 	       N,
 	       T1<:Base.DFT.Plan,
 	       T2<:Base.DFT.Plan,
@@ -55,7 +55,7 @@ function RDFT(x::AbstractArray{T,N}, dims::Int=1) where {T<:Real,N}
 end
 
 RDFT(T::Type,dim_in::NTuple{N,Int},dims::Int=1) where {N} = RDFT(zeros(T,dim_in),dims)
-RDFT{N}(dim_in::NTuple{N,Int},dims::Int=1) = RDFT(zeros(dim_in),dims)
+RDFT(dim_in::NTuple{N,Int},dims::Int=1) where {N} = RDFT(zeros(dim_in),dims)
 RDFT(dim_in::Vararg{Int}) = RDFT(dim_in)
 RDFT(T::Type,dim_in::Vararg{Int}) = RDFT(T,dim_in)
 

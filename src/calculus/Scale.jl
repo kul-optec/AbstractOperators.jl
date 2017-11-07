@@ -22,7 +22,7 @@ julia> 10*A         #shorthand
 ```
 
 """
-immutable Scale{T <: RealOrComplex, L <: AbstractOperator} <: AbstractOperator
+struct Scale{T <: RealOrComplex, L <: AbstractOperator} <: AbstractOperator
   coeff::T
   coeff_conj::T
   A::L
@@ -30,35 +30,39 @@ end
 
 # Constructors
 
-Scale{T <: RealOrComplex, R <: AbstractOperator}(coeff::T, L::R) = Scale{T, R}(coeff, conj(coeff), L)
+Scale(coeff::T, L::R) where {T <: RealOrComplex, R <: AbstractOperator} = 
+Scale{T, R}(coeff, conj(coeff), L)
 
 # Special Constructors
 # scale of scale
-Scale{T1 <: RealOrComplex, T2 <: RealOrComplex, R <: AbstractOperator, S <: Scale{T1, R}}(coeff::T2, L::S) = 
+Scale(coeff::T2, L::S) where {T1 <: RealOrComplex, 
+			      T2 <: RealOrComplex, 
+			      R <: AbstractOperator, 
+			      S <: Scale{T1, R}}= 
 Scale(*(promote(coeff,L.coeff)...), L.A)
 # scale of DiagOp
-Scale{T<:RealOrComplex}(coeff::T,L::DiagOp) = DiagOp(coeff*diag(L))
+Scale(coeff::T,L::DiagOp) where {T<:RealOrComplex} = DiagOp(coeff*diag(L))
 
 # Mappings
 
-function A_mul_B!{T, C <: AbstractArray, D, A <: AbstractOperator}(y::C, L::Scale{T, A}, x::D)
+function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: AbstractArray, D, A <: AbstractOperator}
   A_mul_B!(y, L.A, x)
   y .*= L.coeff
 end
 
-function A_mul_B!{T, C <: Tuple, D, A <: AbstractOperator}(y::C, L::Scale{T, A}, x::D)
+function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: Tuple, D, A <: AbstractOperator}
   A_mul_B!(y, L.A, x)
   for k in eachindex(y)
     y[k] .*= L.coeff
   end
 end
 
-function Ac_mul_B!{T, C, D <: AbstractArray, A <: AbstractOperator}(y::D, L::Scale{T, A}, x::C)
+function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: AbstractArray, A <: AbstractOperator}
   Ac_mul_B!(y, L.A, x)
   y .*= L.coeff_conj
 end
 
-function Ac_mul_B!{T, C, D <: Tuple, A <: AbstractOperator}(y::D, L::Scale{T, A}, x::C)
+function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: Tuple, A <: AbstractOperator}
   Ac_mul_B!(y, L.A, x)
   for k in eachindex(y)
     y[k] .*= L.coeff_conj

@@ -9,7 +9,7 @@ Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVect
 
 """
 
-immutable Conv{T,H <: AbstractVector{T}} <: LinearOperator
+struct Conv{T,H <: AbstractVector{T}} <: LinearOperator
 	dim_in::Tuple{Int}
 	h::H
 end
@@ -17,29 +17,29 @@ end
 # Constructors
 
 ###standard constructor
-function Conv{H<:AbstractVector, N}(DomainType::Type, DomainDim::NTuple{N,Int},  h::H) 
+function Conv(DomainType::Type, DomainDim::NTuple{N,Int},  h::H) where {H<:AbstractVector, N} 
 	eltype(h) != DomainType && error("eltype(h) is $(eltype(h)), should be $(DomainType)")
 	N != 1 && error("Conv treats only SISO, check Filt and MIMOFilt for MIMO")
 	Conv{DomainType,H}(DomainDim,h)
 end
 
-Conv{H<:AbstractVector, N}(DomainDim::NTuple{N,Int},  h::H) =  Conv(eltype(h), DomainDim, h)
-Conv{H}(x::H, h::H) = Conv(eltype(x), size(x), h)
+Conv(DomainDim::NTuple{N,Int},  h::H) where {H<:AbstractVector, N} =  Conv(eltype(h), DomainDim, h)
+Conv(x::H, h::H) where {H} = Conv(eltype(x), size(x), h)
 
 # Mappings
 
-function A_mul_B!{T,H}(y::H,A::Conv{T,H},b::H)
+function A_mul_B!(y::H,A::Conv{T,H},b::H) where {T,H}
 		y .= conv(A.h,b)
 end
 
-function Ac_mul_B!{T,H}(y::H,A::Conv{T,H},b::H)
+function Ac_mul_B!(y::H,A::Conv{T,H},b::H) where {T,H}
 		y .= xcorr(b,A.h)[size(A,1)[1]:end-length(A.h)+1]
 end
 
 # Properties
 
-domainType{T}(L::Conv{T}) = T
-codomainType{T}(L::Conv{T}) = T
+domainType(L::Conv{T}) where {T} = T
+codomainType(L::Conv{T}) where {T} = T
 
 #TODO find out a way to verify this, 
 is_full_row_rank(L::Conv)    = true

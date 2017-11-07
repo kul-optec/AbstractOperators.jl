@@ -33,7 +33,7 @@ julia> V*ones(3)
 ```
 
 """
-immutable VCAT{M, # number of domains  
+struct VCAT{M, # number of domains  
 	       N, # number of AbstractOperator 
 	       L <: NTuple{N,AbstractOperator},
 	       P <: NTuple{N,Union{Int,Tuple}},
@@ -51,11 +51,11 @@ end
 
 # Constructors
 
-function VCAT{N,  
-	      L <: NTuple{N,AbstractOperator},
-	      P <: NTuple{N,Union{Int,Tuple}},
-	      C
-	      }(A::L, idxs::P, buf::C, M::Int)
+function VCAT(A::L, idxs::P, buf::C, M::Int) where {N,  
+						    L <: NTuple{N,AbstractOperator},
+						    P <: NTuple{N,Union{Int,Tuple}},
+						    C
+						    } 
 	if any([size(A[1],2) != size(a,2) for a in A])
 		throw(DimensionMismatch("operators must have the same domain dimension!"))
 	end
@@ -89,7 +89,7 @@ function VCAT(A::Vararg{AbstractOperator})
 	return VCAT(AA, buf)
 end
 
-function VCAT{N,C}(AA::NTuple{N,AbstractOperator}, buf::C) 
+function VCAT(AA::NTuple{N,AbstractOperator}, buf::C) where {N,C} 
 	if N == 1
 		return AA[1]
 	else
@@ -117,7 +117,7 @@ VCAT(A::AbstractOperator) = A
 
 # Mappings
 
-@generated function Ac_mul_B!{M,N,L,P,C,DD}(y::C, H::VCAT{M,N,L,P,C}, b::DD)
+@generated function Ac_mul_B!(y::C, H::VCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -169,7 +169,7 @@ VCAT(A::AbstractOperator) = A
 
 end
 
-@generated function A_mul_B!{M,N,L,P,C,DD}(y::DD, H::VCAT{M,N,L,P,C}, b::C)
+@generated function A_mul_B!(y::DD, H::VCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -198,7 +198,7 @@ end
 end
 
 # same as Ac_mul_B but skips `Zeros`
-@generated function Ac_mul_B_skipZeros!{M,N,L,P,C,DD}(y::C, H::VCAT{M,N,L,P,C}, b::DD)
+@generated function Ac_mul_B_skipZeros!(y::C, H::VCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -244,7 +244,7 @@ end
 end
 
 # same as A_mul_B but skips `Zeros`
-@generated function A_mul_B_skipZeros!{M,N,L,P,C,DD}(y::DD, H::VCAT{M,N,L,P,C}, b::C)
+@generated function A_mul_B_skipZeros!(y::DD, H::VCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -302,7 +302,7 @@ diag_AcA(L::VCAT) = sum(diag_AcA.(L.A))
 # utils
 import Base: permute
 
-function permute{M,N,L,P,C}(H::VCAT{M,N,L,P,C}, p::AbstractVector{Int})
+function permute(H::VCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 
 
 	unfolded = vcat([[idx... ] for idx in H.idxs]...) 

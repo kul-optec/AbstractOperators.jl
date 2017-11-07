@@ -21,27 +21,27 @@ julia> Z*ones(2,2)
 
 """
 
-immutable ZeroPad{T,N} <: LinearOperator
+struct ZeroPad{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	zp::NTuple{N,Int}
 end
 
 # Constructors
 #standard constructor
-function ZeroPad{N,M}(domainType::Type, dim_in::NTuple{N,Int}, zp::NTuple{M,Int})
+function ZeroPad(domainType::Type, dim_in::NTuple{N,Int}, zp::NTuple{M,Int}) where {N,M}
 	M != N && error("dim_in and zp must have the same length")
 	any([zp...].<0) && error("zero padding cannot be negative")
 	ZeroPad{domainType,N}(dim_in,zp)
 end
 
-ZeroPad{N}(dim_in::Tuple, zp::NTuple{N,Int}) = ZeroPad(Float64, dim_in, zp)
-ZeroPad{N}(domainType::Type, dim_in::Tuple, zp::Vararg{Int,N}) = ZeroPad(domainType, dim_in, zp)
-ZeroPad{N}(dim_in::Tuple, zp::Vararg{Int,N}) = ZeroPad(Float64, dim_in, zp)
-ZeroPad{N}(x::AbstractArray, zp::NTuple{N,Int}) = ZeroPad(eltype(x), size(x), zp)
-ZeroPad{N}(x::AbstractArray, zp::Vararg{Int,N}) = ZeroPad(eltype(x), size(x), zp)
+ZeroPad(dim_in::Tuple, zp::NTuple{N,Int})                   where {N} = ZeroPad(Float64, dim_in, zp)
+ZeroPad(domainType::Type, dim_in::Tuple, zp::Vararg{Int,N}) where {N} = ZeroPad(domainType, dim_in, zp)
+ZeroPad(dim_in::Tuple, zp::Vararg{Int,N})                   where {N} = ZeroPad(Float64, dim_in, zp)
+ZeroPad(x::AbstractArray, zp::NTuple{N,Int})                where {N} = ZeroPad(eltype(x), size(x), zp)
+ZeroPad(x::AbstractArray, zp::Vararg{Int,N})                where {N} = ZeroPad(eltype(x), size(x), zp)
 
 # Mappings
-@generated function A_mul_B!{T,N}(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N})
+@generated function A_mul_B!(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N}) where {T,N}
 
 
 	# builds
@@ -74,7 +74,7 @@ ZeroPad{N}(x::AbstractArray, zp::Vararg{Int,N}) = ZeroPad(eltype(x), size(x), zp
 
 end
 
-@generated function Ac_mul_B!{T,N}(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N})
+@generated function Ac_mul_B!(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N}) where {T,N}
 
 	#builds
 	#for l = 1:size(y,1), m = 1:size(y,2)
@@ -102,8 +102,8 @@ end
 
 # Properties
 
-domainType{T}(L::ZeroPad{T}) = T
-codomainType{T}(L::ZeroPad{T}) = T
+  domainType(L::ZeroPad{T}) where {T} = T
+codomainType(L::ZeroPad{T}) where {T} = T
 
 size(L::ZeroPad) = L.dim_in .+ L.zp, L.dim_in
 

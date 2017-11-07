@@ -1,9 +1,9 @@
 export Sum
 
-immutable Sum{M, N, K,
-	      C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-	      D <: Union{NTuple{N,AbstractArray}, AbstractArray},
-	      L<:NTuple{K,AbstractOperator}} <: AbstractOperator
+struct Sum{M, N, K,
+	   C <: Union{NTuple{M,AbstractArray}, AbstractArray},
+	   D <: Union{NTuple{N,AbstractArray}, AbstractArray},
+	   L<:NTuple{K,AbstractOperator}} <: AbstractOperator
 	A::L
 	bufC::C
 	bufD::D
@@ -11,7 +11,7 @@ end
 
 # Constructors
 
-function Sum{C, D, K, L <: NTuple{K,AbstractOperator}}(A::L, bufC::C, bufD::D, M::Int, N::Int)
+function Sum(A::L, bufC::C, bufD::D, M::Int, N::Int) where {C, D, K, L <: NTuple{K,AbstractOperator}}
 	if any([size(a) != size(A[1]) for a in A])
 		throw(DimensionMismatch("cannot sum operator of different sizes"))
 	end
@@ -37,12 +37,12 @@ function Sum(A::Vararg{AbstractOperator})
 end
 
 # special cases
-Sum{M,N,K,C,D}(L1::AbstractOperator, L2::Sum{M,N,K,C,D}           ) =
+Sum(L1::AbstractOperator, L2::Sum{M,N,K,C,D}) where {M,N,K,C,D} =
 Sum((L1,L2.A...),L2.bufC,L2.bufD, M, N)
 
 # Mappings
 
-@generated function A_mul_B!{M,N,K,C,D}(y::C, S::Sum{M,N,K,C,D}, b::D)
+@generated function A_mul_B!(y::C, S::Sum{M,N,K,C,D}, b::D) where {M,N,K,C,D}
 	ex = :(A_mul_B!(y,S.A[1],b))
 	for i = 2:K
 		ex = quote
@@ -63,7 +63,7 @@ Sum((L1,L2.A...),L2.bufC,L2.bufD, M, N)
 	end
 end
 
-@generated function Ac_mul_B!{M,N,K,C,D}(y::D, S::Sum{M,N,K,C,D}, b::C)
+@generated function Ac_mul_B!(y::D, S::Sum{M,N,K,C,D}, b::C) where {M,N,K,C,D}
 	ex = :(Ac_mul_B!(y,S.A[1],b))
 	for i = 2:K
 		ex = quote
@@ -88,10 +88,10 @@ end
 
 size(L::Sum) = size(L.A[1])
 
-  domainType{M,N,K,C,D<:AbstractArray,L}(S::Sum{M, N, K, C, D, L}) =    domainType(S.A[1])
-  domainType{M,N,K,C,D<:Tuple        ,L}(S::Sum{M, N, K, C, D, L}) =   domainType.(S.A[1])
-codomainType{M,N,K,C<:AbstractArray,D,L}(S::Sum{M, N, K, C, D, L}) =  codomainType(S.A[1])
-codomainType{M,N,K,C<:Tuple        ,D,L}(S::Sum{M, N, K, C, D, L}) = codomainType.(S.A[1])
+  domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:AbstractArray,L} =    domainType(S.A[1])
+  domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:Tuple        ,L} =   domainType.(S.A[1])
+codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:AbstractArray,D,L} =  codomainType(S.A[1])
+codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:Tuple        ,D,L} = codomainType.(S.A[1])
 
 fun_domain(S::Sum)   = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])

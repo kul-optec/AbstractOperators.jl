@@ -25,7 +25,7 @@ julia> op*ones(3,4)
 
 """
 
-immutable MatrixMul{T, A <: AbstractVector, B <:RowVector} <: LinearOperator
+struct MatrixMul{T, A <: AbstractVector, B <:RowVector} <: LinearOperator
 	b::A
 	bt::B
 	n_row_in::Integer
@@ -33,23 +33,25 @@ end
 
 ##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
 # Constructors
-function MatrixMul{A <: AbstractVector}(DomainType::Type,
-					DomainDim::Tuple{Int,Int}, b::A)  
+function MatrixMul(DomainType::Type,
+		   DomainDim::Tuple{Int,Int}, b::A) where {A <: AbstractVector} 
 	bt = b'
 	MatrixMul{DomainType, A, typeof(bt)}(b,bt,DomainDim[1])
 end
 
-MatrixMul{T,A<:AbstractVector{T}}(b::A, n_row_in::Int) = MatrixMul(T,(n_row_in,length(b)),b) 
+MatrixMul(b::A, n_row_in::Int) where {T,A<:AbstractVector{T}} = MatrixMul(T,(n_row_in,length(b)),b) 
 
 # Mappings
-A_mul_B!{T,A}(y::AbstractVector{T}, L::MatrixMul{T,A}, b::AbstractMatrix{T} ) = A_mul_B!(y,b,L.b)
-function Ac_mul_B!{T,A,B}(y::AbstractMatrix{T}, L::MatrixMul{T,A,B}, b::AbstractVector{T} ) 
+A_mul_B!(y::AbstractVector{T}, L::MatrixMul{T,A}, b::AbstractMatrix{T} ) where {T,A} = 
+A_mul_B!(y,b,L.b)
+
+function Ac_mul_B!(y::AbstractMatrix{T}, L::MatrixMul{T,A,B}, b::AbstractVector{T} ) where {T,A,B} 
 	y .= L.bt.*b
 end
 
 # Properties
-domainType{T, A}(L::MatrixMul{T, A}) = T
-codomainType{T, A}(L::MatrixMul{T, A}) = T
+domainType(L::MatrixMul{T, A}) where {T, A} = T
+codomainType(L::MatrixMul{T, A}) where {T, A} = T
 
 fun_name(L::MatrixMul) = "(⋅)b"
 

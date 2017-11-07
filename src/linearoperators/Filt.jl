@@ -8,7 +8,7 @@ export Filt
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns a vector `y` filtered by an IIR filter of coefficients `b` and `a`. If only `b` is provided a FIR is used to comute `y` instead. 
 
 """
-immutable Filt{T,N} <: LinearOperator
+struct Filt{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	b::AbstractVector{T}
 	a::AbstractVector{T}
@@ -40,13 +40,13 @@ end
 # Constructors
 
 #default constructor
-function Filt{N}(T::Type, dim_in::NTuple{N,Int}, b::AbstractVector, a::AbstractVector)
+function Filt(T::Type, dim_in::NTuple{N,Int}, b::AbstractVector, a::AbstractVector) where {N}
 	eltype(b) != T && error("eltype of b is $(eltype(b)), should be $T")
 	eltype(a) != T && error("eltype of a is $(eltype(b)), should be $T")
 	Filt{T,N}(dim_in,b,a)
 end
 
-function Filt{N}(T::Type, dim_in::NTuple{N,Int}, b::AbstractVector)
+function Filt(T::Type, dim_in::NTuple{N,Int}, b::AbstractVector) where {N}
 	eltype(b) != T && error("eltype of b is $(eltype(b)), should be $T")
 	Filt{T,N}(dim_in,b,[convert(T,1.0)])
 end
@@ -71,13 +71,13 @@ Filt(size(x), b)
 
 # Mappings
 
-function A_mul_B!{T}(y::AbstractArray{T},L::Filt,x::AbstractArray{T})
+function A_mul_B!(y::AbstractArray{T},L::Filt,x::AbstractArray{T}) where {T}
 	for col = 1:size(x,2)
 		length(L.a) != 1 ? iir!(y,L.b,L.a,x,L.si,col,col) : fir!(y,L.b,x,L.si,col,col)
 	end
 end
 
-function Ac_mul_B!{T}(y::AbstractArray{T},L::Filt,x::AbstractArray{T})
+function Ac_mul_B!(y::AbstractArray{T},L::Filt,x::AbstractArray{T}) where {T}
 	for col = 1:size(x,2)
 		length(L.a) != 1 ? iir_rev!(y,L.b,L.a,x,L.si,col,col) : fir_rev!(y,L.b,x,L.si,col,col)
 	end
@@ -143,8 +143,8 @@ end
 
 # Properties
 
-domainType{T, N}(L::Filt{T, N}) = T
-codomainType{T, N}(L::Filt{T, N}) = T
+domainType(L::Filt{T, N}) where {T, N} = T
+codomainType(L::Filt{T, N}) where {T, N} = T
 
 size(L::Filt) = L.dim_in, L.dim_in
 

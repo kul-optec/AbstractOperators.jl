@@ -43,7 +43,7 @@ true
 
 """
 
-immutable MIMOFilt{T, A<:AbstractVector{T}} <: LinearOperator
+struct MIMOFilt{T, A<:AbstractVector{T}} <: LinearOperator
 	dim_out::Tuple{Int,Int}
 	dim_in::Tuple{Int,Int}
 	B::Vector{A}
@@ -54,7 +54,7 @@ end
 # Constructors
 
 #default constructor
-function MIMOFilt{N}(domainType::Type, dim_in::NTuple{N,Int}, b::Vector, a::Vector)
+function MIMOFilt(domainType::Type, dim_in::NTuple{N,Int}, b::Vector, a::Vector) where {N}
 
 	N != 2 && error("length(dim_in) must be equal to 2")
 	eltype(b) != eltype(a) && error("eltype(b) must be equal to eltype(a)")
@@ -96,21 +96,21 @@ function MIMOFilt{N}(domainType::Type, dim_in::NTuple{N,Int}, b::Vector, a::Vect
 	MIMOFilt{domainType, typeof(B[1])}(dim_out, dim_in, B, A, SI)
 end
 
-MIMOFilt{D1<:AbstractVector}(dim_in::Tuple,  b::Vector{D1}, a::Vector{D1}) =
+MIMOFilt(dim_in::Tuple,  b::Vector{D1}, a::Vector{D1}) where {D1<:AbstractVector} =
 MIMOFilt(eltype(b[1]), dim_in, b, a)
 
-MIMOFilt{D1<:AbstractVector}(dim_in::Tuple,  b::Vector{D1}) =
+MIMOFilt(dim_in::Tuple,  b::Vector{D1}) where {D1<:AbstractVector} =
 MIMOFilt(eltype(b[1]), dim_in, b, [[1.0] for i in eachindex(b)])
 
-MIMOFilt{D1<:AbstractVector}(x::AbstractMatrix,  b::Vector{D1}, a::Vector{D1}) =
+MIMOFilt(x::AbstractMatrix,  b::Vector{D1}, a::Vector{D1}) where {D1<:AbstractVector} =
 MIMOFilt(eltype(x), size(x), b, a)
 
-MIMOFilt{D1<:AbstractVector}(x::AbstractMatrix,  b::Vector{D1}) =
+MIMOFilt(x::AbstractMatrix,  b::Vector{D1}) where {D1<:AbstractVector} =
 MIMOFilt(eltype(x), size(x), b, [[1.0] for i in eachindex(b)])
 
 # Mappings
 
-function A_mul_B!{T,A}(y::AbstractArray{T},L::MIMOFilt{T,A},x::AbstractArray{T})
+function A_mul_B!(y::AbstractArray{T},L::MIMOFilt{T,A},x::AbstractArray{T}) where {T,A}
 	cnt = 0
 	cx  = 0
 	y .= 0. #TODO avoid this?
@@ -130,7 +130,7 @@ function A_mul_B!{T,A}(y::AbstractArray{T},L::MIMOFilt{T,A},x::AbstractArray{T})
 	end
 end
 
-function Ac_mul_B!{T,A}(y::AbstractArray{T},L::MIMOFilt{T,A},x::AbstractArray{T})
+function Ac_mul_B!(y::AbstractArray{T},L::MIMOFilt{T,A},x::AbstractArray{T}) where {T,A}
 	cnt = 0
 	cx  = 0
 	y .= 0. #TODO avoid this?
@@ -152,8 +152,8 @@ end
 
 # Properties
 
-domainType{T, M}(L::MIMOFilt{T, M}) = T
-codomainType{T, M}(L::MIMOFilt{T, M}) = T
+domainType(L::MIMOFilt{T, M}) where {T, M} = T
+codomainType(L::MIMOFilt{T, M}) where {T, M} = T
 
 size(L::MIMOFilt) = L.dim_out, L.dim_in
 

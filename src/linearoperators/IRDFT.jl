@@ -50,7 +50,7 @@ function IRDFT(x::AbstractArray{Complex{T},N}, d::Int, dims::Int=1) where {T<:Nu
 end
 
 IRDFT(T::Type,dim_in::NTuple{N,Int},d::Int,dims::Int=1) where {N} = IRDFT(zeros(T,dim_in),d,dims)
-IRDFT{N}(dim_in::NTuple{N,Int},d::Int,dims::Int=1) = IRDFT(zeros(Complex{Float64},dim_in),d,dims)
+IRDFT(dim_in::NTuple{N,Int},d::Int,dims::Int=1) where {N} = IRDFT(zeros(Complex{Float64},dim_in),d,dims)
 
 # Mappings
 

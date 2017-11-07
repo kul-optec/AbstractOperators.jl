@@ -20,17 +20,17 @@ J(σ)  ℝ^10 -> ℝ^10
 ```
 
 """
-immutable Jacobian{T <: NonLinearOperator, X<:Union{AbstractArray,NTuple}} <: LinearOperator
+struct Jacobian{T <: NonLinearOperator, X<:Union{AbstractArray,NTuple}} <: LinearOperator
 	A::T
 	x::X
 end
 
 #Jacobian of LinearOperator 
-Jacobian{T<:LinearOperator,X<:Union{AbstractArray,NTuple}}(L::T,x::X) = L
+Jacobian(L::T,x::X) where {T<:LinearOperator,X<:Union{AbstractArray,NTuple}} = L
 #Jacobian of Scale
-Jacobian{T,L,T2<:Scale{T,L}}(S::T2,x::AbstractArray) = Scale(S.coeff,Jacobian(S.A,x)) 
+Jacobian(S::T2,x::AbstractArray) where {T,L,T2<:Scale{T,L}} = Scale(S.coeff,Jacobian(S.A,x)) 
 ##Jacobian of DCAT
-function Jacobian{N,L,P1,P2}(H::DCAT{N,L,P1,P2},x)  
+function Jacobian(H::DCAT{N,L,P1,P2},x) where {N,L,P1,P2} 
 	A = ()
 	c = 0
 	for i = 1:N
@@ -42,7 +42,7 @@ function Jacobian{N,L,P1,P2}(H::DCAT{N,L,P1,P2},x)
 	DCAT(A,H.idxD,H.idxC)
 end
 #Jacobian of HCAT
-function Jacobian{M,N,L,P,C,D}(H::HCAT{M,N,L,P,C},x::D)  
+function Jacobian(H::HCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D} 
 	A = ()
 	c = 0
 	for i = 1:N
@@ -54,19 +54,21 @@ function Jacobian{M,N,L,P,C,D}(H::HCAT{M,N,L,P,C},x::D)
 	HCAT(A,H.idxs,H.buf,M)
 end
 #Jacobian of VCAT
-Jacobian{M,N,L,P,C,D}(V::VCAT{M,N,L,P,C},x::D) = VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.buf, M) 
+Jacobian(V::VCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D} = 
+VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.buf, M) 
 #Jacobian of Compose 
-function Jacobian{X<:AbstractArray}(L::Compose, x::X)  
+function Jacobian(L::Compose, x::X) where {X<:AbstractArray} 
 	Compose(Jacobian.(L.A,(x,L.buf...)),L.buf)
 end
 
-function Jacobian{N,X<:NTuple{N,AbstractArray}}(L::Compose, x::X)  
+function Jacobian(L::Compose, x::X) where {N,X<:NTuple{N,AbstractArray}} 
 	Compose(Jacobian.(L.A,(x,L.buf...)),L.buf)
 end
 #Jacobian of Reshape
-Jacobian{N,L}(R::Reshape{N,L},x::AbstractArray) = Reshape(Jacobian(R.A,x),R.dim_out) 
+Jacobian(R::Reshape{N,L},x::AbstractArray) where {N,L} = Reshape(Jacobian(R.A,x),R.dim_out) 
 #Jacobian of Sum
-Jacobian{M,N,K,C,D}(S::Sum{M,N,K,C,D},x::D) = Sum(([Jacobian(a,x) for a in S.A]...),S.bufC,S.bufD,M,N)
+Jacobian(S::Sum{M,N,K,C,D},x::D) where {M,N,K,C,D} = 
+Sum(([Jacobian(a,x) for a in S.A]...),S.bufC,S.bufD,M,N)
 
 # Properties
 
