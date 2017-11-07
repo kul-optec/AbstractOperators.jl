@@ -68,7 +68,7 @@ function Ac_mul_B!(y::C2,
 	
 	A_mul_B!(y,L.At,b)
 	y ./= size(b,D)
-	@views y[L.idx...] .+= conj.(y[L.idx...])
+	@views y[L.idx...] .*= 2
 	return y
 
 end

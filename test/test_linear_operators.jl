@@ -177,7 +177,7 @@ y1 = op*x1
 n = 4
 op = RDFT(Float64,(n,))
 x1 = randn(n)
-y1 = test_op(op, x1, rfft(randn(n)), verb)
+y1 = test_op(op, x1, rfft(x1), verb)
 y2 = rfft(x1)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
@@ -185,7 +185,7 @@ y2 = rfft(x1)
 n,m,l = 4,8,5
 op = RDFT(Float64,(n,m,l),2)
 x1 = randn(n,m,l)
-y1 = test_op(op, x1, rfft(randn(n,m,l),2), verb)
+y1 = test_op(op, x1, rfft(x1,2), verb)
 y2 = rfft(x1,2)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
@@ -209,7 +209,7 @@ op = RDFT(n,n)
 ####### IRDFT ############
 n = 10
 op = IRDFT(Complex{Float64},(n,),19)
-x1 = randn(n)+im*randn(n)
+x1 = rfft(randn(19))
 y1 = test_op(op, x1,irfft(randn(n),19), verb)
 y2 = irfft(x1,19)
 
@@ -217,8 +217,8 @@ y2 = irfft(x1,19)
 
 n,m,l = 4,10,5
 op = IRDFT(Complex{Float64},(n,m,l),19,2)
-x1 = randn(n,m,l)+im*randn(n,m,l)
-y1 = test_op(op, x1, irfft(randn(n,m,l),19,2), verb)
+x1 = rfft(randn(n,19,l),2)
+y1 = test_op(op, x1, irfft(x1,19,2), verb)
 y2 = irfft(x1,19,2)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
