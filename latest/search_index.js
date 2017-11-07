@@ -157,7 +157,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.IDFT",
     "category": "Type",
-    "text": "IDFT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDFT(dim_in...)\n\nIDFT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Inverse Discrete Fourier Transform of x. \n\njulia> IDFT(Complex{Float64},(10,10))\nℱ  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDFT(10,10)\nℱ  ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDFT(ones(3))\nℱ  ℝ^(10, 10) -> ℂ^(10, 10)\n\njulia> A*ones(3)\n3-element Array{Complex{Float64},1}:\n 1.0+0.0im\n 0.0+0.0im\n 0.0+0.0im\n\n\n\n"
+    "text": "IDFT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDFT(dim_in...)\n\nIDFT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Inverse Discrete Fourier Transform of x. \n\njulia> IDFT(Complex{Float64},(10,10))\nℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDFT(10,10)\nℱ⁻¹ ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDFT(ones(3))\nℱ⁻¹  ℝ^3 -> ℂ^3\n\njulia> A*ones(3)\n3-element Array{Complex{Float64},1}:\n 1.0+0.0im\n 0.0+0.0im\n 0.0+0.0im\n\n\n\n"
 },
 
 {
@@ -166,6 +166,14 @@ var documenterSearchIndex = {"docs": [
     "title": "AbstractOperators.RDFT",
     "category": "Type",
     "text": "RDFT([domainType=Float64::Type,] dim_in::Tuple [,dims=1])\n\nRDFT(dim_in...)\n\nRDFT(x::AbstractArray [,dims=1])\n\nCreates a LinearOperator which, when multiplied with a real array x, returns the DFT over the dimension dims, exploiting Hermitian symmetry. \n\njulia> RDFT(Float64,(10,10))\nℱ  ℝ^(10, 10) -> ℂ^(6, 10)\n\njulia> RDFT((10,10,10),2)\nℱ  ℝ^(10, 10, 10) -> ℂ^(10, 6, 10)\n\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.IRDFT",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.IRDFT",
+    "category": "Type",
+    "text": "IRDFT([domainType=Float64::Type,] dim_in::Tuple, d::Int, [,dims=1])\n\nIRDFT(x::AbstractArray, d::Int, [,dims=1])\n\nCreates a LinearOperator which, when multiplied with a complex array x, returns the IDFT over the dimension dims, exploiting Hermitian symmetry. Like in the function BASE.irfft, d must satisfy div(d,2)+1 == size(x,dims).\n\njulia> A = IRDFT(Complex{Float64},(10,),19)\nℱ⁻¹  ℂ^10 -> ℝ^19 \n\njulia> A = IRDFT((5,10,8),19,2)\nℱ⁻¹  ℂ^(5, 10, 8) -> ℝ^(5, 19, 8)\n\n\n\n\n"
 },
 
 {
@@ -181,7 +189,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.IDCT",
     "category": "Type",
-    "text": "IDCT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDCT(dim_in...)\n\nIDCT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Discrete Cosine Transform of x. \n\njulia> IDCT(Complex{Float64},(10,10))\nℱc^(-1)  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDCT(10,10)\nℱc^(-1)  ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDCT(ones(3))\nℱc^(-1)  ℝ^3 -> ℝ^3\n\njulia> A*[1.;0.;0.]\n3-element Array{Float64,1}:\n 0.57735\n 0.57735\n 0.57735\n\n\n\n\n"
+    "text": "IDCT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDCT(dim_in...)\n\nIDCT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Discrete Cosine Transform of x. \n\njulia> IDCT(Complex{Float64},(10,10))\nℱc⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDCT(10,10)\nℱc⁻¹  ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDCT(ones(3))\nℱc⁻¹  ℝ^3 -> ℝ^3\n\njulia> A*[1.;0.;0.]\n3-element Array{Float64,1}:\n 0.57735\n 0.57735\n 0.57735\n\n\n\n\n"
 },
 
 {
@@ -189,7 +197,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Transformations",
     "category": "section",
-    "text": "DFT\nIDFT\nRDFT\nDCT\nIDCT"
+    "text": "DFT\nIDFT\nRDFT\nIRDFT\nDCT\nIDCT"
 },
 
 {
