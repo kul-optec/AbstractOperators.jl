@@ -73,62 +73,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "operators.html#AbstractOperators.Eye",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.Eye",
-    "category": "Type",
-    "text": "Eye([domainType=Float64::Type,] dim_in::Tuple)\n\nEye([domainType=Float64::Type,] dims...)\n\nCreate the identity operator.\n\njulia> op = Eye(Float64,(4,))\nI  ℝ^4 -> ℝ^4\n\njulia> op = Eye(2,3,4)\nI  ℝ^(2, 3, 4) -> ℝ^(2, 3, 4)\n\njulia> op*ones(2,3,4) == ones(2,3,4)\ntrue\n\n\n\n\n"
-},
-
-{
-    "location": "operators.html#AbstractOperators.Zeros",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.Zeros",
-    "category": "Type",
-    "text": "Zeros(domainType::Type, dim_in::Tuple, [codomainType::Type,] dim_out::Tuple)\n\nCreate a LinearOperator which, when multiplied with an array x of size dim_in, returns an array y of size dim_out filled with zeros.\n\nFor convenience Zeros can be constructed from any AbstractOperator.\n\njulia> Zeros(Eye(10,20))\n0  ℝ^(10, 20) -> ℝ^(10, 20)\n\njulia> Zeros([Eye(10,20) Eye(10,20)])\n[0,0]  ℝ^(10, 20)  ℝ^(10, 20) -> ℝ^(10, 20)\n\n\n\n"
-},
-
-{
-    "location": "operators.html#AbstractOperators.DiagOp",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.DiagOp",
-    "category": "Type",
-    "text": "DiagOp(domainType::Type, dim_in::Tuple, d::AbstractArray)\n\nDiagOp(d::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x, returns the elementwise product d.*x.\n\njulia> D = DiagOp(Float64, (2, 2,), [1. 2.; 3. 4.])\n╲  ℝ^(2, 2) -> ℝ^(2, 2)\n\njulia> D*ones(2,2)\n2×2 Array{Float64,2}:\n 1.0  2.0\n 3.0  4.0\n\n\n\n\n"
-},
-
-{
-    "location": "operators.html#AbstractOperators.GetIndex",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.GetIndex",
-    "category": "Type",
-    "text": "GetIndex([domainType=Float64::Type,] dim_in::Tuple, idx...)\n\nGetIndex(x::AbstractArray, idx::Tuple)\n\nCreates a LinearOperator which, when multiplied with x, returns x[idx].\n\njulia> x = collect(linspace(1,10,10));\n\njulia> G = GetIndex(Float64,(10,), 1:3)\n↓  ℝ^10 -> ℝ^3 \n\njulia> G*x\n3-element Array{Float64,1}:\n 1.0\n 2.0\n 3.0\n\njulia> GetIndex(randn(10,20,30),(1:2,1:4))\n↓  ℝ^(10, 20, 30) -> ℝ^(2, 4)\n\n\n\n\n"
-},
-
-{
-    "location": "operators.html#AbstractOperators.MatrixOp",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.MatrixOp",
-    "category": "Type",
-    "text": "MatrixOp(domainType=Float64::Type, dim_in::Tuple, A::AbstractMatrix)\n\nMatrixOp(A::AbstractMatrix)\n\nMatrixOp(A::AbstractMatrix, n_colons)\n\nCreates a LinearOperator which, when multiplied with a vector x::AbstractVector, returns the product A*x.\n\nThe input x can be also a matrix: the number of columns must be given either in the second entry of dim_in::Tuple or using the constructor MatrixOp(A::AbstractMatrix, n_colons).\n\njulia> MatrixOp(Float64,(10,),randn(20,10))\n▒  ℝ^10 -> ℝ^20 \n\njulia> MatrixOp(randn(20,10))\n▒  ℝ^10 -> ℝ^20\n\njulia> MatrixOp(Float64,(10,20),randn(20,10))\n▒  ℝ^(10, 20) -> ℝ^(20, 20)\n\njulia> MatrixOp(randn(20,10),4)\n▒  ℝ^(10, 4) -> ℝ^(20, 4)\n\n\n\n\n"
-},
-
-{
-    "location": "operators.html#AbstractOperators.MatrixMul",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.MatrixMul",
-    "category": "Type",
-    "text": "MatrixMul(domainType=Float64::Type, dim_in::Tuple, b::AbstractVector)\n\nMatrixMul(b::AbstractVector, number_of_rows::Int)\n\nCreates a LinearOperator which, when multiplied with a matrix X::AbstractMatrix, returns the product X*b.\n\njulia> op = MatrixMul(Float64,(3,4),ones(4))\n(⋅)b  ℝ^(3, 4) -> ℝ^3 \n\njulia> op = MatrixMul(ones(4),3)\n(⋅)b  ℝ^(3, 4) -> ℝ^3\n\njulia> op*ones(3,4)\n3-element Array{Float64,1}:\n 4.0\n 4.0\n 4.0\n\n\n\n\n"
-},
-
-{
-    "location": "operators.html#AbstractOperators.MyLinOp",
-    "page": "Abstract Operators",
-    "title": "AbstractOperators.MyLinOp",
-    "category": "Type",
-    "text": "MyLinOp(domainType::Type, dim_in::Tuple, [domainType::Type,] dim_out::Tuple, Fwd!::Function, Adj!::Function)\n\nConstruct a user defined LinearOperator by specifing its linear mapping Fwd! and its adjoint Adj!. The functions Fwd! and Adj must be in-place functions consistent with the given dimensions dim_in and dim_out and the domain and codomain types.\n\njulia> n,m = 5,4;\n\njulia> A = randn(n,m);\n\njulia> op = MyLinOp(Float64, (m,),(n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))\nA  ℝ^4 -> ℝ^5\n\njulia> op = MyLinOp(Float64, (m,), Float64, (n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))\nA  ℝ^4 -> ℝ^5\n\n\n\n\n"
-},
-
-{
     "location": "operators.html#Basic-Operators-1",
     "page": "Abstract Operators",
     "title": "Basic Operators",
