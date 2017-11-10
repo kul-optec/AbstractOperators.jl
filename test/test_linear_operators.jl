@@ -511,11 +511,11 @@ op = convert(LinearOperator,A,c)
 @test is_full_column_rank(MatrixOp(randn(srand(0),3,4))) == false
 
 
-####### MatrixMul ############
+###### LMatrixOp ############
 
 n,m = 5,6
 b = randn(m)
-op = MatrixMul(Float64,(n,m),b)
+op = LMatrixOp(Float64,(n,m),b)
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = x1*b
@@ -524,15 +524,33 @@ y2 = x1*b
 
 n,m = 5,6
 b = randn(m)+im*randn(m)
-op = MatrixMul(Complex{Float64},(n,m),b)
+op = LMatrixOp(Complex{Float64},(n,m),b)
 x1 = randn(n,m)+im*randn(n,m)
 y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
 y2 = x1*b
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
+n,m,l = 5,6,7
+b = randn(m,l)
+op = LMatrixOp(Float64,(n,m),b)
+x1 = randn(n,m)
+y1 = test_op(op, x1, randn(n,l), verb)
+y2 = x1*b
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n,m,l = 5,6,7
+b = randn(m,l)+im*randn(m,l)
+op = LMatrixOp(Complex{Float64},(n,m),b)
+x1 = randn(n,m)+im*randn(n,m)
+y1 = test_op(op, x1, randn(n,l)+im*randn(n,l), verb)
+y2 = x1*b
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
 ## other constructors
-op = MatrixMul(b,n)
+op = LMatrixOp(b,n)
 
 ##properties
 @test is_linear(op)           == true

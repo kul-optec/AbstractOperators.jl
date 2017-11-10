@@ -126,7 +126,7 @@ opS1 = Sigmoid(Float64,(n,),2)
 x = (randn(n,l),randn(n))
 r = randn(n)
 
-A1 = HCAT(MatrixMul(b,n) ,Eye(n))
+A1 = HCAT(LMatrixOp(b,n) ,Eye(n))
 op = Compose(opS1,A1)
 y, grad = test_NLop(op,x,r,verb)
 
@@ -221,7 +221,7 @@ opS1 = Sigmoid(Float64,(n,),2)
 opS2 = Sigmoid(Float64,(n,),2)
 opS3 = Sigmoid(Float64,(m,),2)
 
-A1 = HCAT(MatrixMul(b,n) ,Eye(n))
+A1 = HCAT(LMatrixOp(b,n) ,Eye(n))
 L1 = Compose(opS1,A1)
 A2 = NonLinearCompose(Eye(n,n) , L1)
 L2 = Compose(opS2,A2)
