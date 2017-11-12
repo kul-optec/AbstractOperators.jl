@@ -1,7 +1,7 @@
 export Sigmoid
 
 """
-`Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 100.)`
+`Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 1.)`
 
 Creates the sigmoid non-linear operator with input dimensions `dim_in`.
 ```math
@@ -14,11 +14,11 @@ struct Sigmoid{T,N,G<:Real} <: NonLinearOperator
 	gamma::G
 end
 
-function Sigmoid(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G=100.) where {N, G <: Real} 
+function Sigmoid(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G=1.) where {N, G <: Real} 
 	Sigmoid{DomainType,N,G}(DomainDim,gamma)
 end
 
-Sigmoid(DomainDim::NTuple{N,Int}, gamma::G=100) where {N,G} = Sigmoid{Float64,N,G}(DomainDim,gamma)
+Sigmoid(DomainDim::NTuple{N,Int}, gamma::G=1.) where {N,G} = Sigmoid{Float64,N,G}(DomainDim,gamma)
 
 function A_mul_B!(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractArray{T,N}) where {T,N,G}
 	y .= (1.+exp.(-L.gamma.*x)).^(-1)

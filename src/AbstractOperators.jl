@@ -60,6 +60,7 @@ include("calculus/NonLinearCompose.jl")
 
 # Non-Linear operators
 include("nonlinearoperators/Sigmoid.jl")
+include("nonlinearoperators/SoftMax.jl")
 
 # Syntax
 include("syntax.jl")

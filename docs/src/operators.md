@@ -10,7 +10,7 @@ Zeros
 DiagOp
 GetIndex
 MatrixOp
-MatrixMul
+LMatrixOp
 MyLinOp
 ```
 
@@ -54,6 +54,7 @@ LBFGS
 
 ```@docs
 Sigmoid
+SoftMax
 ```
 
 
