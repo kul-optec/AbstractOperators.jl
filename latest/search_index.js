@@ -401,6 +401,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "calculus.html#AbstractOperators.BroadCast",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.BroadCast",
+    "category": "Type",
+    "text": "BroadCast(A::AbstractOperator, dim_out...)\n\nBroadCast the codomain dimensions of an AbstractOperator.\n\njulia> A = Eye(2)\nI  ℝ^2 -> ℝ^2\n\njulia> B = BroadCast(A,(2,3))\n.I  ℝ^2 -> ℝ^(2, 3)\n\njulia> B*[1.;2.]\n2×3 Array{Float64,2}:\n 1.0  1.0  1.0\n 2.0  2.0  2.0\n\n\n\n\n"
+},
+
+{
     "location": "calculus.html#AbstractOperators.Reshape",
     "page": "Calculus rules",
     "title": "AbstractOperators.Reshape",
@@ -421,7 +429,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "Transformations",
     "category": "section",
-    "text": "Scale\nTranspose\nReshape\nJacobian"
+    "text": "Scale\nTranspose\nBroadCast\nReshape\nJacobian"
 },
 
 {
