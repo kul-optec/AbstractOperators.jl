@@ -682,3 +682,70 @@ x = randn(m1)
 y1 = test_op(opS, x, randn(m3), verb)
 y2 = coeff*(A2*A1*x)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+##########################
+##### test BroadCast #####
+##########################
+
+m, n = 8, 4
+dim_out = (m, 10)
+A1 = randn(m, n)
+opA1 = MatrixOp(A1)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(n)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= A1*x1
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l, k = 8, 4, 5, 7
+dim_out = (m, n, l, k)
+opA1 = Eye(m,n)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m,n)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+@test_throws Exception BroadCast(opA1,(m,m))
+
+m, l = 1, 5
+dim_out = (m, l)
+opA1 = Eye(m)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l  = 2, 5, 8
+dim_out = (m, n, l)
+opA1 = Eye(m)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l  = 1, 5, 8
+dim_out = (m, n, l)
+opA1 = Eye(m)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+@test is_null(opR)             == is_null(opA1)            
+@test is_eye(opR)              == false             
+@test is_diagonal(opR)         == false 
+@test is_AcA_diagonal(opR)     == false
+@test is_AAc_diagonal(opR)     == false
+@test is_orthogonal(opR)       == false
+@test is_invertible(opR)       == false
+@test is_full_row_rank(opR)    == false
+@test is_full_column_rank(opR) == false

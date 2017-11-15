@@ -20,6 +20,7 @@ NonLinearCompose
 ```@docs
 Scale
 Transpose
+BroadCast
 Reshape
 Jacobian
 ```
