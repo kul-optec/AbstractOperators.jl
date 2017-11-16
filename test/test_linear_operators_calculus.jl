@@ -740,6 +740,16 @@ y2 = zeros(dim_out)
 y2 .= x1
 @test vecnorm(y1-y2) <= 1e-12
 
+m, n, l  = 1, 5, 8
+dim_out = (m, n, l)
+opA1 = Scale(2.4,Eye(m))
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= 2.4*x1
+@test vecnorm(y1-y2) <= 1e-12
+
 @test is_null(opR)             == is_null(opA1)            
 @test is_eye(opR)              == false             
 @test is_diagonal(opR)         == false 

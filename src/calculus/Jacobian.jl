@@ -71,6 +71,8 @@ Jacobian(S::Sum{M,N,K,C,D},x::D) where {M,N,K,C,D} =
 Sum(([Jacobian(a,x) for a in S.A]...),S.bufC,S.bufD,M,N)
 #Jacobian of Transpose
 Jacobian(T::Transpose{A}, x::AbstractArray) where {A <: AbstractOperator} = T 
+#Jacobian of BroadCast
+Jacobian(B::A, x::AbstractArray) where {A <: BroadCast} = BroadCast(Jacobian(B.A,x),B.dim_out) 
 
 # Properties
 

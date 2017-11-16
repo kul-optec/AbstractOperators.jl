@@ -143,6 +143,29 @@ y, grad = test_NLop(op,x,r,verb)
 Y = reshape(opS*x,2,2)
 @test vecnorm(Y-y) <1e-8
 
+###testing BroadCast
+n,l = 4,7
+x = randn(n)
+r = randn(n,l)
+opS = Sigmoid(Float64,(n,),2)
+op = BroadCast(opS,(n,l))
+
+y, grad = test_NLop(op,x,r,verb)
+
+Y = (opS*x).*ones(n,l)
+@test vecnorm(Y-y) <1e-8
+
+n,l = 1,7
+x = randn(n)
+r = randn(n,l)
+opS = Sigmoid(Float64,(n,),2)
+op = BroadCast(opS,(n,l))
+
+y, grad = test_NLop(op,x,r,verb)
+
+Y = (opS*x).*ones(n,l)
+@test vecnorm(Y-y) <1e-8
+
 ##testing Sum
 m = 5
 x = randn(m)
