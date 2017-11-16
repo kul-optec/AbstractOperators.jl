@@ -91,7 +91,7 @@ end
 
 #singleton Eye
 function Ac_mul_B!(y::CC, R::BroadCast{N,L,T,D,0}, b::DD) where {N,L<:Eye,T,D,CC,DD}
-	y .= sum(b)
+	sum!(y,b)
 end
 
 # Properties
