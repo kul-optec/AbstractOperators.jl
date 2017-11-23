@@ -1,8 +1,5 @@
 export LBFGS, update!
 
-# TODO make Ac_mul_B!
-# Edit: Ac_mul_B! is not really needed for this operator 
-# Edit2: you never known! anyway for completeness would be cool to have it!
 """
 `LBFGS(T::Type, dim::Tuple, Memory::Int)`
 
@@ -10,7 +7,7 @@ export LBFGS, update!
 
 `LBFGS(x::AbstractArray, Memory::Int)`
 
-Construct a Limited-Memory BFGS `LinearOperator` with memory `M`. The memory of `LBFGS` can be updated using the function `update!`, where the current iteration variable and gradient (`x`, `grad`) and the previous ones (`x_prev` and `grad_prev`) are needed: 
+Construct a Limited-Memory BFGS `LinearOperator` with memory `M`. The memory of `LBFGS` can be updated using the function `update!`, where the current iteration variable and gradient (`x`, `grad`) and the previous ones (`x_prev` and `grad_prev`) are needed:
 
 ```
 julia> L = LBFGS(Float64,(4,),5)
@@ -21,23 +18,22 @@ julia> update!(L,x,x_prev,grad,grad_prev); #update memory
 julia> d = L*x;                            #compute new direction
 
 ```
-
 """
 
-mutable struct LBFGS{M, N, R <: Real, T <: Union{R, Complex{R}}, A<:AbstractArray{T,N}} <: LinearOperator
+mutable struct LBFGS{R, T <: BlockArray, M} <: LinearOperator
 	currmem::Int
 	curridx::Int
-	s::A
-	y::A
-	s_m::NTuple{M, A}
-	y_m::NTuple{M, A}
+	s::T
+	y::T
+	s_m::NTuple{M, T}
+	y_m::NTuple{M, T}
 	ys_m::Array{R, 1}
 	alphas::Array{R, 1}
 	H::R
 end
 
 # Constructors
-#default
+
 function LBFGS(T::Type, dim::NTuple{N,Int}, M::Int) where {N}
 	s_m = tuple([deepzeros(T,dim) for i = 1:M]...)
 	y_m = tuple([deepzeros(T,dim) for i = 1:M]...)
@@ -46,10 +42,12 @@ function LBFGS(T::Type, dim::NTuple{N,Int}, M::Int) where {N}
 	R = real(T)
 	ys_m = zeros(R, M)
 	alphas = zeros(R, M)
-	LBFGS{M,N,R,T,typeof(s)}(0, 0, s, y, s_m, y_m, ys_m, alphas, zero(R))
+	LBFGS{M,N,R,T,typeof(s)}(0, 0, s, y, s_m, y_m, ys_m, alphas, one(R))
 end
 
-LBFGS(x::AbstractArray,M::Int) = LBFGS(eltype(x),size(x),M)
+function LBFGS(x::T, M::Int)
+
+end
 
 """
 `update!(L::LBFGS, x, x_prex, grad, grad_prev)`
@@ -124,8 +122,8 @@ function loop2!(d::A, idx::Int, L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A}
 end
 
 # Properties
-  domainType(L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A} = T
-codomainType(L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A} = T
+  domainType(L::LBFGS{R, T, M}) where {R, T, M} = T
+codomainType(L::LBFGS{R, T, M}) where {R, T, M} = T
 
 size(A::LBFGS) = (size(A.s), size(A.s))
 
