@@ -297,6 +297,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "operators.html#AbstractOperators.SoftPlus",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.SoftPlus",
+    "category": "Type",
+    "text": "SoftPlus([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates the softplus non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = log (1 + e^x )\n\n\n\n"
+},
+
+{
     "location": "operators.html#AbstractOperators.SoftMax",
     "page": "Abstract Operators",
     "title": "AbstractOperators.SoftMax",
@@ -309,7 +317,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Nonlinear operators",
     "category": "section",
-    "text": "Sigmoid\nSoftMax"
+    "text": "Sigmoid\nSoftPlus\nSoftMax"
 },
 
 {
