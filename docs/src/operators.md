@@ -54,6 +54,7 @@ LBFGS
 
 ```@docs
 Sigmoid
+SoftPlus
 SoftMax
 ```
 

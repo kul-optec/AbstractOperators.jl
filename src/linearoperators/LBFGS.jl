@@ -30,8 +30,6 @@ mutable struct LBFGS{R, T <: BlockArray, M} <: LinearOperator
 	H::R
 end
 
-# Constructors
-
 function LBFGS(x::T, M::Integer) where {R, T <: BlockArray{R}}
 	s_M = [blockzeros(x) for i = 1:M]
 	y_M = [blockzeros(x) for i = 1:M]

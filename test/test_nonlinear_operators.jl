@@ -28,3 +28,15 @@ r = randn(n,m,l)
 op = SoftMax(Float64,(n,m,l))
 
 y, grad = test_NLop(op,x,r,verb)
+
+n = 10
+x = randn(n)
+r = randn(n)
+op = SoftPlus(Float64,(n,))
+
+n,m,l = 4,5,6
+x = randn(n,m,l)
+r = randn(n,m,l)
+op = SoftPlus(Float64,(n,m,l))
+
+y, grad = test_NLop(op,x,r,verb)
