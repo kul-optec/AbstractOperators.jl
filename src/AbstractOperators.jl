@@ -2,8 +2,6 @@ __precompile__()
 
 module AbstractOperators
 
-using BlockArrays
-
 abstract type AbstractOperator end
 
 abstract type LinearOperator    <: AbstractOperator end
@@ -17,6 +15,7 @@ export LinearOperator,
 
 # Block stuff
 
+include("utilities/block.jl")
 include("utilities/deep.jl") # TODO: remove this eventually
 
 # Predicates and properties
