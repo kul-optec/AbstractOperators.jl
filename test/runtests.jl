@@ -32,16 +32,6 @@ end
 
 @testset "L-BFGS" begin
   include("test_lbfgs.jl")
-  include("test_lbfgs_larger.jl")
 end
 
 end
-
-
-
-
-
-
-
-
-

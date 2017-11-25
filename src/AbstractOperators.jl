@@ -2,7 +2,7 @@ __precompile__()
 
 module AbstractOperators
 
-const RealOrComplex{T<:Real} = Union{T, Complex{T}}
+using BlockArrays
 
 abstract type AbstractOperator end
 
@@ -17,7 +17,6 @@ export LinearOperator,
 
 # Block stuff
 
-include("utilities/block.jl")
 include("utilities/deep.jl") # TODO: remove this eventually
 
 # Predicates and properties
@@ -67,8 +66,5 @@ include("nonlinearoperators/SoftMax.jl")
 
 # Syntax
 include("syntax.jl")
-
-
-
 
 end

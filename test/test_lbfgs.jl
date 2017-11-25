@@ -33,32 +33,41 @@ dirs_ref = [
 ]
 
 dirs = zeros(10, 5) # matrix of directions (to be filled in)
-dir  = zeros(10) # matrix of directions (to be filled in)
 
 mem = 3;
-# col = 0; # last column of Sk, Yk that was filled in
-# currmem = 0;
-# H0 = 1.0
 x = zeros(10)
 
-A = LBFGS(Float64,size(x),mem)
-A = LBFGS(x,mem)
-println(A)
-x_old = 0;
-grad_old = 0;
+H = LBFGS(x, mem)
+dir  = zeros(10)
+println(H)
+
+HH = LBFGS((x, x), mem)
+dirdir = (zeros(10), zeros(10))
+println(HH)
+
+x_old = [];
+grad_old = [];
 
 for i = 1:5
+
     x = xs[:,i]
     grad = Q*x + q
+
     if i > 1
-	    @time update!(A, x, x_old, grad, grad_old)
-			A_mul_B!(dir,A,grad)
-    else
-	    copy!(dir, -grad)
+        @time update!(H, x, x_old, grad, grad_old)
+        @time update!(HH, (x, x), (x_old, x_old), (grad, grad), (grad_old, grad_old))
     end
-		dirs[:, i] = copy(dir)
+
+    dir_ref = dirs_ref[:,i]
+
+	@time A_mul_B!(dir, H, -grad)
+    @test vecnorm(dir-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+
+    @time A_mul_B!(dirdir, HH, (-grad, -grad))
+    @test vecnorm(dirdir[1]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+    @test vecnorm(dirdir[2]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+
     x_old = x;
     grad_old = grad;
-end
 
-@test vecnorm(dirs-dirs_ref, Inf)/(1+vecnorm(dirs_ref, Inf)) <= 1e-15
+end

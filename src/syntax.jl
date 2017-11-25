@@ -1,4 +1,4 @@
-import Base: blkdiag, transpose, *, +, -, getindex, hcat, vcat, reshape 
+import Base: blkdiag, transpose, *, +, -, getindex, hcat, vcat, reshape
 export jacobian
 
 ###### blkdiag ######
@@ -14,8 +14,8 @@ transpose{T <: AbstractOperator}(L::T) = Transpose(L)
 (-)(L1::AbstractOperator, L2::AbstractOperator) = Sum(L1, -L2 )
 
 ###### * ######
-function (*){T <: Union{AbstractArray, Tuple}}(L::AbstractOperator, b::T)
-	y = deepzeros(codomainType(L), size(L, 1))
+function (*){T <: BlockArray}(L::AbstractOperator, b::T)
+	y = blockzeros(codomainType(L), size(L, 1))
 	A_mul_B!(y, L, b)
 	return y
 end
@@ -25,24 +25,24 @@ end
 
 # redefine .*
 Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codomainType(L), size(d), d)*L
-Base.broadcast(::typeof(*), d::AbstractArray, L::Scale)          = DiagOp(L.coeff*d)*L.A
+Base.broadcast(::typeof(*), d::AbstractArray, L::Scale) = DiagOp(L.coeff*d)*L.A
 
 # getindex
-function getindex(A::AbstractOperator,idx...) 
+function getindex(A::AbstractOperator,idx...)
 	if ndoms(A,2) == 1
 		Gout = GetIndex(codomainType(A),size(A,1),idx)
 		return Gout*A
-	elseif length(idx) == 1  && ndoms(A,2) == length(idx[1]) 
+	elseif length(idx) == 1  && ndoms(A,2) == length(idx[1])
 		return permute(A,idx[1])
 	else
-		error("cannot split operator of type $(typeof(H.A[i]))") 
+		error("cannot split operator of type $(typeof(H.A[i]))")
 	end
 end
 
 #get index of HCAT returns HCAT (or Operator)
 function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
 
-	unfolded = vcat([[i... ] for i in H.idxs]...) 
+	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
 		return permute(H,idx)
 	else
@@ -51,9 +51,9 @@ function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,I
 			for ii in eachindex(H.idxs)
 				if i in H.idxs[ii]
 					if typeof(H.idxs[ii]) <: Int
-						new_H = (new_H...,H.A[ii]) 
+						new_H = (new_H...,H.A[ii])
 					else
-					error("cannot split operator") 
+					error("cannot split operator")
 					end
 				end
 			end
@@ -66,7 +66,7 @@ end
 #get index of HCAT returns HCAT (or Operator)
 function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
 
-	unfolded = vcat([[i... ] for i in H.idxs]...) 
+	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
 		return permute(H,idx)
 	else
@@ -75,9 +75,9 @@ function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,I
 			for ii in eachindex(H.idxs)
 				if i in H.idxs[ii]
 					if typeof(H.idxs[ii]) <: Int
-						new_H = (new_H...,H.A[ii]) 
+						new_H = (new_H...,H.A[ii])
 					else
-					error("cannot split operator") 
+					error("cannot split operator")
 					end
 				end
 			end
@@ -98,4 +98,3 @@ reshape{A<:AbstractOperator}(L::A, idx::Vararg{Int}) = Reshape(L,idx)
 
 ###### jacobian ######
 jacobian = Jacobian
-

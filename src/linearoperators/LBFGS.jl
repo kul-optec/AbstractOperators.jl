@@ -1,11 +1,9 @@
 export LBFGS, update!
 
 """
-`LBFGS(T::Type, dim::Tuple, Memory::Int)`
+`LBFGS(x::Tuple, M::Integer)`
 
-`LBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,Tuple}, M::Int)`
-
-`LBFGS(x::AbstractArray, Memory::Int)`
+`LBFGS(x::AbstractArray, M::Integer)`
 
 Construct a Limited-Memory BFGS `LinearOperator` with memory `M`. The memory of `LBFGS` can be updated using the function `update!`, where the current iteration variable and gradient (`x`, `grad`) and the previous ones (`x_prev` and `grad_prev`) are needed:
 
@@ -13,110 +11,91 @@ Construct a Limited-Memory BFGS `LinearOperator` with memory `M`. The memory of 
 julia> L = LBFGS(Float64,(4,),5)
 LBFGS  ℝ^4 -> ℝ^4
 
-julia> update!(L,x,x_prev,grad,grad_prev); #update memory
+julia> update!(L,x,x_prev,grad,grad_prev); # update memory
 
-julia> d = L*x;                            #compute new direction
+julia> d = L*grad; # compute new direction
 
 ```
 """
 
 mutable struct LBFGS{R, T <: BlockArray, M} <: LinearOperator
-	currmem::Int
-	curridx::Int
+	currmem::Integer
+	curridx::Integer
 	s::T
 	y::T
-	s_m::NTuple{M, T}
-	y_m::NTuple{M, T}
-	ys_m::Array{R, 1}
+	s_M::Array{T, 1}
+	y_M::Array{T, 1}
+	ys_M::Array{R, 1}
 	alphas::Array{R, 1}
 	H::R
 end
 
 # Constructors
 
-function LBFGS(T::Type, dim::NTuple{N,Int}, M::Int) where {N}
-	s_m = tuple([deepzeros(T,dim) for i = 1:M]...)
-	y_m = tuple([deepzeros(T,dim) for i = 1:M]...)
-	s = deepzeros(T,dim)
-	y = deepzeros(T,dim)
-	R = real(T)
-	ys_m = zeros(R, M)
-	alphas = zeros(R, M)
-	LBFGS{M,N,R,T,typeof(s)}(0, 0, s, y, s_m, y_m, ys_m, alphas, one(R))
-end
-
-function LBFGS(x::T, M::Int)
-
+function LBFGS(x::T, M::Integer) where {R, T <: BlockArray{R}}
+	s_M = [blockzeros(x) for i = 1:M]
+	y_M = [blockzeros(x) for i = 1:M]
+	s = blockzeros(x)
+	y = blockzeros(x)
+	ys_M = zeros(M)
+	alphas = zeros(M)
+	LBFGS{R, T, M}(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R))
 end
 
 """
 `update!(L::LBFGS, x, x_prex, grad, grad_prev)`
 
-See `LBFGS` documentation.
-
+See the documentation for `LBFGS`.
 """
 
-function update!(L::LBFGS{M,N,R,T,A},
-		 x::A,
-		 x_prev::A,
-		 gradx::A,
-		 gradx_prev::A) where {M,N,R,T,A}
-
-	ys = update_s_y(L,x,x_prev,gradx,gradx_prev)
-
+function update!(L::LBFGS{R, T, M}, x::T, x_prev::T, gradx::T, gradx_prev::T) where {R, T, M}
+	L.s .= x .- x_prev
+	L.y .= gradx .- gradx_prev
+	ys = real(blockvecdot(L.s, L.y))
 	if ys > 0
 		L.curridx += 1
 		if L.curridx > M L.curridx = 1 end
 		L.currmem += 1
 		if L.currmem > M L.currmem = M end
-
-
-		yty = update_s_m_y_m(L,L.curridx)
-		L.ys_m[L.curridx] = ys
+		L.ys_M[L.curridx] = ys
+		blockcopy!(L.s_M[L.curridx], L.s)
+		blockcopy!(L.y_M[L.curridx], L.y)
+		yty = real(vecdot(L.y, L.y))
 		L.H = ys/yty
 	end
 	return L
 end
 
-function update_s_y(L::LBFGS{M,N,R,T,A}, x::A, x_prev::A, gradx::A, gradx_prev::A) where {M,N,R,T,A}
-	L.s .= (-).(x, x_prev)
-	L.y .= (-).(gradx, gradx_prev)
-	ys = real(vecdot(L.s,L.y))
-	return ys
-end
+# LBFGS operators are symmetric
 
-function update_s_m_y_m(L::LBFGS{M,N,R,T,A}, curridx::Int) where {M,N,R,T,A}
-	L.s_m[curridx] .=  L.s
-	L.y_m[curridx] .=  L.y
+Ac_mul_B!(x::T, L::LBFGS{R, T, M}, y::T) where {R, T, M} = A_mul_B!(x, L, y)
 
-	yty = real(vecdot(L.y,L.y))
-	return yty
-end
+# Two-loop recursion
 
-function A_mul_B!(d::A, L::LBFGS{M,N,R,T,A}, gradx::A) where {M,N,R,T,A}
-	d .= (-).(gradx)
+function A_mul_B!(d::T, L::LBFGS{R, T, M}, gradx::T) where {R, T, M}
+	d .= gradx
 	idx = loop1!(d,L)
 	d .= (*).(L.H, d)
 	d = loop2!(d,idx,L)
 end
 
-function loop1!(d::A, L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A}
+function loop1!(d::T, L::LBFGS{R, T, M}) where {R, T, M}
 	idx = L.curridx
-	for i=1:L.currmem
-		L.alphas[idx] = real(vecdot(L.s_m[idx], d))/L.ys_m[idx]
-		d .-= L.alphas[idx].*L.y_m[idx]
+	for i = 1:L.currmem
+		L.alphas[idx] = real(vecdot(L.s_M[idx], d))/L.ys_M[idx]
+		d .-= L.alphas[idx] .* L.y_M[idx]
 		idx -= 1
 		if idx == 0 idx = M end
 	end
 	return idx
 end
 
-function loop2!(d::A, idx::Int, L::LBFGS{M,N,R,T,A}) where {M,N,R,T,A}
-	for i=1:L.currmem
+function loop2!(d::T, idx::Int, L::LBFGS{R, T, M}) where {R, T, M}
+	for i = 1:L.currmem
 		idx += 1
 		if idx > M idx = 1 end
-		beta = real(vecdot(L.y_m[idx], d))/L.ys_m[idx]
-		d .+= (L.alphas[idx].-beta).*L.s_m[idx]
+		beta = real(vecdot(L.y_M[idx], d))/L.ys_M[idx]
+		d .+= (L.alphas[idx] - beta) .* L.s_M[idx]
 	end
 	return d
 end
@@ -125,6 +104,6 @@ end
   domainType(L::LBFGS{R, T, M}) where {R, T, M} = T
 codomainType(L::LBFGS{R, T, M}) where {R, T, M} = T
 
-size(A::LBFGS) = (size(A.s), size(A.s))
+size(A::LBFGS) = (blocksize(A.s), blocksize(A.s))
 
 fun_name(A::LBFGS) = "LBFGS"
