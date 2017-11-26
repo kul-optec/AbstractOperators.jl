@@ -1,23 +1,10 @@
-# not sure about exporting this!
-#export RealOrComplex, BlockArray
-#export blocksize,
-#       blockeltype,
-#       blocklength,
-#       blockvecnorm,
-#       blockmaxabs,
-#       blocksimilar,
-#       blockcopy,
-#       blockcopy!,
-#       blockset!,
-#       blockvecdot,
-#       blockzeros,
-#       blockaxpy!
-
 # Define block-arrays
 
 const RealOrComplex{R} = Union{R, Complex{R}}
-const BlockArray{R} = Union{AbstractArray{C, N} where {C <: RealOrComplex{R}, N}, 
-			    Tuple{Vararg{AbstractArray{C, N} where {C <: RealOrComplex{R}, N}}}}
+const BlockArray{R} = Union{
+	AbstractArray{C, N} where {C <: RealOrComplex{R}, N},
+	Tuple{Vararg{AbstractArray{C, N} where {C <: RealOrComplex{R}, N}}}
+}
 
 # Operations on block-arrays
 

@@ -31,41 +31,43 @@ mutable struct LBFGS{R, T <: BlockArray, M, I <: Integer} <: LinearOperator
 	alphas::Array{R, 1}
 	H::R
 
-	LBFGS(currmem::I, 
-	      curridx::I,
-	      s::T, 
-	      y::T,
-	      s_M::Array{T,1}, 
-	      y_M::Array{T,1},
-	      ys_M::Array{R,1}, 
-	      alphas::Array{R,1}, 
-	      H::R, 
-	      M) where {R, T, I} = 
-	new{R,T,M,I}(currmem, curridx, s, y, s_M, y_M, ys_M,alphas, H)
+	# LBFGS(currmem::I,
+	#       curridx::I,
+	#       s::T,
+	#       y::T,
+	#       s_M::Array{T,1},
+	#       y_M::Array{T,1},
+	#       ys_M::Array{R,1},
+	#       alphas::Array{R,1},
+	#       H::R,
+	#       M) where {R, T, I} =
+	# new{R,T,M,I}(currmem, curridx, s, y, s_M, y_M, ys_M,alphas, H)
 
 end
 
 #default constructor
+
 function LBFGS(domainType, dim_in, M::I) where {I <: Integer}
-	s_M = [blockzeros(domainType,dim_in) for i = 1:M]
-	y_M = [blockzeros(domainType,dim_in) for i = 1:M]
-	s = blockzeros(domainType,dim_in)
-	y = blockzeros(domainType,dim_in)
-	R = typeof(domainType) <: Tuple  ? real(domainType[1]) : real(domainType) 
-	ys_M = zeros(R,M)
-	alphas = zeros(R,M)
-	LBFGS(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R), M)
+	s_M = [blockzeros(domainType, dim_in) for i = 1:M]
+	y_M = [blockzeros(domainType, dim_in) for i = 1:M]
+	s = blockzeros(domainType, dim_in)
+	y = blockzeros(domainType, dim_in)
+	T = typeof(s)
+	R = typeof(domainType) <: Tuple  ? real(domainType[1]) : real(domainType)
+	ys_M = zeros(R, M)
+	alphas = zeros(R, M)
+	LBFGS{R, T, M, I}(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R))
 end
 
 function LBFGS(dim_in, M::I) where {I <: Integer}
-	domainType = eltype(dim_in) <: Integer ? Float64 : ([Float64 for i in eachindex(dim_in)]...) 
-	LBFGS(domainType,dim_in,M)
+	domainType = eltype(dim_in) <: Integer ? Float64 : ([Float64 for i in eachindex(dim_in)]...)
+	LBFGS(domainType, dim_in, M)
 end
 
-function LBFGS(x::T, M::I) where { T <: BlockArray, I <: Integer}
+function LBFGS(x::T, M::I) where {T <: BlockArray, I <: Integer}
 	domainType = blockeltype(x)
 	dim_in = blocksize(x)
-	LBFGS(domainType,dim_in,M)
+	LBFGS(domainType, dim_in, M)
 end
 
 """
@@ -127,8 +129,9 @@ function loop2!(d::T, idx::Int, L::LBFGS{R, T, M, I}) where {R, T, M, I}
 end
 
 # Properties
-domainType(L::LBFGS{R, T, M}) where {R, T, M} = blockeltype(L.y_M[1])
-codomainType(L::LBFGS{R, T, M}) where {R, T, M} = blockeltype(L.y_M[1])
+
+domainType(L::LBFGS{R, T, M, I}) where {R, T, M, I} = blockeltype(L.y_M[1])
+codomainType(L::LBFGS{R, T, M, I}) where {R, T, M, I} = blockeltype(L.y_M[1])
 
 size(A::LBFGS) = (blocksize(A.s), blocksize(A.s))
 
