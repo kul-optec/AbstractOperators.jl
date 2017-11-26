@@ -1,7 +1,9 @@
 export LBFGS, update!
 
 """
-`LBFGS(x::Tuple, M::Integer)`
+`LBFGS(domainType::Type,dim_in::Tuple, M::Integer)`
+
+`LBFGS(dim_in::Tuple, M::Integer)`
 
 `LBFGS(x::AbstractArray, M::Integer)`
 
@@ -28,34 +30,42 @@ mutable struct LBFGS{R, T <: BlockArray, M, I <: Integer} <: LinearOperator
 	ys_M::Array{R, 1}
 	alphas::Array{R, 1}
 	H::R
+
+	LBFGS(currmem::I, 
+	      curridx::I,
+	      s::T, 
+	      y::T,
+	      s_M::Array{T,1}, 
+	      y_M::Array{T,1},
+	      ys_M::Array{R,1}, 
+	      alphas::Array{R,1}, 
+	      H::R, 
+	      M) where {R, T, I} = 
+	new{R,T,M,I}(currmem, curridx, s, y, s_M, y_M, ys_M,alphas, H)
+
 end
 
-function LBFGS(x::T, M::I) where {T <: BlockArray, I <: Integer}
-	s_M = [blockzeros(x) for i = 1:M]
-	y_M = [blockzeros(x) for i = 1:M]
-	s = blockzeros(x)
-	y = blockzeros(x)
-	ys_M = zeros(M)
-	alphas = zeros(M)
-	R = real(eltype(x[1])) 
-	LBFGS{R, T, M, I}(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R))
+#default constructor
+function LBFGS(domainType, dim_in, M::I) where {I <: Integer}
+	s_M = [blockzeros(domainType,dim_in) for i = 1:M]
+	y_M = [blockzeros(domainType,dim_in) for i = 1:M]
+	s = blockzeros(domainType,dim_in)
+	y = blockzeros(domainType,dim_in)
+	R = typeof(domainType) <: Tuple  ? real(domainType[1]) : real(domainType) 
+	ys_M = zeros(R,M)
+	alphas = zeros(R,M)
+	LBFGS(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R), M)
 end
 
-function LBFGS(domainType::D, dim::T, M::I) where {D <: Type , 
-						   T <: Tuple,  I <: Integer}
-	x = blockzeros(domainType, dim)
-	return LBFGS(x,M)
+function LBFGS(dim_in, M::I) where {I <: Integer}
+	domainType = eltype(dim_in) <: Integer ? Float64 : ([Float64 for i in eachindex(dim_in)]...) 
+	LBFGS(domainType,dim_in,M)
 end
 
-function LBFGS(domainType::D, dim::T, M::I) where {N, D <: NTuple{N,Type}, 
-						   T <: NTuple{N,Tuple},  I <: Integer}
-	x = blockzeros(domainType, dim)
-	return LBFGS(x,M)
-end
-
-function LBFGS(dim::T, M::I) where {T <: Tuple,  I <: Integer}
-	x = blockzeros(dim)
-	return LBFGS(x,M)
+function LBFGS(x::T, M::I) where { T <: BlockArray, I <: Integer}
+	domainType = blockeltype(x)
+	dim_in = blocksize(x)
+	LBFGS(domainType,dim_in,M)
 end
 
 """
