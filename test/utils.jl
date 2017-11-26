@@ -4,23 +4,23 @@ function test_op(A::AbstractOperator, x, y, verb::Bool = false)
   verb && (println(); show(A); println())
 
   Ax = A*x
-  Ax2 = AbstractOperators.deepsimilar(Ax)
+  Ax2 = AbstractOperators.blocksimilar(Ax)
   verb && println("forward preallocated")
   A_mul_B!(Ax2, A, x) #verify in-place linear operator works
   verb && @time A_mul_B!(Ax2, A, x)
 
-  @test AbstractOperators.deepvecnorm(Ax .- Ax2) <= 1e-8
+  @test AbstractOperators.blockvecnorm(Ax .- Ax2) <= 1e-8
 
   Acy = A'*y
-  Acy2 = AbstractOperators.deepsimilar(Acy)
+  Acy2 = AbstractOperators.blocksimilar(Acy)
   verb && println("adjoint preallocated")
   Ac_mul_B!(Acy2, A, y) #verify in-place linear operator works
   verb && @time Ac_mul_B!(Acy2, A, y)
 
-  @test AbstractOperators.deepvecnorm(Acy .- Acy2) <= 1e-8
+  @test AbstractOperators.blockvecnorm(Acy .- Acy2) <= 1e-8
 
-  s1 = real(AbstractOperators.deepvecdot(Ax2, y))
-  s2 = real(AbstractOperators.deepvecdot(x, Acy2))
+  s1 = real(AbstractOperators.blockvecdot(Ax2, y))
+  s2 = real(AbstractOperators.blockvecdot(x, Acy2))
   @test abs( s1 - s2 ) < 1e-8
 
   return Ax
@@ -32,14 +32,14 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	verb && (println(),println(A))
 
 	Ax = A*x
-	Ax2 = AbstractOperators.deepsimilar(Ax)
+	Ax2 = AbstractOperators.blocksimilar(Ax)
 	verb && println("forward preallocated")
 	A_mul_B!(Ax2, A, x) #verify in-place linear operator works
 	verb && @time A_mul_B!(Ax2, A, x)
 
 	@test_throws ErrorException A'
 
-	@test AbstractOperators.deepvecnorm(Ax .- Ax2) <= 1e-8
+	@test AbstractOperators.blockvecnorm(Ax .- Ax2) <= 1e-8
 
 	J = Jacobian(A,x)
 	verb && println(J)
@@ -47,16 +47,16 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	grad = J'*y
 	A_mul_B!(Ax2, A, x) #redo forward
 	verb && println("jacobian Ac_mul_B! preallocated")
-	grad2 = AbstractOperators.deepsimilar(grad)
+	grad2 = AbstractOperators.blocksimilar(grad)
 	Ac_mul_B!(grad2, J, y) #verify in-place linear operator works
 	verb && A_mul_B!(Ax2, A, x) #redo forward
 	verb && @time Ac_mul_B!(grad2, J, y) 
 
-	@test AbstractOperators.deepvecnorm(grad .- grad2) < 1e-8
+	@test AbstractOperators.blockvecnorm(grad .- grad2) < 1e-8
 
 	grad3 = gradient_fd(A,Ax,x,y) #calculate gradient using finite differences
 
-	@test AbstractOperators.deepvecnorm(grad .- grad3) < 1e-4
+	@test AbstractOperators.blockvecnorm(grad .- grad3) < 1e-4
 
 	return Ax, grad
 end

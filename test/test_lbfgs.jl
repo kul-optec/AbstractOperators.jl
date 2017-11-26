@@ -1,4 +1,6 @@
-# @printf("\nTesting L-BFGS routines\n")
+@printf("\nTesting L-BFGS routines\n")
+
+function test_lbfgs()
 
 Q = [32.0000 13.1000 -4.9000 -3.0000  6.0000  2.2000  2.6000  3.4000 -1.9000 -7.5000;
  13.1000 18.3000 -5.3000 -9.5000  3.0000  2.1000  3.9000  3.0000 -3.6000 -4.4000;
@@ -60,10 +62,12 @@ for i = 1:5
 
     dir_ref = dirs_ref[:,i]
 
-	@time A_mul_B!(dir, H, -grad)
+    gradm = -grad
+    @time A_mul_B!(dir, H, gradm)
     @test vecnorm(dir-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
 
-    @time A_mul_B!(dirdir, HH, (-grad, -grad))
+    gradm2 = (-grad,-grad)
+    @time A_mul_B!(dirdir, HH, gradm2)
     @test vecnorm(dirdir[1]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
     @test vecnorm(dirdir[2]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
 
@@ -71,3 +75,28 @@ for i = 1:5
     grad_old = grad;
 
 end
+
+end
+
+test_lbfgs()
+
+#test other constructors
+mem = 3
+x = (zeros(10),zeros(Complex{Float64},10))
+H = LBFGS(x, mem)
+println(H)
+
+dim = (10,)
+H = LBFGS(dim, mem)
+println(H)
+
+dim = ((10,),(10,))
+H = LBFGS(dim, mem)
+println(H)
+
+D = (Float64,Complex{Float64})
+dim = ((10,),(10,))
+H = LBFGS(D,dim, mem)
+println(H)
+
+

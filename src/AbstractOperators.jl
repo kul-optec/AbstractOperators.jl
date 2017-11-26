@@ -16,7 +16,7 @@ export LinearOperator,
 # Block stuff
 
 include("utilities/block.jl")
-include("utilities/deep.jl") # TODO: remove this eventually
+#include("utilities/deep.jl") # TODO: remove this eventually
 
 # Predicates and properties
 
