@@ -30,19 +30,6 @@ mutable struct LBFGS{R, T <: BlockArray, M, I <: Integer} <: LinearOperator
 	ys_M::Array{R, 1}
 	alphas::Array{R, 1}
 	H::R
-
-	# LBFGS(currmem::I,
-	#       curridx::I,
-	#       s::T,
-	#       y::T,
-	#       s_M::Array{T,1},
-	#       y_M::Array{T,1},
-	#       ys_M::Array{R,1},
-	#       alphas::Array{R,1},
-	#       H::R,
-	#       M) where {R, T, I} =
-	# new{R,T,M,I}(currmem, curridx, s, y, s_M, y_M, ys_M,alphas, H)
-
 end
 
 #default constructor
