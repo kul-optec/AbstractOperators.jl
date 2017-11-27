@@ -277,7 +277,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.LBFGS",
     "category": "Type",
-    "text": "LBFGS(T::Type, dim::Tuple, Memory::Int)\n\nLBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,Tuple}, M::Int)\n\nLBFGS(x::AbstractArray, Memory::Int)\n\nConstruct a Limited-Memory BFGS LinearOperator with memory M. The memory of LBFGS can be updated using the function update!, where the current iteration variable and gradient (x, grad) and the previous ones (x_prev and grad_prev) are needed:\n\njulia> L = LBFGS(Float64,(4,),5)\nLBFGS  ℝ^4 -> ℝ^4\n\njulia> update!(L,x,x_prev,grad,grad_prev); #update memory\n\njulia> d = L*x;                            #compute new direction\n\n\n\n\n"
+    "text": "LBFGS(domainType::Type,dim_in::Tuple, M::Integer)\n\nLBFGS(dim_in::Tuple, M::Integer)\n\nLBFGS(x::AbstractArray, M::Integer)\n\nConstruct a Limited-Memory BFGS LinearOperator with memory M. The memory of LBFGS can be updated using the function update!, where the current iteration variable and gradient (x, grad) and the previous ones (x_prev and grad_prev) are needed:\n\njulia> L = LBFGS(Float64,(4,),5)\nLBFGS  ℝ^4 -> ℝ^4\n\njulia> update!(L,x,x_prev,grad,grad_prev); # update memory\n\njulia> d = L*grad; # compute new direction\n\n\n\n\n"
 },
 
 {
