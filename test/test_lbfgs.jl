@@ -1,4 +1,6 @@
-# @printf("\nTesting L-BFGS routines\n")
+@printf("\nTesting L-BFGS routines\n")
+
+function test_lbfgs()
 
 Q = [32.0000 13.1000 -4.9000 -3.0000  6.0000  2.2000  2.6000  3.4000 -1.9000 -7.5000;
  13.1000 18.3000 -5.3000 -9.5000  3.0000  2.1000  3.9000  3.0000 -3.6000 -4.4000;
@@ -33,32 +35,68 @@ dirs_ref = [
 ]
 
 dirs = zeros(10, 5) # matrix of directions (to be filled in)
-dir  = zeros(10) # matrix of directions (to be filled in)
 
 mem = 3;
-# col = 0; # last column of Sk, Yk that was filled in
-# currmem = 0;
-# H0 = 1.0
 x = zeros(10)
 
-A = LBFGS(Float64,size(x),mem)
-A = LBFGS(x,mem)
-println(A)
-x_old = 0;
-grad_old = 0;
+H = LBFGS(x, mem)
+dir  = zeros(10)
+println(H)
+
+HH = LBFGS((x, x), mem)
+dirdir = (zeros(10), zeros(10))
+println(HH)
+
+x_old = [];
+grad_old = [];
 
 for i = 1:5
+
     x = xs[:,i]
     grad = Q*x + q
+
     if i > 1
-	    @time update!(A, x, x_old, grad, grad_old)
-			A_mul_B!(dir,A,grad)
-    else
-	    copy!(dir, -grad)
+        @time update!(H, x, x_old, grad, grad_old)
+        @time update!(HH, (x, x), (x_old, x_old), (grad, grad), (grad_old, grad_old))
     end
-		dirs[:, i] = copy(dir)
+
+    dir_ref = dirs_ref[:,i]
+
+    gradm = -grad
+    @time A_mul_B!(dir, H, gradm)
+    @test vecnorm(dir-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+
+    gradm2 = (-grad,-grad)
+    @time A_mul_B!(dirdir, HH, gradm2)
+    @test vecnorm(dirdir[1]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+    @test vecnorm(dirdir[2]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+
     x_old = x;
     grad_old = grad;
+
 end
 
-@test vecnorm(dirs-dirs_ref, Inf)/(1+vecnorm(dirs_ref, Inf)) <= 1e-15
+end
+
+test_lbfgs()
+
+#test other constructors
+mem = 3
+x = (zeros(10),zeros(Complex{Float64},10))
+H = LBFGS(x, mem)
+println(H)
+
+dim = (10,)
+H = LBFGS(dim, mem)
+println(H)
+
+dim = ((10,),(10,))
+H = LBFGS(dim, mem)
+println(H)
+
+D = (Float64,Complex{Float64})
+dim = ((10,),(10,))
+H = LBFGS(D,dim, mem)
+println(H)
+
+

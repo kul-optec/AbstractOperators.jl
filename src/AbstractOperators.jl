@@ -2,24 +2,24 @@ __precompile__()
 
 module AbstractOperators
 
-const RealOrComplex{T<:Real} = Union{T, Complex{T}}
-
 abstract type AbstractOperator end
 
 abstract type LinearOperator    <: AbstractOperator end
 abstract type NonLinearOperator <: AbstractOperator end
 
-import Base: A_mul_B!, Ac_mul_B! 
+import Base: A_mul_B!, Ac_mul_B!
 
 export LinearOperator,
        NonLinearOperator,
        AbstractOperator
 
-# deep stuff
+# Block stuff
 
-include("utilities/deep.jl")
+include("utilities/block.jl")
+#include("utilities/deep.jl") # TODO: remove this eventually
 
-# predicates and properties
+# Predicates and properties
+
 include("properties.jl")
 
 # Linear operators
@@ -43,7 +43,7 @@ include("linearoperators/Filt.jl")
 include("linearoperators/MIMOFilt.jl")
 include("linearoperators/Xcorr.jl")
 include("linearoperators/LBFGS.jl")
-include("linearoperators/BlkDiagLBFGS.jl")
+# include("linearoperators/BlkDiagLBFGS.jl")
 
 # Calculus rules
 
@@ -66,8 +66,5 @@ include("nonlinearoperators/SoftPlus.jl")
 
 # Syntax
 include("syntax.jl")
-
-
-
 
 end

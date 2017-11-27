@@ -650,7 +650,7 @@ y = test_op(op, x, y0, verb)
 p = randperm(ndoms(op,2))
 y2 = op[p]*x[p]
 
-@test AbstractOperators.deepvecnorm(y .- y2) <= 1e-8
+@test AbstractOperators.blockvecnorm(y .- y2) <= 1e-8
 
 # test Scale of Sum
 
