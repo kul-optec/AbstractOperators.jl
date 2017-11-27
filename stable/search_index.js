@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Installation",
     "category": "section",
-    "text": "To install the package, use the following in the Julia command line:Pkg.clone(\"https://github.com/kul-forbes/AbstractOperators.jl\")Remember to Pkg.update() to keep the package up to date."
+    "text": "To install the package, use the following in the Julia command linePkg.add(\"AbstractOperators\")Remember to Pkg.update() to keep the package up to date."
 },
 
 {
@@ -113,11 +113,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "operators.html#AbstractOperators.MatrixMul",
+    "location": "operators.html#AbstractOperators.LMatrixOp",
     "page": "Abstract Operators",
-    "title": "AbstractOperators.MatrixMul",
+    "title": "AbstractOperators.LMatrixOp",
     "category": "Type",
-    "text": "MatrixMul(domainType=Float64::Type, dim_in::Tuple, b::AbstractVector)\n\nMatrixMul(b::AbstractVector, number_of_rows::Int)\n\nCreates a LinearOperator which, when multiplied with a matrix X::AbstractMatrix, returns the product X*b.\n\njulia> op = MatrixMul(Float64,(3,4),ones(4))\n(⋅)b  ℝ^(3, 4) -> ℝ^3 \n\njulia> op = MatrixMul(ones(4),3)\n(⋅)b  ℝ^(3, 4) -> ℝ^3\n\njulia> op*ones(3,4)\n3-element Array{Float64,1}:\n 4.0\n 4.0\n 4.0\n\n\n\n\n"
+    "text": "LMatrixOp(domainType=Float64::Type, dim_in::Tuple, b::Union{AbstractVector,AbstractMatrix})\n\nLMatrixOp(b::AbstractVector, number_of_rows::Int)\n\nCreates a LinearOperator which, when multiplied with a matrix X::AbstractMatrix, returns the product X*b.\n\njulia> op = LMatrixOp(Float64,(3,4),ones(4))\n(⋅)b  ℝ^(3, 4) -> ℝ^3 \n\njulia> op = LMatrixOp(ones(4),3)\n(⋅)b  ℝ^(3, 4) -> ℝ^3\n\njulia> op*ones(3,4)\n3-element Array{Float64,1}:\n 4.0\n 4.0\n 4.0\n\n\n\n\n"
 },
 
 {
@@ -133,7 +133,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Basic Operators",
     "category": "section",
-    "text": "Eye\nZeros\nDiagOp\nGetIndex\nMatrixOp\nMatrixMul\nMyLinOp"
+    "text": "Eye\nZeros\nDiagOp\nGetIndex\nMatrixOp\nLMatrixOp\nMyLinOp"
 },
 
 {
@@ -157,7 +157,23 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.IDFT",
     "category": "Type",
-    "text": "IDFT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDFT(dim_in...)\n\nIDFT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Inverse Discrete Fourier Transform of x. \n\njulia> IDFT(Complex{Float64},(10,10))\nℱ  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDFT(10,10)\nℱ  ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDFT(ones(3))\nℱ  ℝ^(10, 10) -> ℂ^(10, 10)\n\njulia> A*ones(3)\n3-element Array{Complex{Float64},1}:\n 1.0+0.0im\n 0.0+0.0im\n 0.0+0.0im\n\n\n\n"
+    "text": "IDFT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDFT(dim_in...)\n\nIDFT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Inverse Discrete Fourier Transform of x. \n\njulia> IDFT(Complex{Float64},(10,10))\nℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDFT(10,10)\nℱ⁻¹ ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDFT(ones(3))\nℱ⁻¹  ℝ^3 -> ℂ^3\n\njulia> A*ones(3)\n3-element Array{Complex{Float64},1}:\n 1.0+0.0im\n 0.0+0.0im\n 0.0+0.0im\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.RDFT",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.RDFT",
+    "category": "Type",
+    "text": "RDFT([domainType=Float64::Type,] dim_in::Tuple [,dims=1])\n\nRDFT(dim_in...)\n\nRDFT(x::AbstractArray [,dims=1])\n\nCreates a LinearOperator which, when multiplied with a real array x, returns the DFT over the dimension dims, exploiting Hermitian symmetry. \n\njulia> RDFT(Float64,(10,10))\nℱ  ℝ^(10, 10) -> ℂ^(6, 10)\n\njulia> RDFT((10,10,10),2)\nℱ  ℝ^(10, 10, 10) -> ℂ^(10, 6, 10)\n\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.IRDFT",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.IRDFT",
+    "category": "Type",
+    "text": "IRDFT([domainType=Float64::Type,] dim_in::Tuple, d::Int, [,dims=1])\n\nIRDFT(x::AbstractArray, d::Int, [,dims=1])\n\nCreates a LinearOperator which, when multiplied with a complex array x, returns the IDFT over the dimension dims, exploiting Hermitian symmetry. Like in the function BASE.irfft, d must satisfy div(d,2)+1 == size(x,dims).\n\njulia> A = IRDFT(Complex{Float64},(10,),19)\nℱ⁻¹  ℂ^10 -> ℝ^19 \n\njulia> A = IRDFT((5,10,8),19,2)\nℱ⁻¹  ℂ^(5, 10, 8) -> ℝ^(5, 19, 8)\n\n\n\n\n"
 },
 
 {
@@ -173,7 +189,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.IDCT",
     "category": "Type",
-    "text": "IDCT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDCT(dim_in...)\n\nIDCT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Discrete Cosine Transform of x. \n\njulia> IDCT(Complex{Float64},(10,10))\nℱc^(-1)  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDCT(10,10)\nℱc^(-1)  ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDCT(ones(3))\nℱc^(-1)  ℝ^3 -> ℝ^3\n\njulia> A*[1.;0.;0.]\n3-element Array{Float64,1}:\n 0.57735\n 0.57735\n 0.57735\n\n\n\n\n"
+    "text": "IDCT([domainType=Float64::Type,] dim_in::Tuple)\n\nIDCT(dim_in...)\n\nIDCT(x::AbstractArray)\n\nCreates a LinearOperator which, when multiplied with an array x::AbstractArray{N}, returns the N-dimensional Discrete Cosine Transform of x. \n\njulia> IDCT(Complex{Float64},(10,10))\nℱc⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) \n\njulia> IDCT(10,10)\nℱc⁻¹  ℝ^(10, 10) -> ℂ^(10, 10) \n\njulia> A = IDCT(ones(3))\nℱc⁻¹  ℝ^3 -> ℝ^3\n\njulia> A*[1.;0.;0.]\n3-element Array{Float64,1}:\n 0.57735\n 0.57735\n 0.57735\n\n\n\n\n"
 },
 
 {
@@ -181,7 +197,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Transformations",
     "category": "section",
-    "text": "DFT\nIDFT\nDCT\nIDCT"
+    "text": "DFT\nIDFT\nRDFT\nIRDFT\nDCT\nIDCT"
 },
 
 {
@@ -261,7 +277,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.LBFGS",
     "category": "Type",
-    "text": "LBFGS(T::Type, dim::Tuple, Memory::Int)\n\nLBFGS{N}(T::NTuple{N,Type}, dim::NTuple{N,Tuple}, M::Int)\n\nLBFGS(x::AbstractArray, Memory::Int)\n\nConstruct a Limited-Memory BFGS LinearOperator with memory M. The memory of LBFGS can be updated using the function update!, where the current iteration variable and gradient (x, grad) and the previous ones (x_prev and grad_prev) are needed: \n\njulia> L = LBFGS(Float64,(4,),5)\nLBFGS  ℝ^4 -> ℝ^4\n\njulia> update!(L,x,x_prev,grad,grad_prev); #update memory\n\njulia> d = L*x;                            #compute new direction\n\n\n\n\n"
+    "text": "LBFGS(domainType::Type,dim_in::Tuple, M::Integer)\n\nLBFGS(dim_in::Tuple, M::Integer)\n\nLBFGS(x::AbstractArray, M::Integer)\n\nConstruct a Limited-Memory BFGS LinearOperator with memory M. The memory of LBFGS can be updated using the function update!, where the current iteration variable and gradient (x, grad) and the previous ones (x_prev and grad_prev) are needed:\n\njulia> L = LBFGS(Float64,(4,),5)\nLBFGS  ℝ^4 -> ℝ^4\n\njulia> update!(L,x,x_prev,grad,grad_prev); # update memory\n\njulia> d = L*grad; # compute new direction\n\n\n\n\n"
 },
 
 {
@@ -277,7 +293,23 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.Sigmoid",
     "category": "Type",
-    "text": "Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 100.)\n\nCreates the sigmoid non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = frac11+e^-gamma mathbfx  \n\n\n\n"
+    "text": "Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 1.)\n\nCreates the sigmoid non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = frac11+e^-gamma mathbfx  \n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.SoftPlus",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.SoftPlus",
+    "category": "Type",
+    "text": "SoftPlus([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates the softplus non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = log (1 + e^x )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.SoftMax",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.SoftMax",
+    "category": "Type",
+    "text": "SoftMax([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates the softmax non-linear operator with input dimensions dim_in.\n\nsigma(mathbfx) = frace^mathbfx  sum e^mathbfx  \n\n\n\n"
 },
 
 {
@@ -285,7 +317,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Nonlinear operators",
     "category": "section",
-    "text": "Sigmoid"
+    "text": "Sigmoid\nSoftPlus\nSoftMax"
 },
 
 {
@@ -377,6 +409,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "calculus.html#AbstractOperators.BroadCast",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.BroadCast",
+    "category": "Type",
+    "text": "BroadCast(A::AbstractOperator, dim_out...)\n\nBroadCast the codomain dimensions of an AbstractOperator.\n\njulia> A = Eye(2)\nI  ℝ^2 -> ℝ^2\n\njulia> B = BroadCast(A,(2,3))\n.I  ℝ^2 -> ℝ^(2, 3)\n\njulia> B*[1.;2.]\n2×3 Array{Float64,2}:\n 1.0  1.0  1.0\n 2.0  2.0  2.0\n\n\n\n\n"
+},
+
+{
     "location": "calculus.html#AbstractOperators.Reshape",
     "page": "Calculus rules",
     "title": "AbstractOperators.Reshape",
@@ -397,7 +437,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "Transformations",
     "category": "section",
-    "text": "Scale\nTranspose\nReshape\nJacobian"
+    "text": "Scale\nTranspose\nBroadCast\nReshape\nJacobian"
 },
 
 {
