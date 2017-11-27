@@ -1,4 +1,21 @@
 # Define block-arrays
+module BlockArrays
+
+export RealOrComplex,
+       BlockArray,
+       blocksize,
+       blockeltype,
+       blocklength,
+       blockvecnorm,
+       blockmaxabs,
+       blocksimilar,
+       blockcopy,
+       blockcopy!,
+       blockset!,
+       blockvecdot,
+       blockzeros,
+       blockaxpy!
+
 
 const RealOrComplex{R} = Union{R, Complex{R}}
 const BlockArray{R} = Union{
@@ -85,4 +102,6 @@ function broadcast!(f::Any, dest::Tuple, op1::Tuple, coef::Number, op2::Tuple, o
        broadcast!(f, dest[k], op1[k], coef, op2[k], op3[k])
    end
    return dest
+end
+
 end

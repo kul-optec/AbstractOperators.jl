@@ -2,6 +2,10 @@ __precompile__()
 
 module AbstractOperators
 
+# Block stuff
+include("utilities/block.jl")
+using AbstractOperators.BlockArrays
+
 abstract type AbstractOperator end
 
 abstract type LinearOperator    <: AbstractOperator end
@@ -12,11 +16,6 @@ import Base: A_mul_B!, Ac_mul_B!
 export LinearOperator,
        NonLinearOperator,
        AbstractOperator
-
-# Block stuff
-
-include("utilities/block.jl")
-#include("utilities/deep.jl") # TODO: remove this eventually
 
 # Predicates and properties
 

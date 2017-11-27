@@ -9,9 +9,9 @@ verb = true
 
 @testset "AbstractOperators" begin
 
-#@testset "Tuple operations" begin
-#  include("test_deep.jl")
-#end
+@testset "Block Arrays" begin
+  include("test_block.jl")
+end
 
 @testset "Linear operators" begin
   include("test_linear_operators.jl")
