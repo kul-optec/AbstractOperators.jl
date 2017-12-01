@@ -63,12 +63,12 @@ BroadCast(A, dim_out, zeros(codomainType(A),size(A,1)), zeros(domainType(A),size
 
 # Mappings
 
-function A_mul_B!(y::C, R::BroadCast{N,L}, b::D) where {N,L,C,D}
+function A_mul_B!(y::CC, R::BroadCast{N,L,T,D,M}, b::DD) where {N,L,T,D,M,CC,DD}
 	A_mul_B!(R.bufC, R.A, b)
 	y .= R.bufC
 end
 
-function Ac_mul_B!(y::C, R::BroadCast{N,L}, b::D) where {N,L,C,D}
+function Ac_mul_B!(y::CC, R::BroadCast{N,L,T,D,M}, b::DD) where {N,L,T,D,M,CC,DD}
 	fill!(y, 0.)
 	for i in R.idxs
 		@views Ac_mul_B!(R.bufD, R.A, b[R.cols...,i.I...])
@@ -84,6 +84,17 @@ function Ac_mul_B!(y::CC, R::BroadCast{N,L,T,D,0}, b::DD) where {N,L,T,D,CC,DD}
 	for bi in b
 		bii[1] = bi
 		Ac_mul_B!(R.bufD, R.A, bii)
+		y .+= R.bufD
+	end
+	return y
+end
+
+#TODO make this more general
+#length(dim_out) == size(A,1) e.g. a .= b; size(a) = (m,n) size(b) = (1,n) matrix out, column in 
+function Ac_mul_B!(y::CC, R::BroadCast{2,L,T,D,2}, b::DD) where {L,T,D,CC,DD}
+	fill!(y, 0.)
+	for i = 1:size(b,1)
+		@views Ac_mul_B!(R.bufD, R.A, b[i,:]')
 		y .+= R.bufD
 	end
 	return y
