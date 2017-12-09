@@ -1,0 +1,60 @@
+%!tikz editor 1.0
+\documentclass[convert={density=2000,size=600x600,outext=.png}]{standalone}
+%\documentclass{article}
+\usepackage{tikzsymbols}
+\usepackage{tikz}
+\usepackage[graphics, active, tightpage]{preview}
+\PreviewEnvironment{tikzpicture}
+\usetikzlibrary{backgrounds}
+
+%!tikz preamble begin
+\usetikzlibrary{arrows}
+\usepackage{pstricks}
+\usepackage{pstricks-add}
+\usetikzlibrary{pgfplots.groupplots} 
+\usetikzlibrary{colorbrewer}
+\usepackage{pgfplots}
+\usetikzlibrary{plotmarks}
+\usetikzlibrary{calc}
+\usetikzlibrary{pgfplots.polar}
+\usepackage{subcaption}
+%!tikz preamble end
+
+\definecolor{JuliaBlue}{RGB}{64.256, 99.328, 216.832}
+\definecolor{JuliaBlueL}{RGB}{102.4, 130.56, 224.768   }
+\definecolor{JuliaPurple}{RGB}{149.504, 88.32, 178.688}
+\definecolor{JuliaPurpleL}{RGB}{170.752, 121.6, 193.792}
+\definecolor{JuliaGreen}{RGB}{56.32, 152.576, 38.144}
+\definecolor{JuliaGreenL}{RGB}{96.256, 173.568, 81.408}
+\definecolor{JuliaRed}{RGB}{203.776, 60.16, 51.2}
+\definecolor{JuliaRedL}{RGB}{213.76, 99.328, 92.416}
+
+\begin{document}
+%!tikz source begin
+\begin{tikzpicture}[background rectangle/.style={fill=white}, show background rectangle]
+
+\newcommand{\LW}{1.3}
+
+\tikzset{
+	% Mic style
+myarc/.pic={ 
+\draw[pic actions] (-1,0) to (-0.8,0) arc (0:180:-0.9 and 0.9) arc (0:180:1 and 1);
+},
+}
+
+\pic[JuliaBlueL,fill=JuliaBlue,line width=\LW] (n1) at (0,0) {myarc} ;
+\pic[JuliaBlueL,fill=JuliaBlue,line width=\LW, rotate = -180] (n2) at (0,0) {myarc} ;
+
+\draw[JuliaGreen,fill=JuliaGreenL,line width=\LW] (0,0) circle (0.2);
+
+\draw[JuliaRed,fill=JuliaRedL,line width=\LW] (0.3,0.4) circle (0.2);
+\draw[JuliaRed,fill=JuliaRedL,line width=\LW] (-0.3,-0.4) circle (0.2);
+
+\draw[JuliaPurple,fill=JuliaPurpleL,line width=\LW] (-0.3,0.4) circle (0.2);
+\draw[JuliaPurple,fill=JuliaPurpleL,line width=\LW] (0.3,-0.4) circle (0.2);
+
+
+
+\end{tikzpicture}
+
+\end{document}

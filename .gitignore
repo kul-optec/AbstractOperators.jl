@@ -4,6 +4,12 @@
 *.swp
 *.bmp
 *.wav
+*.aux
+*.cvs
+*.bbl
+*.blg
+*.log
+
 
 docs/build/
 docs/site/
