@@ -72,18 +72,14 @@ blockaxpy!(yb,xb,2,x2b)
 @test y == x .+ 2.*x2
 @test yb == (xb[1] .+ 2.*x2b[1], xb[2] .+ 2.*x2b[2], xb[3] .+ 2.*x2b[3])
 
-x = rand(Float64, 5)
-y = (x, x)
-@test blockiszero(x) == blockiszero(y) == false
+x = (ones(Float64, 5), zeros(Float64, 2, 3))
+@test blockiszero(x) == false
 
-x = rand(Complex{Float64}, 5)
-y = (x, x)
-@test blockiszero(x) == blockiszero(y) == false
+y = (zeros(Complex{Float64}, 3, 2), ones(Complex{Float64}, 5))
+@test blockiszero(x) == false
 
-x = zeros(Float64, 5)
-y = (x, x)
-@test blockiszero(x) == blockiszero(y) == true
+x = (zeros(Float64, 5), zeros(Complex{Float64}, 2, 3))
+@test blockiszero(x) == true
 
-x = zeros(Complex{Float64}, 5)
-y = (x, x)
-@test blockiszero(x) == blockiszero(y) == true
+y = (zeros(Float64, 2, 3), zeros(Complex{Float64}, 5))
+@test blockiszero(x) == true
