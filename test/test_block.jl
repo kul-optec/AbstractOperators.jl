@@ -32,7 +32,7 @@ x2b = (randn(2), randn(3)+im.*randn(3), randn(2,3))
 
 y = blocksimilar(x)
 yb = blocksimilar(xb)
-blockcopy!(y,x) 
+blockcopy!(y,x)
 blockcopy!(yb,xb)
 
 @test y == x
@@ -40,7 +40,7 @@ blockcopy!(yb,xb)
 
 y = blocksimilar(x)
 yb = blocksimilar(xb)
-blockset!(y,x) 
+blockset!(y,x)
 blockset!(yb,xb)
 
 @test y == x
@@ -72,8 +72,18 @@ blockaxpy!(yb,xb,2,x2b)
 @test y == x .+ 2.*x2
 @test yb == (xb[1] .+ 2.*x2b[1], xb[2] .+ 2.*x2b[2], xb[3] .+ 2.*x2b[3])
 
+x = rand(Float64, 5)
+y = (x, x)
+@test blockiszero(x) == blockiszero(y) == false
 
+x = rand(Complex{Float64}, 5)
+y = (x, x)
+@test blockiszero(x) == blockiszero(y) == false
 
+x = zeros(Float64, 5)
+y = (x, x)
+@test blockiszero(x) == blockiszero(y) == true
 
-
-
+x = zeros(Complex{Float64}, 5)
+y = (x, x)
+@test blockiszero(x) == blockiszero(y) == true

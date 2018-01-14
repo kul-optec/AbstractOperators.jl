@@ -14,7 +14,8 @@ export RealOrComplex,
        blockset!,
        blockvecdot,
        blockzeros,
-       blockaxpy!
+       blockaxpy!,
+       blockiszero
 
 
 const RealOrComplex{R} = Union{R, Complex{R}}
@@ -64,6 +65,9 @@ blockzeros(a::AbstractArray) = zeros(a)
 
 blockaxpy!(z::Tuple, x, alpha::Real, y::Tuple) = blockaxpy!.(z, x, alpha, y)
 blockaxpy!(z::AbstractArray, x, alpha::Real, y::AbstractArray) = (z .= x .+ alpha.*y)
+
+blockiszero(x::AbstractArray) = iszero(x)
+blockiszero(x::Tuple) = all(iszero.(x))
 
 # Define broadcast
 
