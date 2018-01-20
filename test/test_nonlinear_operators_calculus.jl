@@ -180,7 +180,7 @@ y, grad = test_NLop(op,x,r,verb)
 Y = A*x+opB*x
 @test vecnorm(Y-y) <1e-8
 
-#testing NonLinearCompose
+## testing NonLinearCompose
 
 #with vectors
 n,m = 3,4
@@ -208,7 +208,25 @@ Y = A*x[1]*B*x[2]
 @test norm(Y - y) <= 1e-12
 
 #further test on gradient with analytical formulas
-grad2 =  ((B*x[2])*(A'*r)')', B'*(A*x[1])'*r
+grad2 =  (A'*r)*(B*x[2])', B'*(A*x[1])'*r
+@test vecnorm(grad[1]-grad2[1]) <1e-7
+@test vecnorm(grad[2]-grad2[2]) <1e-7
+
+#with complex matrices
+l,m1,m2,n1,n2 = 2,3,4,5,6
+x = (randn(m1,m2)+im*randn(m1,m2),randn(n1,n2)+im*randn(n1,n2))
+A = randn(l,m1) +im*randn(l,m1)
+B = randn(m2,n1)+im*randn(m2,n1)
+r = randn(l,n2) +im*randn(l,n2)
+
+P = NonLinearCompose( MatrixOp(A,m2), MatrixOp(B,n2) )
+y, grad = test_NLop(P,x,r,verb)
+
+Y = A*x[1]*B*x[2]
+@test norm(Y - y) <= 1e-12
+
+##test on gradient with analytical formulas
+grad2 =  (A'*r)*(B*x[2])', B'*(A*x[1])'*r
 @test vecnorm(grad[1]-grad2[1]) <1e-7
 @test vecnorm(grad[2]-grad2[2]) <1e-7
 

@@ -54,7 +54,8 @@ blockset!(y::Tuple, x) = blockset!.(y, x)
 blockset!(y::AbstractArray, x) = (y .= x)
 
 blockvecdot(x::T, y::T) where {T <: Tuple} = sum(blockvecdot.(x,y))
-blockvecdot(x::AbstractArray{R}, y::AbstractArray{R}) where {R <: Number} = vecdot(x, y)
+blockvecdot(x::AbstractArray{R}, y::AbstractArray{R}) where {R <: Number} = real(vecdot(x, y))
+# inner product must be always real see section 4.2 of TFOCS manual
 
 blockzeros(t::Tuple, s::Tuple) = blockzeros.(t, s)
 blockzeros(t::Type, n::NTuple{N, Integer} where {N}) = zeros(t, n)

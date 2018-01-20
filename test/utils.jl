@@ -26,7 +26,7 @@ function test_op(A::AbstractOperator, x, y, verb::Bool = false)
   return Ax
 end
 
-########### Test for LinearOperators
+########### Test for NonLinearOperators
 function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 
 	verb && (println(),println(A))
@@ -54,9 +54,11 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 
 	@test AbstractOperators.blockvecnorm(grad .- grad2) < 1e-8
 
-	grad3 = gradient_fd(A,Ax,x,y) #calculate gradient using finite differences
+	if all(isreal.(grad))  # currently finite difference gradient not working with complex variables 
+		grad3 = gradient_fd(A,Ax,x,y) #calculate gradient using finite differences
 
-	@test AbstractOperators.blockvecnorm(grad .- grad3) < 1e-4
+		@test AbstractOperators.blockvecnorm(grad .- grad3) < 1e-4
+	end
 
 	return Ax, grad
 end
