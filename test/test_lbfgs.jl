@@ -76,6 +76,17 @@ for i = 1:5
 
 end
 
+@test blockones(size(H,1)) != H*blockones(size(H,1))
+@test blockones(size(HH,1)) != HH*blockones(size(HH,1))
+
+#testing reset
+
+reset!(H)
+reset!(HH)
+
+@test blockones(size(H,1)) == H*blockones(size(H,1))
+@test blockones(size(HH,1)) == HH*blockones(size(HH,1))
+
 end
 
 test_lbfgs()

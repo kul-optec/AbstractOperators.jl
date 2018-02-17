@@ -101,6 +101,31 @@ y2 = (A1*x1, A2*x2, A3*x3)
 @test is_full_row_rank(opD)    == false
 @test is_full_column_rank(opD) == false
 
+# DCAT of Eye
+
+n1, n2 = 4, 7 
+x1 = randn(n1)
+x2 = randn(n2)
+
+opD = Eye((x1,x2))
+y1 = test_op(opD, (x1, x2), (randn(n1),randn(n2)), verb)
+
+#properties
+@test is_linear(opD)           == true
+@test is_null(opD)             == false
+@test is_eye(opD)              == true 
+@test is_diagonal(opD)         == true
+@test is_AcA_diagonal(opD)     == true
+@test is_AAc_diagonal(opD)     == true
+@test is_orthogonal(opD)       == true
+@test is_invertible(opD)       == true
+@test is_full_row_rank(opD)    == true
+@test is_full_column_rank(opD) == true
+
+@test diag(opD) == 1
+@test diag_AcA(opD) == 1
+@test diag_AAc(opD) == 1
+
 ########################
 ### test HCAT    #######
 ########################

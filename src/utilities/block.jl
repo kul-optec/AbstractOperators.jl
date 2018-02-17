@@ -14,6 +14,7 @@ export RealOrComplex,
        blockset!,
        blockvecdot,
        blockzeros,
+       blockones,
        blockaxpy!,
        blockiszero
 
@@ -53,8 +54,8 @@ blockcopy!(y::AbstractArray, x::AbstractArray) = copy!(y, x)
 blockset!(y::Tuple, x) = blockset!.(y, x)
 blockset!(y::AbstractArray, x) = (y .= x)
 
-blockvecdot(x::T, y::T) where {T <: Tuple} = sum(blockvecdot.(x,y))
-blockvecdot(x::AbstractArray{R}, y::AbstractArray{R}) where {R <: Number} = real(vecdot(x, y))
+blockvecdot(x::T1, y::T2) where {T1 <: Tuple, T2 <: Tuple} = sum(blockvecdot.(x,y))
+blockvecdot(x::AbstractArray{R1}, y::AbstractArray{R2}) where {R1 <: Number, R2 <: Number} = real(vecdot(x, y))
 # inner product must be always real see section 4.2 of TFOCS manual
 
 blockzeros(t::Tuple, s::Tuple) = blockzeros.(t, s)
@@ -63,6 +64,13 @@ blockzeros(t::Tuple) = blockzeros.(t)
 blockzeros(n::NTuple{N, Integer} where {N}) = zeros(n)
 blockzeros(n::Integer) = zeros(n)
 blockzeros(a::AbstractArray) = zeros(a)
+
+blockones(t::Tuple, s::Tuple) = blockones.(t, s)
+blockones(t::Type, n::NTuple{N, Integer} where {N}) = ones(t, n)
+blockones(t::Tuple) = blockones.(t)
+blockones(n::NTuple{N, Integer} where {N}) = ones(n)
+blockones(n::Integer) = ones(n)
+blockones(a::AbstractArray) = ones(a)
 
 blockaxpy!(z::Tuple, x, alpha::Real, y::Tuple) = blockaxpy!.(z, x, alpha, y)
 blockaxpy!(z::AbstractArray, x, alpha::Real, y::AbstractArray) = (z .= x .+ alpha.*y)

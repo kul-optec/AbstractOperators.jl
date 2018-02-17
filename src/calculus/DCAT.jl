@@ -181,10 +181,11 @@ function codomainType(H::DCAT)
 	return (codomain...)
 end
 
+is_eye(L::DCAT) = all(is_eye.(L.A))
 is_linear(L::DCAT) = all(is_linear.(L.A))
 is_diagonal(L::DCAT) = all(is_diagonal.(L.A))
 is_AcA_diagonal(L::DCAT) = all(is_AcA_diagonal.(L.A))
-is_Ac_diagonal(L::DCAT) = all(is_Ac_diagonal.(L.A))
+is_AAc_diagonal(L::DCAT) = all(is_AAc_diagonal.(L.A))
 is_orthogonal(L::DCAT) = all(is_orthogonal.(L.A))
 is_invertible(L::DCAT) = all(is_invertible.(L.A))
 is_full_row_rank(L::DCAT) = all(is_full_row_rank.(L.A))
@@ -208,3 +209,10 @@ function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 
 	DCAT(H.A,new_part,H.idxC)
 end
+
+# special cases
+# Eye constructor
+Eye(x::A) where {N, A <: NTuple{N,AbstractArray}} = DCAT(Eye.(x)...)
+diag(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
+diag_AAc(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
+diag_AcA(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.

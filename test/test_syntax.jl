@@ -314,3 +314,14 @@ A = MatrixOp(randn(n,m))
 B = Sigmoid(Float64,(n,),100.)
 op = B*A
 J = jacobian(op,randn(m))
+
+#### convert ####
+L = Eye(10)
+LL = convert(AbstractOperator, Float64, (10,), L)
+@test LL == L
+
+LL = convert(LinearOperator, Float64, (10,), L)
+@test LL == L
+
+@test_throws MethodError LL = convert(NonLinearOperator, Float64, (10,), L)
+

@@ -48,7 +48,6 @@ julia> codomainType(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
 """
 codomainType
 
-
 """
 `size(A::AbstractOperator, [dom,])`
 
@@ -253,6 +252,15 @@ false
 ```
 """
 is_full_column_rank(L::AbstractOperator) = false
+
+
+import Base: convert
+function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T <: AbstractOperator}
+	domainType(L) != dom && error("cannot convert operator with domain $(domainType(L)) to operator with domain $dom ")
+	size(L,1) != dim_in && error("cannot convert operator with size $(size(L,1)) to operator with domain $dim_in ")
+	return L
+end
+
 
 #printing
 function Base.show(io::IO, L::AbstractOperator)

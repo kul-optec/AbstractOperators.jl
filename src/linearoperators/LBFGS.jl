@@ -1,4 +1,4 @@
-export LBFGS, update!
+export LBFGS, update!, reset!
 
 """
 `LBFGS(domainType::Type,dim_in::Tuple, M::Integer)`
@@ -18,6 +18,9 @@ julia> update!(L,x,x_prev,grad,grad_prev); # update memory
 julia> d = L*grad; # compute new direction
 
 ```
+
+Use  `reset!(L)` to cancel the memory of the operator.
+
 """
 
 mutable struct LBFGS{R, T <: BlockArray, M, I <: Integer} <: LinearOperator
@@ -79,6 +82,17 @@ function update!(L::LBFGS{R, T, M, I}, x::T, x_prev::T, gradx::T, gradx_prev::T)
 		L.H = ys/yty
 	end
 	return L
+end
+
+"""
+`reset!(L::LBFGS)`
+
+Cancels the memory of `L`.
+"""
+
+function reset!(L::LBFGS)
+	L.currmem, L.curridx = 0, 0
+	L.H = 1.0
 end
 
 # LBFGS operators are symmetric

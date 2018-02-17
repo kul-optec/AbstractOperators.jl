@@ -33,6 +33,7 @@ Eye(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} = Eye{DomainType,N}(Do
 Eye(t::Type, dims::Vararg{Integer}) = Eye(t,dims)
 Eye(dims::NTuple{N, Integer}) where {N} = Eye(Float64,dims)
 Eye(dims::Vararg{Integer}) = Eye(Float64,dims)
+Eye(x::A) where {A <: AbstractArray} = Eye(eltype(x), size(x))
 
 # Mappings
 

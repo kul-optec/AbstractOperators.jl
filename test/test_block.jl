@@ -66,6 +66,21 @@ yb = blockzeros(blockeltype(xb),blocksize(xb))
 @test y == zeros(2)
 @test yb == (zeros(2),zeros(3)+im*zeros(3),zeros(2,3))
 
+y = blockones(x)
+yb = blockones(xb)
+@test y == ones(2)
+@test yb == (ones(2),ones(3)+im*zeros(3),ones(2,3))
+
+y = blockones(blocksize(x))
+yb = blockones(blocksize(xb))
+@test y == ones(2)
+@test yb == (ones(2),ones(3)+im*zeros(3),ones(2,3))
+
+y = blockones(blockeltype(x),blocksize(x))
+yb = blockones(blockeltype(xb),blocksize(xb))
+@test y == ones(2)
+@test yb == (ones(2),ones(3)+im*zeros(3),ones(2,3))
+
 blockaxpy!(y,x,2,x2)
 blockaxpy!(yb,xb,2,x2b)
 

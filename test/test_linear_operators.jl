@@ -282,6 +282,7 @@ y1 = test_op(op, x1, randn(n), verb)
 op = Eye(Float64, (n,))
 op = Eye((n,))
 op = Eye(n)
+op = Eye(x1)
 
 #properties
 @test is_linear(op)           == true
@@ -472,6 +473,7 @@ op = GetIndex(Float64,(n,),(1:k,))
 
 ######## MatrixOp ############
 
+# real matrix, real input
 n,m = 5,4
 A = randn(n,m)
 op = MatrixOp(Float64,(m,),A)
@@ -479,14 +481,39 @@ x1 = randn(m)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = A*x1
 
+# real matrix, complex input
+n,m = 5,4
+A = randn(n,m)
+op = MatrixOp(Complex{Float64},(m,),A)
+x1 = randn(m)+im.*randn(m)
+y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y2 = A*x1
+
+# complex matrix, complex input
+n,m = 5,4
+A = randn(n,m)+im*randn(n,m)
+op = MatrixOp(Complex{Float64},(m,),A)
+x1 = randn(m)+im.*randn(m)
+y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y2 = A*x1
+
+# complex matrix, real input
+n,m = 5,4
+A = randn(n,m)+im*randn(n,m)
+op = MatrixOp(Float64,(m,),A)
+x1 = randn(m)
+y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y2 = A*x1
+
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
+# complex matrix, real matrix input
 c = 3
 op = MatrixOp(Float64,(m,c),A)
 @test_throws ErrorException op = MatrixOp(Float64,(m,c,3),A)
 @test_throws MethodError op = MatrixOp(Float64,(m,c),randn(n,m,2))
 x1 = randn(m,c)
-y1 = test_op(op, x1, randn(n,c), verb)
+y1 = test_op(op, x1, randn(n,c).+randn(n,c), verb)
 y2 = A*x1
 
 # other constructors
@@ -497,6 +524,7 @@ op = MatrixOp(Float64, A, c)
 
 op = convert(LinearOperator,A)
 op = convert(LinearOperator,A,c)
+op = convert(LinearOperator, Complex{Float64}, size(x1), A)
 
 ##properties
 @test is_linear(op)           == true

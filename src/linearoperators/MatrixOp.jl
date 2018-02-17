@@ -28,7 +28,7 @@ julia> MatrixOp(randn(20,10),4)
 
 """
 
-struct MatrixOp{T, M <: AbstractMatrix{T}} <: LinearOperator
+struct MatrixOp{D, T, M <: AbstractMatrix{T}} <: LinearOperator
 	A::M
 	n_col_in::Integer
 end
@@ -37,35 +37,43 @@ end
 
 ##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-function MatrixOp(DomainType::Type, DomainDim::NTuple{N,Int}, A::M) where {N, M <: AbstractMatrix} 
+function MatrixOp(DomainType::Type, DomainDim::NTuple{N,Int}, A::M) where {N, T, M <: AbstractMatrix{T}} 
 	N > 2 && error("cannot multiply a Matrix by a n-dimensional Variable with n > 2") 
 	size(A,2) != DomainDim[1] && error("wrong input dimensions")
 	if N == 1
-		MatrixOp{DomainType, M}(A, 1)
+		MatrixOp{DomainType, T, M}(A, 1)
 	else
-		MatrixOp{DomainType, M}(A, DomainDim[2])
+		MatrixOp{DomainType, T, M}(A, DomainDim[2])
 	end
 end
 ###
 
-MatrixOp(A::M)                      where {M <: AbstractMatrix} = MatrixOp{eltype(A), M}(A, 1)
-MatrixOp(T::Type, A::M)             where {M <: AbstractMatrix} = MatrixOp{T, M}(A, 1)
-MatrixOp(A::M, n::Integer)          where {M <: AbstractMatrix} = MatrixOp{eltype(A), M}(A, n)
-MatrixOp(T::Type, A::M, n::Integer) where {M <: AbstractMatrix} = MatrixOp{T, M}(A, n)
+MatrixOp(A::M)                      where {M <: AbstractMatrix} = MatrixOp(eltype(A), (size(A,2),), A)
+MatrixOp(D::Type, A::M)             where {M <: AbstractMatrix} = MatrixOp(D, (size(A,2),), A)
+MatrixOp(A::M, n::Integer)          where {M <: AbstractMatrix} = MatrixOp(eltype(A), (size(A,2), n), A)
+MatrixOp(D::Type, A::M, n::Integer) where {M <: AbstractMatrix} = MatrixOp(D, (size(A,2), n), A)
 
 import Base: convert
-convert(::Type{LinearOperator}, L::M) where {T,M<:AbstractMatrix{T}} = MatrixOp{T,M}(L,1)
-convert(::Type{LinearOperator}, L::M, n::Integer) where {T,M<:AbstractMatrix{T}} = MatrixOp{T,M}(L, n)
+convert(::Type{LinearOperator}, L::M) where {T, M<:AbstractMatrix{T}} = MatrixOp{T, T, M}(L,1)
+convert(::Type{LinearOperator}, L::M, n::Integer) where {T, M<:AbstractMatrix{T}} = MatrixOp{T, T, M}(L, n)
+convert(::Type{LinearOperator}, dom::Type, dim_in::Tuple, L::AbstractMatrix) = MatrixOp(dom, dim_in, L)
 
 # Mappings
 
- A_mul_B!(y::AbstractArray, L::MatrixOp{M, T}, b::AbstractArray) where {M, T} = A_mul_B!(y, L.A, b)
-Ac_mul_B!(y::AbstractArray, L::MatrixOp{M, T}, b::AbstractArray) where {M, T} = Ac_mul_B!(y, L.A, b)
+ A_mul_B!(y::AbstractArray, L::MatrixOp{D, T, M}, b::AbstractArray) where {D, T, M} = A_mul_B!(y, L.A, b)
+Ac_mul_B!(y::AbstractArray, L::MatrixOp{D, T, M}, b::AbstractArray) where {D, T, M} = Ac_mul_B!(y, L.A, b)
+
+# Special Case, real b, complex matrix
+function Ac_mul_B!(y::AbstractArray, L::MatrixOp{D, T}, b::AbstractArray) where {D <: Real , T <: Complex} 
+	yc = zeros(T,size(y))
+	Ac_mul_B!(yc, L.A, b)
+	y .= real.(yc)
+end
 
 # Properties
 
-  domainType(L::MatrixOp{T, M}) where {T, M} = T
-codomainType(L::MatrixOp{T, M}) where {T, M} = T
+  domainType(L::MatrixOp{D, T}) where {D, T} = D
+codomainType(L::MatrixOp{D, T}) where {D, T} = D <: Real && T <: Complex ? T : D
 
 function size(L::MatrixOp)
 	if L.n_col_in == 1
