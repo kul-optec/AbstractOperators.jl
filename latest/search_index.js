@@ -37,7 +37,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Usage",
     "category": "section",
-    "text": "With using AbstractOperators the package imports several methods like multiplication *  and transposition ' (and their in-place methods A_mul_B!, Ac_mul_B!).For example, one can create a 2-D Discrete Fourier Transform as follows:julia> A = DFT(3,4)\nℱ  ℝ^(3, 4) -> ℂ^(3, 4)Here, it can be seen that A has a domain of dimensions size(A,2) = (3,4) and of type domainType(A) = Float64 and a codomain of dimensions size(A,1) = (3,4) and type codomainType(A) = Complex{Float64}.This linear transformation can be evaluated as follows: julia> x = randn(3,4); #input matrix\n\njulia> y = A*x\n3×4 Array{Complex{Float64},2}:\n  -1.11412+0.0im       3.58654-0.724452im  -9.10125+0.0im       3.58654+0.724452im\n -0.905575+1.98446im  0.441199-0.913338im  0.315788+3.29666im  0.174273+0.318065im\n -0.905575-1.98446im  0.174273-0.318065im  0.315788-3.29666im  0.441199+0.913338im\n\njulia> A_mul_B!(y,A,x) == A*x #in-place evaluation\ntrue\n\njulia> all(A'*y - *(size(x)...)*x .< 1e-12) \ntrue\n\njulia> Ac_mul_B!(x,A,y) #in-place evaluation\n3×4 Array{Float64,2}:\n  -2.99091   9.45611  -19.799     1.6327 \n -11.1841   11.2365   -26.3614   11.7261 \n   5.04815   7.61552   -6.00498   6.25586\nNotice that inputs and outputs are not necessarily Vectors.It is also possible to combine multiple AbstractOperators using different calculus rules. For example AbstractOperators can be concatenated horizontally: julia> B = Eye(Complex{Float64},(3,4))\nI  ℂ^(3, 4) -> ℂ^(3, 4)\n\njulia> H = [A B]\n[ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -> ℂ^(3, 4)In this case H has a domain of dimensions size(H,2) = ((3, 4), (3, 4)) and type domainType(H) = (Float64, Complex{Float64}).When an AbstractOperators have multiple domains, this must be multiplied using a Tuples of AbstractArrays with corresponding size(H,2) and domainType(H), for example: julia> H*(x, complex(x))\n3×4 Array{Complex{Float64},2}:\n -16.3603+0.0im      52.4946-8.69342im  -129.014+0.0im      44.6712+8.69342im\n  -22.051+23.8135im  16.5309-10.9601im  -22.5719+39.5599im  13.8174+3.81678im\n -5.81874-23.8135im  9.70679-3.81678im  -2.21552-39.5599im  11.5502+10.9601imSimilarly, when an AbstractOperators have multiple codomains, this will return a Tuple of AbstractArrays with corresponding size(H,1) and codomainType(H), for example: julia> V = VCAT(Eye(3,3),FiniteDiff((3,3)))\n[I;δx]  ℝ^(3, 3) -> ℝ^(3, 3)  ℝ^(2, 3)\n\njulia> V*ones(3,3)\n([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0], [0.0 0.0 0.0; 0.0 0.0 0.0])\nA list of the available AbstractOperators and calculus rules can be found in the documentation."
+    "text": "With using AbstractOperators the package imports several methods like multiplication *  and transposition \' (and their in-place methods A_mul_B!, Ac_mul_B!).For example, one can create a 2-D Discrete Fourier Transform as follows:julia> A = DFT(3,4)\nℱ  ℝ^(3, 4) -> ℂ^(3, 4)Here, it can be seen that A has a domain of dimensions size(A,2) = (3,4) and of type domainType(A) = Float64 and a codomain of dimensions size(A,1) = (3,4) and type codomainType(A) = Complex{Float64}.This linear transformation can be evaluated as follows: julia> x = randn(3,4); #input matrix\n\njulia> y = A*x\n3×4 Array{Complex{Float64},2}:\n  -1.11412+0.0im       3.58654-0.724452im  -9.10125+0.0im       3.58654+0.724452im\n -0.905575+1.98446im  0.441199-0.913338im  0.315788+3.29666im  0.174273+0.318065im\n -0.905575-1.98446im  0.174273-0.318065im  0.315788-3.29666im  0.441199+0.913338im\n\njulia> A_mul_B!(y,A,x) == A*x #in-place evaluation\ntrue\n\njulia> all(A\'*y - *(size(x)...)*x .< 1e-12) \ntrue\n\njulia> Ac_mul_B!(x,A,y) #in-place evaluation\n3×4 Array{Float64,2}:\n  -2.99091   9.45611  -19.799     1.6327 \n -11.1841   11.2365   -26.3614   11.7261 \n   5.04815   7.61552   -6.00498   6.25586\nNotice that inputs and outputs are not necessarily Vectors.It is also possible to combine multiple AbstractOperators using different calculus rules. For example AbstractOperators can be concatenated horizontally: julia> B = Eye(Complex{Float64},(3,4))\nI  ℂ^(3, 4) -> ℂ^(3, 4)\n\njulia> H = [A B]\n[ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -> ℂ^(3, 4)In this case H has a domain of dimensions size(H,2) = ((3, 4), (3, 4)) and type domainType(H) = (Float64, Complex{Float64}).When an AbstractOperators have multiple domains, this must be multiplied using a Tuples of AbstractArrays with corresponding size(H,2) and domainType(H), for example: julia> H*(x, complex(x))\n3×4 Array{Complex{Float64},2}:\n -16.3603+0.0im      52.4946-8.69342im  -129.014+0.0im      44.6712+8.69342im\n  -22.051+23.8135im  16.5309-10.9601im  -22.5719+39.5599im  13.8174+3.81678im\n -5.81874-23.8135im  9.70679-3.81678im  -2.21552-39.5599im  11.5502+10.9601imSimilarly, when an AbstractOperators have multiple codomains, this will return a Tuple of AbstractArrays with corresponding size(H,1) and codomainType(H), for example: julia> V = VCAT(Eye(3,3),FiniteDiff((3,3)))\n[I;δx]  ℝ^(3, 3) -> ℝ^(3, 3)  ℝ^(2, 3)\n\njulia> V*ones(3,3)\n([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0], [0.0 0.0 0.0; 0.0 0.0 0.0])\nA list of the available AbstractOperators and calculus rules can be found in the documentation."
 },
 
 {
@@ -277,7 +277,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "AbstractOperators.LBFGS",
     "category": "Type",
-    "text": "LBFGS(domainType::Type,dim_in::Tuple, M::Integer)\n\nLBFGS(dim_in::Tuple, M::Integer)\n\nLBFGS(x::AbstractArray, M::Integer)\n\nConstruct a Limited-Memory BFGS LinearOperator with memory M. The memory of LBFGS can be updated using the function update!, where the current iteration variable and gradient (x, grad) and the previous ones (x_prev and grad_prev) are needed:\n\njulia> L = LBFGS(Float64,(4,),5)\nLBFGS  ℝ^4 -> ℝ^4\n\njulia> update!(L,x,x_prev,grad,grad_prev); # update memory\n\njulia> d = L*grad; # compute new direction\n\n\n\n\n"
+    "text": "LBFGS(domainType::Type,dim_in::Tuple, M::Integer)\n\nLBFGS(dim_in::Tuple, M::Integer)\n\nLBFGS(x::AbstractArray, M::Integer)\n\nConstruct a Limited-Memory BFGS LinearOperator with memory M. The memory of LBFGS can be updated using the function update!, where the current iteration variable and gradient (x, grad) and the previous ones (x_prev and grad_prev) are needed:\n\njulia> L = LBFGS(Float64,(4,),5)\nLBFGS  ℝ^4 -> ℝ^4\n\njulia> update!(L,x,x_prev,grad,grad_prev); # update memory\n\njulia> d = L*grad; # compute new direction\n\n\nUse  reset!(L) to cancel the memory of the operator.\n\n\n\n"
 },
 
 {
@@ -341,7 +341,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "AbstractOperators.VCAT",
     "category": "Type",
-    "text": "VCAT(A::AbstractOperator...)\n\nShorthand constructors: \n\n[A1; A2 ...] \n\nvcat(A...) \n\nVertically concatenate AbstractOperators. Notice that all the operators must share the same domain dimensions and type, e.g. size(A1,2) == size(A2,2) and domainType(A1) == domainType(A2).\n\njulia> VCAT(DFT(4,4),Variation((4,4)))\n[ℱ;Ʋ]  ℝ^(4, 4) -> ℂ^(4, 4)  ℝ^(16, 2)\n\njulia> V = [Eye(3); DiagOp(2*ones(3))]\n[I;╲]  ℝ^3 -> ℝ^3  ℝ^3\n\n\njulia> vcat(V,FiniteDiff((3,)))\nVCAT  ℝ^3 -> ℝ^3  ℝ^3  ℝ^2\n\nWhen multiplying a VCAT with an array of the proper size, the result will be a Tuple containing arrays with the VCAT's codomain type and size.\n\njulia> V*ones(3)\n([1.0, 1.0, 1.0], [2.0, 2.0, 2.0])\n\n\n\n\n"
+    "text": "VCAT(A::AbstractOperator...)\n\nShorthand constructors: \n\n[A1; A2 ...] \n\nvcat(A...) \n\nVertically concatenate AbstractOperators. Notice that all the operators must share the same domain dimensions and type, e.g. size(A1,2) == size(A2,2) and domainType(A1) == domainType(A2).\n\njulia> VCAT(DFT(4,4),Variation((4,4)))\n[ℱ;Ʋ]  ℝ^(4, 4) -> ℂ^(4, 4)  ℝ^(16, 2)\n\njulia> V = [Eye(3); DiagOp(2*ones(3))]\n[I;╲]  ℝ^3 -> ℝ^3  ℝ^3\n\n\njulia> vcat(V,FiniteDiff((3,)))\nVCAT  ℝ^3 -> ℝ^3  ℝ^3  ℝ^2\n\nWhen multiplying a VCAT with an array of the proper size, the result will be a Tuple containing arrays with the VCAT\'s codomain type and size.\n\njulia> V*ones(3)\n([1.0, 1.0, 1.0], [2.0, 2.0, 2.0])\n\n\n\n\n"
 },
 
 {
@@ -405,7 +405,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "AbstractOperators.Transpose",
     "category": "Type",
-    "text": "Transpose(A::AbstractOperator)\n\nShorthand constructor: \n\n'(A::AbstractOperator)\n\nReturns the adjoint operator of A.\n\njulia> Transpose(DFT(10))\nℱᵃ  ℂ^10 -> ℝ^10\n\njulia> [DFT(10); DCT(10)]'\n[ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10\n\n\n\n"
+    "text": "Transpose(A::AbstractOperator)\n\nShorthand constructor: \n\n\'(A::AbstractOperator)\n\nReturns the adjoint operator of A.\n\njulia> Transpose(DFT(10))\nℱᵃ  ℂ^10 -> ℝ^10\n\njulia> [DFT(10); DCT(10)]\'\n[ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10\n\n\n\n"
 },
 
 {
@@ -541,7 +541,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Properties",
     "title": "AbstractOperators.is_AcA_diagonal",
     "category": "Function",
-    "text": "is_AcA_diagonal(A::AbstractOperator)\n\nTest whether A'*A is diagonal.\n\njulia> is_AcA_diagonal(Eye(10))\ntrue\n\njulia> is_AcA_diagonal(GetIndex((10,),1:3))\nfalse\n\n\n\n\n"
+    "text": "is_AcA_diagonal(A::AbstractOperator)\n\nTest whether A\'*A is diagonal.\n\njulia> is_AcA_diagonal(Eye(10))\ntrue\n\njulia> is_AcA_diagonal(GetIndex((10,),1:3))\nfalse\n\n\n\n\n"
 },
 
 {
@@ -549,7 +549,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Properties",
     "title": "AbstractOperators.is_AAc_diagonal",
     "category": "Function",
-    "text": "is_AAc_diagonal(A::AbstractOperator)\n\nTest whether A*A' is diagonal.\n\njulia> is_AAc_diagonal(Eye(10))\ntrue\n\njulia> is_AAc_diagonal(GetIndex((10,),1:3))\nfalse\n\n\n\n\n"
+    "text": "is_AAc_diagonal(A::AbstractOperator)\n\nTest whether A*A\' is diagonal.\n\njulia> is_AAc_diagonal(Eye(10))\ntrue\n\njulia> is_AAc_diagonal(GetIndex((10,),1:3))\nfalse\n\n\n\n\n"
 },
 
 {
