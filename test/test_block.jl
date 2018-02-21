@@ -48,8 +48,8 @@ blockset!(yb,xb)
 
 z = blockvecdot(x,x2)
 zb = blockvecdot(xb,x2b)
-@test z == real(vecdot(x,x2))
-@test zb == real(vecdot(xb[1],x2b[1])+vecdot(xb[2],x2b[2])+vecdot(xb[3],x2b[3]))
+@test z == vecdot(x,x2)
+@test zb == vecdot(xb[1],x2b[1])+vecdot(xb[2],x2b[2])+vecdot(xb[3],x2b[3])
 
 y = blockzeros(x)
 yb = blockzeros(xb)

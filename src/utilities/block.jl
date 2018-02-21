@@ -36,7 +36,7 @@ blockeltype(x::AbstractArray) = eltype(x)
 blocklength(x::Tuple) = sum(blocklength.(x))
 blocklength(x::AbstractArray) = length(x)
 
-blockvecnorm(x::Tuple) = sqrt(blockvecdot(x, x))
+blockvecnorm(x::Tuple) = sqrt(real(blockvecdot(x, x)))
 blockvecnorm(x::AbstractArray{R}) where {R <: Number} = vecnorm(x)
 
 blockmaxabs(x::Tuple) = maximum(blockmaxabs.(x))
@@ -55,8 +55,7 @@ blockset!(y::Tuple, x) = blockset!.(y, x)
 blockset!(y::AbstractArray, x) = (y .= x)
 
 blockvecdot(x::T1, y::T2) where {T1 <: Tuple, T2 <: Tuple} = sum(blockvecdot.(x,y))
-blockvecdot(x::AbstractArray{R1}, y::AbstractArray{R2}) where {R1 <: Number, R2 <: Number} = real(vecdot(x, y))
-# inner product must be always real see section 4.2 of TFOCS manual
+blockvecdot(x::AbstractArray{R1}, y::AbstractArray{R2}) where {R1 <: Number, R2 <: Number} = vecdot(x, y)
 
 blockzeros(t::Tuple, s::Tuple) = blockzeros.(t, s)
 blockzeros(t::Type, n::NTuple{N, Integer} where {N}) = zeros(t, n)

@@ -42,8 +42,8 @@ function IRDFT(x::AbstractArray{Complex{T},N}, d::Int, dims::Int=1) where {T<:Nu
 	dim_out = ()
 	idx = ()
 	for i = 1:N
-		dim_out = i == dims ? (dim_out...,          d) : (dim_out...,dim_in[i]   )
-		idx     = i == dims ? (idx...    ,2:dim_in[i]) : (idx...    ,Colon()     )
+		dim_out = i == dims ? (dim_out...,               d) : (dim_out...,dim_in[i]   )
+        idx     = i == dims ? (idx...    , 2:ceil(Int,d/2)) : (idx...    ,Colon()     )
 	end
 	At = plan_rfft(zeros(dim_out),dims)
 	IRDFT{T,N,dims,typeof(A),typeof(At),typeof(idx)}(dim_in,dim_out,A,At,idx)

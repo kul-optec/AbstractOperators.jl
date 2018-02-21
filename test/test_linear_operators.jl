@@ -207,19 +207,43 @@ op = RDFT(n,n)
 @test is_full_column_rank(op) == false
 
 ####### IRDFT ############
-n = 10
-op = IRDFT(Complex{Float64},(n,),19)
-x1 = rfft(randn(19))
-y1 = test_op(op, x1,irfft(randn(n),19), verb)
-y2 = irfft(x1,19)
+n = 12
+op = IRDFT(Complex{Float64},(div(n,2)+1,),n)
+x1 = rfft(randn(n))
+y1 = test_op(op, x1,irfft(randn(div(n,2)+1),n), verb)
+y2 = irfft(x1,n)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-n,m,l = 4,10,5
-op = IRDFT(Complex{Float64},(n,m,l),19,2)
-x1 = rfft(randn(n,19,l),2)
-y1 = test_op(op, x1, irfft(x1,19,2), verb)
-y2 = irfft(x1,19,2)
+n = 11
+op = IRDFT(Complex{Float64},(div(n,2)+1,),n)
+x1 = rfft(randn(n))
+y1 = test_op(op, x1,irfft(randn(div(n,2)+1),n), verb)
+y2 = irfft(x1,n)
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n,m,l = 4,19,5
+op = IRDFT(Complex{Float64},(n,div(m,2)+1,l),m,2)
+x1 = rfft(randn(n,m,l),2)
+y1 = test_op(op, x1, irfft(x1,m,2), verb)
+y2 = irfft(x1,m,2)
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n,m,l = 4,18,5
+op = IRDFT(Complex{Float64},(n,div(m,2)+1,l),m,2)
+x1 = rfft(randn(n,m,l),2)
+y1 = test_op(op, x1, irfft(x1,m,2), verb)
+y2 = irfft(x1,m,2)
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n,m,l = 5,18,5
+op = IRDFT(Complex{Float64},(div(n,2)+1,m,l),n,1)
+x1 = rfft(randn(n,m,l),1)
+y1 = test_op(op, x1, irfft(x1,n,1), verb)
+y2 = irfft(x1,n,1)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
