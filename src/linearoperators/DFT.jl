@@ -186,8 +186,8 @@ is_invertible(L::FourierTransform)       = true
 is_full_row_rank(L::FourierTransform)    = true
 is_full_column_rank(L::FourierTransform) = true
 
-diag_AcA(L::DFT) = prod(size(L,1))
-diag_AAc(L::DFT) = prod(size(L,1))
+diag_AcA(L::DFT) = float(prod(size(L,1)))
+diag_AAc(L::DFT) = float(prod(size(L,1)))
 
 diag_AcA(L::IDFT) = 1/prod(size(L,1))
 diag_AAc(L::IDFT) = 1/prod(size(L,1))

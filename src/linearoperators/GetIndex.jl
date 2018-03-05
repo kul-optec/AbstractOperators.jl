@@ -73,7 +73,7 @@ fun_name(L::GetIndex) = "↓"
 
 is_AAc_diagonal(L::GetIndex)   = true
 is_full_row_rank(L::GetIndex)  = true
-
+is_sliced(L::GetIndex)   = true
 
 # Utils
 

@@ -482,6 +482,7 @@ op = GetIndex(Float64,(n,m),(1:n,1:m))
 op = GetIndex(Float64,(n,),(1:k,))
 
 ##properties
+@test is_sliced(op)           == true
 @test is_linear(op)           == true
 @test is_null(op)             == false
 @test is_eye(op)              == false

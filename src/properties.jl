@@ -14,6 +14,7 @@ export ndoms,
        is_invertible,
        is_full_row_rank,
        is_full_column_rank,
+       is_sliced,
        diag_AcA, 
        diag_AAc
 
@@ -252,6 +253,19 @@ false
 ```
 """
 is_full_column_rank(L::AbstractOperator) = false
+
+"""
+`is_sliced(A::AbstractOperator)`
+
+Test whether `A` is a sliced operator.
+
+```julia
+julia> is_sliced(GetIndex((10,), 1:5))
+true
+
+```
+"""
+is_sliced(L::AbstractOperator) = false
 
 
 import Base: convert

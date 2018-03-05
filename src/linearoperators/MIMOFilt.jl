@@ -7,9 +7,12 @@ export MIMOFilt
 
 Creates a `LinearOperator` which, when multiplied with a matrix `X`, returns a matrix `Y`. Here a Multiple Input Multiple Output system is evaluated: the columns of `X` and `Y` represent the input signals and output signals respectively. 
 
-`Y[:,i] = ∑j h_{i,j} ⋆ X[:,j]`
+```math
+\\mathbf{y}_i = \\sum_{j = 1}^{M} \\mathbf{h}_{i,j} * \\mathbf{x}_j 
+```
+where ``\\mathbf{y}_i`` and ``\\mathbf{x}_j`` are the ``i``-th and ``j``-th columns of the output `Y` and input `X` matrices respectively.
 
-The filters `h` can be represented either by providing coefficients `B` and `A` (IIR) or `B` alone (FIR). These coefficients must be given in a `Vector` of `Vector`s. 
+The filters ``\\mathbf{h}_{i,j}`` can be represented either by providing coefficients `B` and `A` (IIR) or `B` alone (FIR). These coefficients must be given in a `Vector` of `Vector`s. 
 
 For example for a `3` by `2` MIMO system (i.e. `size(X,2) == 3` inputs and `size(Y,2) == 2` outputs) `B` must be:
 

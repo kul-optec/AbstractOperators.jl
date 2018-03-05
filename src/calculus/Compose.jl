@@ -104,8 +104,14 @@ domainType(L::Compose)   = domainType(L.A[1])
 codomainType(L::Compose) = codomainType(L.A[end])
 
 is_linear(L::Compose) = all(is_linear.(L.A))
-is_diagonal(L::Compose) = all(is_diagonal.(L.A))
+is_diagonal(L::Compose) = is_sliced(L) ? (length(L.A) == 2 && is_diagonal(L.A[2])) : all(is_diagonal.(L.A))
 is_invertible(L::Compose) = all(is_invertible.(L.A))
+
+is_sliced(L::Compose) = typeof(L.A[1]) <: GetIndex
+is_AAc_diagonal(L::Compose)  = is_sliced(L) && length(L.A) == 2 && is_AAc_diagonal(L.A[2])
+
+diag(L::Compose) = is_sliced(L) ? diag(L.A[2]) : prod(diag.(L.A))
+diag_AAc(L::Compose) = is_AAc_diagonal(L) ? diag_AAc(L.A[2]) : error("is_AAc_diagonal( $(typeof(L) ) ) == false")
 
 # utils
 import Base: permute

@@ -45,6 +45,7 @@ opS2 = Scale(pi,opA2)
 @test typeof(opS2*opS1) <: Scale
 
 #properties
+@test is_sliced(opC)            == false
 @test is_linear(opC1)           == true
 @test is_null(opC1)             == false
 @test is_eye(opC1)              == false
@@ -55,6 +56,18 @@ opS2 = Scale(pi,opA2)
 @test is_invertible(opC1)       == false
 @test is_full_row_rank(opC1)    == false
 @test is_full_column_rank(opC1) == false
+
+# properties special case
+opC = DCT((5,))*GetIndex((10,), 1:5)
+@test is_sliced(opC)           == true
+@test is_AAc_diagonal(opC)     == true
+@test diag_AAc(opC)            == 1.0
+
+d = randn(5)
+opC = DiagOp(d)*GetIndex((10,), 1:5)
+@test is_sliced(opC)           == true
+@test is_diagonal(opC)         == true
+@test diag(opC)                == d
 
 ###########################
 ###### test DCAT    #######
