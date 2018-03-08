@@ -1,4 +1,3 @@
-
 @printf("\nTesting  calculus non linear operators\n")
 ##testing Scale
 m = 3
@@ -180,9 +179,9 @@ y, grad = test_NLop(op,x,r,verb)
 Y = A*x+opB*x
 @test vecnorm(Y-y) <1e-8
 
-## testing NonLinearCompose
+# testing NonLinearCompose
 
-#with vectors
+##with vectors inner product
 n,m = 3,4
 x = (randn(1,m),randn(n))
 A = randn(m,n)
@@ -193,6 +192,27 @@ y, grad = test_NLop(P,x,r,verb)
 
 Y = x[1]*(A*x[2])
 @test norm(Y - y) <= 1e-12
+
+#with vectors outer product
+n, m = 3, 5
+x = (randn(n),randn(1,m))
+r = randn(n,m)
+
+L1, L2 = Eye(n), Eye(1,m)
+P = NonLinearCompose(L1, L2)
+y, grad = test_NLop(P,x,r,verb)
+
+Y = x[1]*x[2]
+@test norm(Y - y) <= 1e-12
+
+L1, L2 = Eye(n), Eye(2,m)
+@test_throws Exception NonLinearCompose(L1, L2)
+
+L1, L2 = Eye(n,m,10), Eye(1,m)
+@test_throws Exception NonLinearCompose(L1, L2)
+
+L1, L2 = Eye(1,m), Eye(n,m)
+@test_throws Exception NonLinearCompose(L1, L2)
 
 #with matrices
 l,m1,m2,n1,n2 = 2,3,4,5,6
@@ -280,17 +300,3 @@ Y = opS3*(x[1]*(opS2*(x[2]*(opS1*(x[3]*b+x[4])))))
 p = randperm(length(x))
 L3p = permute(L3,p)
 y, grad = test_NLop(L3p,x[p],r,verb)
-
-
-
-
-
-
-
-
-
-
-
-
-
-

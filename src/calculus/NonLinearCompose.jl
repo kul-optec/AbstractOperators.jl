@@ -38,10 +38,13 @@ struct NonLinearCompose{N,
 	buf::C
 	bufx::D
 	function NonLinearCompose(A::L1, B::L2, buf::C, bufx::D) where {L1,L2,C,D}
-		(ndoms(A,1) > 1 || ndoms(B,1) > 1) ||
-		(ndims(A,1) > 2 || ndims(B,1) > 2) ||
-		(size(A,1)[2] != size(B,1)[1]) && 
-		throw(DimensionMismatch("cannot compose operators"))
+		if ( (ndoms(A,1) > 1 || ndoms(B,1) > 1) || 
+             (ndims(A,1) > 2 || ndims(B,1) > 2) ||
+             (size(B,1)[1] == 1 ? length(size(A,1)) == 1 ? false : true : # outer product case
+              (size(A,1)[2] != size(B,1)[1]))
+            ) 
+                throw(DimensionMismatch("cannot compose operators"))
+        end
 		N = length(bufx)
 		new{N,L1,L2,C,D}(A,B,buf,bufx)
 	end
@@ -92,6 +95,17 @@ end
 function Ac_mul_B!(y, P::NonLinearComposeJac{N,L,C,D}, b) where {N,L,C,D}
 
 	A_mul_Bc!(P.bufx[1],b,P.buf[2])
+	Ac_mul_B_skipZeros!(y,P.A,P.bufx[1])
+
+	Ac_mul_B!(P.bufx[2],P.buf[1],b)
+	Ac_mul_B_skipZeros!(y,P.B,P.bufx[2])
+
+end
+
+# special case outer product  
+function Ac_mul_B!(y, P::NonLinearComposeJac{N,L,C,D}, b) where {N,L,C,D <: Tuple{AbstractVector,AbstractArray}}
+
+    P.bufx[1] .= b*P.buf[2]'[:] #TODO wonder if there is another way to do this
 	Ac_mul_B_skipZeros!(y,P.A,P.bufx[1])
 
 	Ac_mul_B!(P.bufx[2],P.buf[1],b)
