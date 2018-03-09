@@ -52,6 +52,18 @@ LBFGS
 
 # Nonlinear operators
 
+## Basic
+
+```@docs
+Exp
+Cos
+Sin
+Atan
+Tanh
+```
+
+## Sigmoids
+
 ```@docs
 Sigmoid
 SoftPlus
