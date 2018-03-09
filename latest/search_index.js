@@ -289,6 +289,62 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "operators.html#Nonlinear-operators-1",
+    "page": "Abstract Operators",
+    "title": "Nonlinear operators",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "operators.html#AbstractOperators.Exp",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Exp",
+    "category": "type",
+    "text": "Exp([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates the exponential non-linear operator with input dimensions dim_in:\n\ne^ mathbfx \n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Cos",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Cos",
+    "category": "type",
+    "text": "Cos([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates a cosine non-linear operator with input dimensions dim_in:\n\ncos (mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Sin",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Sin",
+    "category": "type",
+    "text": "Sin([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates a sinusoid non-linear operator with input dimensions dim_in:\n\nsin( mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Atan",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Atan",
+    "category": "type",
+    "text": "Atan([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates an inverse tangent non-linear operator with input dimensions dim_in:\n\ntextatan ( mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Tanh",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Tanh",
+    "category": "type",
+    "text": "Tanh([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates an hyperbolic tangent non-linear operator with input dimensions dim_in:\n\ntexttanh ( mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#Basic-1",
+    "page": "Abstract Operators",
+    "title": "Basic",
+    "category": "section",
+    "text": "Exp\nCos\nSin\nAtan\nTanh"
+},
+
+{
     "location": "operators.html#AbstractOperators.Sigmoid",
     "page": "Abstract Operators",
     "title": "AbstractOperators.Sigmoid",
@@ -313,9 +369,9 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "operators.html#Nonlinear-operators-1",
+    "location": "operators.html#Sigmoids-1",
     "page": "Abstract Operators",
-    "title": "Nonlinear operators",
+    "title": "Sigmoids",
     "category": "section",
     "text": "Sigmoid\nSoftPlus\nSoftMax"
 },
