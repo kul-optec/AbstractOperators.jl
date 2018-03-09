@@ -30,8 +30,11 @@ end
 
 # Constructors
 
-Scale(coeff::T, L::R) where {T <: RealOrComplex, R <: AbstractOperator} = 
-Scale{T, R}(coeff, conj(coeff), L)
+function Scale(coeff::T, L::R) where {T <: RealOrComplex, R <: AbstractOperator} 
+    coeff_conj = conj(coeff)
+    coeff, coeff_conj = promote(coeff, coeff_conj)
+    Scale{typeof(coeff), R}(coeff, coeff_conj, L)
+end
 
 # Special Constructors
 # scale of scale
@@ -62,6 +65,17 @@ function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: AbstractArray, 
   y .*= L.coeff_conj
 end
 
+# special case complex scalar 
+function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T<: Complex, CC <: Complex, RR <: Real, 
+                                                      C <: AbstractArray{CC}, 
+                                                      D <: AbstractArray{RR}, 
+                                                      A <: AbstractOperator}
+    yc = complex(y)
+    Ac_mul_B!(yc, L.A, x)
+    yc .*= L.coeff_conj
+    y .= real.(yc)
+end
+
 function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: Tuple, A <: AbstractOperator}
   Ac_mul_B!(y, L.A, x)
   for k in eachindex(y)
@@ -74,7 +88,7 @@ end
 size(L::Scale) = size(L.A)
 
 domainType(L::Scale) = domainType(L.A)
-codomainType(L::Scale) = codomainType(L.A)
+codomainType(L::Scale{T}) where {T} = T <: Complex ? complex(codomainType(L.A)) : codomainType(L.A)
 
 is_linear(L::Scale) = is_linear(L.A)
 is_null(L::Scale) = is_null(L.A)

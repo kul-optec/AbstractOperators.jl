@@ -268,9 +268,9 @@ y2 = reshape(A1*x1, dim_out)
 @test is_full_row_rank(opR)    == is_full_row_rank(opA1)   
 @test is_full_column_rank(opR) == is_full_column_rank(opA1)
 
-##########################
-##### test Scale   #######
-##########################
+#########################
+#### test Scale   #######
+#########################
 
 m, n = 8, 4
 coeff = pi
@@ -319,6 +319,17 @@ d = randn(10)
 op = Scale(3,DiagOp(d))
 @test typeof(op) <: DiagOp
 @test norm(diag(op) - 3.*d) < 1e-12
+
+# special case, Scale with imaginary coeff and real operator
+m, n = 8, 4
+coeff = im
+A1 = randn(m, n)
+opA1 = MatrixOp(A1)
+opS = Scale(coeff, opA1)
+x1 = randn(n)
+y1 = test_op(opS, x1, im*randn(m), verb)
+y2 = coeff*A1*x1
+@test vecnorm(y1-y2) <= 1e-12
 
 ##########################
 ##### test Sum     #######

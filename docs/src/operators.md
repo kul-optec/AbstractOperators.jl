@@ -56,6 +56,7 @@ LBFGS
 
 ```@docs
 Exp
+Pow
 Cos
 Sin
 Atan

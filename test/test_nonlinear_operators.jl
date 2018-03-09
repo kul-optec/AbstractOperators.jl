@@ -82,3 +82,18 @@ r = randn(n)
 op = Tanh(Float64,(n,))
 
 y, grad = test_NLop(op,x,r,verb)
+
+# Pow
+n = 10
+x = randn(n)
+r = randn(n)
+op = Pow(Float64,(n,),2)
+
+y, grad = test_NLop(op,x,r,verb)
+
+n = 10
+x = abs.(randn(n))
+r = abs.(randn(n))
+op = Pow(Float64,(n,),0.5)
+
+y, grad = test_NLop(op,x,r,verb)

@@ -58,6 +58,7 @@ include("calculus/Jacobian.jl")
 include("calculus/NonLinearCompose.jl")
 
 # Non-Linear operators
+include("nonlinearoperators/Pow.jl")
 include("nonlinearoperators/Exp.jl")
 include("nonlinearoperators/Sin.jl")
 include("nonlinearoperators/Cos.jl")
