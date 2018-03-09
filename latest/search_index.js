@@ -305,6 +305,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "operators.html#AbstractOperators.Pow",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Pow",
+    "category": "type",
+    "text": "Pow([domainType=Float64::Type,] dim_in::Tuple)\n\nElementwise power p non-linear operator with input dimensions dim_in.\n\n\n\n"
+},
+
+{
     "location": "operators.html#AbstractOperators.Cos",
     "page": "Abstract Operators",
     "title": "AbstractOperators.Cos",
@@ -341,7 +349,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Abstract Operators",
     "title": "Basic",
     "category": "section",
-    "text": "Exp\nCos\nSin\nAtan\nTanh"
+    "text": "Exp\nPow\nCos\nSin\nAtan\nTanh"
 },
 
 {
