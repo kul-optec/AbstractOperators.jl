@@ -52,9 +52,7 @@ Compose(L1::Compose,       L2::Compose,       buf::AbstractArray) =
 Compose((L2.A...,L1.A...), (L2.buf...,buf,L1.buf...))
 
 #special cases
-Compose(L1::Scale,L2::AbstractOperator) = Scale(L1.coeff,L1.A*L2)
-Compose(L1::AbstractOperator,L2::Scale) = Scale(L2.coeff,L1*L2.A)
-Compose(L1::Scale,L2::Scale) = Scale(*(promote(L1.coeff,L2.coeff)...),L1.A*L2.A)
+Scale(coeff,L::Compose) = Compose((L.A[1:end-1]...,Scale(coeff,L.A[end])), L.buf)
 Compose(L1::Scale,L2::Eye) = L1
 Compose(L1::Eye,L2::Scale) = L2
 

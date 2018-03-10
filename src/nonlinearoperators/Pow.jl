@@ -27,7 +27,7 @@ function Ac_mul_B!(y::AbstractArray{T,N},
     y .= conj.(L.A.p.*(L.x).^(L.A.p-1)).*b
 end
 
-fun_name(L::Pow) = "^$(round(L.p,1))"
+fun_name(L::Pow) = "『"
 
 size(L::Pow) = (L.dim, L.dim)
 

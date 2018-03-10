@@ -205,6 +205,18 @@ y, grad = test_NLop(P,x,r,verb)
 Y = x[1]*x[2]
 @test norm(Y - y) <= 1e-12
 
+opM = MatrixOp(randn(1,3))
+A  = opM
+B  = Eye((1,)) 
+
+L = NonLinearCompose(A, B)
+x = randn.(size(L,2)) 
+y, grad = test_NLop(L,x,[1.],verb)
+
+L = NonLinearCompose(B, A)
+x = randn.(size(L,2)) 
+y, grad = test_NLop(L,x,[1.],verb)
+
 L1, L2 = Eye(n), Eye(2,m)
 @test_throws Exception NonLinearCompose(L1, L2)
 

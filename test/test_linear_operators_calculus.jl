@@ -38,11 +38,9 @@ y3 = A3*A2*A1*x
 @test typeof(Eye(m2)*opA1) == typeof(opA1) 
 @test typeof(Eye(m2)*Eye(m2)) == typeof(Eye(m2)) 
 
-opS1 = Scale(pi,opA1)
-opS2 = Scale(pi,opA2)
-@test typeof(opS2*opA1) <: Scale
-@test typeof(opA2*opS1) <: Scale
-@test typeof(opS2*opS1) <: Scale
+opS1 = Compose(opA2,opA1)
+opS1c = Scale(pi,opS1)
+@test typeof(opS1c.A[end]) <: Scale
 
 #properties
 @test is_sliced(opC)            == false
@@ -68,6 +66,19 @@ opC = DiagOp(d)*GetIndex((10,), 1:5)
 @test is_sliced(opC)           == true
 @test is_diagonal(opC)         == true
 @test diag(opC)                == d
+
+# Real and scaled with complex vars
+n = 10
+op1 = DCT(Float64,(n,))
+op2 = DCT(Complex{Float64},(n,))
+
+opS = Scale(im,op1)
+opC = Compose(op2,opS)
+
+x = randn(n)
+y1 = test_op(opC, x, im*randn(n), verb)
+y2 = dct(im*dct(x))
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 ###########################
 ###### test DCAT    #######
@@ -268,9 +279,9 @@ y2 = reshape(A1*x1, dim_out)
 @test is_full_row_rank(opR)    == is_full_row_rank(opA1)   
 @test is_full_column_rank(opR) == is_full_column_rank(opA1)
 
-#########################
-#### test Scale   #######
-#########################
+#######################
+## test Scale   #######
+#######################
 
 m, n = 8, 4
 coeff = pi
@@ -329,6 +340,15 @@ opS = Scale(coeff, opA1)
 x1 = randn(n)
 y1 = test_op(opS, x1, im*randn(m), verb)
 y2 = coeff*A1*x1
+@test vecnorm(y1-y2) <= 1e-12
+
+n = 4
+coeff = im
+opA1 = DCT((n,))
+opS = Scale(coeff, opA1)
+x1 = randn(n)
+y1 = test_op(opS, x1, im*randn(n), verb)
+y2 = coeff*opA1*x1
 @test vecnorm(y1-y2) <= 1e-12
 
 ##########################

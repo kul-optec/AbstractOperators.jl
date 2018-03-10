@@ -53,6 +53,16 @@ function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: AbstractArray, D, A
   y .*= L.coeff
 end
 
+# special case complex scalar real operator
+function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T<: Complex, CC <: Complex, RR <: Real, 
+                                                      C <: AbstractArray{CC}, 
+                                                      D <: AbstractArray{RR}, 
+                                                      A <: AbstractOperator}
+    yr = real(y)
+    A_mul_B!(yr, L.A, x)
+    y .= L.coeff.*yr
+end
+
 function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: Tuple, D, A <: AbstractOperator}
   A_mul_B!(y, L.A, x)
   for k in eachindex(y)
@@ -65,14 +75,16 @@ function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: AbstractArray, 
   y .*= L.coeff_conj
 end
 
-# special case complex scalar 
+# special case complex scalar real operator
 function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T<: Complex, CC <: Complex, RR <: Real, 
                                                       C <: AbstractArray{CC}, 
                                                       D <: AbstractArray{RR}, 
                                                       A <: AbstractOperator}
-    yc = complex(y)
-    Ac_mul_B!(yc, L.A, x)
-    yc .*= L.coeff_conj
+    yr = real(y)
+    Ac_mul_B!(yr, L.A, real(x))
+    yi = imag(y)
+    Ac_mul_B!(yi, L.A, imag(x))
+    yc = L.coeff_conj.*(yr.+im.*yi)
     y .= real.(yc)
 end
 
