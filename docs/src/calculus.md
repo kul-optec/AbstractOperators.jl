@@ -13,6 +13,7 @@ DCAT
 ```@docs
 Compose
 NonLinearCompose
+Hadamard
 ```
 
 ## Transformations

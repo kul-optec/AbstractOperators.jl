@@ -312,3 +312,38 @@ Y = opS3*(x[1]*(opS2*(x[2]*(opS1*(x[3]*b+x[4])))))
 p = randperm(length(x))
 L3p = permute(L3,p)
 y, grad = test_NLop(L3p,x[p],r,verb)
+
+### Hadamard
+l,m,n = 10,3,7
+op1 = MatrixOp(randn(n,m))
+op2 = MatrixOp(randn(n,l))
+H = Hadamard(op1,op2)
+
+r = randn(n) 
+x = randn.(size(H,2)) 
+
+y, grad = test_NLop(H,x,r,verb)
+@test norm(y-(op1.A*x[1]).*(op2.A*x[2])) < 1e-9
+
+p = [2;1]
+Hp = permute(H,p)
+y, grad = test_NLop(Hp,x[p],r,verb)
+@test norm(y-(op1.A*x[1]).*(op2.A*x[2])) < 1e-9
+
+### Hadamard
+l,m,n = 10,3,7
+op1 = MatrixOp(randn(n,m))
+op2 = MatrixOp(randn(n,l))
+op3 = DCT(n)
+H = Hadamard(op1,op2,op3)
+
+r = randn(n) 
+x = randn.(size(H,2)) 
+
+y, grad = test_NLop(H,x,r,verb)
+@test norm(y-(op1.A*x[1]).*(op2.A*x[2]).*(op3.A*x[3])) < 1e-9
+
+p = [2;1;3]
+Hp = permute(H,p)
+y, grad = test_NLop(Hp,x[p],r,verb)
+@test norm(y-(op1.A*x[1]).*(op2.A*x[2]).*(op3.A*x[3])) < 1e-9

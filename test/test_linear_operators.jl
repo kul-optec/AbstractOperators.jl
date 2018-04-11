@@ -272,8 +272,43 @@ y2 = d.*x1
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
+n = 4
+d = randn(n)+im*randn(n)
+op = DiagOp(Float64,(n,),d)
+x1 = randn(n)
+y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y2 = d.*x1
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n = 4
+d = pi
+op = DiagOp(Float64,(n,),d)
+x1 = randn(n)
+y1 = test_op(op, x1, randn(n), verb)
+y2 = d.*x1
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+n = 4
+d = im
+op = DiagOp(Float64,(n,),d)
+x1 = randn(n)
+y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y2 = d.*x1
+
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
 # other constructors
+d = randn(4)
 op = DiagOp(d)
+
+d = randn(4)+im
+op = DiagOp(d)
+
+n = 4
+d = pi
+op = DiagOp((n,), d)
 
 #properties
 @test is_linear(op)           == true
@@ -289,6 +324,15 @@ op = DiagOp(d)
 @test is_full_row_rank(DiagOp([ones(5);0]))    == false
 @test is_full_column_rank(op) == true
 @test is_full_column_rank(DiagOp([ones(5);0]))    == false
+
+@test diag(op) == d
+@test vecnorm(op'*(op*x1) - diag_AcA(op).*x1) <= 1e-12
+@test vecnorm(op*(op'*x1) - diag_AAc(op).*x1) <= 1e-12
+
+n = 4
+d = pi
+op = DiagOp((n,), d)
+x1 = randn(n)
 
 @test diag(op) == d
 @test vecnorm(op'*(op*x1) - diag_AcA(op).*x1) <= 1e-12

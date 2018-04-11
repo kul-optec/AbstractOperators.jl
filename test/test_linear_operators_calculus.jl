@@ -67,19 +67,6 @@ opC = DiagOp(d)*GetIndex((10,), 1:5)
 @test is_diagonal(opC)         == true
 @test diag(opC)                == d
 
-# Real and scaled with complex vars
-n = 10
-op1 = DCT(Float64,(n,))
-op2 = DCT(Complex{Float64},(n,))
-
-opS = Scale(im,op1)
-opC = Compose(op2,opS)
-
-x = randn(n)
-y1 = test_op(opC, x, im*randn(n), verb)
-y2 = dct(im*dct(x))
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
-
 ###########################
 ###### test DCAT    #######
 ###########################
@@ -331,25 +318,12 @@ op = Scale(3,DiagOp(d))
 @test typeof(op) <: DiagOp
 @test norm(diag(op) - 3.*d) < 1e-12
 
-# special case, Scale with imaginary coeff and real operator
+# Scale with imaginary coeff gives error
 m, n = 8, 4
 coeff = im
 A1 = randn(m, n)
 opA1 = MatrixOp(A1)
-opS = Scale(coeff, opA1)
-x1 = randn(n)
-y1 = test_op(opS, x1, im*randn(m), verb)
-y2 = coeff*A1*x1
-@test vecnorm(y1-y2) <= 1e-12
-
-n = 4
-coeff = im
-opA1 = DCT((n,))
-opS = Scale(coeff, opA1)
-x1 = randn(n)
-y1 = test_op(opS, x1, im*randn(n), verb)
-y2 = coeff*opA1*x1
-@test vecnorm(y1-y2) <= 1e-12
+@test_throws ErrorException opS = Scale(coeff, opA1)
 
 ##########################
 ##### test Sum     #######

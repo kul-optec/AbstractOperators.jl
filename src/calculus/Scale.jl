@@ -33,6 +33,11 @@ end
 function Scale(coeff::T, L::R) where {T <: RealOrComplex, R <: AbstractOperator} 
     coeff_conj = conj(coeff)
     coeff, coeff_conj = promote(coeff, coeff_conj)
+    cT = codomainType(L)
+    isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real  
+    if isCodomainReal && T <: Complex
+        error("Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.")
+    end
     Scale{typeof(coeff), R}(coeff, coeff_conj, L)
 end
 
@@ -53,16 +58,6 @@ function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: AbstractArray, D, A
   y .*= L.coeff
 end
 
-# special case complex scalar real operator
-function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T<: Complex, CC <: Complex, RR <: Real, 
-                                                      C <: AbstractArray{CC}, 
-                                                      D <: AbstractArray{RR}, 
-                                                      A <: AbstractOperator}
-    yr = real(y)
-    A_mul_B!(yr, L.A, x)
-    y .= L.coeff.*yr
-end
-
 function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: Tuple, D, A <: AbstractOperator}
   A_mul_B!(y, L.A, x)
   for k in eachindex(y)
@@ -73,19 +68,6 @@ end
 function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: AbstractArray, A <: AbstractOperator}
   Ac_mul_B!(y, L.A, x)
   y .*= L.coeff_conj
-end
-
-# special case complex scalar real operator
-function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T<: Complex, CC <: Complex, RR <: Real, 
-                                                      C <: AbstractArray{CC}, 
-                                                      D <: AbstractArray{RR}, 
-                                                      A <: AbstractOperator}
-    yr = real(y)
-    Ac_mul_B!(yr, L.A, real(x))
-    yi = imag(y)
-    Ac_mul_B!(yi, L.A, imag(x))
-    yc = L.coeff_conj.*(yr.+im.*yi)
-    y .= real.(yc)
 end
 
 function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: Tuple, A <: AbstractOperator}
@@ -100,7 +82,7 @@ end
 size(L::Scale) = size(L.A)
 
 domainType(L::Scale) = domainType(L.A)
-codomainType(L::Scale{T}) where {T} = T <: Complex ? complex(codomainType(L.A)) : codomainType(L.A)
+codomainType(L::Scale) = codomainType(L.A)
 
 is_linear(L::Scale) = is_linear(L.A)
 is_null(L::Scale) = is_null(L.A)
@@ -118,6 +100,3 @@ fun_type(L::Scale) = fun_type(L.A)
 diag(L::Scale) = L.coeff*diag(L.A)
 diag_AcA(L::Scale) = (L.coeff)^2*diag_AcA(L.A)
 diag_AAc(L::Scale) = (L.coeff)^2*diag_AAc(L.A)
-
-
-

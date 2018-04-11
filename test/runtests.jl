@@ -21,8 +21,11 @@ end
   include("test_nonlinear_operators.jl")
 end
 
-@testset "Calculus rules" begin
+@testset "Linear Calculus rules" begin
   include("test_linear_operators_calculus.jl")
+end
+
+@testset "Nonlinear Calculus rules" begin
   include("test_nonlinear_operators_calculus.jl")
 end
 

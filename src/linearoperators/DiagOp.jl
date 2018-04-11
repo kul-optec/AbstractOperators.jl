@@ -20,31 +20,42 @@ julia> D*ones(2,2)
 
 """
 
-struct DiagOp{T,N,D <: AbstractArray{T,N}} <: LinearOperator
-	d::D
+struct DiagOp{N, D, C, T <: Union{AbstractArray{C,N}, Number}} <: LinearOperator
+	dim_in::NTuple{N,Int}
+	d::T
 end
-
 
 # Constructors
 
-##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::D) where {N, D <: AbstractArray} 
+function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::T) where {N, T <: AbstractArray} 
 	size(d) != DomainDim && error("dimension of d must coincide with DomainDim")
-	DiagOp{DomainType, N, D}(d)
+    C = eltype(d) <: Complex ? complex(DomainType) : DomainType
+    DiagOp{N, DomainType, C, T}(DomainDim, d)
 end
-###
 
-DiagOp(d::A) where {A <: AbstractArray} = DiagOp(eltype(d),size(d),d)
+###standard constructor with Scalar
+function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::T) where {N, T <: Number} 
+    C = eltype(d) <: Complex ? Complex{DomainType} : DomainType
+    DiagOp{N, DomainType, C, T}(DomainDim, d)
+end
+
+# other constructors
+DiagOp(d::A) where {A <: AbstractArray} = DiagOp(eltype(d), size(d), d)
+DiagOp(DomainDim::NTuple{N,Int}, d::A) where {N, A <: Number} = DiagOp(Float64, DomainDim, d)
 
 # Mappings
 
-function A_mul_B!(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N}) where {T,N,D}
-	y .= (*).(L.d, b)
+function A_mul_B!(y::AbstractArray{C,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{D,N}) where {N, D, C, T}
+	y .= L.d.*b
 end
 
-function Ac_mul_B!(y::AbstractArray{T,N}, L::DiagOp{T,N,D}, b::AbstractArray{T,N}) where {T,N,D}
-	y .= (*).(conj.(L.d), b)
+function Ac_mul_B!(y::AbstractArray{D,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{C,N}) where {N, D, C, T}
+	y .= conj.(L.d).*b
+end
+
+function Ac_mul_B!(y::AbstractArray{D,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{C,N}) where {N, D <: Real, C <: Complex, T}
+    y .= real.(conj.(L.d).*b)
 end
 
 # Transformations (we'll see about this)
@@ -56,10 +67,10 @@ diag(L::DiagOp) = L.d
 diag_AAc(L::DiagOp) = L.d.*conj.(L.d)
 diag_AcA(L::DiagOp) = conj.(L.d).*L.d
 
-domainType(L::DiagOp{T,N,D}) where {T,N,D} = T
-codomainType(L::DiagOp{T,N,D}) where {T,N,D} = T
+domainType(L::DiagOp{N, D, C, T}) where {N, D, C, T} = D
+codomainType(L::DiagOp{N, D, C, T}) where {N, D, C, T} = C
 
-size(L::DiagOp) = (size(L.d), size(L.d))
+size(L::DiagOp) = (L.dim_in, L.dim_in)
 
 fun_name(L::DiagOp) = "╲"
 

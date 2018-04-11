@@ -20,7 +20,7 @@ J(σ)  ℝ^10 -> ℝ^10
 ```
 
 """
-struct Jacobian{T <: NonLinearOperator, X<:Union{AbstractArray,NTuple}} <: LinearOperator
+struct Jacobian{T <: NonLinearOperator, X<:Union{AbstractArray,Tuple}} <: LinearOperator
 	A::T
 	x::X
 end
