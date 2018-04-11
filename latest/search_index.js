@@ -449,11 +449,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "calculus.html#AbstractOperators.Hadamard",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.Hadamard",
+    "category": "type",
+    "text": "Hadamard(A::AbstractOperator,B::AbstractOperator)\n\nCompose opeators such that their output is multiplied elementwise:\n\nA(⋅).*B(⋅)\n\nExample\n\njulia> n,m = 5,10\n\njulia> x = (randn(n),randn(m)); #inputs\n\njulia> A = randn(m,n); #A matrix\n\njulia> C = Hadamard( MatrixOp(A), Eye(m) )\n# i.e. `A(⋅).*I(⋅)`\n\njulia> Y = (A*x[1]).*x[2]\n\njulia> C*x ≈ Y\ntrue\n\n\n\n\n"
+},
+
+{
     "location": "calculus.html#Composition-1",
     "page": "Calculus rules",
     "title": "Composition",
     "category": "section",
-    "text": "Compose\nNonLinearCompose"
+    "text": "Compose\nNonLinearCompose\nHadamard"
 },
 
 {
