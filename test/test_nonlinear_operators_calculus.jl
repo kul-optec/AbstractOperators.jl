@@ -330,7 +330,6 @@ Hp = permute(H,p)
 y, grad = test_NLop(Hp,x[p],r,verb)
 @test norm(y-(op1.A*x[1]).*(op2.A*x[2])) < 1e-9
 
-### Hadamard
 l,m,n = 10,3,7
 op1 = MatrixOp(randn(n,m))
 op2 = MatrixOp(randn(n,l))
@@ -347,3 +346,18 @@ p = [2;1;3]
 Hp = permute(H,p)
 y, grad = test_NLop(Hp,x[p],r,verb)
 @test norm(y-(op1.A*x[1]).*(op2.A*x[2]).*(op3.A*x[3])) < 1e-9
+
+l,m,n = 10,3,7
+A = randn(n,m)+im*randn(n,m)
+op1 = MatrixOp(A)
+op3 = DFT(n)
+H = Hadamard(op1,op3)
+
+x = randn(m)+im*randn(m),randn(n)
+
+y = H*x
+@test vecnorm(y - (A*x[1]).*(fft(x[2])) ) <1e-9
+grad = Jacobian(H,x)'*y
+# TODO add test on gradient
+
+

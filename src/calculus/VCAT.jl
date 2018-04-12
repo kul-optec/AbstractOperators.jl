@@ -42,10 +42,10 @@ struct VCAT{M, # number of domains
 	A::L     # tuple of AbstractOperators
 	idxs::P  # indices 
 	         # H = VCAT(Eye(n),VCAT(Eye(n),Eye(n))) has H.idxs = (1,2,3) 
-		 # `AbstractOperators` are flatten
+             # `AbstractOperators` are flatten
 	         # H = VCAT(Eye(n),Compose(MatrixOp(randn(n,n)),VCAT(Eye(n),Eye(n)))) 
-		 # has H.idxs = (1,(2,3))
-		 # `AbstractOperators` are stack
+             # has H.idxs = (1,(2,3))
+             # `AbstractOperators` are stack
 	buf::C   # buffer memory
 end
 

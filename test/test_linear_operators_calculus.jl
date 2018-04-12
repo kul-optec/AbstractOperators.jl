@@ -422,6 +422,16 @@ y1 = test_op(opV, x1, (randn(m1), randn(m2)), verb)
 y2 = (A1*x1, A2*x1)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
+m1, n = 4, 5
+A1 = randn(m1, n)+im*randn(m1, n)
+opA1 = MatrixOp(A1)
+opA2 = DFT(n)'
+opV = VCAT(opA1, opA2)
+x1 = randn(n)+im*randn(n)
+y1 = test_op(opV, x1, (randn(m1)+im*randn(m1), randn(n)), verb)
+y2 = (A1*x1, opA2*x1)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
 #test VCAT longer
 m1, m2, m3, n = 4, 7, 3, 5
 A1 = randn(m1, n)
@@ -546,6 +556,24 @@ y1 = test_op(opV, (x1,x2), (randn(n1),randn(n2)), verb)
 y2 = (A1*x1+A2*x2,A3*x1+A4*x2)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
+# test VCAT of HCAT's with complex num
+m1, m2, n1 = 4, 7, 5
+A1 = randn(n1, m1)+im*randn(n1, m1)
+opA1 = MatrixOp(A1)
+opA2 = DFT(n1)
+opH1 = HCAT(opA1,opA2)
+
+m1, m2, n2 = 4, 7, 5
+A3 = randn(n2, m1)+im*randn(n2,m1)
+opA3 = MatrixOp(A3)
+opA4 = DFT(n2)
+opH2 = HCAT(opA3,opA4)
+
+opV = VCAT(opH1,opH2)
+x1, x2 = randn(m1)+im*randn(m1), randn(n2)
+y1 = test_op(opV, (x1,x2), (randn(n1)+im*randn(n1),randn(n2)+im*randn(n2)), verb)
+y2 = (A1*x1+fft(x2),A3*x1+fft(x2))
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
 # test HCAT of VCAT's
 

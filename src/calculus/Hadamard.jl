@@ -32,13 +32,14 @@ struct Hadamard{M, # number of domains
                 N, # number of AbstractOperator 
                 L <: NTuple{N,AbstractOperator},
                 P <: NTuple{N,Union{Int,Tuple}},
+                D <: Union{NTuple{M,AbstractArray}, AbstractArray},
                 C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-                V <: VCAT{M,N,L,P,C}
+                V <: VCAT{M,N,L,P,D}
                } <: NonLinearOperator
 	A::V
 	mid::C
 	mid2::C
-	function Hadamard(A::V, mid::C, mid2::C) where {M, N, L, P, C, V <: VCAT{M,N,L,P,C}}
+	function Hadamard(A::V, mid::C, mid2::C) where {M, N, L, P, D, C, V <: VCAT{M,N,L,P,D}}
 		any([ai != size(A,1)[1] for ai in size(A,1)]) &&
 		throw(DimensionMismatch("cannot compose operators"))
 		any(any(
@@ -46,7 +47,7 @@ struct Hadamard{M, # number of domains
 			)) &&
 		throw(DimensionMismatch("cannot compose operators"))
 
-		new{M, N, L, P, C, V}(A,mid,mid2)
+		new{M, N, L, P, D, C, V}(A,mid,mid2)
 	end
 end
 
@@ -54,14 +55,15 @@ struct HadamardJacobian{M, # number of domains
                         N, # number of AbstractOperator 
                         L <: NTuple{N,AbstractOperator},
                         P <: NTuple{N,Union{Int,Tuple}},
+                        D <: Union{NTuple{M,AbstractArray}, AbstractArray},
                         C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-                        V <: VCAT{M,N,L,P,C}
+                        V <: VCAT{M,N,L,P,D}
                        } <: LinearOperator
 	A::V
 	mid::C
 	mid2::C
-	function HadamardJacobian(A::V,mid::C,mid2::C) where {M, N, L, P, C, V <: VCAT{M,N,L,P,C}}
-		new{M, N, L, P, C, V}(A,mid,mid2)
+	function HadamardJacobian(A::V,mid::C,mid2::C) where {M, N, L, P, D, C, V <: VCAT{M,N,L,P,D}}
+		new{M, N, L, P, D, C, V}(A,mid,mid2)
 	end
 end
 
@@ -84,7 +86,7 @@ function Hadamard(L::Vararg{AbstractOperator})
 end
 
 # Mappings
-function A_mul_B!(y, H::Hadamard{M,N,L,P,C,V}, b) where {M,N,L,P,C,V}
+function A_mul_B!(y, H::Hadamard{M,N,L,P,D,C,V}, b) where {M,N,L,P,D,C,V}
 	A_mul_B!(H.mid,H.A,b)
 
 	y .= H.mid[1].*H.mid[2]
@@ -94,10 +96,10 @@ function A_mul_B!(y, H::Hadamard{M,N,L,P,C,V}, b) where {M,N,L,P,C,V}
 end
 
 # Jacobian
-Jacobian(A::H, x::D) where {M, N, L, P, C, V, H <: Hadamard{M,N,L,P,C,V}, D <: Tuple } =
+Jacobian(A::H, x::D) where {M, N, L, P, D <: Tuple, C, V, H <: Hadamard{M,N,L,P,D,C,V}} =
 HadamardJacobian(Jacobian(A.A,x),A.mid,A.mid2)
 
-function Ac_mul_B!(y, J::HadamardJacobian{M,N,L,P,C,V}, b) where {M,N,L,P,C,V}
+function Ac_mul_B!(y, J::HadamardJacobian{M,N,L,P,D,C,V}, b) where {M,N,L,P,D,C,V}
 	for i = 1:M
 		c = (J.mid[1:i-1]...,J.mid[i+1:end]...,b)
 		J.mid2[i] .= (.*)(c...)
