@@ -871,6 +871,7 @@ r = randn(n)
 
 # with sign
 T = AffineAdd(opA,d,false)
+@test sign(T) == -1
 
 println(T)
 x1 = randn(m)
@@ -881,6 +882,7 @@ r = randn(n)
 
 # with scalar
 T = AffineAdd(opA,pi)
+@test sign(T) == 1
 
 println(T)
 x1 = randn(m)
@@ -893,3 +895,15 @@ r = randn(n)
 @test_throws ErrorException AffineAdd(DFT(4),randn(4))
 AffineAdd(DFT(4),pi)
 @test_throws ErrorException AffineAdd(Eye(4),im*pi)
+
+# permute AddAffine 
+n,m = 5,6
+A = randn(n,m)
+d = randn(n)
+opH = HCAT(Eye(n),MatrixOp(A))
+x = (randn(n),randn(m))
+opHT = AffineAdd(opH,d)
+
+@test norm(opHT*x-(x[1]+A*x[2]+d)) < 1e-12
+p = [2;1]
+@test norm(permute(opHT,p)*x[p]-(x[1]+A*x[2]+d)) < 1e-12
