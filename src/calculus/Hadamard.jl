@@ -28,79 +28,57 @@ true
 ```
 """
 
-struct Hadamard{M, # number of domains  
-                N, # number of AbstractOperator 
-                L <: NTuple{N,AbstractOperator},
-                P <: NTuple{N,Union{Int,Tuple}},
-                D <: Union{NTuple{M,AbstractArray}, AbstractArray},
-                C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-                V <: VCAT{M,N,L,P,D}
-               } <: NonLinearOperator
+struct Hadamard{M, C, V <: VCAT{M}} <: NonLinearOperator
 	A::V
 	mid::C
 	mid2::C
-	function Hadamard(A::V, mid::C, mid2::C) where {M, N, L, P, D, C, V <: VCAT{M,N,L,P,D}}
+	function Hadamard(A::V, mid::C, mid2::C) where {M, C, V <: VCAT{M}}
 		any([ai != size(A,1)[1] for ai in size(A,1)]) &&
 		throw(DimensionMismatch("cannot compose operators"))
-		any(any(
-			sum([!is_null(A[m][n]) for n = 1:N, m = 1:M],2) .> 1
-			)) &&
-		throw(DimensionMismatch("cannot compose operators"))
 
-		new{M, N, L, P, D, C, V}(A,mid,mid2)
+		new{M, C, V}(A,mid,mid2)
 	end
 end
 
-struct HadamardJacobian{M, # number of domains  
-                        N, # number of AbstractOperator 
-                        L <: NTuple{N,AbstractOperator},
-                        P <: NTuple{N,Union{Int,Tuple}},
-                        D <: Union{NTuple{M,AbstractArray}, AbstractArray},
-                        C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-                        V <: VCAT{M,N,L,P,D}
-                       } <: LinearOperator
+struct HadamardJacobian{M, C, V <: VCAT{M}} <: LinearOperator
 	A::V
 	mid::C
 	mid2::C
-	function HadamardJacobian(A::V,mid::C,mid2::C) where {M, N, L, P, D, C, V <: VCAT{M,N,L,P,D}}
-		new{M, N, L, P, D, C, V}(A,mid,mid2)
+	function HadamardJacobian(A::V,mid::C,mid2::C) where {M, C, V <: VCAT{M}}
+		new{M, C, V}(A,mid,mid2)
 	end
 end
 
 # Constructors
-function Hadamard(L::Vararg{HCAT{1,N}}) where {N}
-	A = VCAT(L...)
-	mid  = zeros.(codomainType(A), size(A,1))
-	mid2 = zeros.(codomainType(A), size(A,1))
-	Hadamard(A,mid,mid2)
-end
+function Hadamard(L1::AbstractOperator,L2::AbstractOperator)
 
-function Hadamard(L::Vararg{AbstractOperator})
+	A = HCAT(L1, Zeros( domainType(L2), size(L2,2), codomainType(L1), size(L1,1) ))
+	B = HCAT(Zeros( domainType(L1), size(L1,2), codomainType(L2), size(L2,1) ), L2 )
 
-	M = sum(ndoms.(L,2))
-	Z  = Zeros.(domainType.(L),size.(L,2),codomainType.(L),size.(L,1))
-	Op = [(Z[1:i-1]...,L[i], Z[i+1:end]...) for i in eachindex(L)]
-	hcats = [HCAT(op...) for op in Op ]
-	Hadamard(hcats...)
+    V = VCAT(A,B)
 
+	mid  = zeros.(codomainType(V), size(V,1))
+	mid2 = zeros.(codomainType(V), size(V,1))
+
+	Hadamard(V,mid,mid2)
 end
 
 # Mappings
-function A_mul_B!(y, H::Hadamard{M,N,L,P,D,C,V}, b) where {M,N,L,P,D,C,V}
+function A_mul_B!(y, H::Hadamard{M,C,V}, b) where {M,C,V}
 	A_mul_B!(H.mid,H.A,b)
 
-	y .= H.mid[1].*H.mid[2]
-	for i = 3:M
+	y .= H.mid[1]
+    for i = 2:length(H.mid)
 		y .*= H.mid[i]
 	end
 end
 
 # Jacobian
-Jacobian(A::H, x::D) where {M, N, L, P, D <: Tuple, C, V, H <: Hadamard{M,N,L,P,D,C,V}} =
+Jacobian(A::H, x::D) where {M, D<:Tuple, C, V, H <: Hadamard{M,C,V}} =
 HadamardJacobian(Jacobian(A.A,x),A.mid,A.mid2)
 
-function Ac_mul_B!(y, J::HadamardJacobian{M,N,L,P,D,C,V}, b) where {M,N,L,P,D,C,V}
-	for i = 1:M
+function Ac_mul_B!(y, J::HadamardJacobian{M,C,V}, b) where {M,C,V}
+    for i = 1:length(J.mid)
 		c = (J.mid[1:i-1]...,J.mid[i+1:end]...,b)
 		J.mid2[i] .= (.*)(c...)
 	end
@@ -112,10 +90,8 @@ end
 size(P::Hadamard) = size(P.A[1],1), size(P.A[1],2)
 size(P::HadamardJacobian) = size(P.A[1],1), size(P.A[1],2)
 
-fun_name(L::Hadamard{M,N})         where {M,N} = N == 2 ? 
-fun_name(L.A[1].A[L.A.A[1].idxs[1]])"⊙"*fun_name(L.A[2].A[L.A.A[2].idxs[2]]) : "⊙"
-fun_name(L::HadamardJacobian{M,N}) where {M,N} = N == 2 ?
-"J("*fun_name(L.A[1].A[L.A.A[1].idxs[1]])"⊙"*fun_name(L.A[2].A[L.A.A[2].idxs[2]])*")" : "J(⊙)"
+fun_name(L::Hadamard) = "⊙"
+fun_name(L::HadamardJacobian) = "J(⊙)"
 
 domainType(L::Hadamard)   = domainType.(L.A[1])
 codomainType(L::Hadamard) = codomainType(L.A[1])
@@ -126,7 +102,7 @@ codomainType(L::HadamardJacobian) = codomainType(L.A[1])
 # utils
 import Base: permute
 
-function permute(H::Hadamard{M,N,L,P,C,V}, p::AbstractVector{Int}) where {M,N,L,P,C,V}
-    A = VCAT([permute(a,p) for a in H.A.A][p]...)
+function permute(H::Hadamard, p::AbstractVector{Int})
+    A = VCAT([permute(a,p) for a in H.A.A]...)
     Hadamard(A,H.mid,H.mid2)
 end

@@ -18,6 +18,7 @@ function Cos(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 end
 
 Cos(DomainDim::NTuple{N,Int}) where {N} = Cos{Float64,N}(DomainDim)
+Cos(DomainDim::Vararg{Int}) = Cos{Float64,length(DomainDim)}(DomainDim)
 
 function A_mul_B!(y::AbstractArray{T,N}, L::Cos{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= cos.(x)

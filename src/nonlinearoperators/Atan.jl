@@ -18,6 +18,7 @@ function Atan(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 end
 
 Atan(DomainDim::NTuple{N,Int}) where {N} = Atan{Float64,N}(DomainDim)
+Atan(DomainDim::Vararg{Int}) = Atan{Float64,length(DomainDim)}(DomainDim)
 
 function A_mul_B!(y::AbstractArray{T,N}, L::Atan{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= atan.(x)

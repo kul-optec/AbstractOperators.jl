@@ -18,6 +18,7 @@ function Tanh(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 end
 
 Tanh(DomainDim::NTuple{N,Int}) where {N} = Tanh{Float64,N}(DomainDim)
+Tanh(DomainDim::Vararg{Int}) = Tanh{Float64,length(DomainDim)}(DomainDim)
 
 function A_mul_B!(y::AbstractArray{T,N}, L::Tanh{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= tanh.(x)

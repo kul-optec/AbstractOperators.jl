@@ -313,7 +313,7 @@ p = randperm(length(x))
 L3p = permute(L3,p)
 y, grad = test_NLop(L3p,x[p],r,verb)
 
-### Hadamard
+# Hadamard
 l,m,n = 10,3,7
 op1 = MatrixOp(randn(n,m))
 op2 = MatrixOp(randn(n,l))
@@ -334,7 +334,7 @@ l,m,n = 10,3,7
 op1 = MatrixOp(randn(n,m))
 op2 = MatrixOp(randn(n,l))
 op3 = DCT(n)
-H = Hadamard(op1,op2,op3)
+H = Hadamard(Hadamard(op1,op2),op3)
 
 r = randn(n) 
 x = randn.(size(H,2)) 
@@ -360,4 +360,29 @@ y = H*x
 grad = Jacobian(H,x)'*y
 # TODO add test on gradient
 
+# Hadamard with HCAT
+n,m1,m2 = 10,4,3
+op1 = Eye(n)
+opA = MatrixOp(randn(n,m1))
+opB = MatrixOp(randn(n,m2))
+op2 = HCAT(opA,opB)
+H = Hadamard(op1,op2)
+r = randn(n) 
+x = randn.(size(H,2)) 
+y, grad = test_NLop(H,x,r,verb)
 
+p = [2;1;3]
+Hp = permute(H,p)
+y, grad = test_NLop(Hp,x[p],r,verb)
+
+## Hadamard of Hadamard with NonLinear operators
+n = 10
+op1 = Eye(n)
+opA = Exp(n)
+opB = Sin(n)
+H1  = Hadamard(opA,opB)
+H   = Hadamard(op1,H1)
+
+r = randn(n) 
+x = randn.(size(H,2)) 
+y, grad = test_NLop(H,x,r,verb)

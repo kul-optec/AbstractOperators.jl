@@ -113,7 +113,7 @@ diag_AAc(L::Compose) = is_AAc_diagonal(L) ? diag_AAc(L.A[2]) : error("is_AAc_dia
 
 # utils
 import Base: permute
-function permute(C::Compose{N,M,L,T}, p::AbstractVector{Int}) where {N,M,L,T}
+function permute(C::Compose, p::AbstractVector{Int})
 
 	i = findfirst( x -> ndoms(x,2) > 1 , C.A)
 	P = permute(C.A[i],p)

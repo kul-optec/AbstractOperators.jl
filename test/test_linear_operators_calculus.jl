@@ -590,7 +590,7 @@ y2 = (A*x1 + B*x2, C*x1 + D*x2)
 
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-# test Sum of HCAT's
+## test Sum of HCAT's
 
 m, n1, n2, n3 = 4, 7, 5, 3
 A1 = randn(m, n1)
@@ -615,6 +615,10 @@ y1 = test_op(opS, (x1, x2, x3), randn(m), verb)
 y2 = A1*x1 + B1*x1 + A2*x2 + B2*x2 + A3*x3 + B3*x3
 
 @test vecnorm(y1-y2) <= 1e-12
+
+p = [3;2;1]
+opSp = permute(opS,p)
+y1 = test_op(opSp, (x1, x2, x3)[p], randn(m), verb)
 
 # test Sum of VCAT's
 

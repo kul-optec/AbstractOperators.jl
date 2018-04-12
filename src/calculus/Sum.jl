@@ -109,3 +109,10 @@ is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
 diag(L::Sum) = sum(diag.(L.A))
 
 
+# utils
+import Base: permute
+
+function permute(S::Sum{M,N}, p::AbstractVector{Int}) where {M,N}
+    AA = ([permute(A,p) for A in S.A]...) 
+    return Sum(AA,S.bufC,S.bufD[p],M,N)
+end

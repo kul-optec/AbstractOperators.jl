@@ -18,6 +18,7 @@ function Sin(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 end
 
 Sin(DomainDim::NTuple{N,Int}) where {N} = Sin{Float64,N}(DomainDim)
+Sin(DomainDim::Vararg{Int}) = Sin{Float64,length(DomainDim)}(DomainDim)
 
 function A_mul_B!(y::AbstractArray{T,N}, L::Sin{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= sin.(x)

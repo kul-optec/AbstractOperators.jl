@@ -18,6 +18,7 @@ function Exp(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 end
 
 Exp(DomainDim::NTuple{N,Int}) where {N} = Exp{Float64,N}(DomainDim)
+Exp(DomainDim::Vararg{Int}) = Exp{Float64,length(DomainDim)}(DomainDim)
 
 function A_mul_B!(y::AbstractArray{T,N}, L::Exp{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= exp.(x)
