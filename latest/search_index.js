@@ -481,6 +481,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "calculus.html#AbstractOperators.AffineAdd",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.AffineAdd",
+    "category": "type",
+    "text": "AffineAdd(A::AbstractOperator, d, [sign = true])\n\nAffine addition to AbstractOperator with an array or scalar d. \n\nUse sign = false to perform subtraction.\n\njulia> A = AffineAdd(Sin(3),[1.;2.;3.])\nsin+d  ℝ^3 -> ℝ^3\n\njulia> A*[3.;4.;5.] == sin.([3.;4.;5.]).+[1.;2.;3.]\ntrue\n\njulia> A = AffineAdd(Exp(3),[1.;2.;3.],false)\ne-d  ℝ^3 -> ℝ^3\n\njulia> A*[3.;4.;5.] == exp.([3.;4.;5.]).-[1.;2.;3.]\ntrue\n\n\n\n\n"
+},
+
+{
     "location": "calculus.html#AbstractOperators.BroadCast",
     "page": "Calculus rules",
     "title": "AbstractOperators.BroadCast",
@@ -509,7 +517,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "Transformations",
     "category": "section",
-    "text": "Scale\nTranspose\nBroadCast\nReshape\nJacobian"
+    "text": "Scale\nTranspose\nAffineAdd\nBroadCast\nReshape\nJacobian"
 },
 
 {
