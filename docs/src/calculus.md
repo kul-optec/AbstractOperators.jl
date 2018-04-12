@@ -21,6 +21,7 @@ Hadamard
 ```@docs
 Scale
 Transpose
+AffineAdd
 BroadCast
 Reshape
 Jacobian

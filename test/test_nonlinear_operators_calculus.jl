@@ -386,3 +386,100 @@ H   = Hadamard(op1,H1)
 r = randn(n) 
 x = randn.(size(H,2)) 
 y, grad = test_NLop(H,x,r,verb)
+
+## AffineAdd and NonLinearOperator
+n = 10
+d = randn(n)
+T = AffineAdd(Exp(n),d,false)
+
+r = randn(n) 
+x = randn(size(T,2)) 
+y, grad = test_NLop(T,x,r,verb)
+@test vecnorm( y - (exp.(x)-d) ) < 1e-8
+
+## AffineAdd and Compose NonLinearOperator
+n = 10
+d1 = randn(n)
+d2 = randn(n)
+T = Compose(AffineAdd(Sin(n),d2),AffineAdd(Eye(n),d1))
+
+r = randn(n) 
+x = randn(size(T,2)) 
+y, grad = test_NLop(T,x,r,verb)
+@test vecnorm( y - (sin.(x+d1)+d2) ) < 1e-8
+
+n = 10
+d1 = randn(n)
+d2 = randn(n)
+d3 = pi
+T = Compose( AffineAdd(Sin(n),d3), Compose( AffineAdd(Exp(n),d2,false),AffineAdd(Eye(n),d1 ) ) )
+
+r = randn(n) 
+x = randn(size(T,2)) 
+y, grad = test_NLop(T,x,r,verb)
+@test vecnorm( y -( sin.(exp.(x+d1)-d2)+d3 )) < 1e-8
+
+## AffineAdd and NonLinearCompose
+l,m1,m2,n1,n2 = 2,3,4,5,6
+x = (randn(m1,m2),randn(n1,n2))
+A = randn(l,m1)
+B = randn(m2,n1)
+d1 = randn(l,m2)
+d2 = randn(m2,n2)
+r = randn(l,n2)
+
+P = NonLinearCompose( AffineAdd(MatrixOp(A,m2),d1), AffineAdd(MatrixOp(B,n2),d2) )
+y, grad = test_NLop(P,x,r,verb)
+
+Y = (A*x[1]+d1)*(B*x[2]+d2)
+@test norm(Y - y) <= 1e-12
+
+## AffineAdd and NonLinearCompose and Compose
+l,m1,m2,n1,n2 = 2,3,4,5,6
+x = (randn(m1,m2),randn(n1,n2))
+A = randn(l,m1)
+B = randn(m2,n1)
+d1, d2 = randn(m1,m2), randn(n1,n2)
+r = randn(l,n2)
+
+P = NonLinearCompose( 
+                     Compose( MatrixOp(A,m2), AffineAdd(Eye(size(d1)),d1)), 
+                     Compose( MatrixOp(B,n2), AffineAdd(Eye(size(d2)),d2)), 
+                    )
+y, grad = test_NLop(P,x,r,verb)
+
+Y = (A*(x[1]+d1))*(B*(x[2]+d2))
+@test norm(Y - y) <= 1e-12
+
+## AffineAdd and Hadamard
+n,m,l = 3,4,7
+x = (randn(n),randn(m))
+A = randn(l,n)
+B = randn(l,m)
+d1 = randn(l)
+d2 = randn(l)
+r = randn(l)
+
+P = Hadamard( AffineAdd(MatrixOp(A),d1), AffineAdd(MatrixOp(B),d2) )
+y, grad = test_NLop(P,x,r,verb)
+
+Y = (A*x[1]+d1).*(B*x[2]+d2)
+@test norm(Y - y) <= 1e-12
+
+## AffineAdd and Hadamard and Compose
+n,m,l = 3,4,7
+x = (randn(n),randn(m))
+A = randn(l,n)
+B = randn(l,m)
+d1 = randn(n)
+d2 = randn(m)
+r = randn(l)
+
+P = Hadamard( 
+             Compose( MatrixOp(A), AffineAdd(Eye(size(d1)),d1)), 
+             Compose( MatrixOp(B), AffineAdd(Eye(size(d2)),d2,false)), 
+            )
+y, grad = test_NLop(P,x,r,verb)
+
+Y = (A*(x[1]+d1)).*(B*(x[2]-d2))
+@test norm(Y - y) <= 1e-12

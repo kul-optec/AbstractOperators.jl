@@ -1,6 +1,5 @@
 export Jacobian
 
-
 """
 `Jacobian(A::AbstractOperator,x)`
 
@@ -73,6 +72,8 @@ Sum(([Jacobian(a,x) for a in S.A]...),S.bufC,S.bufD,M,N)
 Jacobian(T::Transpose{A}, x::AbstractArray) where {A <: AbstractOperator} = T 
 #Jacobian of BroadCast
 Jacobian(B::A, x::AbstractArray) where {A <: BroadCast} = BroadCast(Jacobian(B.A,x),B.dim_out) 
+#Jacobian of AffineAdd
+Jacobian(B::A, x::AbstractArray) where {A <: AffineAdd} = Jacobian(B.A,x)
 
 # Properties
 

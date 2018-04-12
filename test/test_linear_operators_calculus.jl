@@ -1,4 +1,4 @@
- @printf("\nTesting linear operators calculus rules\n")
+@printf("\nTesting linear operators calculus rules\n")
 
 ##########################
 ##### test Compose #######
@@ -851,3 +851,45 @@ y2 .= 2.4*x1
 @test is_invertible(opR)       == false
 @test is_full_row_rank(opR)    == false
 @test is_full_column_rank(opR) == false
+
+##########################
+#### test AffineAdd  #####
+##########################
+
+n,m = 5,6
+A = randn(n,m)
+opA = MatrixOp(A)
+d = randn(n)
+T = AffineAdd(opA,d)
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1+d)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) <1e-9
+
+# with sign
+T = AffineAdd(opA,d,false)
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1-d)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) <1e-9
+
+# with scalar
+T = AffineAdd(opA,pi)
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1+pi)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) <1e-9
+
+@test_throws DimensionMismatch AffineAdd(MatrixOp(randn(2,5)),randn(5))
+@test_throws ErrorException AffineAdd(DFT(4),randn(4))
+AffineAdd(DFT(4),pi)
+@test_throws ErrorException AffineAdd(Eye(4),im*pi)
