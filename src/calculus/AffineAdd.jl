@@ -81,3 +81,15 @@ fun_type(L::AffineAdd) = fun_type(L.A)
 diag(L::AffineAdd) = diag(L.A)
 diag_AcA(L::AffineAdd) = diag_AcA(L.A)
 diag_AAc(L::AffineAdd) = diag_AAc(L.A)
+
+# utils
+import Base: sign
+sign(T::AffineAdd{L,D,false}) where {L,D} = -1
+sign(T::AffineAdd{L,D, true}) where {L,D} =  1
+
+function permute(T::AffineAdd{L,D,S}, p::AbstractVector{Int}) where {L,D,S}
+    A = permute(T.A,p)
+    return AffineAdd(A,T.d,S) 
+end
+
+
