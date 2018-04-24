@@ -92,4 +92,5 @@ function permute(T::AffineAdd{L,D,S}, p::AbstractVector{Int}) where {L,D,S}
     return AffineAdd(A,T.d,S) 
 end
 
-
+displacement(A::AffineAdd{L,D,true})  where {L,D} =  A.d+displacement(A.A)
+displacement(A::AffineAdd{L,D,false}) where {L,D} = -A.d+displacement(A.A)

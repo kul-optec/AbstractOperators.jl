@@ -116,3 +116,4 @@ function permute(S::Sum{M,N}, p::AbstractVector{Int}) where {M,N}
     AA = ([permute(A,p) for A in S.A]...) 
     return Sum(AA,S.bufC,S.bufD[p],M,N)
 end
+

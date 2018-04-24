@@ -16,7 +16,8 @@ export ndoms,
        is_full_column_rank,
        is_sliced,
        diag_AcA, 
-       diag_AAc
+       diag_AAc,
+       displacement
 
 
 """
@@ -267,6 +268,32 @@ true
 """
 is_sliced(L::AbstractOperator) = false
 
+"""
+`displacement(A::AbstractOperator)`
+
+Returns the displacement of the operator.
+
+```julia
+julia> A = AffineAdd(Eye(4),[1.;2.;3.;4.])
+I+d  ℝ^4 -> ℝ^4
+
+julia> displacement(A)
+4-element Array{Float64,1}:
+ 1.0
+ 2.0
+ 3.0
+ 4.0
+
+```
+"""
+function displacement(S::AbstractOperator) 
+    d = S*blockzeros(domainType(S),size(S,2))
+    if all(y -> y == d[1], d ) 
+        return d[1]
+    else
+        return d
+    end
+end
 
 import Base: convert
 function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T <: AbstractOperator}
