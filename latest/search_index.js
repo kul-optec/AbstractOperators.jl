@@ -577,11 +577,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "properties.html#AbstractOperators.displacement",
+    "page": "Properties",
+    "title": "AbstractOperators.displacement",
+    "category": "function",
+    "text": "displacement(A::AbstractOperator)\n\nReturns the displacement of the operator.\n\njulia> A = AffineAdd(Eye(4),[1.;2.;3.;4.])\nI+d  ℝ^4 -> ℝ^4\n\njulia> displacement(A)\n4-element Array{Float64,1}:\n 1.0\n 2.0\n 3.0\n 4.0\n\n\n\n\n"
+},
+
+{
+    "location": "properties.html#AbstractOperators.remove_displacement",
+    "page": "Properties",
+    "title": "AbstractOperators.remove_displacement",
+    "category": "function",
+    "text": "remove_displacement(A::AbstractOperator)\n\nRemoves the displacement of the operator.\n\n\n\n"
+},
+
+{
     "location": "properties.html#Size-and-Domains-1",
     "page": "Properties",
     "title": "Size and Domains",
     "category": "section",
-    "text": "size\nndims\nndoms\ndomainType\ncodomainType"
+    "text": "size\nndims\nndoms\ndomainType\ncodomainType\ndisplacement\nremove_displacement"
 },
 
 {
