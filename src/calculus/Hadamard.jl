@@ -30,22 +30,22 @@ true
 
 struct Hadamard{M, C, V <: VCAT{M}} <: NonLinearOperator
 	A::V
-	mid::C
-	mid2::C
-	function Hadamard(A::V, mid::C, mid2::C) where {M, C, V <: VCAT{M}}
+	buf::C
+	buf2::C
+	function Hadamard(A::V, buf::C, buf2::C) where {M, C, V <: VCAT{M}}
 		any([ai != size(A,1)[1] for ai in size(A,1)]) &&
 		throw(DimensionMismatch("cannot compose operators"))
 
-		new{M, C, V}(A,mid,mid2)
+		new{M, C, V}(A,buf,buf2)
 	end
 end
 
 struct HadamardJacobian{M, C, V <: VCAT{M}} <: LinearOperator
 	A::V
-	mid::C
-	mid2::C
-	function HadamardJacobian(A::V,mid::C,mid2::C) where {M, C, V <: VCAT{M}}
-		new{M, C, V}(A,mid,mid2)
+	buf::C
+	buf2::C
+	function HadamardJacobian(A::V,buf::C,buf2::C) where {M, C, V <: VCAT{M}}
+		new{M, C, V}(A,buf,buf2)
 	end
 end
 
@@ -57,32 +57,32 @@ function Hadamard(L1::AbstractOperator,L2::AbstractOperator)
 
     V = VCAT(A,B)
 
-	mid  = zeros.(codomainType(V), size(V,1))
-	mid2 = zeros.(codomainType(V), size(V,1))
+	buf  = zeros.(codomainType(V), size(V,1))
+	buf2 = zeros.(codomainType(V), size(V,1))
 
-	Hadamard(V,mid,mid2)
+	Hadamard(V,buf,buf2)
 end
 
 # Mappings
 function A_mul_B!(y, H::Hadamard{M,C,V}, b) where {M,C,V}
-	A_mul_B!(H.mid,H.A,b)
+	A_mul_B!(H.buf,H.A,b)
 
-	y .= H.mid[1]
-    for i = 2:length(H.mid)
-		y .*= H.mid[i]
+	y .= H.buf[1]
+    for i = 2:length(H.buf)
+		y .*= H.buf[i]
 	end
 end
 
 # Jacobian
 Jacobian(A::H, x::D) where {M, D<:Tuple, C, V, H <: Hadamard{M,C,V}} =
-HadamardJacobian(Jacobian(A.A,x),A.mid,A.mid2)
+HadamardJacobian(Jacobian(A.A,x),A.buf,A.buf2)
 
 function Ac_mul_B!(y, J::HadamardJacobian{M,C,V}, b) where {M,C,V}
-    for i = 1:length(J.mid)
-		c = (J.mid[1:i-1]...,J.mid[i+1:end]...,b)
-		J.mid2[i] .= (.*)(c...)
+    for i = 1:length(J.buf)
+		c = (J.buf[1:i-1]...,J.buf[i+1:end]...,b)
+		J.buf2[i] .= (.*)(c...)
 	end
-	Ac_mul_B!(y, J.A, J.mid2)
+	Ac_mul_B!(y, J.A, J.buf2)
 
 end
 
@@ -104,5 +104,7 @@ import Base: permute
 
 function permute(H::Hadamard, p::AbstractVector{Int})
     A = VCAT([permute(a,p) for a in H.A.A]...)
-    Hadamard(A,H.mid,H.mid2)
+    Hadamard(A,H.buf,H.buf2)
 end
+
+remove_displacement(N::Hadamard) = Hadamard(remove_displacement(N.A), N.buf, N.buf2)

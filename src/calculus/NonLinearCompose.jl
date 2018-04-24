@@ -143,5 +143,4 @@ function permute(P::NonLinearCompose{N,L,C,D}, p::AbstractVector{Int}) where {N,
 	NonLinearCompose(permute(P.A,p),permute(P.B,p),P.buf,P.bufx)
 end
 
-
-
+remove_displacement(N::NonLinearCompose) = NonLinearCompose(remove_displacement(N.A), remove_displacement(N.B), N.buf, N.bufx)

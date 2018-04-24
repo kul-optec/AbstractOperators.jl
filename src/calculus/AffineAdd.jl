@@ -94,3 +94,5 @@ end
 
 displacement(A::AffineAdd{L,D,true})  where {L,D} =  A.d+displacement(A.A)
 displacement(A::AffineAdd{L,D,false}) where {L,D} = -A.d+displacement(A.A)
+
+remove_displacement(A::AffineAdd) = remove_displacement(A.A)

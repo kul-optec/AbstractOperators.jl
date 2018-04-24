@@ -117,3 +117,4 @@ function permute(S::Sum{M,N}, p::AbstractVector{Int}) where {M,N}
     return Sum(AA,S.bufC,S.bufD[p],M,N)
 end
 
+remove_displacement(S::Sum{M,N}) where {M,N} = Sum(remove_displacement.(S.A), S.bufC, S.bufD, M, N)

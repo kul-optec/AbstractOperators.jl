@@ -210,6 +210,8 @@ function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 	DCAT(H.A,new_part,H.idxC)
 end
 
+remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC)
+
 # special cases
 # Eye constructor
 Eye(x::A) where {N, A <: NTuple{N,AbstractArray}} = DCAT(Eye.(x)...)

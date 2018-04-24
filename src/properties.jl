@@ -17,7 +17,8 @@ export ndoms,
        is_sliced,
        diag_AcA, 
        diag_AAc,
-       displacement
+       displacement,
+       remove_displacement
 
 
 """
@@ -294,6 +295,14 @@ function displacement(S::AbstractOperator)
         return d
     end
 end
+
+"""
+`remove_displacement(A::AbstractOperator)`
+
+Removes the displacement of the operator.
+
+"""
+remove_displacement(A::AbstractOperator) = A
 
 import Base: convert
 function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T <: AbstractOperator}

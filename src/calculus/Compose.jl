@@ -121,3 +121,5 @@ function permute(C::Compose, p::AbstractVector{Int})
 	Compose(AA,C.buf)
 
 end
+
+remove_displacement(C::Compose) = Compose(remove_displacement.(C.A),C.buf)

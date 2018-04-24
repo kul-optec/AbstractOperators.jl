@@ -317,3 +317,5 @@ function permute(H::VCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 
 	VCAT{M,N,L,P,C}(H.A,new_part,H.buf)
 end
+
+remove_displacement(V::VCAT{M}) where {M} = VCAT(remove_displacement.(V.A), V.idxs, V.buf, M)

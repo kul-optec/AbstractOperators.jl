@@ -116,3 +116,4 @@ is_linear(      R::BroadCast) = is_linear(R.A)
 is_null(        R::BroadCast) = is_null(R.A)
 
 fun_name(R::BroadCast) = "."fun_name(R.A)
+remove_displacement(B::BroadCast) = BroadCast(remove_displacement(B.A), B.dim_out, B.bufC, B.bufD)
