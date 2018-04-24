@@ -325,3 +325,6 @@ LL = convert(LinearOperator, Float64, (10,), L)
 
 @test_throws MethodError LL = convert(NonLinearOperator, Float64, (10,), L)
 
+### displacement ###
+L = Eye(10)
+@test displacement(L) == 0.0

@@ -67,9 +67,38 @@ opC = DiagOp(d)*GetIndex((10,), 1:5)
 @test is_diagonal(opC)         == true
 @test diag(opC)                == d
 
-###########################
-###### test DCAT    #######
-###########################
+# displacement test
+m1, m2, m3, m4, m5 = 4, 7, 3, 2, 11
+A1 = randn(m2, m1)
+A2 = randn(m3, m2)
+A3 = randn(m4, m3)
+A4 = randn(m5, m4)
+d1 = randn(m2)
+d2 = pi
+d3 = 0.0
+d4 = randn(m5)
+opA1 = AffineAdd(MatrixOp(A1),d1)  
+opA2 = AffineAdd(MatrixOp(A2),d2)
+opA3 = MatrixOp(A3)
+opA4 = AffineAdd(MatrixOp(A4),d4,false) 
+
+opC  = Compose(Compose(Compose(opA4,opA3),opA2),opA1)
+
+x = randn(m1)
+
+@test norm( opC*x - (A4*(A3*( A2*( A1*x+d1 )+d2 )+d3)-d4) )  < 1e-9
+@test norm( displacement(opC) - ( A4*(A3*(A2*d1+d2)+d3)-d4) ) < 1e-9
+
+opA4 = MatrixOp(A4)
+opC  = AffineAdd(Compose(Compose(Compose(opA4,opA3),opA2),opA1),d4)
+@test norm( opC*x - (A4*(A3*( A2*( A1*x+d1 )+d2 )+d3)+d4) )  < 1e-9
+@test norm( displacement(opC) - ( A4*(A3*(A2*d1+d2)+d3)+d4) ) < 1e-9
+
+@test norm( remove_displacement(opC)*x - (A4*(A3*( A2*( A1*x ) ) ) ) )  < 1e-9
+
+#########################
+#### test DCAT    #######
+#########################
 
 m1, n1, m2, n2 = 4, 7, 5, 2
 A1 = randn(m1, n1)
@@ -137,9 +166,33 @@ y1 = test_op(opD, (x1, x2), (randn(n1),randn(n2)), verb)
 @test diag_AcA(opD) == 1
 @test diag_AAc(opD) == 1
 
-########################
-### test HCAT    #######
-########################
+# displacement DCAT
+
+m1, n1, m2, n2, m3, n3 = 4, 7, 5, 2, 5, 5
+A1 = randn(m1, n1)
+A2 = randn(m2, n2)
+A3 = randn(m3, n3)
+d1 = randn(m1)
+d2 = randn(m2)
+d3 = randn(m3)
+opA1 = AffineAdd(MatrixOp(A1), d1)
+opA2 = AffineAdd(MatrixOp(A2), d2)
+opA3 = AffineAdd(MatrixOp(A3), d3)
+opD = DCAT(opA1, opA2, opA3)
+x1 = randn(n1)
+x2 = randn(n2)
+x3 = randn(n3)
+y1 = opD*(x1,x2,x3)
+y2 = (A1*x1+d1, A2*x2+d2, A3*x3+d3)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(vecnorm.(displacement(opD) .- (d1,d2,d3)) .<= 1e-12)
+y1 = remove_displacement(opD)*(x1,x2,x3)
+y2 = (A1*x1, A2*x2, A3*x3)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+#######################
+## test HCAT    #######
+#######################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -239,9 +292,28 @@ op = HCAT(DiagOp(d), DFT(Complex{Float64},n1))
 y1 = randn(n1)+im*randn(n1)
 @test norm(op*(op'*y1)-diag_AAc(op).*y1) <1e-12
 
-##########################
-##### test Reshape #######
-##########################
+#test displacement
+
+m, n1, n2 = 4, 7, 5
+A1 = randn(m, n1)
+A2 = randn(m, n2)
+d1 = randn(m)
+d2 = randn(m)
+opA1 = AffineAdd(MatrixOp(A1), d1)
+opA2 = AffineAdd(MatrixOp(A2), d2)
+opH = HCAT(opA1, opA2)
+x1 = randn(n1)
+x2 = randn(n2)
+y1 = opH*(x1,x2)
+y2 = A1*x1+d1 + A2*x2+d2
+@test vecnorm(y1-y2) <= 1e-12
+y1 = remove_displacement(opH)*(x1,x2)
+y2 = A1*x1 + A2*x2
+@test vecnorm(y1-y2) <= 1e-12
+
+#########################
+#### test Reshape #######
+#########################
 
 m, n = 8, 4
 dim_out = (2, 2, 2)
@@ -265,6 +337,21 @@ y2 = reshape(A1*x1, dim_out)
 @test is_invertible(opR)       == is_invertible(opA1)      
 @test is_full_row_rank(opR)    == is_full_row_rank(opA1)   
 @test is_full_column_rank(opR) == is_full_column_rank(opA1)
+
+# testing displacement
+m, n = 8, 4
+dim_out = (2, 2, 2)
+A1 = randn(m, n)
+d1 = randn(m)
+opA1 = AffineAdd(MatrixOp(A1),d1)
+opR = Reshape(opA1, dim_out)
+x1 = randn(n)
+y1 = opR*x1
+y2 = reshape(A1*x1+d1, dim_out)
+@test vecnorm(y1-y2) <= 1e-12
+y1 = remove_displacement(opR)*x1
+y2 = reshape(A1*x1, dim_out)
+@test vecnorm(y1-y2) <= 1e-12
 
 #######################
 ## test Scale   #######
@@ -325,9 +412,24 @@ A1 = randn(m, n)
 opA1 = MatrixOp(A1)
 @test_throws ErrorException opS = Scale(coeff, opA1)
 
-##########################
-##### test Sum     #######
-##########################
+## testing displacement
+m, n = 8, 4
+coeff = pi
+A1 = randn(m, n)
+d1 = randn(m)
+opA1 = AffineAdd(MatrixOp(A1),d1)
+opS = Scale(coeff, opA1)
+x1 = randn(n)
+y1 = opS*x1
+y2 = coeff*(A1*x1+d1)
+@test vecnorm(y1-y2) <= 1e-12
+y1 = remove_displacement(opS)*x1
+y2 = coeff*(A1*x1)
+@test vecnorm(y1-y2) <= 1e-12
+
+#########################
+#### test Sum     #######
+#########################
 
 m,n = 5,7
 A1 = randn(m,n)
@@ -339,6 +441,7 @@ x1 = randn(n)
 y1 = test_op(opS, x1, randn(m), verb)
 y2 = A1*x1+A2*x1
 @test vecnorm(y1-y2) <= 1e-12
+
 #test Sum longer
 m,n = 5,7
 A1 = randn(m,n)
@@ -372,6 +475,25 @@ d = randn(10)
 op = Sum(Scale(-3.1,Eye(10)),DiagOp(d))
 @test is_diagonal(op)         == true
 @test norm(   diag(op) - (d-3.1)  )<1e-12
+
+#test displacement of sum
+m,n = 5,7
+A1 = randn(m,n)
+A2 = randn(m,n)
+A3 = randn(m,n)
+d1 = randn(m)
+d2 = pi
+d3 = randn(m)
+opA1 = AffineAdd(MatrixOp(A1), d1) 
+opA2 = AffineAdd(MatrixOp(A2), d2)
+opA3 = AffineAdd(MatrixOp(A3), d3) 
+opS = Sum(opA1,opA2,opA3)
+x1 = randn(n)
+y2 = A1*x1+A2*x1+A3*x1+d1+d2+d3
+@test vecnorm(opS*x1-y2) <= 1e-12
+@test vecnorm(displacement(opS) - (d1+d2+d3)) <= 1e-12
+y2 = A1*x1+A2*x1+A3*x1
+@test vecnorm(remove_displacement(opS)*x1-y2) <= 1e-12
 
 ###########################
 ###### test Transpose######
@@ -485,6 +607,213 @@ op = VCAT(opA1, opA2, opA3)
 op = VCAT(DFT(Complex{Float64},10), Eye(Complex{Float64},10) )
 @test is_AcA_diagonal(op)     == true
 @test diag_AcA(op) == 11
+
+##test displacement
+m1, m2, n = 4, 7, 5
+A1 = randn(m1, n)
+A2 = randn(m2, n)
+opA1 = MatrixOp(A1)
+opA2 = MatrixOp(A2)
+d1 = randn(m1)
+d2 = randn(m2)
+opV = VCAT(AffineAdd(opA1,d1), AffineAdd(opA2,d2))
+x1 = randn(n)
+y1 = opV*x1
+y2 = (A1*x1+d1, A2*x1+d2)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+y1 = remove_displacement(opV)*x1
+y2 = (A1*x1, A2*x1)
+@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+
+#########################
+#### test BroadCast #####
+#########################
+
+m, n = 8, 4
+dim_out = (m, 10)
+A1 = randn(m, n)
+opA1 = MatrixOp(A1)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(n)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= A1*x1
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l, k = 8, 4, 5, 7
+dim_out = (m, n, l, k)
+opA1 = Eye(m,n)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m,n)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+@test_throws Exception BroadCast(opA1,(m,m))
+
+m, l = 1, 5
+dim_out = (m, l)
+opA1 = Eye(m)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+#colum in - matrix out
+m, l = 4, 5
+dim_out = (m, l)
+opA1 = Eye(1,l)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(1,l)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+op = HCAT(Eye(m,l),opR)
+x1 = (randn(m,l),randn(1,l))
+y1 = test_op(op, x1, randn(dim_out), verb)
+y2 = x1[1].+x1[2]
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l  = 2, 5, 8
+dim_out = (m, n, l)
+opA1 = Eye(m)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l  = 1, 5, 8
+dim_out = (m, n, l)
+opA1 = Eye(m)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= x1
+@test vecnorm(y1-y2) <= 1e-12
+
+m, n, l  = 1, 5, 8
+dim_out = (m, n, l)
+opA1 = Scale(2.4,Eye(m))
+opR = BroadCast(opA1, dim_out)
+x1 = randn(m)
+y1 = test_op(opR, x1, randn(dim_out), verb)
+y2 = zeros(dim_out)
+y2 .= 2.4*x1
+@test vecnorm(y1-y2) <= 1e-12
+
+@test is_null(opR)             == is_null(opA1)            
+@test is_eye(opR)              == false             
+@test is_diagonal(opR)         == false 
+@test is_AcA_diagonal(opR)     == false
+@test is_AAc_diagonal(opR)     == false
+@test is_orthogonal(opR)       == false
+@test is_invertible(opR)       == false
+@test is_full_row_rank(opR)    == false
+@test is_full_column_rank(opR) == false
+
+# test displacement
+
+m, n = 8, 4
+dim_out = (m, 10)
+A1 = randn(m, n)
+d1 = randn(m)
+opA1 = AffineAdd(MatrixOp(A1), d1)
+opR = BroadCast(opA1, dim_out)
+x1 = randn(n)
+y1 = opR*x1
+y2 = zeros(dim_out)
+y2 .= A1*x1+d1
+@test vecnorm(y1-y2) <= 1e-12
+x1 = randn(n)
+y1 = remove_displacement(opR)*x1
+y2 = zeros(dim_out)
+y2 .= A1*x1
+@test vecnorm(y1-y2) <= 1e-12
+
+##########################
+#### test AffineAdd  #####
+##########################
+
+n,m = 5,6
+A = randn(n,m)
+opA = MatrixOp(A)
+d = randn(n)
+T = AffineAdd(opA,d)
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1+d)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) <1e-9
+@test displacement(T) == d
+@test norm(remove_displacement(T)*x1-A*x1) <1e-9
+
+# with sign
+T = AffineAdd(opA,d,false)
+@test sign(T) == -1
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1-d)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) <1e-9
+@test displacement(T) == -d
+@test norm(remove_displacement(T)*x1-A*x1) <1e-9
+
+# with scalar
+T = AffineAdd(opA,pi)
+@test sign(T) == 1
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1+pi)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) < 1e-9
+@test displacement(T) .- pi < 1e-9
+@test norm(remove_displacement(T)*x1-A*x1) <1e-9
+
+@test_throws DimensionMismatch AffineAdd(MatrixOp(randn(2,5)),randn(5))
+@test_throws ErrorException AffineAdd(DFT(4),randn(4))
+AffineAdd(DFT(4),pi)
+@test_throws ErrorException AffineAdd(Eye(4),im*pi)
+
+# with scalar and vector 
+d = randn(n) 
+T = AffineAdd(AffineAdd(opA,pi),d,false)
+
+println(T)
+x1 = randn(m)
+y1 = T*x1
+@test vecnorm(y1-(A*x1+pi-d)) <1e-9
+r = randn(n)
+@test vecnorm(T'*r-(A'*r)) < 1e-9
+@test vecnorm(displacement(T) .- (pi .-d )) < 1e-9
+
+T2 = remove_displacement(T)
+@test vecnorm(T2*x1-(A*x1)) <1e-9
+
+# permute AddAffine 
+n,m = 5,6
+A = randn(n,m)
+d = randn(n)
+opH = HCAT(Eye(n),MatrixOp(A))
+x = (randn(n),randn(m))
+opHT = AffineAdd(opH,d)
+
+@test norm(opHT*x-(x[1]+A*x[2]+d)) < 1e-12
+p = [2;1]
+@test norm(permute(opHT,p)*x[p]-(x[1]+A*x[2]+d)) < 1e-12
 
 ##############################
 ######### test combin. #######
@@ -758,152 +1087,3 @@ y1 = test_op(opS, x, randn(m3), verb)
 y2 = coeff*(A2*A1*x)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-#########################
-#### test BroadCast #####
-#########################
-
-m, n = 8, 4
-dim_out = (m, 10)
-A1 = randn(m, n)
-opA1 = MatrixOp(A1)
-opR = BroadCast(opA1, dim_out)
-x1 = randn(n)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= A1*x1
-@test vecnorm(y1-y2) <= 1e-12
-
-m, n, l, k = 8, 4, 5, 7
-dim_out = (m, n, l, k)
-opA1 = Eye(m,n)
-opR = BroadCast(opA1, dim_out)
-x1 = randn(m,n)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= x1
-@test vecnorm(y1-y2) <= 1e-12
-
-@test_throws Exception BroadCast(opA1,(m,m))
-
-m, l = 1, 5
-dim_out = (m, l)
-opA1 = Eye(m)
-opR = BroadCast(opA1, dim_out)
-x1 = randn(m)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= x1
-@test vecnorm(y1-y2) <= 1e-12
-
-#colum in - matrix out
-m, l = 4, 5
-dim_out = (m, l)
-opA1 = Eye(1,l)
-opR = BroadCast(opA1, dim_out)
-x1 = randn(1,l)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= x1
-@test vecnorm(y1-y2) <= 1e-12
-
-op = HCAT(Eye(m,l),opR)
-x1 = (randn(m,l),randn(1,l))
-y1 = test_op(op, x1, randn(dim_out), verb)
-y2 = x1[1].+x1[2]
-@test vecnorm(y1-y2) <= 1e-12
-
-m, n, l  = 2, 5, 8
-dim_out = (m, n, l)
-opA1 = Eye(m)
-opR = BroadCast(opA1, dim_out)
-x1 = randn(m)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= x1
-@test vecnorm(y1-y2) <= 1e-12
-
-m, n, l  = 1, 5, 8
-dim_out = (m, n, l)
-opA1 = Eye(m)
-opR = BroadCast(opA1, dim_out)
-x1 = randn(m)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= x1
-@test vecnorm(y1-y2) <= 1e-12
-
-m, n, l  = 1, 5, 8
-dim_out = (m, n, l)
-opA1 = Scale(2.4,Eye(m))
-opR = BroadCast(opA1, dim_out)
-x1 = randn(m)
-y1 = test_op(opR, x1, randn(dim_out), verb)
-y2 = zeros(dim_out)
-y2 .= 2.4*x1
-@test vecnorm(y1-y2) <= 1e-12
-
-@test is_null(opR)             == is_null(opA1)            
-@test is_eye(opR)              == false             
-@test is_diagonal(opR)         == false 
-@test is_AcA_diagonal(opR)     == false
-@test is_AAc_diagonal(opR)     == false
-@test is_orthogonal(opR)       == false
-@test is_invertible(opR)       == false
-@test is_full_row_rank(opR)    == false
-@test is_full_column_rank(opR) == false
-
-##########################
-#### test AffineAdd  #####
-##########################
-
-n,m = 5,6
-A = randn(n,m)
-opA = MatrixOp(A)
-d = randn(n)
-T = AffineAdd(opA,d)
-
-println(T)
-x1 = randn(m)
-y1 = T*x1
-@test vecnorm(y1-(A*x1+d)) <1e-9
-r = randn(n)
-@test vecnorm(T'*r-(A'*r)) <1e-9
-
-# with sign
-T = AffineAdd(opA,d,false)
-@test sign(T) == -1
-
-println(T)
-x1 = randn(m)
-y1 = T*x1
-@test vecnorm(y1-(A*x1-d)) <1e-9
-r = randn(n)
-@test vecnorm(T'*r-(A'*r)) <1e-9
-
-# with scalar
-T = AffineAdd(opA,pi)
-@test sign(T) == 1
-
-println(T)
-x1 = randn(m)
-y1 = T*x1
-@test vecnorm(y1-(A*x1+pi)) <1e-9
-r = randn(n)
-@test vecnorm(T'*r-(A'*r)) <1e-9
-
-@test_throws DimensionMismatch AffineAdd(MatrixOp(randn(2,5)),randn(5))
-@test_throws ErrorException AffineAdd(DFT(4),randn(4))
-AffineAdd(DFT(4),pi)
-@test_throws ErrorException AffineAdd(Eye(4),im*pi)
-
-# permute AddAffine 
-n,m = 5,6
-A = randn(n,m)
-d = randn(n)
-opH = HCAT(Eye(n),MatrixOp(A))
-x = (randn(n),randn(m))
-opHT = AffineAdd(opH,d)
-
-@test norm(opHT*x-(x[1]+A*x[2]+d)) < 1e-12
-p = [2;1]
-@test norm(permute(opHT,p)*x[p]-(x[1]+A*x[2]+d)) < 1e-12

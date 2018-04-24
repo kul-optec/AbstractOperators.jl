@@ -434,6 +434,11 @@ y, grad = test_NLop(P,x,r,verb)
 Y = (A*x[1]+d1)*(B*x[2]+d2)
 @test norm(Y - y) <= 1e-12
 
+y, grad = test_NLop(remove_displacement(P),x,r,verb)
+
+Y = (A*x[1])*(B*x[2])
+@test norm(Y - y) <= 1e-12
+
 ## AffineAdd and NonLinearCompose and Compose
 l,m1,m2,n1,n2 = 2,3,4,5,6
 x = (randn(m1,m2),randn(n1,n2))
@@ -451,6 +456,11 @@ y, grad = test_NLop(P,x,r,verb)
 Y = (A*(x[1]+d1))*(B*(x[2]+d2))
 @test norm(Y - y) <= 1e-12
 
+y, grad = test_NLop(remove_displacement(P),x,r,verb)
+
+Y = (A*(x[1]))*(B*(x[2]))
+@test norm(Y - y) <= 1e-12
+
 ## AffineAdd and Hadamard
 n,m,l = 3,4,7
 x = (randn(n),randn(m))
@@ -464,6 +474,11 @@ P = Hadamard( AffineAdd(MatrixOp(A),d1), AffineAdd(MatrixOp(B),d2) )
 y, grad = test_NLop(P,x,r,verb)
 
 Y = (A*x[1]+d1).*(B*x[2]+d2)
+@test norm(Y - y) <= 1e-12
+
+y, grad = test_NLop(remove_displacement(P),x,r,verb)
+
+Y = (A*x[1]).*(B*x[2])
 @test norm(Y - y) <= 1e-12
 
 ## AffineAdd and Hadamard and Compose
@@ -482,4 +497,9 @@ P = Hadamard(
 y, grad = test_NLop(P,x,r,verb)
 
 Y = (A*(x[1]+d1)).*(B*(x[2]-d2))
+@test norm(Y - y) <= 1e-12
+
+y, grad = test_NLop(remove_displacement(P),x,r,verb)
+
+Y = (A*(x[1])).*(B*(x[2]))
 @test norm(Y - y) <= 1e-12
