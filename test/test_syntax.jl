@@ -207,6 +207,12 @@ opHperm = opH[[3,1,2]]
 opHperm = opH[[3,1]]
 @test norm(opC*x3+opA*x1 - opHperm*(x3,x1)) <1e-12
 
+# slicing Affine add of HCAT
+d = randn(n)
+opHA = AffineAdd(opH,d)
+@test norm(opHA[1]*x1-(A*x1+d)) < 1e-9
+@test norm(opHA[2]*x2-(B*x2+d)) < 1e-9
+@test norm(opHA[3]*x3-(C*x3+d)) < 1e-9
 
 m4 = 9
 x4 = randn(m4)
