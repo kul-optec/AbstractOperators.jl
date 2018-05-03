@@ -73,7 +73,7 @@ Jacobian(T::Transpose{A}, x::AbstractArray) where {A <: AbstractOperator} = T
 #Jacobian of BroadCast
 Jacobian(B::A, x::AbstractArray) where {A <: BroadCast} = BroadCast(Jacobian(B.A,x),B.dim_out) 
 #Jacobian of AffineAdd
-Jacobian(B::A, x::AbstractArray) where {A <: AffineAdd} = Jacobian(B.A,x)
+Jacobian(B::A, x) where {A <: AffineAdd} = Jacobian(B.A,x)
 
 # Properties
 
