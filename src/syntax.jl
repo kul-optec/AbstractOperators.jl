@@ -35,7 +35,7 @@ function getindex(A::AbstractOperator,idx...)
 	elseif length(idx) == 1  && ndoms(A,2) == length(idx[1])
 		return permute(A,idx[1])
 	else
-		error("cannot split operator of type $(typeof(H.A[i]))")
+		error("cannot split operator of type $(typeof(A))")
 	end
 end
 

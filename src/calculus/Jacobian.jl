@@ -32,23 +32,26 @@ Jacobian(S::T2,x::AbstractArray) where {T,L,T2<:Scale{T,L}} = Scale(S.coeff,Jaco
 function Jacobian(H::DCAT{N,L,P1,P2},x) where {N,L,P1,P2} 
 	A = ()
 	c = 0
-	for i = 1:N
-		A = length(H.idxD[i]) == 1 ?
-		(A...,jacobian(H.A[i],x[c+1])) :
-		(A...,jacobian(H.A[i],x[c+1:c+length(H.idxD[i])])) 
-		c += length(H.idxD[i])
+    for (k, idx) in enumerate(H.idxD)
+		if length(idx) == 1 
+            A = (A...,jacobian(H.A[k],x[idx])) 
+        else
+            xx = ([x[i] for i in idx]...)
+            A = (A...,jacobian(H.A[k],xx)) 
+        end
 	end
 	DCAT(A,H.idxD,H.idxC)
 end
 #Jacobian of HCAT
 function Jacobian(H::HCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D} 
 	A = ()
-	c = 0
-	for i = 1:N
-		A = length(H.idxs[i]) == 1 ?
-		(A...,jacobian(H.A[i],x[c+1])) :
-		(A...,jacobian(H.A[i],x[c+1:c+length(H.idxs[i])])) 
-		c += length(H.idxs[i])
+    for (k, idx) in enumerate(H.idxs)
+		if length(idx) == 1 
+            A = (A...,jacobian(H.A[k],x[idx])) 
+        else
+            xx = ([x[i] for i in idx]...)
+            A = (A...,jacobian(H.A[k],xx)) 
+        end
 	end
 	HCAT(A,H.idxs,H.buf,M)
 end

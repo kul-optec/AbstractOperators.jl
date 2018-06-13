@@ -11,6 +11,17 @@ y, grad = test_NLop(op,x,r,verb)
 Y = 30*(A*x)
 @test vecnorm(Y-y) <1e-8
 
+m = 3
+x = randn(m)
+r = randn(m)
+A = Pow(Float64,(m,),2)
+op = -A
+
+y, grad = test_NLop(op,x,r,verb)
+
+Y = -A*x
+@test vecnorm(Y-y) <1e-8
+
 #testing DCAT
 n,m = 4,3
 x = (randn(n),randn(m))
@@ -37,6 +48,25 @@ y, grad = test_NLop(op,x,r,verb)
 
 Y = A*x[1]+B*x[2]
 @test vecnorm(Y-y) <1e-8
+
+m,n = 3,5
+x = (randn(m),randn(n))
+r = randn(m)
+A= Sin(Float64,(m,))
+M = randn(m,n)
+B = MatrixOp(M)
+op = HCAT(A,B)
+
+y, grad = test_NLop(op,x,r,verb)
+
+Y = A*x[1]+M*x[2]
+@test vecnorm(Y-y) <1e-8
+
+p = [2,1]
+opP = permute(op,p)
+J = Jacobian(opP,x[p])'
+println(size(J,1))
+y, grad = test_NLop(opP,x[p],r,verb)
 
 #testing VCAT
 n,m = 4,3

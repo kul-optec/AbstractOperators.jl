@@ -190,9 +190,9 @@ y1 = remove_displacement(opD)*(x1,x2,x3)
 y2 = (A1*x1, A2*x2, A3*x3)
 @test all(vecnorm.(y1 .- y2) .<= 1e-12)
 
-#######################
-## test HCAT    #######
-#######################
+########################
+### test HCAT    #######
+########################
 
 m, n1, n2 = 4, 7, 5
 A1 = randn(m, n1)
@@ -204,6 +204,12 @@ x1 = randn(n1)
 x2 = randn(n2)
 y1 = test_op(opH, (x1, x2), randn(m), verb)
 y2 = A1*x1 + A2*x2
+@test vecnorm(y1-y2) <= 1e-12
+
+#permuatation 
+p = [2;1]
+opHp = opH[p]
+y1 = test_op(opHp, (x2, x1), randn(m), verb)
 @test vecnorm(y1-y2) <= 1e-12
 
 # test HCAT longer
