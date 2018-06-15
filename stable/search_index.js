@@ -289,6 +289,70 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "operators.html#Nonlinear-operators-1",
+    "page": "Abstract Operators",
+    "title": "Nonlinear operators",
+    "category": "section",
+    "text": ""
+},
+
+{
+    "location": "operators.html#AbstractOperators.Exp",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Exp",
+    "category": "type",
+    "text": "Exp([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates the exponential non-linear operator with input dimensions dim_in:\n\ne^ mathbfx \n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Pow",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Pow",
+    "category": "type",
+    "text": "Pow([domainType=Float64::Type,] dim_in::Tuple)\n\nElementwise power p non-linear operator with input dimensions dim_in.\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Cos",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Cos",
+    "category": "type",
+    "text": "Cos([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates a cosine non-linear operator with input dimensions dim_in:\n\ncos (mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Sin",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Sin",
+    "category": "type",
+    "text": "Sin([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates a sinusoid non-linear operator with input dimensions dim_in:\n\nsin( mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Atan",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Atan",
+    "category": "type",
+    "text": "Atan([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates an inverse tangent non-linear operator with input dimensions dim_in:\n\ntextatan ( mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#AbstractOperators.Tanh",
+    "page": "Abstract Operators",
+    "title": "AbstractOperators.Tanh",
+    "category": "type",
+    "text": "Tanh([domainType=Float64::Type,] dim_in::Tuple)\n\nCreates an hyperbolic tangent non-linear operator with input dimensions dim_in:\n\ntexttanh ( mathbfx )\n\n\n\n"
+},
+
+{
+    "location": "operators.html#Basic-1",
+    "page": "Abstract Operators",
+    "title": "Basic",
+    "category": "section",
+    "text": "Exp\nPow\nCos\nSin\nAtan\nTanh"
+},
+
+{
     "location": "operators.html#AbstractOperators.Sigmoid",
     "page": "Abstract Operators",
     "title": "AbstractOperators.Sigmoid",
@@ -313,9 +377,9 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "operators.html#Nonlinear-operators-1",
+    "location": "operators.html#Sigmoids-1",
     "page": "Abstract Operators",
-    "title": "Nonlinear operators",
+    "title": "Sigmoids",
     "category": "section",
     "text": "Sigmoid\nSoftPlus\nSoftMax"
 },
@@ -385,11 +449,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "calculus.html#AbstractOperators.Hadamard",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.Hadamard",
+    "category": "type",
+    "text": "Hadamard(A::AbstractOperator,B::AbstractOperator)\n\nCompose opeators such that their output is multiplied elementwise:\n\nA(⋅).*B(⋅)\n\nExample\n\njulia> n,m = 5,10\n\njulia> x = (randn(n),randn(m)); #inputs\n\njulia> A = randn(m,n); #A matrix\n\njulia> C = Hadamard( MatrixOp(A), Eye(m) )\n# i.e. `A(⋅).*I(⋅)`\n\njulia> Y = (A*x[1]).*x[2]\n\njulia> C*x ≈ Y\ntrue\n\n\n\n\n"
+},
+
+{
     "location": "calculus.html#Composition-1",
     "page": "Calculus rules",
     "title": "Composition",
     "category": "section",
-    "text": "Compose\nNonLinearCompose"
+    "text": "Compose\nNonLinearCompose\nHadamard"
 },
 
 {
@@ -406,6 +478,14 @@ var documenterSearchIndex = {"docs": [
     "title": "AbstractOperators.Transpose",
     "category": "type",
     "text": "Transpose(A::AbstractOperator)\n\nShorthand constructor: \n\n\'(A::AbstractOperator)\n\nReturns the adjoint operator of A.\n\njulia> Transpose(DFT(10))\nℱᵃ  ℂ^10 -> ℝ^10\n\njulia> [DFT(10); DCT(10)]\'\n[ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10\n\n\n\n"
+},
+
+{
+    "location": "calculus.html#AbstractOperators.AffineAdd",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.AffineAdd",
+    "category": "type",
+    "text": "AffineAdd(A::AbstractOperator, d, [sign = true])\n\nAffine addition to AbstractOperator with an array or scalar d. \n\nUse sign = false to perform subtraction.\n\njulia> A = AffineAdd(Sin(3),[1.;2.;3.])\nsin+d  ℝ^3 -> ℝ^3\n\njulia> A*[3.;4.;5.] == sin.([3.;4.;5.]).+[1.;2.;3.]\ntrue\n\njulia> A = AffineAdd(Exp(3),[1.;2.;3.],false)\ne-d  ℝ^3 -> ℝ^3\n\njulia> A*[3.;4.;5.] == exp.([3.;4.;5.]).-[1.;2.;3.]\ntrue\n\n\n\n\n"
 },
 
 {
@@ -437,7 +517,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "Transformations",
     "category": "section",
-    "text": "Scale\nTranspose\nBroadCast\nReshape\nJacobian"
+    "text": "Scale\nTranspose\nAffineAdd\nBroadCast\nReshape\nJacobian"
 },
 
 {
@@ -497,11 +577,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "properties.html#AbstractOperators.displacement",
+    "page": "Properties",
+    "title": "AbstractOperators.displacement",
+    "category": "function",
+    "text": "displacement(A::AbstractOperator)\n\nReturns the displacement of the operator.\n\njulia> A = AffineAdd(Eye(4),[1.;2.;3.;4.])\nI+d  ℝ^4 -> ℝ^4\n\njulia> displacement(A)\n4-element Array{Float64,1}:\n 1.0\n 2.0\n 3.0\n 4.0\n\n\n\n\n"
+},
+
+{
+    "location": "properties.html#AbstractOperators.remove_displacement",
+    "page": "Properties",
+    "title": "AbstractOperators.remove_displacement",
+    "category": "function",
+    "text": "remove_displacement(A::AbstractOperator)\n\nRemoves the displacement of the operator.\n\n\n\n"
+},
+
+{
     "location": "properties.html#Size-and-Domains-1",
     "page": "Properties",
     "title": "Size and Domains",
     "category": "section",
-    "text": "size\nndims\nndoms\ndomainType\ncodomainType"
+    "text": "size\nndims\nndoms\ndomainType\ncodomainType\ndisplacement\nremove_displacement"
 },
 
 {
