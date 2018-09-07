@@ -66,7 +66,7 @@ function DCAT(A::Vararg{AbstractOperator})
 end
 
 # Mappings
-@generated function A_mul_B!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
+@generated function mul!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
 
 	ex = :()
 
@@ -83,7 +83,7 @@ end
 			for ii in eachindex(fieldnames(fieldtype(P2,i)))
 				yy *= "y[H.idxC[$i][$ii]],"
 			end
-			yy = parse(yy)
+			yy = Meta.parse(yy)
 		end
 
 		if fieldtype(P1,i) <: Int 
@@ -97,10 +97,10 @@ end
 			for ii in eachindex(fieldnames(fieldtype(P1,i)))
 				bb *= "b[H.idxD[$i][$ii]],"
 			end
-			bb = parse(bb)
+			bb = Meta.parse(bb)
 		end
 		
-		ex = :($ex; A_mul_B!($yy,H.A[$i],$bb))
+		ex = :($ex; mul!($yy,H.A[$i],$bb))
 
 	end
 	ex = :($ex; return y)
@@ -108,9 +108,9 @@ end
 
 end
 
-@generated function Ac_mul_B!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
+@generated function mul!(y, A::AdjointOperator{DCAT{N,L,P1,P2}}, b) where {N,L,P1,P2} 
 
-	ex = :()
+	ex = :(H = A.A)
 
 	for i = 1:N
 
@@ -125,7 +125,7 @@ end
 			for ii in eachindex(fieldnames(fieldtype(P1,i)))
 				yy *= "y[H.idxD[$i][$ii]],"
 			end
-			yy = parse(yy)
+			yy = Meta.parse(yy)
 		end
 
 		if fieldtype(P2,i) <: Int 
@@ -139,10 +139,10 @@ end
 			for ii in eachindex(fieldnames(fieldtype(P2,i)))
 				bb *= "b[H.idxC[$i][$ii]],"
 			end
-			bb = parse(bb)
+			bb = Meta.parse(bb)
 		end
 		
-		ex = :($ex; Ac_mul_B!($yy,H.A[$i],$bb))
+		ex = :($ex; mul!($yy,H.A[$i]',$bb))
 
 	end
 	ex = :($ex; return y)
@@ -160,7 +160,7 @@ function size(H::DCAT, i::Int)
 		eltype(s) <: Int ? push!(sz,s) : push!(sz,s...) 
 	end
 	p = vcat([[idx... ] for idx in (i == 1 ? H.idxC : H.idxD) ]...)
-	ipermute!(sz,p)
+	invpermute!(sz,p)
 
 	(sz...,)
 end
@@ -171,13 +171,13 @@ fun_name(L::DCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*",0;0,"*fun_name(L.A
 function domainType(H::DCAT) 
 	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxD]...)
-	ipermute!(domain,p)
+	invpermute!(domain,p)
 	return (domain...,)
 end
 function codomainType(H::DCAT) 
 	codomain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in codomainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxC]...)
-	ipermute!(codomain,p)
+	invpermute!(codomain,p)
 	return (codomain...,)
 end
 
@@ -196,7 +196,7 @@ function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 
 
 	unfolded = vcat([[idx... ] for idx in H.idxD]...) 
-	ipermute!(unfolded,p)
+	invpermute!(unfolded,p)
 
 	new_part = ()
 	cnt = 0

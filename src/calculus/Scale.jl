@@ -53,28 +53,30 @@ Scale(coeff::T,L::DiagOp) where {T<:RealOrComplex} = DiagOp(coeff*diag(L))
 
 # Mappings
 
-function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: AbstractArray, D, A <: AbstractOperator}
-  A_mul_B!(y, L.A, x)
+function mul!(y::C, L::Scale{T, A}, x::D) where {T, C <: AbstractArray, D, A <: AbstractOperator}
+  mul!(y, L.A, x)
   y .*= L.coeff
 end
 
-function A_mul_B!(y::C, L::Scale{T, A}, x::D) where {T, C <: Tuple, D, A <: AbstractOperator}
-  A_mul_B!(y, L.A, x)
+function mul!(y::C, L::Scale{T, A}, x::D) where {T, C <: Tuple, D, A <: AbstractOperator}
+  mul!(y, L.A, x)
   for k in eachindex(y)
     y[k] .*= L.coeff
   end
 end
 
-function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: AbstractArray, A <: AbstractOperator}
-  Ac_mul_B!(y, L.A, x)
-  y .*= L.coeff_conj
+function mul!(y::D, S::AdjointOperator{Scale{T, A}}, x::C) where {T, C, D <: AbstractArray, A <: AbstractOperator}
+    L = S.A
+    mul!(y, L.A', x)
+    y .*= L.coeff_conj
 end
 
-function Ac_mul_B!(y::D, L::Scale{T, A}, x::C) where {T, C, D <: Tuple, A <: AbstractOperator}
-  Ac_mul_B!(y, L.A, x)
-  for k in eachindex(y)
-    y[k] .*= L.coeff_conj
-  end
+function mul!(y::D, S::AdjointOperator{Scale{T, A}}, x::C) where {T, C, D <: Tuple, A <: AbstractOperator}
+    L = S.A
+    mul!(y, L.A', x)
+    for k in eachindex(y)
+        y[k] .*= L.coeff_conj
+    end
 end
 
 # Properties

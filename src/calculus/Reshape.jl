@@ -39,14 +39,15 @@ Reshape(A, dim_out)
 
 # Mappings
 
-function A_mul_B!(y::C, R::Reshape{N,L}, b::D) where {N,L,C,D}
+function mul!(y::C, R::Reshape{N,L}, b::D) where {N,L,C,D}
 	y_res = reshape(y,size(R.A,1))
-	A_mul_B!(y_res, R.A, b)
+	mul!(y_res, R.A, b)
 end
 
-function Ac_mul_B!(y::D, R::Reshape{N,L}, b::C) where {N,L,C,D}
+function mul!(y::D, A::AdjointOperator{Reshape{N,L}}, b::C) where {N,L,C,D}
+    R = A.A
 	b_res = reshape(b,size(R.A,1))
-	Ac_mul_B!(y, R.A, b_res)
+	mul!(y, R.A', b_res)
 end
 
 # Properties

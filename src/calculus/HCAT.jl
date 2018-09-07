@@ -120,42 +120,42 @@ HCAT(A::AbstractOperator) = A
 
 # Mappings
 
-@generated function A_mul_B!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
+@generated function mul!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
 
 	if fieldtype(P,1) <: Int 
 		# flatten operator  
-		# build A_mul_B!(y, H.A[1], b[H.idxs[1]])  
+		# build mul!(y, H.A[1], b[H.idxs[1]])  
 		bb = :(b[H.idxs[1]])
 	else
 		# staked operator 
-		# build A_mul_B!(y, H.A[1],( b[H.idxs[1][1]], b[H.idxs[1][2]] ...  ))
+		# build mul!(y, H.A[1],( b[H.idxs[1][1]], b[H.idxs[1][2]] ...  ))
 		bb = ""
 		for ii in eachindex(fieldnames(fieldtype(P,1)))
 			bb *= "b[H.idxs[1][$ii]],"
 		end
-		bb = parse(bb)
+		bb = Meta.parse(bb)
 	end
-	ex = :($ex; A_mul_B!(y,H.A[1],$bb)) # write on y
+	ex = :($ex; mul!(y,H.A[1],$bb)) # write on y
 
 	for i = 2:N
 
 		if fieldtype(P,i) <: Int 
 		# flatten operator  
-		# build A_mul_B!(H.buf, H.A[i], b[H.idxs[i]])  
+		# build mul!(H.buf, H.A[i], b[H.idxs[i]])  
 			bb = :(b[H.idxs[$i]])
 		else
 		# staked operator 
-		# build A_mul_B!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
+		# build mul!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
 			bb = ""
 			for ii in eachindex(fieldnames(fieldtype(P,i)))
 				bb *= "b[H.idxs[$i][$ii]],"
 			end
-			bb = parse(bb)
+			bb = Meta.parse(bb)
 		end
 
-		ex = :($ex; A_mul_B!(H.buf,H.A[$i],$bb)) # write on H.buf
+		ex = :($ex; mul!(H.buf,H.A[$i],$bb)) # write on H.buf
 		
 		# sum H.buf with y
 		if C <: AbstractArray
@@ -172,27 +172,27 @@ HCAT(A::AbstractOperator) = A
 
 end
 
-@generated function Ac_mul_B!(y::DD, H::HCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
+@generated function mul!(y::DD, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::C) where {M,N,L,P,C,DD}
 
-	ex = :()
+	ex = :(H = A.A)
 
 	for i = 1:N
 
 		if fieldtype(P,i) <: Int 
 		# flatten operator  
-		# build Ac_mul_B!(y[H.idxs[i]], H.A[i], b)  
+		# build mul!(y[H.idxs[i]], H.A[i]', b)  
 			yy = :(y[H.idxs[$i]])
 		else
 		# staked operator 
-		# build Ac_mul_B!(( y[H.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i], b)
+		# build mul!(( y[H.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i]', b)
 			yy = ""
 			for ii in eachindex(fieldnames(fieldtype(P,i)))
 				yy *= "y[H.idxs[$i][$ii]],"
 			end
-			yy = parse(yy)
+			yy = Meta.parse(yy)
 		end
 		
-		ex = :($ex; Ac_mul_B!($yy,H.A[$i],b))
+		ex = :($ex; mul!($yy,H.A[$i]',b))
 
 	end
 	ex = :($ex; return y)
@@ -200,8 +200,8 @@ end
 
 end
 
-# same as A_mul_B but skips `Zeros`
-@generated function A_mul_B_skipZeros!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
+# same as mul! but skips `Zeros`
+@generated function mul_skipZeros!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
 
@@ -212,9 +212,9 @@ end
 		for ii in eachindex(fieldnames(fieldtype(P,1)))
 			bb *= "b[H.idxs[1][$ii]],"
 		end
-		bb = parse(bb)
+		bb = Meta.parse(bb)
 	end
-	ex = :($ex; A_mul_B!(y,H.A[1],$bb))
+	ex = :($ex; mul!(y,H.A[1],$bb))
 
 	for i = 2:N
 		if !(fieldtype(L,i) <: Zeros)
@@ -226,10 +226,10 @@ end
 				for ii in eachindex(fieldnames(fieldtype(P,i)))
 					bb *= "b[H.idxs[$i][$ii]],"
 				end
-				bb = parse(bb)
+				bb = Meta.parse(bb)
 			end
 
-			ex = :($ex; A_mul_B!(H.buf,H.A[$i],$bb))
+			ex = :($ex; mul!(H.buf,H.A[$i],$bb))
 			
 			if C <: AbstractArray
 				ex = :($ex; y .+= H.buf)
@@ -246,10 +246,10 @@ end
 
 end
 
-# same as Ac_mul_B but skips `Zeros`
-@generated function Ac_mul_B_skipZeros!(y::DD, H::HCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
+# same as mul! but skips `Zeros`
+@generated function mul_skipZeros!(y::DD, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::C) where {M,N,L,P,C,DD}
 
-	ex = :()
+	ex = :(H = A.A)
 
 	for i = 1:N
 
@@ -261,10 +261,10 @@ end
 				for ii in eachindex(fieldnames(fieldtype(P,i)))
 					yy *= "y[H.idxs[$i][$ii]],"
 				end
-				yy = parse(yy)
+				yy = Meta.parse(yy)
 			end
 			
-			ex = :($ex; Ac_mul_B!($yy,H.A[$i],b))
+			ex = :($ex; mul!($yy,H.A[$i]',b))
 		end
 
 	end
@@ -281,7 +281,7 @@ function size(H::HCAT)
 		eltype(s) <: Int ? push!(size_in,s) : push!(size_in,s...) 
 	end
 	p = vcat([[idx... ] for idx in H.idxs]...)
-	ipermute!(size_in,p)
+	invpermute!(size_in,p)
 
 	size(H.A[1],1), (size_in...,)
 end
@@ -289,25 +289,25 @@ end
 fun_name(L::HCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*","*fun_name(L.A[2])*"]" : "HCAT"
 
 function domainType(H::HCAT) 
-	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
+    domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxs]...)
-	ipermute!(domain,p)
+	invpermute!(domain,p)
 	return (domain...,)
 end
-codomainType(L::HCAT) = codomainType.(L.A[1])
+codomainType(L::HCAT) = codomainType.(Ref(L.A[1]))
 
 is_linear(L::HCAT) = all(is_linear.(L.A))
 is_AAc_diagonal(L::HCAT) = all(is_AAc_diagonal.(L.A))
 is_full_row_rank(L::HCAT) = any(is_full_row_rank.(L.A))
 
-diag_AAc(L::HCAT) = sum(diag_AAc.(L.A))
+diag_AAc(L::HCAT) = (+).(diag_AAc.(L.A)...)
 
 # utils
 function permute(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 
 
 	unfolded = vcat([[idx... ] for idx in H.idxs]...) 
-	ipermute!(unfolded,p)
+	invpermute!(unfolded,p)
 
 	new_part = ()
 	cnt = 0

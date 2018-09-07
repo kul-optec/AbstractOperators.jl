@@ -27,7 +27,7 @@ struct BroadCast{N,
 		 D <: AbstractArray,
 		 M,
 		 C <: NTuple{M,Colon},
-		 I <: CartesianRange
+		 I <: CartesianIndices
 		 } <: AbstractOperator
 	A::L
 	dim_out::NTuple{N,Int}
@@ -45,11 +45,11 @@ struct BroadCast{N,
 		if size(A,1) != (1,)
 			M = length(size(A,1)) 
 			cols = ([Colon() for i = 1:M]...,)
-			idxs = CartesianRange((dim_out[M+1:end]...,))
+			idxs = CartesianIndices((dim_out[M+1:end]...,))
 			new{N,L,T,D,M,typeof(cols),typeof(idxs)}(A,dim_out,bufC,bufD,cols,idxs)
 		else #singleton case
 			M = 0
-			idxs = CartesianRange((1,))
+			idxs = CartesianIndices((1,))
 			new{N,L,T,D,M,NTuple{0,Colon},typeof(idxs)}(A,dim_out,bufC,bufD,(),idxs)
 		end
 		
@@ -63,27 +63,29 @@ BroadCast(A, dim_out, zeros(codomainType(A),size(A,1)), zeros(domainType(A),size
 
 # Mappings
 
-function A_mul_B!(y::CC, R::BroadCast{N,L,T,D,M}, b::DD) where {N,L,T,D,M,CC,DD}
-	A_mul_B!(R.bufC, R.A, b)
+function mul!(y::CC, R::BroadCast{N,L,T,D,M}, b::DD) where {N,L,T,D,M,CC,DD}
+	mul!(R.bufC, R.A, b)
 	y .= R.bufC
 end
 
-function Ac_mul_B!(y::CC, R::BroadCast{N,L,T,D,M}, b::DD) where {N,L,T,D,M,CC,DD}
+function mul!(y::CC, A::AdjointOperator{BroadCast{N,L,T,D,M,C,I}}, b::DD) where {N,L,T,D,M,C,I,CC,DD}
+    R = A.A
 	fill!(y, 0.)
 	for i in R.idxs
-		@views Ac_mul_B!(R.bufD, R.A, b[R.cols...,i.I...])
+		@views mul!(R.bufD, R.A', b[R.cols...,i.I...])
 		y .+= R.bufD
 	end
 	return y
 end
 
 #singleton
-function Ac_mul_B!(y::CC, R::BroadCast{N,L,T,D,0}, b::DD) where {N,L,T,D,CC,DD}
+function mul!(y::CC, A::AdjointOperator{BroadCast{N,L,T,D,0,C,I}}, b::DD) where {N,L,T,D,C,I,CC,DD}
+    R = A.A
 	fill!(y, 0.)
 	bii = zeros(eltype(b),1)
 	for bi in b
 		bii[1] = bi
-		Ac_mul_B!(R.bufD, R.A, bii)
+		mul!(R.bufD, R.A', bii)
 		y .+= R.bufD
 	end
 	return y
@@ -91,17 +93,18 @@ end
 
 #TODO make this more general
 #length(dim_out) == size(A,1) e.g. a .= b; size(a) = (m,n) size(b) = (1,n) matrix out, column in 
-function Ac_mul_B!(y::CC, R::BroadCast{2,L,T,D,2}, b::DD) where {L,T,D,CC,DD}
+function mul!(y::CC, A::AdjointOperator{BroadCast{2,L,T,D,2,C,I}}, b::DD) where {L,T,D,C,I,CC,DD}
+    R = A.A
 	fill!(y, 0.)
 	for i = 1:size(b,1)
-		@views Ac_mul_B!(R.bufD, R.A, b[i,:]')
+		@views mul!(R.bufD, R.A, b[i,:]')
 		y .+= R.bufD
 	end
 	return y
 end
 
 #singleton Eye
-function Ac_mul_B!(y::CC, R::BroadCast{N,L,T,D,0}, b::DD) where {N,L<:Eye,T,D,CC,DD}
+function mul!(y::CC, R::AdjointOperator{BroadCast{N,L,T,D,0,C,I}}, b::DD) where {N,L<:Eye,T,D,C,I,CC,DD}
 	sum!(y,b)
 end
 

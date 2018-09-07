@@ -33,7 +33,7 @@ function Compose(L1::AbstractOperator, L2::AbstractOperator)
 	if domainType(L1) != codomainType(L2)
 		throw(DomainError())
 	end
-	Compose( L1, L2, Array{domainType(L1)}(size(L2,1)) )
+	Compose( L1, L2, Array{domainType(L1)}(undef,size(L2,1)) )
 end
 
 Compose(A::NTuple{N,Any},buf::NTuple{M,Any}) where {N,M} =
@@ -62,32 +62,32 @@ Compose(L1::Eye, L2::Eye) = L1
 
 # Mappings
 
-@generated function A_mul_B!(y::C, L::Compose{N,M,T1,T2},b::D) where {N,M,T1,T2,C,D}
-	ex = :(A_mul_B!(L.buf[1],L.A[1],b))
+@generated function mul!(y::C, L::Compose{N,M,T1,T2},b::D) where {N,M,T1,T2,C,D}
+	ex = :(mul!(L.buf[1],L.A[1],b))
 	for i = 2:M
 		ex = quote
 			$ex
-			A_mul_B!(L.buf[$i],L.A[$i], L.buf[$i-1])
+			mul!(L.buf[$i],L.A[$i], L.buf[$i-1])
 		end
 	end
 	ex = quote
 		$ex
-		A_mul_B!(y,L.A[N], L.buf[M])
+		mul!(y,L.A[N], L.buf[M])
 		return y
 	end
 end
 
-@generated function Ac_mul_B!(y::D, L::Compose{N,M,T1,T2},b::C) where {N,M,T1,T2,C,D}
-	ex = :(Ac_mul_B!(L.buf[M],L.A[N],b))
+@generated function mul!(y::D, L::AdjointOperator{Compose{N,M,T1,T2}},b::C) where {N,M,T1,T2,C,D}
+	ex = :(mul!(L.A.buf[M],L.A.A[N]',b))
 	for i = M:-1:2
 		ex = quote
 			$ex
-			Ac_mul_B!(L.buf[$i-1],L.A[$i], L.buf[$i])
+			mul!(L.A.buf[$i-1],L.A.A[$i]', L.A.buf[$i])
 		end
 	end
 	ex = quote
 		$ex
-		Ac_mul_B!(y,L.A[1], L.buf[1])
+		mul!(y,L.A.A[1]', L.A.buf[1])
 		return y
 	end
 end
