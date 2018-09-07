@@ -18,6 +18,8 @@ export RealOrComplex,
        blockzeros,
        blockones,
        blockaxpy!,
+       blockscale!,
+       blockcumscale!,
        blockiszero
 
 
@@ -73,8 +75,14 @@ blockones(n::NTuple{N, Integer} where {N}) = ones(n)
 blockones(n::Integer) = ones(n)
 blockones(a::AbstractArray) = fill!(a,one(eltype(a)))
 
-blockaxpy!(z::Tuple, x, alpha::Real, y::Tuple) = blockaxpy!.(z, x, alpha, y)
-blockaxpy!(z::AbstractArray, x, alpha::Real, y::AbstractArray) = (z .= x .+ alpha.*y)
+blockscale!(z::Tuple, alpha::Real, y::Tuple) = blockscale!.(z, alpha, y)
+blockscale!(z::AbstractArray, alpha::Real, y::AbstractArray) = (z .= alpha.*y)
+
+blockcumscale!(z::Tuple, alpha::Real, y::Tuple) = blockcumscale!.(z, alpha, y)
+blockcumscale!(z::AbstractArray, alpha::Real, y::AbstractArray) = (z .+= alpha.*y)
+
+blockaxpy!(z::Tuple, x::Tuple, alpha::Real, y::Tuple) = blockaxpy!.(z, x, alpha, y)
+blockaxpy!(z::AbstractArray, x::AbstractArray, alpha::Real, y::AbstractArray) = (z .= x .+ alpha.*y)
 
 blockiszero(x::AbstractArray) = iszero(x)
 blockiszero(x::Tuple) = all(iszero.(x))

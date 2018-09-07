@@ -65,8 +65,10 @@ end
 See the documentation for `LBFGS`.
 """
 function update!(L::LBFGS{R, T, M, I}, x::T, x_prev::T, gradx::T, gradx_prev::T) where {R, T, M, I}
-	L.s .= x .- x_prev
-	L.y .= gradx .- gradx_prev
+	#L.s .= x .- x_prev
+    blockaxpy!(L.s, x, -1, x_prev)
+	#L.y .= gradx .- gradx_prev
+    blockaxpy!(L.y, gradx, -1, gradx_prev)
 	ys = real(blockvecdot(L.s, L.y))
 	if ys > 0
 		L.curridx += 1
@@ -94,14 +96,16 @@ end
 
 # LBFGS operators are symmetric
 
-Ac_mul_B!(x::T, L::LBFGS{R, T, M, I}, y::T) where {R, T, M, I} = A_mul_B!(x, L, y)
+mul!(x::T, L::AdjointOperator{LBFGS{R, T, M, I}}, y::T) where {R, T, M, I} = mul!(x, L.A, y)
 
 # Two-loop recursion
 
-function A_mul_B!(d::T, L::LBFGS{R, T, M, I}, gradx::T) where {R, T, M, I}
-	d .= gradx
+function mul!(d::T, L::LBFGS{R, T, M, I}, gradx::T) where {R, T, M, I}
+	#d .= gradx
+    blockcopy!(d,gradx)
 	idx = loop1!(d,L)
-	d .= (*).(L.H, d)
+	#d .= (*).(L.H, d)
+    blockscale!(d, L.H, d)
 	d = loop2!(d,idx,L)
 end
 
@@ -109,7 +113,8 @@ function loop1!(d::T, L::LBFGS{R, T, M, I}) where {R, T, M, I}
 	idx = L.curridx
 	for i = 1:L.currmem
 		L.alphas[idx] = real(blockvecdot(L.s_M[idx], d))/L.ys_M[idx]
-		d .-= L.alphas[idx] .* L.y_M[idx]
+		#d .-= L.alphas[idx] .* L.y_M[idx]
+        blockcumscale!(d, -L.alphas[idx], L.y_M[idx])
 		idx -= 1
 		if idx == 0 idx = M end
 	end
@@ -121,7 +126,8 @@ function loop2!(d::T, idx::Int, L::LBFGS{R, T, M, I}) where {R, T, M, I}
 		idx += 1
 		if idx > M idx = 1 end
 		beta = real(blockvecdot(L.y_M[idx], d))/L.ys_M[idx]
-		d .+= (L.alphas[idx] - beta) .* L.s_M[idx]
+		#d .+= (L.alphas[idx] - beta) .* L.s_M[idx]
+        blockcumscale!(d, L.alphas[idx] - beta, L.s_M[idx])
 	end
 	return d
 end
