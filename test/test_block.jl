@@ -83,6 +83,21 @@ yb = blockones(blockeltype(xb),blocksize(xb))
 @test y == ones(2)
 @test yb == (ones(2),ones(3)+im*zeros(3),ones(2,3))
 
+blockscale!(y,2,x2)
+blockscale!(yb,2,x2b)
+
+@test y ==  2 .*x2
+@test yb == (2 .*x2b[1], 2 .*x2b[2], 2 .*x2b[3])
+
+blockcopy!(y,x)
+blockcopy!(yb,xb)
+
+blockcumscale!(y,2,x2)
+blockcumscale!(yb,2,x2b)
+
+@test y == x .+ 2 .*x2
+@test yb == (xb[1] .+ 2 .*x2b[1], xb[2] .+  2 .*x2b[2], xb[3] .+  2 .*x2b[3])
+
 blockaxpy!(y,x,2,x2)
 blockaxpy!(yb,xb,2,x2b)
 

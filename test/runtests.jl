@@ -12,9 +12,9 @@ verb = true
 
 @testset "AbstractOperators" begin
 
-#@testset "Block Arrays" begin
-#  include("test_block.jl")
-#end
+@testset "Block Arrays" begin
+  include("test_block.jl")
+end
 
 @testset "Linear operators" begin
   include("test_linear_operators.jl")
@@ -32,9 +32,9 @@ end
 #  include("test_nonlinear_operators_calculus.jl")
 #end
 #
-#@testset "L-BFGS" begin
-#  include("test_lbfgs.jl")
-#end
+@testset "L-BFGS" begin
+  include("test_lbfgs.jl")
+end
 #
 #@testset "Syntax shorthands" begin
 #  include("test_syntax.jl")
