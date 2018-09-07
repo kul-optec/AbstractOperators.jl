@@ -6,16 +6,17 @@ function test_op(A::AbstractOperator, x, y, verb::Bool = false)
   Ax = A*x
   Ax2 = AbstractOperators.blocksimilar(Ax)
   verb && println("forward preallocated")
-  A_mul_B!(Ax2, A, x) #verify in-place linear operator works
-  verb && @time A_mul_B!(Ax2, A, x)
+  mul!(Ax2, A, x) #verify in-place linear operator works
+  verb && @time mul!(Ax2, A, x)
 
   @test AbstractOperators.blockvecnorm(Ax .- Ax2) <= 1e-8
 
   Acy = A'*y
   Acy2 = AbstractOperators.blocksimilar(Acy)
   verb && println("adjoint preallocated")
-  Ac_mul_B!(Acy2, A, y) #verify in-place linear operator works
-  verb && @time Ac_mul_B!(Acy2, A, y)
+  At = AdjointOperator(A)
+  mul!(Acy2, At, y) #verify in-place linear operator works
+  verb && @time mul!(Acy2, At, y)
 
   @test AbstractOperators.blockvecnorm(Acy .- Acy2) <= 1e-8
 
@@ -66,10 +67,10 @@ end
 ############# Finite Diff for Jacobian tests
 
 
-function gradient_fd{A<:AbstractOperator}(op::A, 
-					  y0::AbstractArray, 
-					  x0::AbstractArray, 
-					  r::AbstractArray) 
+function gradient_fd(op::A, 
+                     y0::AbstractArray, 
+                     x0::AbstractArray, 
+                     r::AbstractArray) where {A<:AbstractOperator} 
 	
 	y = copy(y0)
 	J =  zeros(*(size(op,1)...),*(size(op,2)...))
@@ -83,10 +84,10 @@ function gradient_fd{A<:AbstractOperator}(op::A,
 	return reshape(J'*r[:],size(op,2))
 end
 
-function gradient_fd{N, A<:AbstractOperator}(op::A, 
-					     y0::AbstractArray, 
-					     x0::NTuple{N,AbstractArray},
-					     r::AbstractArray) 
+function gradient_fd(op::A, 
+                     y0::AbstractArray, 
+                     x0::NTuple{N,AbstractArray},
+                     r::AbstractArray) where {N, A<:AbstractOperator} 
 	
 
 	y = copy(y0)
@@ -106,10 +107,10 @@ function gradient_fd{N, A<:AbstractOperator}(op::A,
 	return grad
 end
 
-function gradient_fd{N, A<:AbstractOperator}(op::A, 
-					     y0::NTuple{N,AbstractArray}, 
-					     x0::AbstractArray, 
-					     r::NTuple{N,AbstractArray}) 
+function gradient_fd(op::A, 
+                     y0::NTuple{N,AbstractArray}, 
+                     x0::AbstractArray, 
+                     r::NTuple{N,AbstractArray}) where {N, A<:AbstractOperator} 
 	
 	y = zeros.(y0)
 	grad = zeros(x0)
@@ -130,10 +131,10 @@ function gradient_fd{N, A<:AbstractOperator}(op::A,
 	return grad
 end
 
-function gradient_fd{N,M, A<:AbstractOperator}(op::A, 
-					       y0::NTuple{N,AbstractArray}, 
-					       x0::NTuple{M,AbstractArray}, 
-					       r::NTuple{N,AbstractArray}) 
+function gradient_fd(op::A, 
+                     y0::NTuple{N,AbstractArray}, 
+                     x0::NTuple{M,AbstractArray}, 
+                     r::NTuple{N,AbstractArray}) where {N,M, A<:AbstractOperator} 
 	grad = zeros.(x0)
 	y    = zeros.(y0)
 	J = [ zeros(*(size(op,1)[i]...),*(size(op,2)[ii]...)) for ii = 1:M, i = 1:N ]

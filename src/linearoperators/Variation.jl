@@ -26,7 +26,6 @@ julia> Variation(ones(2,2))*[1. 2.; 1. 2.]
 ```
 
 """
-
 struct Variation{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
 end
@@ -45,22 +44,22 @@ Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 
 # Mappings
 
-@generated function A_mul_B!(y::AbstractArray{T,2}, 
-			     A::Variation{T,N}, b::AbstractArray{T,N}) where {T,N}
+@generated function mul!(y::AbstractArray{T,2}, 
+                         A::Variation{T,N}, b::AbstractArray{T,N}) where {T,N}
 
 	ex = :()
 
 	for i = 1:N
 		z = zeros(Int,N)
 		z[i] = 1
-		z = (z...)
+		z = (z...,)
 		ex = :($ex; y[cnt,$i] = I[$i] == 1 ? b[I+CartesianIndex($z)]-b[I] : 
 		       b[I]-b[I-CartesianIndex($z)])
 	end
 
 	ex2 = quote 
 		cnt = 0
-		for I in CartesianRange(size(b))
+		for I in CartesianIndices(size(b))
 			cnt += 1
 			$ex
 		end
@@ -68,8 +67,8 @@ Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 	end
 end
 
-@generated function Ac_mul_B!(y::AbstractArray{T,N}, 
-			      A::Variation{T,N}, b::AbstractArray{T,2}) where {T,N}
+@generated function mul!(y::AbstractArray{T,N}, 
+                              A::AdjointOperator{Variation{T,N}}, b::AbstractArray{T,2}) where {T,N}
 
 	ex = :(y[I] = I[1] == 1  ? -(b[cnt,1] + b[cnt+1,1]) :
 	              I[1] == 2  ?   b[cnt,1] + b[cnt-1,1] - b[cnt+1,1] :
@@ -89,7 +88,7 @@ end
 
 	ex2 = quote 
 		cnt = 0
-		for I in CartesianRange(size(y))
+		for I in CartesianIndices(size(y))
 			cnt += 1
 			$ex
 		end

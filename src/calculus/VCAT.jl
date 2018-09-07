@@ -103,13 +103,13 @@ function VCAT(AA::NTuple{N,AbstractOperator}, buf::C) where {N,C}
 				K += 1
 				push!(idxs,K)
 			else                   # stacked operator 
-				idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],1))...) )
+				idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],1))...,) )
 				for ii = 1:ndoms(AA[i],1)
 					K += 1
 				end
 			end
 		end
-		return VCAT(AA, (idxs...), buf, M)
+		return VCAT(AA, (idxs...,), buf, M)
 	end
 end
 
@@ -280,16 +280,16 @@ function size(H::VCAT)
 	p = vcat([[idx... ] for idx in H.idxs]...)
 	ipermute!(size_out,p)
 
-	(size_out...), size(H.A[1],2)
+	(size_out...,), size(H.A[1],2)
 end
 
-fun_name(L::VCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*";"*fun_name(L.A[2])*"]" : "VCAT"
+fun_name(L::VCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*";"*fun_name(L.A[2])*"]" : "VCAT"
 
 function codomainType(H::VCAT) 
 	codomain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in codomainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxs]...)
 	ipermute!(codomain,p)
-	return (codomain...)
+	return (codomain...,)
 end
 domainType(L::VCAT) = domainType.(L.A[1])
 
@@ -300,8 +300,6 @@ is_full_column_rank(L::VCAT) = any(is_full_column_rank.(L.A))
 diag_AcA(L::VCAT) = sum(diag_AcA.(L.A))
 
 # utils
-import Base: permute
-
 function permute(H::VCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 
 
@@ -311,7 +309,7 @@ function permute(H::VCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 	new_part = ()
 	cnt = 0
 	for z in length.(H.idxs)
-		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...))
+		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...,))
 		cnt += z
 	end
 

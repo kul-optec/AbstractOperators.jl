@@ -30,11 +30,10 @@ julia> A*ones(3)
 ```
 
 """
-
 struct DCT{N,
 	   C<:RealOrComplex,
-	   T1<:Base.DFT.Plan,
-	   T2<:Base.DFT.Plan} <: CosineTransform{N,C,T1,T2}
+	   T1<:AbstractFFTs.Plan,
+	   T2<:AbstractFFTs.Plan} <: CosineTransform{N,C,T1,T2}
 	dim_in::NTuple{N,Int}
 	A::T1
 	At::T2
@@ -68,11 +67,10 @@ julia> A*[1.;0.;0.]
 ```
 
 """
-
 struct IDCT{N,
 	    C<:RealOrComplex,
-	    T1<:Base.DFT.Plan,
-	    T2<:Base.DFT.Plan} <: CosineTransform{N,C,T1,T2}
+	    T1<:AbstractFFTs.Plan,
+	    T2<:AbstractFFTs.Plan} <: CosineTransform{N,C,T1,T2}
 	dim_in::NTuple{N,Int}
 	A::T1
 	At::T2
@@ -106,20 +104,20 @@ end
 
 # Mappings
 
-function A_mul_B!(y::AbstractArray{C,N},A::DCT{N,C,T1,T2},b::AbstractArray{C,N}) where {N,C,T1,T2}
-	A_mul_B!(y,A.A,b)
+function mul!(y::AbstractArray{C,N},A::DCT{N,C,T1,T2},b::AbstractArray{C,N}) where {N,C,T1,T2}
+	mul!(y,A.A,b)
 end
 
-function Ac_mul_B!(y::AbstractArray{C,N},A::DCT{N,C,T1,T2},b::AbstractArray{C,N}) where {N,C,T1,T2}
-	y .= A.At*b
+function mul!(y::AbstractArray{C,N},A::AdjointOperator{DCT{N,C,T1,T2}},b::AbstractArray{C,N}) where {N,C,T1,T2}
+	y .= A.A.At*b
 end
 
-function A_mul_B!(y::AbstractArray{C,N},A::IDCT{N,C,T1,T2},b::AbstractArray{C,N}) where {N,C,T1,T2}
+function mul!(y::AbstractArray{C,N},A::IDCT{N,C,T1,T2},b::AbstractArray{C,N}) where {N,C,T1,T2}
 	y .= A.A*b
 end
 
-function Ac_mul_B!(y::AbstractArray{C,N},A::IDCT{N,C,T1,T2},b::AbstractArray{C,N}) where {N,C,T1,T2}
-	A_mul_B!(y,A.At,b)
+function mul!(y::AbstractArray{C,N},A::AdjointOperator{IDCT{N,C,T1,T2}},b::AbstractArray{C,N}) where {N,C,T1,T2}
+	mul!(y,A.A.At,b)
 end
 
 # Properties

@@ -1,4 +1,5 @@
 export Xcorr
+#TODO make more efficient
 
 """
 `Xcorr([domainType=Float64::Type,] dim_in::Tuple, h::AbstractVector)`
@@ -8,7 +9,6 @@ export Xcorr
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the cross correlation between `x` and `h`. Uses `xcross`. 
 
 """
-
 struct Xcorr{T,H <:AbstractVector{T}} <: LinearOperator
 	dim_in::Tuple{Int}
 	h::H
@@ -24,11 +24,12 @@ Xcorr(x::H, h::H) where {H} = Xcorr(eltype(x), size(x), h)
 
 # Mappings
 
-function A_mul_B!(y::H,A::Xcorr{T,H},b::H) where {T,H}
+function mul!(y::H,A::Xcorr{T,H},b::H) where {T,H}
 	y .= xcorr(b,A.h)
 end
 
-function Ac_mul_B!(y::H,A::Xcorr{T,H},b::H) where {T,H}
+function mul!(y::H,L::AdjointOperator{Xcorr{T,H}},b::H) where {T,H}
+    A = L.A
 	l =floor(Int64,size(A,1)[1]/2)
 	idx = l+1:l+length(y)
 	y .= conv(b,A.h)[idx]

@@ -1,6 +1,8 @@
 @printf("\nTesting BlockArrays\n")
 
-using AbstractOperators:BlockArrays
+using AbstractOperators.BlockArrays
+using LinearAlgebra
+using Printf
 
 T = Float64
 x = [2.0; 3.0]
@@ -18,8 +20,8 @@ x2b = (randn(2), randn(3)+im.*randn(3), randn(2,3))
 @test blocklength(x) == 2
 @test blocklength(xb) == 2+3+6
 
-@test blockvecnorm(x) == vecnorm(x)
-@test blockvecnorm(xb) == sqrt(vecnorm(xb[1])^2+vecnorm(xb[2])^2+vecnorm(xb[3])^2)
+@test blockvecnorm(x) == norm(x)
+@test blockvecnorm(xb) == sqrt(norm(xb[1])^2+norm(xb[2])^2+norm(xb[3])^2)
 
 @test blockmaxabs(x) == 3.0
 @test blockmaxabs(xb) == 6.0
@@ -48,8 +50,8 @@ blockset!(yb,xb)
 
 z = blockvecdot(x,x2)
 zb = blockvecdot(xb,x2b)
-@test z == vecdot(x,x2)
-@test zb == vecdot(xb[1],x2b[1])+vecdot(xb[2],x2b[2])+vecdot(xb[3],x2b[3])
+@test z == dot(x,x2)
+@test zb == dot(xb[1],x2b[1])+dot(xb[2],x2b[2])+dot(xb[3],x2b[3])
 
 y = blockzeros(x)
 yb = blockzeros(xb)
@@ -84,8 +86,8 @@ yb = blockones(blockeltype(xb),blocksize(xb))
 blockaxpy!(y,x,2,x2)
 blockaxpy!(yb,xb,2,x2b)
 
-@test y == x .+ 2.*x2
-@test yb == (xb[1] .+ 2.*x2b[1], xb[2] .+ 2.*x2b[2], xb[3] .+ 2.*x2b[3])
+@test y == x .+ 2 .*x2
+@test yb == (xb[1] .+ 2 .*x2b[1], xb[2] .+ 2 .*x2b[2], xb[3] .+ 2 .*x2b[3])
 
 x = (ones(Float64, 5), zeros(Float64, 2, 3))
 @test blockiszero(x) == false

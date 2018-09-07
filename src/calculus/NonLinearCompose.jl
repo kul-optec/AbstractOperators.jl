@@ -26,7 +26,6 @@ true
 
 ```
 """
-
 struct NonLinearCompose{N,
 			L1 <: HCAT{1},
 			L2 <: HCAT{1},
@@ -127,8 +126,8 @@ function size(P::NonLinearComposeJac)
 	size_out, size(P.A,2)
 end
 
-fun_name(L::NonLinearCompose) = fun_name(L.A.A[1])"*"*fun_name(L.B.A[2]) 
-fun_name(L::NonLinearComposeJac) = fun_name(L.A.A[1])"*"*fun_name(L.B.A[2]) 
+fun_name(L::NonLinearCompose) = fun_name(L.A.A[1])*"*"*fun_name(L.B.A[2]) 
+fun_name(L::NonLinearComposeJac) = fun_name(L.A.A[1])*"*"*fun_name(L.B.A[2]) 
 
 domainType(L::NonLinearCompose)   = domainType.(L.A)
 codomainType(L::NonLinearCompose) = codomainType(L.A)
@@ -137,8 +136,6 @@ domainType(L::NonLinearComposeJac)   = domainType.(L.A)
 codomainType(L::NonLinearComposeJac) = codomainType(L.A)
 
 # utils
-import Base: permute
-
 function permute(P::NonLinearCompose{N,L,C,D}, p::AbstractVector{Int}) where {N,L,C,D}
 	NonLinearCompose(permute(P.A,p),permute(P.B,p),P.buf,P.bufx)
 end

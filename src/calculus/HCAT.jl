@@ -106,13 +106,13 @@ function HCAT(AA::NTuple{N,AbstractOperator}, buf::C) where {N,C}
 				K += 1
 				push!(idxs,K)
 			else                   # stacked operator 
-				idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],2))...) )
+				idxs = push!(idxs,(collect(K+1:K+ndoms(AA[i],2))...,) )
 				for ii = 1:ndoms(AA[i],2)
 					K += 1
 				end
 			end
 		end
-		return HCAT(AA, (idxs...), buf, M)
+		return HCAT(AA, (idxs...,), buf, M)
 	end
 end
 
@@ -283,16 +283,16 @@ function size(H::HCAT)
 	p = vcat([[idx... ] for idx in H.idxs]...)
 	ipermute!(size_in,p)
 
-	size(H.A[1],1), (size_in...)
+	size(H.A[1],1), (size_in...,)
 end
 
-fun_name(L::HCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*","*fun_name(L.A[2])*"]" : "HCAT"
+fun_name(L::HCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*","*fun_name(L.A[2])*"]" : "HCAT"
 
 function domainType(H::HCAT) 
 	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxs]...)
 	ipermute!(domain,p)
-	return (domain...)
+	return (domain...,)
 end
 codomainType(L::HCAT) = codomainType.(L.A[1])
 
@@ -303,8 +303,6 @@ is_full_row_rank(L::HCAT) = any(is_full_row_rank.(L.A))
 diag_AAc(L::HCAT) = sum(diag_AAc.(L.A))
 
 # utils
-import Base: permute
-
 function permute(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 
 
@@ -314,7 +312,7 @@ function permute(H::HCAT{M,N,L,P,C}, p::AbstractVector{Int}) where {M,N,L,P,C}
 	new_part = ()
 	cnt = 0
 	for z in length.(H.idxs)
-		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...))
+		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...,))
 		cnt += z
 	end
 

@@ -112,7 +112,6 @@ diag(L::Compose) = is_sliced(L) ? diag(L.A[2]) : prod(diag.(L.A))
 diag_AAc(L::Compose) = is_AAc_diagonal(L) ? diag_AAc(L.A[2]) : error("is_AAc_diagonal( $(typeof(L) ) ) == false")
 
 # utils
-import Base: permute
 function permute(C::Compose, p::AbstractVector{Int})
 
 	i = findfirst( x -> ndoms(x,2) > 1 , C.A)

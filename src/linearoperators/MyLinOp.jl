@@ -10,16 +10,15 @@ julia> n,m = 5,4;
 
 julia> A = randn(n,m);
 
-julia> op = MyLinOp(Float64, (m,),(n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
+julia> op = MyLinOp(Float64, (m,),(n,), (y,x) -> mul!(y,A,x), (y,x) -> mul!(y,A',x))
 A  ℝ^4 -> ℝ^5
 
-julia> op = MyLinOp(Float64, (m,), Float64, (n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
+julia> op = MyLinOp(Float64, (m,), Float64, (n,), (y,x) -> mul!(y,A,x), (y,x) -> mul!(y,A',x))
 A  ℝ^4 -> ℝ^5
 
 ```
 
 """
-
 struct MyLinOp{N,M,C,D} <: LinearOperator
 	dim_out::NTuple{N,Int}
 	dim_in::NTuple{M,Int}
@@ -39,14 +38,14 @@ MyLinOp{N,M, domainType, codomainType}(dim_out, dim_in, Fwd!, Adj! )
 
 # Mappings
 
- A_mul_B!(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) where {N,M,C,D} = L.Fwd!(y,b)
-Ac_mul_B!(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) where {N,M,C,D} = L.Adj!(y,b)
+mul!(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) where {N,M,C,D} = L.Fwd!(y,b)
+mul!(y::Array{C,N}, L::AdjointOperator{MyLinOp{N,M,C,D}}, b::Array{D,M}) where {N,M,C,D} = L.A.Adj!(y,b)
 
 # Properties
 
 size(L::MyLinOp) = (L.dim_out, L.dim_in)
 
-codomainType{N,M,C,D}(L::MyLinOp{N,M,C,D}) = C
-  domainType{N,M,C,D}(L::MyLinOp{N,M,C,D}) = D
+codomainType(L::MyLinOp{N,M,C,D}) where {N,M,C,D} = C
+  domainType(L::MyLinOp{N,M,C,D}) where {N,M,C,D} = D
 
 fun_name(L::MyLinOp)  = "A"

@@ -1,4 +1,3 @@
-
 export IRDFT
 
 """
@@ -18,12 +17,11 @@ julia> A = IRDFT((5,10,8),19,2)
 ```
 
 """
-
 struct IRDFT{T <:Number,
 	     N,
 	     D,
-	     T1<:Base.DFT.Plan,
-	     T2<:Base.DFT.Plan,
+	     T1<:AbstractFFTs.Plan,
+	     T2<:AbstractFFTs.Plan,
 	     T3<:NTuple{N,Any}
 	     } <: LinearOperator 
 	dim_in::NTuple{N,Int}
@@ -54,21 +52,22 @@ IRDFT(dim_in::NTuple{N,Int},d::Int,dims::Int=1) where {N} = IRDFT(zeros(Complex{
 
 # Mappings
 
-function A_mul_B!(y::C1,
-		  L::IRDFT{T,N,D,T1,T2,T3},
-		  b::C2) where {N,T,D,T1,T2,T3,C1<:AbstractArray{T,N},
+function mul!(y::C1,
+              L::IRDFT{T,N,D,T1,T2,T3},
+              b::C2) where {N,T,D,T1,T2,T3,C1<:AbstractArray{T,N},
 				C2<:AbstractArray{Complex{T},N}}
-	A_mul_B!(y,L.A,b)
+	mul!(y,L.A,b)
 end
 
-function Ac_mul_B!(y::C2,
-		   L::IRDFT{T,N,D,T1,T2,T3},
-		   b::C1) where {N,T,D,T1,T2,T3,C1<:AbstractArray{T,N},
+function mul!(y::C2,
+              L::AdjointOperator{IRDFT{T,N,D,T1,T2,T3}},
+              b::C1) where {N,T,D,T1,T2,T3,C1<:AbstractArray{T,N},
 				 C2<:AbstractArray{Complex{T},N}}
 	
-	A_mul_B!(y,L.At,b)
+    A = L.A
+	mul!(y,A.At,b)
 	y ./= size(b,D)
-	@views y[L.idx...] .*= 2
+	@views y[A.idx...] .*= 2
 	return y
 
 end

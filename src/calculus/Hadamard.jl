@@ -27,7 +27,6 @@ true
 
 ```
 """
-
 struct Hadamard{M, C, V <: VCAT{M}} <: NonLinearOperator
 	A::V
 	buf::C
@@ -100,8 +99,6 @@ domainType(L::HadamardJacobian)   = domainType.(L.A[1])
 codomainType(L::HadamardJacobian) = codomainType(L.A[1])
 
 # utils
-import Base: permute
-
 function permute(H::Hadamard, p::AbstractVector{Int})
     A = VCAT([permute(a,p) for a in H.A.A]...)
     Hadamard(A,H.buf,H.buf2)

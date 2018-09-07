@@ -52,13 +52,13 @@ function DCAT(A::Vararg{AbstractOperator})
 				K += 1
 				push!(idxs,K)
 			else                   # stacked operator 
-				idxs = push!(idxs,(collect(K+1:K+ndoms(A[i],d))...) )
+				idxs = push!(idxs,(collect(K+1:K+ndoms(A[i],d))...,) )
 				for ii = 1:ndoms(A[i],d)
 					K += 1
 				end
 			end
 		end
-		d == 1 ? (idxC = (idxs...)) : (idxD = (idxs...))
+		d == 1 ? (idxC = (idxs...,)) : (idxD = (idxs...,))
 	end
 
 	return DCAT(A,idxD,idxC)
@@ -159,26 +159,26 @@ function size(H::DCAT, i::Int)
 	for s in size.(H.A,i)
 		eltype(s) <: Int ? push!(sz,s) : push!(sz,s...) 
 	end
-	p = vcat([[idx... ] for idx in (i == 1? H.idxC : H.idxD) ]...)
+	p = vcat([[idx... ] for idx in (i == 1 ? H.idxC : H.idxD) ]...)
 	ipermute!(sz,p)
 
-	(sz...)
+	(sz...,)
 end
 
-fun_name(L::DCAT) = length(L.A) == 2 ? "["fun_name(L.A[1])*",0;0,"*fun_name(L.A[2])*"]" :
+fun_name(L::DCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*",0;0,"*fun_name(L.A[2])*"]" :
 "DCAT"
 
 function domainType(H::DCAT) 
 	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxD]...)
 	ipermute!(domain,p)
-	return (domain...)
+	return (domain...,)
 end
 function codomainType(H::DCAT) 
 	codomain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in codomainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxC]...)
 	ipermute!(codomain,p)
-	return (codomain...)
+	return (codomain...,)
 end
 
 is_eye(L::DCAT) = all(is_eye.(L.A))
@@ -192,8 +192,6 @@ is_full_row_rank(L::DCAT) = all(is_full_row_rank.(L.A))
 is_full_column_rank(L::DCAT) = all(is_full_column_rank.(L.A))
 
 # utils
-import Base: permute
-
 function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 
 
@@ -203,7 +201,7 @@ function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 	new_part = ()
 	cnt = 0
 	for z in length.(H.idxD)
-		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...))
+		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...,))
 		cnt += z
 	end
 

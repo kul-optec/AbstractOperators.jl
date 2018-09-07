@@ -20,7 +20,6 @@ true
 ```
 
 """
-
 struct Eye{T, N} <: LinearOperator
 	dim::NTuple{N, Integer}
 end
@@ -37,8 +36,8 @@ Eye(x::A) where {A <: AbstractArray} = Eye(eltype(x), size(x))
 
 # Mappings
 
-A_mul_B!(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) where {T, N} = y .= b
-Ac_mul_B!(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) where {T, N} = A_mul_B!(y, L, b)
+mul!(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) where {T, N} = y .= b
+mul!(y::AbstractArray{T, N}, L::AdjointOperator{Eye{T, N}}, b::AbstractArray{T, N}) where {T, N} = mul!(y, L.A, b)
 
 # Properties
 diag(L::Eye) = 1.

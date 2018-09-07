@@ -97,7 +97,7 @@ fun_domain(S::Sum)   = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])
 
 fun_name(S::Sum) =
-length(S.A) == 2 ? fun_name(S.A[1])"+"fun_name(S.A[2]) : "Σ"
+length(S.A) == 2 ? fun_name(S.A[1])*"+"*fun_name(S.A[2]) : "Σ"
 
 
 is_linear(L::Sum)        = all(is_linear.(L.A))            
@@ -110,10 +110,8 @@ diag(L::Sum) = sum(diag.(L.A))
 
 
 # utils
-import Base: permute
-
 function permute(S::Sum{M,N}, p::AbstractVector{Int}) where {M,N}
-    AA = ([permute(A,p) for A in S.A]...) 
+    AA = ([permute(A,p) for A in S.A]...,) 
     return Sum(AA,S.bufC,S.bufD[p],M,N)
 end
 

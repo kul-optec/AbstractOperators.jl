@@ -22,7 +22,6 @@ julia> d = L*grad; # compute new direction
 Use  `reset!(L)` to cancel the memory of the operator.
 
 """
-
 mutable struct LBFGS{R, T <: BlockArray, M, I <: Integer} <: LinearOperator
 	currmem::I
 	curridx::I
@@ -50,7 +49,7 @@ function LBFGS(domainType, dim_in, M::I) where {I <: Integer}
 end
 
 function LBFGS(dim_in, M::I) where {I <: Integer}
-	domainType = eltype(dim_in) <: Integer ? Float64 : ([Float64 for i in eachindex(dim_in)]...)
+	domainType = eltype(dim_in) <: Integer ? Float64 : ([Float64 for i in eachindex(dim_in)]...,)
 	LBFGS(domainType, dim_in, M)
 end
 
@@ -65,7 +64,6 @@ end
 
 See the documentation for `LBFGS`.
 """
-
 function update!(L::LBFGS{R, T, M, I}, x::T, x_prev::T, gradx::T, gradx_prev::T) where {R, T, M, I}
 	L.s .= x .- x_prev
 	L.y .= gradx .- gradx_prev
@@ -89,7 +87,6 @@ end
 
 Cancels the memory of `L`.
 """
-
 function reset!(L::LBFGS)
 	L.currmem, L.curridx = 0, 0
 	L.H = 1.0

@@ -1,5 +1,4 @@
-
-export RDFT, IRDFT
+export RDFT
 
 """
 `RDFT([domainType=Float64::Type,] dim_in::Tuple [,dims=1])`
@@ -20,11 +19,10 @@ julia> RDFT((10,10,10),2)
 ```
 
 """
-
 struct RDFT{T <:Number,
 	       N,
-	       T1<:Base.DFT.Plan,
-	       T2<:Base.DFT.Plan,
+	       T1<:AbstractFFTs.Plan,
+	       T2<:AbstractFFTs.Plan,
 	       T3<:AbstractArray{Complex{T},N}
 	      } <: LinearOperator 
 	dim_in::NTuple{N,Int}
@@ -62,18 +60,19 @@ RDFT(T::Type,dim_in::Vararg{Int}) = RDFT(T,dim_in)
 
 # Mappings
 
-function A_mul_B!(y::T3,
-		  L::RDFT{T,N,T1,T2,T3},
-		  b::T4) where {N,T,T1,T2,T3,T4 <: AbstractArray{T,N}}
-	A_mul_B!(y,L.A,b)
+function mul!(y::T3,
+              L::RDFT{T,N,T1,T2,T3},
+              b::T4) where {N,T,T1,T2,T3,T4 <: AbstractArray{T,N}}
+	mul!(y,L.A,b)
 end
 
-function Ac_mul_B!(y::T4,
-		   L::RDFT{T,N,T1,T2,T3},
-		   b::T3) where {N,T,T1,T2,T3,T4 <: AbstractArray{T,N}}
-	A_mul_B!(L.b2,L.Zp,b)
-	A_mul_B!(L.y2,L.At,L.b2)
-	y .= real.(L.y2)
+function mul!(y::T4,
+              L::AdjointOperator{RDFT{T,N,T1,T2,T3}},
+              b::T3) where {N,T,T1,T2,T3,T4 <: AbstractArray{T,N}}
+    A = L.A
+	mul!(A.b2,A.Zp,b)
+	mul!(A.y2,A.At,A.b2)
+	y .= real.(A.y2)
 	return y
 
 end

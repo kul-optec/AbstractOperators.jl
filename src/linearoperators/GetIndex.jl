@@ -25,7 +25,6 @@ julia> GetIndex(randn(10,20,30),(1:2,1:4))
 ```
 
 """
-
 struct GetIndex{N,M,T<:Tuple} <: LinearOperator
 	domainType::Type
 	dim_out::NTuple{N,Int}
@@ -52,13 +51,13 @@ GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
 
 # Mappings
 
-function A_mul_B!(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M}) where {T1,N,M,T2}
+function mul!(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M}) where {T1,N,M,T2}
 	y .= view(b,L.idx...)
 end
 
-function Ac_mul_B!(y::Array{T1,M},L::GetIndex{N,M,T2},b::AbstractArray{T1,N}) where {T1,N,M,T2}
+function mul!(y::Array{T1,M},L::AdjointOperator{GetIndex{N,M,T2}},b::AbstractArray{T1,N}) where {T1,N,M,T2}
 	fill!(y,0.)
-	setindex!(y,b,L.idx...)
+	setindex!(y,b,L.A.idx...)
 end
 
 # Properties

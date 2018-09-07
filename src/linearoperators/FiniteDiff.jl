@@ -22,13 +22,13 @@ true
 ```
 
 """
-
-
-struct FiniteDiff{T,N,D} <: LinearOperator
+struct FiniteDiff{T,N,D,C <: CartesianIndices{N}} <: LinearOperator
 	dim_in::NTuple{N,Int}
+    idx::C
 	function FiniteDiff{T,N,D}(dim_in) where {T,N,D}
 		D > N && error("direction is bigger the number of dimension $N")
-		new{T,N,D}(dim_in)
+        idx = CartesianIndices(([i == D ? (2:d) : (1:d) for (i,d) in enumerate(dim_in)]...,))
+        new{T,N,D,typeof(idx)}(dim_in,idx)
 	end
 end
 
@@ -44,32 +44,28 @@ FiniteDiff(x::AbstractArray{T,N}, dir::Int64 = 1) where {T,N}  = FiniteDiff(elty
 
 # Mappings
 
-@generated function A_mul_B!(y::AbstractArray{T,N},
-			     L::FiniteDiff{T,N,D},
-			    b::AbstractArray{T,N}) where {T,N,D}
-	o = ones(Int,N)
-	o[D] = 2
-	I1 = CartesianIndex(o...)
+@generated function mul!(y::AbstractArray{T,N},
+                         L::FiniteDiff{T,N,D},
+                         b::AbstractArray{T,N}) where {T,N,D}
 	z = zeros(Int,N)
 	z[D] = 1
 	idx = CartesianIndex(z...)
 	ex = quote
-		I2 = CartesianIndex(size(b))
-		for I in CartesianRange($I1,I2)
+        for I in L.idx
 			y[I-$idx] = b[I]-b[I-$idx]
 		end
 		return y
 	end
 end
 
-@generated function Ac_mul_B!(y::AbstractArray{T,N},
-			      L::FiniteDiff{T,N,D},
-			     b::AbstractArray{T,N}) where {T,N,D}
+@generated function mul!(y::AbstractArray{T,N},
+                         L::AdjointOperator{FiniteDiff{T,N,D,C}},
+                         b::AbstractArray{T,N}) where {T,N,D,C}
 	z = zeros(Int,N)
 	z[D] = 1
 	idx = CartesianIndex(z...)
 	ex = quote
-		for I in CartesianRange(size(y))
+		for I in CartesianIndices(size(y))
 			y[I] = 
 			I[$D] == 1 ? -b[I]  :
 			I[$D] == size(y,$D) ?   b[I-$idx]  : -b[I]+b[I-$idx]
@@ -86,7 +82,7 @@ codomainType(L::FiniteDiff{T, N}) where {T, N} = T
 function size(L::FiniteDiff{T,N,D}) where {T,N,D} 
 	dim_out = [L.dim_in...]
 	dim_out[D] = dim_out[D]-1
-	return ((dim_out...), L.dim_in)
+	return ((dim_out...,), L.dim_in)
 end
 
 fun_name(L::FiniteDiff{T,N,1}) where  {T,N} = "δx"

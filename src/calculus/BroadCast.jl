@@ -44,8 +44,8 @@ struct BroadCast{N,
 		Base.Broadcast.check_broadcast_shape(dim_out,size(A,1))
 		if size(A,1) != (1,)
 			M = length(size(A,1)) 
-			cols = ([Colon() for i = 1:M]...)
-			idxs = CartesianRange((dim_out[M+1:end]...))
+			cols = ([Colon() for i = 1:M]...,)
+			idxs = CartesianRange((dim_out[M+1:end]...,))
 			new{N,L,T,D,M,typeof(cols),typeof(idxs)}(A,dim_out,bufC,bufD,cols,idxs)
 		else #singleton case
 			M = 0
@@ -115,5 +115,5 @@ codomainType(  R::BroadCast) = codomainType(R.A)
 is_linear(      R::BroadCast) = is_linear(R.A)
 is_null(        R::BroadCast) = is_null(R.A)
 
-fun_name(R::BroadCast) = "."fun_name(R.A)
+fun_name(R::BroadCast) = "."*fun_name(R.A)
 remove_displacement(B::BroadCast) = BroadCast(remove_displacement(B.A), B.dim_out, B.bufC, B.bufD)
