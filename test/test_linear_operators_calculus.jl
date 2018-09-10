@@ -86,13 +86,13 @@ opC  = Compose(Compose(Compose(opA4,opA3),opA2),opA1)
 
 x = randn(m1)
 
-@test norm( opC*x - (A4*(A3*( A2*( A1*x+d1 )+d2 )+d3)-d4) )  < 1e-9
-@test norm( displacement(opC) - ( A4*(A3*(A2*d1+d2)+d3)-d4) ) < 1e-9
+@test norm( opC*x - (A4*(A3*( A2*( A1*x+d1 ) .+ d2 ) .+ d3)-d4) )  < 1e-9
+@test norm( displacement(opC) - ( A4*(A3*(A2*d1 .+d2 ) .+ d3)-d4) ) < 1e-9
 
 opA4 = MatrixOp(A4)
 opC  = AffineAdd(Compose(Compose(Compose(opA4,opA3),opA2),opA1),d4)
-@test norm( opC*x - (A4*(A3*( A2*( A1*x+d1 )+d2 )+d3)+d4) )  < 1e-9
-@test norm( displacement(opC) - ( A4*(A3*(A2*d1+d2)+d3)+d4) ) < 1e-9
+@test norm( opC*x - (A4*(A3*( A2*( A1*x+d1 ) .+ d2 ) .+ d3)+d4) )  < 1e-9
+@test norm( displacement(opC) - ( A4*(A3*(A2*d1 .+ d2) .+ d3)+d4) ) < 1e-9
 
 @test norm( remove_displacement(opC)*x - (A4*(A3*( A2*( A1*x ) ) ) ) )  < 1e-9
 
@@ -495,9 +495,9 @@ opA2 = AffineAdd(MatrixOp(A2), d2)
 opA3 = AffineAdd(MatrixOp(A3), d3) 
 opS = Sum(opA1,opA2,opA3)
 x1 = randn(n)
-y2 = A1*x1+A2*x1+A3*x1+d1+d2+d3
+y2 = A1*x1+A2*x1+A3*x1+d1.+d2+d3
 @test norm(opS*x1-y2) <= 1e-12
-@test norm(displacement(opS) - (d1+d2+d3)) <= 1e-12
+@test norm(displacement(opS) - (d1.+d2+d3)) <= 1e-12
 y2 = A1*x1+A2*x1+A3*x1
 @test norm(remove_displacement(opS)*x1-y2) <= 1e-12
 
@@ -821,9 +821,9 @@ opHT = AffineAdd(opH,d)
 p = [2;1]
 @test norm(AbstractOperators.permute(opHT,p)*x[p]-(x[1]+A*x[2].+d)) < 1e-12
 
-##############################
-######### test combin. #######
-##############################
+#############################
+######## test combin. #######
+#############################
 
 ## test Compose of HCAT
 m1, m2, m3, m4 = 4, 7, 3, 2
@@ -925,7 +925,7 @@ y2 = (A*x1 + B*x2, C*x1 + D*x2)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
-## test Sum of HCAT's
+# test Sum of HCAT's
 
 m, n1, n2, n3 = 4, 7, 5, 3
 A1 = randn(m, n1)

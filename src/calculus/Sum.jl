@@ -89,9 +89,9 @@ end
 size(L::Sum) = size(L.A[1])
 
   domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:AbstractArray,L} =    domainType(S.A[1])
-  domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:Tuple        ,L} =   domainType.(S.A[1])
+  domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:Tuple        ,L} =   domainType.(Ref(S.A[1]))
 codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:AbstractArray,D,L} =  codomainType(S.A[1])
-codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:Tuple        ,D,L} = codomainType.(S.A[1])
+codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:Tuple        ,D,L} = codomainType.(Ref(S.A[1]))
 
 fun_domain(S::Sum)   = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])
