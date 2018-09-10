@@ -35,8 +35,8 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	Ax = A*x
 	Ax2 = AbstractOperators.blocksimilar(Ax)
 	verb && println("forward preallocated")
-	A_mul_B!(Ax2, A, x) #verify in-place linear operator works
-	verb && @time A_mul_B!(Ax2, A, x)
+	mul!(Ax2, A, x) #verify in-place linear operator works
+	verb && @time mul!(Ax2, A, x)
 
 	@test_throws ErrorException A'
 
@@ -46,12 +46,12 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	verb && println(J)
 
 	grad = J'*y
-	A_mul_B!(Ax2, A, x) #redo forward
-	verb && println("jacobian Ac_mul_B! preallocated")
+	mul!(Ax2, A, x) #redo forward
+	verb && println("adjoint jacobian mul! preallocated")
 	grad2 = AbstractOperators.blocksimilar(grad)
-	Ac_mul_B!(grad2, J, y) #verify in-place linear operator works
-	verb && A_mul_B!(Ax2, A, x) #redo forward
-	verb && @time Ac_mul_B!(grad2, J, y) 
+	mul!(grad2, J', y) #verify in-place linear operator works
+	verb && mul!(Ax2, A, x) #redo forward
+	verb && @time mul!(grad2, J', y) 
 
 	@test AbstractOperators.blockvecnorm(grad .- grad2) < 1e-8
 
@@ -78,7 +78,7 @@ function gradient_fd(op::A,
 	for i = 1:size(J,2)
 		x = copy(x0)
 		x[i] = x[i]+h
-		A_mul_B!(y,op,x)
+		mul!(y,op,x)
 		J[:,i] .= ((y.-y0)./h)[:]
 	end
 	return reshape(J'*r[:],size(op,2))
@@ -99,7 +99,7 @@ function gradient_fd(op::A,
 		for i = 1:size(J[ii],2)
 			x = deepcopy(x0)
 			x[ii][i] = x[ii][i]+h
-			A_mul_B!(y,op,x)
+			mul!(y,op,x)
 			J[ii][:,i] .= ((y.-y0)./h)[:]
 		end
 		grad[ii] .= reshape(J[ii]'*r[:],size(op,2)[ii])
@@ -120,7 +120,7 @@ function gradient_fd(op::A,
 	for i in eachindex(x0)
 		x = deepcopy(x0)
 		x[i] = x[i]+h
-		A_mul_B!(y,op,x)
+		mul!(y,op,x)
 		for ii in eachindex(J)
 			J[ii][:,i] .= ((y[ii].-y0[ii])./h)[:]
 		end
@@ -145,7 +145,7 @@ function gradient_fd(op::A,
 		for iii in eachindex(x[i])
 			x = deepcopy(x0)
 			x[i][iii] = x[i][iii]+h
-			A_mul_B!(y,op,x)
+			mul!(y,op,x)
 
 			for ii = 1:N
 				J[i,ii][:,iii] .= ((y[ii].-y0[ii])./h)[:]

@@ -20,19 +20,20 @@ end
 
 SoftMax(DomainDim::NTuple{N,Int}) where {N} = SoftMax(Float64,DomainDim)
 
-function A_mul_B!(y::AbstractArray{T,N}, L::SoftMax{T,N}, x::AbstractArray{T,N}) where {T,N}
+function mul!(y::AbstractArray{T,N}, L::SoftMax{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= exp.(x.-maximum(x))
 	y ./= sum(y)
 end
 
-function Ac_mul_B!(y::AbstractArray{T,N}, 
-		   L::Jacobian{A}, 
-		   b::AbstractArray{T,N}) where {T,N, A<: SoftMax{T,N}}
+function mul!(y::TT, 
+              J::AdjointOperator{Jacobian{A,TT}}, 
+              b::TT) where {T, N, A<: SoftMax{T,N}, TT <: AbstractArray{T,N} }
+    L = J.A
 	fill!(y,zero(T))
 	L.A.buf .= exp.(L.x.-maximum(L.x))
 	L.A.buf ./= sum(L.A.buf)
 	for i in eachindex(y)
-		y[i] = -L.A.buf[i]*vecdot(L.A.buf,b) 
+		y[i] = -L.A.buf[i]*dot(L.A.buf,b) 
 		y[i] += L.A.buf[i]*b[i]
 	end
 	return y

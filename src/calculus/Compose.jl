@@ -36,9 +36,6 @@ function Compose(L1::AbstractOperator, L2::AbstractOperator)
 	Compose( L1, L2, Array{domainType(L1)}(undef,size(L2,1)) )
 end
 
-Compose(A::NTuple{N,Any},buf::NTuple{M,Any}) where {N,M} =
-Compose{N,M,typeof(A),typeof(buf)}(A,buf)
-
 Compose(L1::AbstractOperator,L2::AbstractOperator,buf::AbstractArray) =
 Compose( (L2,L1), (buf,))
 

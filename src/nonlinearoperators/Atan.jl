@@ -20,13 +20,14 @@ end
 Atan(DomainDim::NTuple{N,Int}) where {N} = Atan{Float64,N}(DomainDim)
 Atan(DomainDim::Vararg{Int}) = Atan{Float64,length(DomainDim)}(DomainDim)
 
-function A_mul_B!(y::AbstractArray{T,N}, L::Atan{T,N}, x::AbstractArray{T,N}) where {T,N}
+function mul!(y::AbstractArray{T,N}, L::Atan{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= atan.(x)
 end
 
-function Ac_mul_B!(y::AbstractArray{T,N}, 
-		   L::Jacobian{A}, 
-		   b::AbstractArray{T,N}) where {T,N, A<: Atan{T,N}}
+function mul!(y::TT, 
+              J::AdjointOperator{Jacobian{A,TT}}, 
+              b::TT) where {T, N, A <: Atan{T,N}, TT <: AbstractArray{T,N}}
+    L = J.A
     y .= conj.(1.0./(1.0.+ L.x.^2)).*b
 end
 
