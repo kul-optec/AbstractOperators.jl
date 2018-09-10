@@ -91,7 +91,7 @@ function gradient_fd(op::A,
 	
 
 	y = copy(y0)
-	grad = zeros.(x0)
+	grad = AbstractOperators.blockzeros(x0)
 	J =  [ zeros(*(size(op,1)...),*(sz2...)) for sz2 in size(op,2)]
 
 	h = sqrt(eps())
@@ -112,8 +112,8 @@ function gradient_fd(op::A,
                      x0::AbstractArray, 
                      r::NTuple{N,AbstractArray}) where {N, A<:AbstractOperator} 
 	
-	y = zeros.(y0)
-	grad = zeros(x0)
+	y = AbstractOperators.blockzeros(y0)
+	grad = AbstractOperators.blockzeros(x0)
 	J = [ zeros(*(sz1...),*(size(op,2)...)) for sz1 in size(op,1)]
 
 	h = sqrt(eps())
@@ -135,8 +135,8 @@ function gradient_fd(op::A,
                      y0::NTuple{N,AbstractArray}, 
                      x0::NTuple{M,AbstractArray}, 
                      r::NTuple{N,AbstractArray}) where {N,M, A<:AbstractOperator} 
-	grad = zeros.(x0)
-	y    = zeros.(y0)
+	grad = AbstractOperators.blockzeros(x0)
+	y    = AbstractOperators.blockzeros(y0)
 	J = [ zeros(*(size(op,1)[i]...),*(size(op,2)[ii]...)) for ii = 1:M, i = 1:N ]
 				
 

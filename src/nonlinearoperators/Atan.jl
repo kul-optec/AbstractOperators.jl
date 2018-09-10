@@ -24,9 +24,9 @@ function mul!(y::AbstractArray{T,N}, L::Atan{T,N}, x::AbstractArray{T,N}) where 
 	y .= atan.(x)
 end
 
-function mul!(y::TT, 
+function mul!(y::AbstractArray, 
               J::AdjointOperator{Jacobian{A,TT}}, 
-              b::TT) where {T, N, A <: Atan{T,N}, TT <: AbstractArray{T,N}}
+              b::AbstractArray) where {T, N, A <: Atan{T,N}, TT <: AbstractArray{T,N}}
     L = J.A
     y .= conj.(1.0./(1.0.+ L.x.^2)).*b
 end

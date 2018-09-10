@@ -66,7 +66,7 @@ blockzeros(t::Type, n::NTuple{N, Integer} where {N}) = zeros(t, n)
 blockzeros(t::Tuple) = blockzeros.(t)
 blockzeros(n::NTuple{N, Integer} where {N}) = zeros(n)
 blockzeros(n::Integer) = zeros(n)
-blockzeros(a::AbstractArray) = fill!(a,zero(eltype(a)))
+blockzeros(a::AbstractArray) = fill!(similar(a),zero(eltype(a)))
 
 blockones(t::Tuple, s::Tuple) = blockones.(t, s)
 blockones(t::Type, n::NTuple{N, Integer} where {N}) = ones(t, n)

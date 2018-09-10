@@ -34,10 +34,10 @@ julia> V*ones(3)
 
 """
 struct VCAT{M, # number of domains  
-	       N, # number of AbstractOperator 
-	       L <: NTuple{N,AbstractOperator},
-	       P <: NTuple{N,Union{Int,Tuple}},
-	       C <: Union{NTuple{M,AbstractArray}, AbstractArray},
+            N, # number of AbstractOperator 
+            L <: NTuple{N,AbstractOperator},
+            P <: NTuple{N,Union{Int,Tuple}},
+            C <: Union{NTuple{M,AbstractArray}, AbstractArray},
 	       } <: AbstractOperator
 	A::L     # tuple of AbstractOperators
 	idxs::P  # indices 
@@ -62,6 +62,7 @@ function VCAT(A::L, idxs::P, buf::C, M::Int) where {N,
 	if any([domainType(A[1]) != domainType(a) for a in A])
 		throw(error("operators must all share the same domainType!"))
 	end
+
 	VCAT{M,N,L,P,C}(A, idxs, buf)
 end
 

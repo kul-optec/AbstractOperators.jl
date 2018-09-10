@@ -23,9 +23,9 @@ function mul!(y::AbstractArray{T,N}, L::SoftPlus{T,N}, x::AbstractArray{T,N}) wh
 	y .= log.(1 .+exp.(x))
 end
 
-function mul!(y::TT, 
+function mul!(y::AbstractArray, 
               J::AdjointOperator{Jacobian{A,TT}}, 
-              b::TT) where {T, N, A <: SoftPlus{T,N}, TT <: AbstractArray{T,N} }
+              b::AbstractArray) where {T, N, A <: SoftPlus{T,N}, TT <: AbstractArray{T,N} }
     L = J.A
 	y .= 1 ./(1 .+exp.(-L.x)).*b
 end

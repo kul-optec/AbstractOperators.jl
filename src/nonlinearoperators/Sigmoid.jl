@@ -25,9 +25,9 @@ function mul!(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractArray{T,N}) w
 end
 
 
-function mul!(y::TT, 
+function mul!(y::AbstractArray, 
               J::AdjointOperator{Jacobian{A,TT}}, 
-              b::TT) where {T,N,G, A<: Sigmoid{T,N,G}, TT <: AbstractArray{T,N}}
+              b::AbstractArray) where {T,N,G, A<: Sigmoid{T,N,G}, TT <: AbstractArray{T,N}}
     L = J.A
 	y .= exp.(-L.A.gamma.*L.x)
 	y ./= (1 .+y).^2 

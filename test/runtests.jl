@@ -28,9 +28,9 @@ end
   include("test_linear_operators_calculus.jl")
 end
 
-#@testset "Nonlinear Calculus rules" begin
-#  include("test_nonlinear_operators_calculus.jl")
-#end
+@testset "Nonlinear Calculus rules" begin
+  include("test_nonlinear_operators_calculus.jl")
+end
 
 @testset "L-BFGS" begin
   include("test_lbfgs.jl")

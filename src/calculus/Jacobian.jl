@@ -56,8 +56,10 @@ function Jacobian(H::HCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D}
 	HCAT(A,H.idxs,H.buf,M)
 end
 #Jacobian of VCAT
-Jacobian(V::VCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D} = 
-VCAT(([Jacobian(a,x) for a in V.A]...,), V.idxs,  V.buf, M) 
+function Jacobian(V::VCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D}
+    JJ = ([Jacobian(a,x) for a in V.A]...,)
+    VCAT{M,N,typeof(JJ),P,C}(JJ, V.idxs, V.buf)
+end
 #Jacobian of Compose 
 function Jacobian(L::Compose, x::X) where {X<:AbstractArray} 
 	Compose(Jacobian.(L.A,(x,L.buf...)),L.buf)

@@ -21,9 +21,9 @@ function mul!(y::AbstractArray{T,N}, L::Pow{T,N,I}, x::AbstractArray{T,N}) where
 	y .= x.^L.p
 end
 
-function mul!(y::TT, 
+function mul!(y::AbstractArray, 
               J::AdjointOperator{Jacobian{Pow{T, N, I},TT}}, 
-              b::TT) where {T, N, I, TT <: AbstractArray{T,N}}
+              b::AbstractArray) where {T, N, I, TT <: AbstractArray{T,N}}
     L = J.A
     y .= conj.(L.A.p.*(L.x).^(L.A.p-1)).*b
 end

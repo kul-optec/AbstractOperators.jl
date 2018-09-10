@@ -25,9 +25,9 @@ function mul!(y::AbstractArray{T,N}, L::SoftMax{T,N}, x::AbstractArray{T,N}) whe
 	y ./= sum(y)
 end
 
-function mul!(y::TT, 
+function mul!(y::AbstractArray, 
               J::AdjointOperator{Jacobian{A,TT}}, 
-              b::TT) where {T, N, A<: SoftMax{T,N}, TT <: AbstractArray{T,N} }
+              b::AbstractArray) where {T, N, A<: SoftMax{T,N}, TT <: AbstractArray{T,N} }
     L = J.A
 	fill!(y,zero(T))
 	L.A.buf .= exp.(L.x.-maximum(L.x))

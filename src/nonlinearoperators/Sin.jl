@@ -24,9 +24,9 @@ function mul!(y::AbstractArray{T,N}, L::Sin{T,N}, x::AbstractArray{T,N}) where {
 	y .= sin.(x)
 end
 
-function mul!(y::TT, 
+function mul!(y::AbstractArray, 
               J::AdjointOperator{Jacobian{A,TT}}, 
-              b::TT) where {T,N, A<: Sin{T,N}, TT <: AbstractArray{T,N}}
+              b::AbstractArray) where {T,N, A<: Sin{T,N}, TT <: AbstractArray{T,N}}
     L = J.A
     y .= conj.(cos.(L.x)).*b
 end
