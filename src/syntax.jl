@@ -20,10 +20,6 @@ end
 *(coeff::T, L::AbstractOperator) where {T<:Number} = Scale(coeff,L)
 *(L1::AbstractOperator, L2::AbstractOperator) = Compose(L1,L2)
 
-# redefine .*
-Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codomainType(L), size(d), d)*L
-Base.broadcast(::typeof(*), d::AbstractArray, L::Scale) = DiagOp(L.coeff*d)*L.A
-
 # getindex
 function getindex(A::AbstractOperator,idx...)
 	if ndoms(A,2) == 1
