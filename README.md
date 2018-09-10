@@ -97,6 +97,11 @@ julia> V*ones(3,3)
 
 A list of the available `AbstractOperators` and calculus rules can be found in the [documentation](https://kul-forbes.github.io/AbstractOperators.jl/latest).
 
+## Related packages
+
+* [ProximalOperators.jl](https://github.com/kul-forbes/ProximalOperators.jl)
+* [ProximalAlgorithms.jl](https://github.com/kul-forbes/ProximalAlgorithms.jl)
+* [StructuredOptimization.jl](https://github.com/kul-forbes/StructuredOptimization.jl)
 
 ## Credits
 
