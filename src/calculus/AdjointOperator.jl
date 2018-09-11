@@ -29,11 +29,6 @@ end
 
 AdjointOperator(L::AdjointOperator) = L.A
 
-# Mappings
-
-# A_mul_B!(y, L::AdjointOperator{T}, x) where {T<:AbstractOperator} = Ac_mul_B!(y, L.A, x)
-#Ac_mul_B!(y, L::AdjointOperator{T}, x) where {T<:AbstractOperator} = A_mul_B!(y, L.A, x)
-
 # Properties
 
 size(L::AdjointOperator) = size(L.A,2), size(L.A,1)
