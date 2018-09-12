@@ -20,7 +20,6 @@ julia> Z*ones(2,2)
 ```
 
 """
-
 struct ZeroPad{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	zp::NTuple{N,Int}
@@ -41,7 +40,7 @@ ZeroPad(x::AbstractArray, zp::NTuple{N,Int})                where {N} = ZeroPad(
 ZeroPad(x::AbstractArray, zp::Vararg{Int,N})                where {N} = ZeroPad(eltype(x), size(x), zp)
 
 # Mappings
-@generated function A_mul_B!(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N}) where {T,N}
+@generated function mul!(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N}) where {T,N}
 
 
 	# builds
@@ -70,11 +69,11 @@ ZeroPad(x::AbstractArray, zp::Vararg{Int,N})                where {N} = ZeroPad(
 	ex = ex[1:end-1] #remove ,
 	ex *= "] : 0. end" 
 
-	ex = parse(ex)
+	ex = Meta.parse(ex)
 
 end
 
-@generated function Ac_mul_B!(y::AbstractArray{T,N},L::ZeroPad{T,N},b::AbstractArray{T,N}) where {T,N}
+@generated function mul!(y::AbstractArray{T,N},L::AdjointOperator{ZeroPad{T,N}},b::AbstractArray{T,N}) where {T,N}
 
 	#builds
 	#for l = 1:size(y,1), m = 1:size(y,2)
@@ -96,7 +95,7 @@ end
 	ex *= idx 
 	ex *= "] end" 
 
-	ex = parse(ex)
+	ex = Meta.parse(ex)
 
 end
 

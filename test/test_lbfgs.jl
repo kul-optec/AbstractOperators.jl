@@ -63,13 +63,13 @@ for i = 1:5
     dir_ref = dirs_ref[:,i]
 
     gradm = -grad
-    @time A_mul_B!(dir, H, gradm)
-    @test vecnorm(dir-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+    @time mul!(dir, H, gradm)
+    @test norm(dir-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
 
     gradm2 = (-grad,-grad)
-    @time A_mul_B!(dirdir, HH, gradm2)
-    @test vecnorm(dirdir[1]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
-    @test vecnorm(dirdir[2]-dir_ref, Inf)/(1+vecnorm(dir_ref, Inf)) <= 1e-15
+    @time mul!(dirdir, HH, gradm2)
+    @test norm(dirdir[1]-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
+    @test norm(dirdir[2]-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
 
     x_old = x;
     grad_old = grad;
@@ -81,8 +81,8 @@ end
 
 #testing reset
 
-reset!(H)
-reset!(HH)
+AbstractOperators.reset!(H)
+AbstractOperators.reset!(HH)
 
 @test blockones(size(H,1)) == H*blockones(size(H,1))
 @test blockones(size(HH,1)) == HH*blockones(size(HH,1))

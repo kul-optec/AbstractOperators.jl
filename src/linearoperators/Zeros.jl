@@ -16,7 +16,6 @@ julia> Zeros([Eye(10,20) Eye(10,20)])
 ```
 
 """
-
 struct Zeros{C,N,D,M} <: LinearOperator
 	dim_out::NTuple{N, Int}
 	dim_in::NTuple{M, Int}
@@ -45,8 +44,8 @@ Zeros(A::AbstractOperator) = Zeros(domainType(A),size(A,2),codomainType(A),size(
 
 # Mappings
 
- A_mul_B!(y::AbstractArray{C,N}, A::Zeros{C,N,D,M}, b::AbstractArray{D,M}) where {C,N,D,M}= fill!(y,zero(C))
-Ac_mul_B!(y::AbstractArray{D,M}, A::Zeros{C,N,D,M}, b::AbstractArray{C,N}) where {C,N,D,M}= fill!(y,zero(D))
+mul!(y::AbstractArray{C,N}, A::Zeros{C,N,D,M}, b::AbstractArray{D,M}) where {C,N,D,M}= fill!(y,zero(C))
+mul!(y::AbstractArray{D,M}, A::AdjointOperator{Zeros{C,N,D,M}}, b::AbstractArray{C,N}) where {C,N,D,M}= fill!(y,zero(D))
 
 # Properties
 

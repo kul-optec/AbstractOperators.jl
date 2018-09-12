@@ -1,31 +1,24 @@
-import Base: blkdiag, transpose, *, +, -, getindex, hcat, vcat, reshape
+import Base: adjoint, *, +, -, getindex, hcat, vcat, reshape
 export jacobian
 
-###### blkdiag ######
-blkdiag(L::Vararg{AbstractOperator}) = DCAT(L...)
-
 ###### ' ######
-transpose{T <: AbstractOperator}(L::T) = Transpose(L)
+adjoint(L::T) where {T <: AbstractOperator} = AdjointOperator(L)
 
 ######+,-######
-(+){T <: AbstractOperator}(L::T) = L
-(-){T <: AbstractOperator}(L::T) = Scale(-1.0, L)
+(+)(L::T) where {T <: AbstractOperator} = L
+(-)(L::T) where {T <: AbstractOperator} = Scale(-1.0, L)
 (+)(L1::AbstractOperator, L2::AbstractOperator) = Sum(L1,  L2 )
 (-)(L1::AbstractOperator, L2::AbstractOperator) = Sum(L1, -L2 )
 
 ###### * ######
-function (*){T <: BlockArray}(L::AbstractOperator, b::T)
+function (*)(L::AbstractOperator, b::T) where {T <: BlockArray}
 	y = blockzeros(codomainType(L), size(L, 1))
-	A_mul_B!(y, L, b)
+	mul!(y, L, b)
 	return y
 end
 
-*{T<:Number}(coeff::T, L::AbstractOperator) = Scale(coeff,L)
+*(coeff::T, L::AbstractOperator) where {T<:Number} = Scale(coeff,L)
 *(L1::AbstractOperator, L2::AbstractOperator) = Compose(L1,L2)
-
-# redefine .*
-Base.broadcast(::typeof(*), d::AbstractArray, L::AbstractOperator) = DiagOp(codomainType(L), size(d), d)*L
-Base.broadcast(::typeof(*), d::AbstractArray, L::Scale) = DiagOp(L.coeff*d)*L.A
 
 # getindex
 function getindex(A::AbstractOperator,idx...)
@@ -40,7 +33,7 @@ function getindex(A::AbstractOperator,idx...)
 end
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex{M,N,L,P,C,A<:HCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
+function getindex(H::A, idx::Union{AbstractArray,Int}) where {M,N,L,P,C,A<:HCAT{M,N,L,P,C}}
 
 	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
@@ -64,7 +57,7 @@ end
 
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex{M,N,L,P,C,A<:VCAT{M,N,L,P,C}}(H::A, idx::Union{AbstractArray,Int})
+function getindex(H::A, idx::Union{AbstractArray,Int}) where {M,N,L,P,C,A<:VCAT{M,N,L,P,C}}
 
 	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
@@ -90,14 +83,14 @@ getindex(H::A, idx::Union{AbstractArray,Int}) where {L <: HCAT, D, S, A<: Affine
 AffineAdd(getindex(H.A, idx), H.d, S) 
 
 # get index of scale
-getindex{T, L, S <:Scale{T,L}}(A::S,idx...) = Scale(A.coeff,A.coeff_conj,getindex(A.A,idx...))
+getindex(A::S,idx...) where {T, L, S <:Scale{T,L}} = Scale(A.coeff,A.coeff_conj,getindex(A.A,idx...))
 
 hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
 vcat(L::Vararg{AbstractOperator}) = VCAT(L...)
 
 ###### reshape ######
-reshape{N,A<:AbstractOperator}(L::A, idx::NTuple{N,Int}) = Reshape(L,idx)
-reshape{A<:AbstractOperator}(L::A, idx::Vararg{Int}) = Reshape(L,idx)
+reshape(L::A, idx::NTuple{N,Int}) where {N,A<:AbstractOperator} = Reshape(L,idx)
+reshape(L::A, idx::Vararg{Int}) where {A<:AbstractOperator} = Reshape(L,idx)
 
 ###### jacobian ######
 jacobian = Jacobian

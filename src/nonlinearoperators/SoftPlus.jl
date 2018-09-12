@@ -19,14 +19,15 @@ end
 
 SoftPlus(DomainDim::NTuple{N,Int}) where {N} = SoftPlus{Float64,N}(DomainDim)
 
-function A_mul_B!(y::AbstractArray{T,N}, L::SoftPlus{T,N}, x::AbstractArray{T,N}) where {T,N}
-	y .= log.(1.+exp.(x))
+function mul!(y::AbstractArray{T,N}, L::SoftPlus{T,N}, x::AbstractArray{T,N}) where {T,N}
+	y .= log.(1 .+exp.(x))
 end
 
-function Ac_mul_B!(y::AbstractArray{T,N}, 
-		   L::Jacobian{A}, 
-		   b::AbstractArray{T,N}) where {T,N, A <: SoftPlus{T,N}}
-	y .= 1./(1.+exp.(-L.x)).*b
+function mul!(y::AbstractArray, 
+              J::AdjointOperator{Jacobian{A,TT}}, 
+              b::AbstractArray) where {T, N, A <: SoftPlus{T,N}, TT <: AbstractArray{T,N} }
+    L = J.A
+	y .= 1 ./(1 .+exp.(-L.x)).*b
 end
 
 fun_name(L::SoftPlus) = "σ"

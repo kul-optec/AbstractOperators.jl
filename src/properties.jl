@@ -1,5 +1,6 @@
 
-import Base: size, ndims, diag 
+import Base: size, ndims 
+import LinearAlgebra: diag 
 
 export ndoms, 
        domainType, 
@@ -56,7 +57,6 @@ codomainType
 
 Returns the size of an `AbstractOperator`. Type `size(A,1)` for the size of the codomain and `size(A,2)` for the size of the codomain. 
 """
-
 size(L::AbstractOperator, i::Int) = size(L)[i]
 
 """
@@ -65,12 +65,11 @@ size(L::AbstractOperator, i::Int) = size(L)[i]
 Returns a `Tuple` with the number of dimensions of the codomain and domain of an `AbstractOperator`.  Type `ndims(A,1)` for the number of dimensions of the codomain and `ndims(A,2)` for the number of dimensions of the codomain.
 
 """
-
 ndims(L::AbstractOperator) = count_dims(size(L,1)), count_dims(size(L,2))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
-count_dims{N}(dims::NTuple{N,Int}) = N
-count_dims{N}(dims::NTuple{N,Tuple}) = count_dims.(dims)
+count_dims(dims::NTuple{N,Int}) where N = N
+count_dims(dims::NTuple{N,Tuple}) where N = count_dims.(dims)
 
 """
 `ndoms(L::AbstractOperator, [dom::Int]) -> (number of codomains, number of domains)`
@@ -87,7 +86,7 @@ julia> ndoms(hcat(DFT(10,10),DFT(10,10)))
 julia> ndoms(hcat(DFT(10,10),DFT(10,10)),2)
 2
 
-julia> ndoms(blkdiag(DFT(10,10),DFT(10,10))
+julia> ndoms(DCAT(DFT(10,10),DFT(10,10)))
 (2,2)
 ```
 """
@@ -314,7 +313,7 @@ end
 
 #printing
 function Base.show(io::IO, L::AbstractOperator)
-	print(io, fun_name(L)" "*fun_space(L) )
+	print(io, fun_name(L)*" "*fun_space(L) )
 end
 
 function fun_space(L::AbstractOperator)  
@@ -324,7 +323,7 @@ function fun_space(L::AbstractOperator)
 end
 
 function fun_dom(L::AbstractOperator,n::Int)
-	dm = n == 2? domainType(L) : codomainType(L)
+	dm = n == 2 ? domainType(L) : codomainType(L)
 	sz = size(L,n)
 	return string_dom(dm,sz)
 end
@@ -337,5 +336,5 @@ end
 
 function string_dom(dm::Tuple,sz::Tuple)
 	s = string_dom.(dm,sz)
-	length(s) > 3 ? s[1]*"..."s[end]  : *(s...)
+	length(s) > 3 ? s[1]*"..."*s[end]  : *(s...)
 end

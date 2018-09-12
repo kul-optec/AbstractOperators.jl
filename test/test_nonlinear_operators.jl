@@ -30,7 +30,7 @@ op = SoftMax(Float64,(n,m,l))
 
 y, grad = test_NLop(op,x,r,verb)
 
-# SoftMax
+# SoftPlus
 n = 10
 x = randn(n)
 r = randn(n)
@@ -52,7 +52,7 @@ op = Exp(Float64,(n,m,l))
 
 y, grad = test_NLop(op,x,r,verb)
 
-# Sin
+## Sin
 n,m,l = 4,5,6
 x = randn(n,m,l)
 r = randn(n,m,l)
@@ -61,7 +61,7 @@ op = Sin(Float64,(n,m,l))
 
 y, grad = test_NLop(op,x,r,verb)
 
-# Sin
+ Cos
 n,m,l = 4,5,6
 x = randn(n,m,l)
 r = randn(n,m,l)

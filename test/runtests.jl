@@ -1,9 +1,12 @@
 using AbstractOperators
-using Base.Test
-using Base.Profile
+using LinearAlgebra, FFTW, DSP, SparseArrays
+using Printf
+using Random
+using Test
+using Profile
 
 include("utils.jl")
-srand(0)
+Random.seed!(0)
 
 verb = true
 

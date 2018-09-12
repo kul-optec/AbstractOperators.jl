@@ -8,7 +8,6 @@ export Conv
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the convolution between `x` and `h`. Uses `conv` and hence FFT algorithm. 
 
 """
-
 struct Conv{T,
 	    H  <: AbstractVector{T},
 	    Hc <: AbstractVector{Complex{T}},
@@ -18,8 +17,8 @@ struct Conv{T,
 	buf::H
 	buf_c1::Hc
 	buf_c2::Hc
-	R::Base.DFT.Plan
-	I::Base.DFT.Plan
+	R::AbstractFFTs.Plan
+	I::AbstractFFTs.Plan
 end
 
 # Constructors
@@ -41,37 +40,37 @@ Conv(x::H, h::H) where {H} = Conv(eltype(x), size(x), h)
 
 # Mappings
 
-function A_mul_B!(y::H, A::Conv{T,H}, b::H) where {T, H}
+function mul!(y::H, A::Conv{T,H}, b::H) where {T, H}
 	#y .= conv(A.h,b) #naive implementation
 	for i in eachindex(A.buf)
 		A.buf[i] = i <= length(A.h) ? A.h[i] : zero(T) 
 	end
-	A_mul_B!(A.buf_c1, A.R, A.buf)
+	mul!(A.buf_c1, A.R, A.buf)
 	for i in eachindex(A.buf)
 		A.buf[i] = i <= length(b) ? b[i] : zero(T) 
 	end
-	A_mul_B!(A.buf_c2, A.R, A.buf)
+	mul!(A.buf_c2, A.R, A.buf)
 	A.buf_c2 .*= A.buf_c1
-	A_mul_B!(y,A.I,A.buf_c2)
+	mul!(y,A.I,A.buf_c2)
 
 end
 
-function Ac_mul_B!(y::H, A::Conv{T,H}, b::H) where {T, H}
-	#y .= xcorr(b,A.h)[size(A,1)[1]:end-length(A.h)+1] #naive implementation
-	for i in eachindex(A.buf)
-		ii = length(A.buf)-i+1
-		A.buf[ii] = i <= length(A.h) ? A.h[i] : zero(T) 
+function mul!(y::H, L::AdjointOperator{C}, b::H) where {T, H, C <: Conv{T,H}}
+	#y .= xcorr(b,L.A.h)[size(L.A,1)[1]:end-length(L.A.h)+1] #naive implementation
+	for i in eachindex(L.A.buf)
+		ii = length(L.A.buf)-i+1
+		L.A.buf[ii] = i <= length(L.A.h) ? L.A.h[i] : zero(T) 
 	end
-	A_mul_B!(A.buf_c1, A.R, A.buf)
-	for i in eachindex(A.buf)
-		A.buf[i] = b[i] 
+	mul!(L.A.buf_c1, L.A.R, L.A.buf)
+	for i in eachindex(L.A.buf)
+		L.A.buf[i] = b[i] 
 	end
-	A_mul_B!(A.buf_c2, A.R, A.buf)
-	A.buf_c2 .*= A.buf_c1
-	A_mul_B!(A.buf,A.I,A.buf_c2)
-	y[1] = A.buf[end]
+	mul!(L.A.buf_c2, L.A.R, L.A.buf)
+	L.A.buf_c2 .*= L.A.buf_c1
+	mul!(L.A.buf,L.A.I,L.A.buf_c2)
+	y[1] = L.A.buf[end]
 	for i = 2:length(y)
-		y[i] = A.buf[i-1]
+		y[i] = L.A.buf[i-1]
 	end
 end
 

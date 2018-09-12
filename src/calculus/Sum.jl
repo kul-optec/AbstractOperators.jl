@@ -17,7 +17,7 @@ function Sum(A::L, bufC::C, bufD::D, M::Int, N::Int) where {C, D, K, L <: NTuple
 	end
 	if any([codomainType(A[1]) != codomainType(a) for a in A]) ||
 	   any([codomainType(A[1]) != codomainType(a) for a in A])
-		throw(DomainError())
+		throw(DomainError(A,"cannot sum operator with different codomains"))
 	end
 	Sum{M, N, K, C, D, L}(A, bufC, bufD)
 end
@@ -42,12 +42,12 @@ Sum((L1,L2.A...),L2.bufC,L2.bufD, M, N)
 
 # Mappings
 
-@generated function A_mul_B!(y::C, S::Sum{M,N,K,C,D}, b::D) where {M,N,K,C,D}
-	ex = :(A_mul_B!(y,S.A[1],b))
+@generated function mul!(y::C, S::Sum{M,N,K,C,D}, b::D) where {M,N,K,C,D}
+	ex = :(mul!(y,S.A[1],b))
 	for i = 2:K
 		ex = quote
 			$ex
-			A_mul_B!(S.bufC,S.A[$i],b)
+			mul!(S.bufC,S.A[$i],b)
 		end
 		if C <: AbstractArray
 			ex = :($ex; y .+= S.bufC)
@@ -63,12 +63,12 @@ Sum((L1,L2.A...),L2.bufC,L2.bufD, M, N)
 	end
 end
 
-@generated function Ac_mul_B!(y::D, S::Sum{M,N,K,C,D}, b::C) where {M,N,K,C,D}
-	ex = :(Ac_mul_B!(y,S.A[1],b))
+@generated function mul!(y::D, A::AdjointOperator{Sum{M,N,K,C,D,L}}, b::C) where {M,N,K,C,D,L}
+	ex = :(S = A.A; mul!(y,S.A[1]',b))
 	for i = 2:K
 		ex = quote
 			$ex
-			Ac_mul_B!(S.bufD,S.A[$i],b)
+			mul!(S.bufD,S.A[$i]',b)
 		end
 		if D <: AbstractArray
 			ex = :($ex; y .+= S.bufD)
@@ -89,15 +89,15 @@ end
 size(L::Sum) = size(L.A[1])
 
   domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:AbstractArray,L} =    domainType(S.A[1])
-  domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:Tuple        ,L} =   domainType.(S.A[1])
+  domainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C,D<:Tuple        ,L} =   domainType.(Ref(S.A[1]))
 codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:AbstractArray,D,L} =  codomainType(S.A[1])
-codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:Tuple        ,D,L} = codomainType.(S.A[1])
+codomainType(S::Sum{M, N, K, C, D, L}) where {M,N,K,C<:Tuple        ,D,L} = codomainType.(Ref(S.A[1]))
 
 fun_domain(S::Sum)   = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])
 
 fun_name(S::Sum) =
-length(S.A) == 2 ? fun_name(S.A[1])"+"fun_name(S.A[2]) : "Σ"
+length(S.A) == 2 ? fun_name(S.A[1])*"+"*fun_name(S.A[2]) : "Σ"
 
 
 is_linear(L::Sum)        = all(is_linear.(L.A))            
@@ -106,14 +106,11 @@ is_diagonal(L::Sum)      = all(is_diagonal.(L.A))
 is_full_row_rank(L::Sum) = any(is_full_row_rank.(L.A))
 is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
 
-diag(L::Sum) = sum(diag.(L.A))
-
+diag(L::Sum) = (+).(diag.(L.A)...,)
 
 # utils
-import Base: permute
-
 function permute(S::Sum{M,N}, p::AbstractVector{Int}) where {M,N}
-    AA = ([permute(A,p) for A in S.A]...) 
+    AA = ([permute(A,p) for A in S.A]...,) 
     return Sum(AA,S.bufC,S.bufD[p],M,N)
 end
 

@@ -29,12 +29,11 @@ julia> A*ones(3)
 ```
 
 """
-
 struct DFT{N,
 	      C<:RealOrComplex,
 	      D<:RealOrComplex,
-	      T1<:Base.DFT.Plan,
-	      T2<:Base.DFT.Plan} <: FourierTransform{N,C,D,T1,T2}
+	      T1<:AbstractFFTs.Plan,
+	      T2<:AbstractFFTs.Plan} <: FourierTransform{N,C,D,T1,T2}
 	dim_in::NTuple{N,Int}
 	A::T1
 	At::T2
@@ -68,12 +67,11 @@ julia> A*ones(3)
 ```
 
 """
-
 struct IDFT{N,
 	       C<:RealOrComplex,
 	       D<:RealOrComplex,
-	       T1<:Base.DFT.Plan,
-	       T2<:Base.DFT.Plan} <: FourierTransform{N,C,D,T1,T2}
+	       T1<:AbstractFFTs.Plan,
+	       T2<:AbstractFFTs.Plan} <: FourierTransform{N,C,D,T1,T2}
 	dim_in::NTuple{N,Int}
 	A::T1
 	At::T2
@@ -116,57 +114,57 @@ IDFT(T::Type,dim_in::Vararg{Int}) = IDFT(T,dim_in)
 
 # Mappings
 
-function A_mul_B!(y::AbstractArray{C,N},
-		  L::DFT{N,C,C,T1,T2},
-		  b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
-	A_mul_B!(y,L.A,b)
+function mul!(y::AbstractArray{C,N},
+              L::DFT{N,C,C,T1,T2},
+              b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
+	mul!(y,L.A,b)
 end
 
-function A_mul_B!(y::AbstractArray{C,N},
-		  L::DFT{N,C,D,T1,T2},
-		  b::AbstractArray{D,N}) where {N,C<:Complex,D<:Real,T1,T2}
-	A_mul_B!(y,L.A,complex(b))
+function mul!(y::AbstractArray{C,N},
+              L::DFT{N,C,D,T1,T2},
+              b::AbstractArray{D,N}) where {N,C<:Complex,D<:Real,T1,T2}
+	mul!(y,L.A,complex(b))
 end
 
-function Ac_mul_B!(y::AbstractArray{C,N},
-		   L::DFT{N,C,C,T1,T2},
-		   b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
-	A_mul_B!(y,L.At,b)
+function mul!(y::AbstractArray{C,N},
+              L::AdjointOperator{DFT{N,C,C,T1,T2}},
+              b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
+	mul!(y,L.A.At,b)
 end
 
-function Ac_mul_B!(y::AbstractArray{D,N},
-		   L::DFT{N,C,D,T1,T2},
-		   b::AbstractArray{C,N}) where {N,C<:Complex,D<:Real,T1,T2}
+function mul!(y::AbstractArray{D,N},
+              L::AdjointOperator{DFT{N,C,D,T1,T2}},
+              b::AbstractArray{C,N}) where {N,C<:Complex,D<:Real,T1,T2}
 	y2 = complex(y)
-	A_mul_B!(y2,L.At,b)
+	mul!(y2,L.A.At,b)
 	y .= real.(y2)
 end
 
-function A_mul_B!(y::AbstractArray{C,N},
-		  L::IDFT{N,C,C,T1,T2},
-		  b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
-	A_mul_B!(y,L.A,b)
+function mul!(y::AbstractArray{C,N},
+              L::IDFT{N,C,C,T1,T2},
+              b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
+	mul!(y,L.A,b)
 end
 
-function A_mul_B!(y::AbstractArray{C,N},
-		  L::IDFT{N,C,D,T1,T2},
-		  b::AbstractArray{D,N}) where {N,C<:Complex,D<:Real,T1,T2}
-	A_mul_B!(y,L.A,complex(b))
+function mul!(y::AbstractArray{C,N},
+              L::IDFT{N,C,D,T1,T2},
+              b::AbstractArray{D,N}) where {N,C<:Complex,D<:Real,T1,T2}
+	mul!(y,L.A,complex(b))
 end
 
-function Ac_mul_B!(y::AbstractArray{C,N},
-		   L::IDFT{N,C,C,T1,T2},
-		   b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
-	A_mul_B!(y,L.At,b)
+function mul!(y::AbstractArray{C,N},
+              L::AdjointOperator{IDFT{N,C,C,T1,T2}},
+              b::AbstractArray{C,N}) where {N,C<:Complex,T1,T2}
+	mul!(y,L.A.At,b)
 	y ./= length(b)
 end
 
-function Ac_mul_B!(y::AbstractArray{D,N},
-		   L::IDFT{N,C,D,T1,T2},
-		   b::AbstractArray{C,N}) where {N,C<:Complex,D<:Real,T1,T2}
+function mul!(y::AbstractArray{D,N},
+              L::AdjointOperator{IDFT{N,C,D,T1,T2}},
+              b::AbstractArray{C,N}) where {N,C<:Complex,D<:Real,T1,T2}
 
 	y2 = complex(y)
-	A_mul_B!(y2,L.At,b)
+	mul!(y2,L.A.At,b)
 	y .= (/).(real.(y2), length(b))
 end
 

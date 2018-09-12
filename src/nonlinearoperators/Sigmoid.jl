@@ -20,16 +20,17 @@ end
 
 Sigmoid(DomainDim::NTuple{N,Int}, gamma::G=1.) where {N,G} = Sigmoid{Float64,N,G}(DomainDim,gamma)
 
-function A_mul_B!(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractArray{T,N}) where {T,N,G}
-	y .= (1.+exp.(-L.gamma.*x)).^(-1)
+function mul!(y::AbstractArray{T,N}, L::Sigmoid{T,N,G}, x::AbstractArray{T,N}) where {T,N,G}
+	y .= (1 .+exp.(-L.gamma.*x)).^(-1)
 end
 
 
-function Ac_mul_B!(y::AbstractArray{T,N}, 
-		   L::Jacobian{A}, 
-		   b::AbstractArray{T,N}) where {T,N,G, A<: Sigmoid{T,N,G}}
+function mul!(y::AbstractArray, 
+              J::AdjointOperator{Jacobian{A,TT}}, 
+              b::AbstractArray) where {T,N,G, A<: Sigmoid{T,N,G}, TT <: AbstractArray{T,N}}
+    L = J.A
 	y .= exp.(-L.A.gamma.*L.x)
-	y ./= (1.+y).^2 
+	y ./= (1 .+y).^2 
 	y .= conj.(L.A.gamma.*y)
 	y .*= b
 end

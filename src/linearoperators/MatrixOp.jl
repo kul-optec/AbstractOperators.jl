@@ -27,7 +27,6 @@ julia> MatrixOp(randn(20,10),4)
 ```
 
 """
-
 struct MatrixOp{D, T, M <: AbstractMatrix{T}} <: LinearOperator
 	A::M
 	n_col_in::Integer
@@ -60,13 +59,13 @@ convert(::Type{LinearOperator}, dom::Type, dim_in::Tuple, L::AbstractMatrix) = M
 
 # Mappings
 
- A_mul_B!(y::AbstractArray, L::MatrixOp{D, T, M}, b::AbstractArray) where {D, T, M} = A_mul_B!(y, L.A, b)
-Ac_mul_B!(y::AbstractArray, L::MatrixOp{D, T, M}, b::AbstractArray) where {D, T, M} = Ac_mul_B!(y, L.A, b)
+mul!(y::AbstractArray, L::MatrixOp{D, T, M}, b::AbstractArray) where {D, T, M} = mul!(y, L.A, b)
+mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) where {D, T, M} = mul!(y, L.A.A', b)
 
 # Special Case, real b, complex matrix
-function Ac_mul_B!(y::AbstractArray, L::MatrixOp{D, T}, b::AbstractArray) where {D <: Real , T <: Complex} 
+function mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) where {D <: Real , T <: Complex, M} 
 	yc = zeros(T,size(y))
-	Ac_mul_B!(yc, L.A, b)
+	mul!(yc, L.A.A', b)
 	y .= real.(yc)
 end
 

@@ -24,9 +24,8 @@ julia> op*ones(3,4)
 ```
 
 """
-
 struct LMatrixOp{T, A <: Union{AbstractVector,AbstractMatrix}, 
-		 B <:Union{RowVector,AbstractMatrix}} <: LinearOperator
+		 B <: AbstractMatrix} <: LinearOperator
 	b::A
 	bt::B
 	n_row_in::Integer
@@ -44,15 +43,15 @@ LMatrixOp(b::A, n_row_in::Int) where {T,A<:Union{AbstractVector{T},AbstractMatri
 LMatrixOp(T,(n_row_in,size(b,1)),b) 
 
 # Mappings
-A_mul_B!(y::C, L::LMatrixOp{T,A,B}, X::AbstractMatrix{T} ) where {T,A,B,C<:Union{AbstractVector,AbstractMatrix}} = 
-A_mul_B!(y,X,L.b)
+mul!(y::C, L::LMatrixOp{T,A,B}, X::AbstractMatrix{T} ) where {T,A,B,C<:Union{AbstractVector,AbstractMatrix}} = 
+mul!(y,X,L.b)
 
-function Ac_mul_B!(y::AbstractMatrix{T}, L::LMatrixOp{T,A,B}, Y::AbstractVector{T} ) where {T,A,B} 
-	y .= L.bt.*Y
+function mul!(y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractVector{T} ) where {T,A,B} 
+	y .= L.A.bt.*Y
 end
 
-function Ac_mul_B!(y::AbstractMatrix{T}, L::LMatrixOp{T,A,B}, Y::AbstractMatrix{T} ) where {T,A,B} 
-	A_mul_Bc!(y,Y,L.b)
+function mul!(y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractMatrix{T} ) where {T,A,B} 
+	mul!(y,Y,L.A.b')
 end
 
 # Properties
@@ -61,7 +60,7 @@ codomainType(L::LMatrixOp{T, A}) where {T, A} = T
 
 fun_name(L::LMatrixOp) = "(⋅)b"
 
-size(L::LMatrixOp{T,A,B}) where {T,A <: AbstractVector,B <: RowVector} = (L.n_row_in,),(L.n_row_in, length(L.b))
+size(L::LMatrixOp{T,A,B}) where {T,A <: AbstractVector,B <: Adjoint} = (L.n_row_in,),(L.n_row_in, length(L.b))
 size(L::LMatrixOp{T,A,B}) where {T,A <: AbstractMatrix,B <: AbstractMatrix} = (L.n_row_in,size(L.b,2)),(L.n_row_in, size(L.b,1))
 
 #TODO

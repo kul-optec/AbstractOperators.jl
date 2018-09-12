@@ -1,6 +1,8 @@
 # Define block-arrays
 module BlockArrays
 
+using LinearAlgebra
+
 export RealOrComplex,
        BlockArray,
        blocksize,
@@ -16,6 +18,8 @@ export RealOrComplex,
        blockzeros,
        blockones,
        blockaxpy!,
+       blockscale!,
+       blockcumscale!,
        blockiszero
 
 
@@ -37,7 +41,7 @@ blocklength(x::Tuple) = sum(blocklength.(x))
 blocklength(x::AbstractArray) = length(x)
 
 blockvecnorm(x::Tuple) = sqrt(real(blockvecdot(x, x)))
-blockvecnorm(x::AbstractArray{R}) where {R <: Number} = vecnorm(x)
+blockvecnorm(x::AbstractArray{R}) where {R <: Number} = norm(x)
 
 blockmaxabs(x::Tuple) = maximum(blockmaxabs.(x))
 blockmaxabs(x::AbstractArray{R}) where {R <: Number}= maximum(abs, x)
@@ -49,30 +53,36 @@ blockcopy(x::Tuple) = blockcopy.(x)
 blockcopy(x::AbstractArray) = copy(x)
 
 blockcopy!(y::Tuple, x::Tuple) = blockcopy!.(y, x)
-blockcopy!(y::AbstractArray, x::AbstractArray) = copy!(y, x)
+blockcopy!(y::AbstractArray, x::AbstractArray) = copyto!(y, x)
 
 blockset!(y::Tuple, x) = blockset!.(y, x)
 blockset!(y::AbstractArray, x) = (y .= x)
 
 blockvecdot(x::T1, y::T2) where {T1 <: Tuple, T2 <: Tuple} = sum(blockvecdot.(x,y))
-blockvecdot(x::AbstractArray{R1}, y::AbstractArray{R2}) where {R1 <: Number, R2 <: Number} = vecdot(x, y)
+blockvecdot(x::AbstractArray{R1}, y::AbstractArray{R2}) where {R1 <: Number, R2 <: Number} = dot(x, y)
 
 blockzeros(t::Tuple, s::Tuple) = blockzeros.(t, s)
 blockzeros(t::Type, n::NTuple{N, Integer} where {N}) = zeros(t, n)
 blockzeros(t::Tuple) = blockzeros.(t)
 blockzeros(n::NTuple{N, Integer} where {N}) = zeros(n)
 blockzeros(n::Integer) = zeros(n)
-blockzeros(a::AbstractArray) = zeros(a)
+blockzeros(a::AbstractArray) = fill!(similar(a),zero(eltype(a)))
 
 blockones(t::Tuple, s::Tuple) = blockones.(t, s)
 blockones(t::Type, n::NTuple{N, Integer} where {N}) = ones(t, n)
 blockones(t::Tuple) = blockones.(t)
 blockones(n::NTuple{N, Integer} where {N}) = ones(n)
 blockones(n::Integer) = ones(n)
-blockones(a::AbstractArray) = ones(a)
+blockones(a::AbstractArray) = fill!(a,one(eltype(a)))
 
-blockaxpy!(z::Tuple, x, alpha::Real, y::Tuple) = blockaxpy!.(z, x, alpha, y)
-blockaxpy!(z::AbstractArray, x, alpha::Real, y::AbstractArray) = (z .= x .+ alpha.*y)
+blockscale!(z::Tuple, alpha::Real, y::Tuple) = blockscale!.(z, alpha, y)
+blockscale!(z::AbstractArray, alpha::Real, y::AbstractArray) = (z .= alpha.*y)
+
+blockcumscale!(z::Tuple, alpha::Real, y::Tuple) = blockcumscale!.(z, alpha, y)
+blockcumscale!(z::AbstractArray, alpha::Real, y::AbstractArray) = (z .+= alpha.*y)
+
+blockaxpy!(z::Tuple, x::Tuple, alpha::Real, y::Tuple) = blockaxpy!.(z, x, alpha, y)
+blockaxpy!(z::AbstractArray, x::AbstractArray, alpha::Real, y::AbstractArray) = (z .= x .+ alpha.*y)
 
 blockiszero(x::AbstractArray) = iszero(x)
 blockiszero(x::Tuple) = all(iszero.(x))

@@ -2,6 +2,8 @@ __precompile__()
 
 module AbstractOperators
 
+using LinearAlgebra, AbstractFFTs, DSP, FFTW
+
 # Block stuff
 include("utilities/block.jl")
 using AbstractOperators.BlockArrays
@@ -11,7 +13,7 @@ abstract type AbstractOperator end
 abstract type LinearOperator    <: AbstractOperator end
 abstract type NonLinearOperator <: AbstractOperator end
 
-import Base: A_mul_B!, Ac_mul_B!
+import LinearAlgebra: mul!
 
 export LinearOperator,
        NonLinearOperator,
@@ -21,7 +23,9 @@ export LinearOperator,
 
 include("properties.jl")
 
-# Linear operators
+include("calculus/AdjointOperator.jl")
+
+## Linear operators
 
 include("linearoperators/MyLinOp.jl")
 include("linearoperators/Zeros.jl")
@@ -30,7 +34,7 @@ include("linearoperators/Eye.jl")
 include("linearoperators/DiagOp.jl")
 include("linearoperators/GetIndex.jl")
 include("linearoperators/MatrixOp.jl")
-include("linearoperators/MatrixMul.jl")
+include("linearoperators/LMatrixOp.jl")
 include("linearoperators/DFT.jl")
 include("linearoperators/RDFT.jl")
 include("linearoperators/IRDFT.jl")
@@ -53,7 +57,6 @@ include("calculus/Compose.jl")
 include("calculus/Reshape.jl")
 include("calculus/BroadCast.jl")
 include("calculus/Sum.jl")
-include("calculus/Transpose.jl")
 include("calculus/AffineAdd.jl")
 include("calculus/Jacobian.jl")
 include("calculus/NonLinearCompose.jl")

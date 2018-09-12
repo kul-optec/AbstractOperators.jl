@@ -36,7 +36,7 @@ function Jacobian(H::DCAT{N,L,P1,P2},x) where {N,L,P1,P2}
 		if length(idx) == 1 
             A = (A...,jacobian(H.A[k],x[idx])) 
         else
-            xx = ([x[i] for i in idx]...)
+            xx = ([x[i] for i in idx]...,)
             A = (A...,jacobian(H.A[k],xx)) 
         end
 	end
@@ -49,15 +49,17 @@ function Jacobian(H::HCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D}
 		if length(idx) == 1 
             A = (A...,jacobian(H.A[k],x[idx])) 
         else
-            xx = ([x[i] for i in idx]...)
+            xx = ([x[i] for i in idx]...,)
             A = (A...,jacobian(H.A[k],xx)) 
         end
 	end
 	HCAT(A,H.idxs,H.buf,M)
 end
 #Jacobian of VCAT
-Jacobian(V::VCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D} = 
-VCAT(([Jacobian(a,x) for a in V.A]...), V.idxs,  V.buf, M) 
+function Jacobian(V::VCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D}
+    JJ = ([Jacobian(a,x) for a in V.A]...,)
+    VCAT{M,N,typeof(JJ),P,C}(JJ, V.idxs, V.buf)
+end
 #Jacobian of Compose 
 function Jacobian(L::Compose, x::X) where {X<:AbstractArray} 
 	Compose(Jacobian.(L.A,(x,L.buf...)),L.buf)
@@ -70,7 +72,7 @@ end
 Jacobian(R::Reshape{N,L},x::AbstractArray) where {N,L} = Reshape(Jacobian(R.A,x),R.dim_out) 
 #Jacobian of Sum
 Jacobian(S::Sum{M,N,K,C,D},x::D) where {M,N,K,C,D} = 
-Sum(([Jacobian(a,x) for a in S.A]...),S.bufC,S.bufD,M,N)
+Sum(([Jacobian(a,x) for a in S.A]...,),S.bufC,S.bufD,M,N)
 #Jacobian of Transpose
 Jacobian(T::Transpose{A}, x::AbstractArray) where {A <: AbstractOperator} = T 
 #Jacobian of BroadCast

@@ -6,16 +6,17 @@ function test_op(A::AbstractOperator, x, y, verb::Bool = false)
   Ax = A*x
   Ax2 = AbstractOperators.blocksimilar(Ax)
   verb && println("forward preallocated")
-  A_mul_B!(Ax2, A, x) #verify in-place linear operator works
-  verb && @time A_mul_B!(Ax2, A, x)
+  mul!(Ax2, A, x) #verify in-place linear operator works
+  verb && @time mul!(Ax2, A, x)
 
   @test AbstractOperators.blockvecnorm(Ax .- Ax2) <= 1e-8
 
   Acy = A'*y
   Acy2 = AbstractOperators.blocksimilar(Acy)
   verb && println("adjoint preallocated")
-  Ac_mul_B!(Acy2, A, y) #verify in-place linear operator works
-  verb && @time Ac_mul_B!(Acy2, A, y)
+  At = AdjointOperator(A)
+  mul!(Acy2, At, y) #verify in-place linear operator works
+  verb && @time mul!(Acy2, At, y)
 
   @test AbstractOperators.blockvecnorm(Acy .- Acy2) <= 1e-8
 
@@ -34,8 +35,8 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	Ax = A*x
 	Ax2 = AbstractOperators.blocksimilar(Ax)
 	verb && println("forward preallocated")
-	A_mul_B!(Ax2, A, x) #verify in-place linear operator works
-	verb && @time A_mul_B!(Ax2, A, x)
+	mul!(Ax2, A, x) #verify in-place linear operator works
+	verb && @time mul!(Ax2, A, x)
 
 	@test_throws ErrorException A'
 
@@ -45,12 +46,12 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	verb && println(J)
 
 	grad = J'*y
-	A_mul_B!(Ax2, A, x) #redo forward
-	verb && println("jacobian Ac_mul_B! preallocated")
+	mul!(Ax2, A, x) #redo forward
+	verb && println("adjoint jacobian mul! preallocated")
 	grad2 = AbstractOperators.blocksimilar(grad)
-	Ac_mul_B!(grad2, J, y) #verify in-place linear operator works
-	verb && A_mul_B!(Ax2, A, x) #redo forward
-	verb && @time Ac_mul_B!(grad2, J, y) 
+	mul!(grad2, J', y) #verify in-place linear operator works
+	verb && mul!(Ax2, A, x) #redo forward
+	verb && @time mul!(grad2, J', y) 
 
 	@test AbstractOperators.blockvecnorm(grad .- grad2) < 1e-8
 
@@ -66,10 +67,10 @@ end
 ############# Finite Diff for Jacobian tests
 
 
-function gradient_fd{A<:AbstractOperator}(op::A, 
-					  y0::AbstractArray, 
-					  x0::AbstractArray, 
-					  r::AbstractArray) 
+function gradient_fd(op::A, 
+                     y0::AbstractArray, 
+                     x0::AbstractArray, 
+                     r::AbstractArray) where {A<:AbstractOperator} 
 	
 	y = copy(y0)
 	J =  zeros(*(size(op,1)...),*(size(op,2)...))
@@ -77,20 +78,20 @@ function gradient_fd{A<:AbstractOperator}(op::A,
 	for i = 1:size(J,2)
 		x = copy(x0)
 		x[i] = x[i]+h
-		A_mul_B!(y,op,x)
+		mul!(y,op,x)
 		J[:,i] .= ((y.-y0)./h)[:]
 	end
 	return reshape(J'*r[:],size(op,2))
 end
 
-function gradient_fd{N, A<:AbstractOperator}(op::A, 
-					     y0::AbstractArray, 
-					     x0::NTuple{N,AbstractArray},
-					     r::AbstractArray) 
+function gradient_fd(op::A, 
+                     y0::AbstractArray, 
+                     x0::NTuple{N,AbstractArray},
+                     r::AbstractArray) where {N, A<:AbstractOperator} 
 	
 
 	y = copy(y0)
-	grad = zeros.(x0)
+	grad = AbstractOperators.blockzeros(x0)
 	J =  [ zeros(*(size(op,1)...),*(sz2...)) for sz2 in size(op,2)]
 
 	h = sqrt(eps())
@@ -98,7 +99,7 @@ function gradient_fd{N, A<:AbstractOperator}(op::A,
 		for i = 1:size(J[ii],2)
 			x = deepcopy(x0)
 			x[ii][i] = x[ii][i]+h
-			A_mul_B!(y,op,x)
+			mul!(y,op,x)
 			J[ii][:,i] .= ((y.-y0)./h)[:]
 		end
 		grad[ii] .= reshape(J[ii]'*r[:],size(op,2)[ii])
@@ -106,20 +107,20 @@ function gradient_fd{N, A<:AbstractOperator}(op::A,
 	return grad
 end
 
-function gradient_fd{N, A<:AbstractOperator}(op::A, 
-					     y0::NTuple{N,AbstractArray}, 
-					     x0::AbstractArray, 
-					     r::NTuple{N,AbstractArray}) 
+function gradient_fd(op::A, 
+                     y0::NTuple{N,AbstractArray}, 
+                     x0::AbstractArray, 
+                     r::NTuple{N,AbstractArray}) where {N, A<:AbstractOperator} 
 	
-	y = zeros.(y0)
-	grad = zeros(x0)
+	y = AbstractOperators.blockzeros(y0)
+	grad = AbstractOperators.blockzeros(x0)
 	J = [ zeros(*(sz1...),*(size(op,2)...)) for sz1 in size(op,1)]
 
 	h = sqrt(eps())
 	for i in eachindex(x0)
 		x = deepcopy(x0)
 		x[i] = x[i]+h
-		A_mul_B!(y,op,x)
+		mul!(y,op,x)
 		for ii in eachindex(J)
 			J[ii][:,i] .= ((y[ii].-y0[ii])./h)[:]
 		end
@@ -130,12 +131,12 @@ function gradient_fd{N, A<:AbstractOperator}(op::A,
 	return grad
 end
 
-function gradient_fd{N,M, A<:AbstractOperator}(op::A, 
-					       y0::NTuple{N,AbstractArray}, 
-					       x0::NTuple{M,AbstractArray}, 
-					       r::NTuple{N,AbstractArray}) 
-	grad = zeros.(x0)
-	y    = zeros.(y0)
+function gradient_fd(op::A, 
+                     y0::NTuple{N,AbstractArray}, 
+                     x0::NTuple{M,AbstractArray}, 
+                     r::NTuple{N,AbstractArray}) where {N,M, A<:AbstractOperator} 
+	grad = AbstractOperators.blockzeros(x0)
+	y    = AbstractOperators.blockzeros(y0)
 	J = [ zeros(*(size(op,1)[i]...),*(size(op,2)[ii]...)) for ii = 1:M, i = 1:N ]
 				
 
@@ -144,7 +145,7 @@ function gradient_fd{N,M, A<:AbstractOperator}(op::A,
 		for iii in eachindex(x[i])
 			x = deepcopy(x0)
 			x[i][iii] = x[i][iii]+h
-			A_mul_B!(y,op,x)
+			mul!(y,op,x)
 
 			for ii = 1:N
 				J[i,ii][:,iii] .= ((y[ii].-y0[ii])./h)[:]

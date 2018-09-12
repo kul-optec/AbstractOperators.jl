@@ -1,6 +1,6 @@
  @printf("\nTesting linear operators\n")
 
-####### Conv ############
+######## Conv ############
 n,m = 5, 6
 h = randn(m)
 op = Conv(Float64,(n,),h)
@@ -8,7 +8,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n+m-1), verb)
 y2 = conv(x1,h)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 op = Conv(x1,h)
@@ -25,14 +25,14 @@ op = Conv(x1,h)
 @test is_full_row_rank(op)    == true
 @test is_full_column_rank(op) == true
 
-######### DCT ############
+########## DCT ############
 n = 4
 op = DCT(Float64,(n,))
 x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = dct(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 op = DCT((n,))
@@ -55,7 +55,7 @@ m = 10
 op = DCT(n,m)
 x1 = randn(n,m)
 
-@test vecnorm(op'*(op*x1) - x1) <= 1e-12
+@test norm(op'*(op*x1) - x1) <= 1e-12
 @test diag_AAc(op) == 1.
 @test diag_AcA(op) == 1.
 
@@ -66,7 +66,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = idct(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 op = IDCT((n,))
@@ -89,30 +89,31 @@ m = 10
 op = IDCT(n,m)
 x1 = randn(n,m)
 
-@test vecnorm(op'*(op*x1) - x1) <= 1e-12
+@test norm(op'*(op*x1) - x1) <= 1e-12
 @test diag_AAc(op) == 1.
 @test diag_AcA(op) == 1.
 
 ######## DFT ############
+# seems like there is an object called DFT in Base julia 0.7 (however in 1.0 was rm)
 n = 4
-op = DFT(Float64,(n,))
+op = AbstractOperators.DFT(Float64,(n,)) 
 x1 = randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = fft(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
-op = DFT(Complex{Float64},(n,))
+op = AbstractOperators.DFT(Complex{Float64},(n,))
 x1 = randn(n)+im*randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = fft(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
-op = DFT((n,))
-op = DFT(n,n)
-op = DFT(Complex{Float64}, n,n)
+op = AbstractOperators.DFT((n,))
+op = AbstractOperators.DFT(n,n)
+op = AbstractOperators.DFT(Complex{Float64}, n,n)
 
 #properties
 @test is_linear(op)           == true
@@ -127,11 +128,11 @@ op = DFT(Complex{Float64}, n,n)
 @test is_full_column_rank(op) == true
 
 m = 10
-op = DFT(n,m)
+op = AbstractOperators.DFT(n,m)
 x1 = randn(n,m)
 y1 = op*x1
-@test vecnorm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
-@test vecnorm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
+@test norm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
+@test norm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
 
 ######### IDFT ############
 n = 4
@@ -140,14 +141,14 @@ x1 = randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = ifft(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 op = IDFT(Complex{Float64},(n,))
 x1 = randn(n)+im*randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = ifft(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 op = IDFT((n,))
@@ -170,8 +171,8 @@ m = 10
 op = IDFT(n,m)
 x1 = randn(n,m)
 y1 = op*x1
-@test vecnorm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
-@test vecnorm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
+@test norm(op'*(op*x1) - diag_AcA(op)*x1) <= 1e-12
+@test norm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
 
 ####### RDFT ############
 n = 4
@@ -180,7 +181,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, rfft(x1), verb)
 y2 = rfft(x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m,l = 4,8,5
 op = RDFT(Float64,(n,m,l),2)
@@ -188,7 +189,7 @@ x1 = randn(n,m,l)
 y1 = test_op(op, x1, rfft(x1,2), verb)
 y2 = rfft(x1,2)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 op = RDFT((n,))
@@ -213,7 +214,7 @@ x1 = rfft(randn(n))
 y1 = test_op(op, x1,irfft(randn(div(n,2)+1),n), verb)
 y2 = irfft(x1,n)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n = 11
 op = IRDFT(Complex{Float64},(div(n,2)+1,),n)
@@ -221,7 +222,7 @@ x1 = rfft(randn(n))
 y1 = test_op(op, x1,irfft(randn(div(n,2)+1),n), verb)
 y2 = irfft(x1,n)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m,l = 4,19,5
 op = IRDFT(Complex{Float64},(n,div(m,2)+1,l),m,2)
@@ -229,7 +230,7 @@ x1 = rfft(randn(n,m,l),2)
 y1 = test_op(op, x1, irfft(x1,m,2), verb)
 y2 = irfft(x1,m,2)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m,l = 4,18,5
 op = IRDFT(Complex{Float64},(n,div(m,2)+1,l),m,2)
@@ -237,7 +238,7 @@ x1 = rfft(randn(n,m,l),2)
 y1 = test_op(op, x1, irfft(x1,m,2), verb)
 y2 = irfft(x1,m,2)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m,l = 5,18,5
 op = IRDFT(Complex{Float64},(div(n,2)+1,m,l),n,1)
@@ -245,7 +246,7 @@ x1 = rfft(randn(n,m,l),1)
 y1 = test_op(op, x1, irfft(x1,n,1), verb)
 y2 = irfft(x1,n,1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 ## other constructors
 op = IRDFT((10,),19)
@@ -262,7 +263,7 @@ op = IRDFT((10,),19)
 @test is_full_row_rank(op)    == true
 @test is_full_column_rank(op) == false
 
-######### DiagOp ############
+########## DiagOp ############
 n = 4
 d = randn(n)
 op = DiagOp(Float64,(n,),d)
@@ -270,16 +271,16 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = d.*x1
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n = 4
 d = randn(n)+im*randn(n)
 op = DiagOp(Float64,(n,),d)
 x1 = randn(n)
-y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
+y1 = test_op(op, x1, randn(n).+im*randn(n), verb)
 y2 = d.*x1
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n = 4
 d = pi
@@ -288,7 +289,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = d.*x1
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n = 4
 d = im
@@ -297,13 +298,13 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
 y2 = d.*x1
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 d = randn(4)
 op = DiagOp(d)
 
-d = randn(4)+im
+d = randn(4).+im
 op = DiagOp(d)
 
 n = 4
@@ -326,8 +327,8 @@ op = DiagOp((n,), d)
 @test is_full_column_rank(DiagOp([ones(5);0]))    == false
 
 @test diag(op) == d
-@test vecnorm(op'*(op*x1) - diag_AcA(op).*x1) <= 1e-12
-@test vecnorm(op*(op'*x1) - diag_AAc(op).*x1) <= 1e-12
+@test norm(op'*(op*x1) .- diag_AcA(op).*x1) <= 1e-12
+@test norm(op*(op'*x1) .- diag_AAc(op).*x1) <= 1e-12
 
 n = 4
 d = pi
@@ -335,8 +336,8 @@ op = DiagOp((n,), d)
 x1 = randn(n)
 
 @test diag(op) == d
-@test vecnorm(op'*(op*x1) - diag_AcA(op).*x1) <= 1e-12
-@test vecnorm(op*(op'*x1) - diag_AAc(op).*x1) <= 1e-12
+@test norm(op'*(op*x1) .- diag_AcA(op).*x1) <= 1e-12
+@test norm(op*(op'*x1) .- diag_AAc(op).*x1) <= 1e-12
 
 ########## Eye ############
 n = 4
@@ -344,7 +345,7 @@ op = Eye(Float64,(n,))
 x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 
-@test all(vecnorm.(y1 .- x1) .<= 1e-12)
+@test all(norm.(y1 .- x1) .<= 1e-12)
 
 # other constructors
 op = Eye(Float64, (n,))
@@ -376,7 +377,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = filt(b, a, x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 h = randn(10)
 op = Filt(Float64,(n,m),h)
@@ -384,7 +385,7 @@ x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n,m), verb)
 y2 = filt(h, [1.], x1)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 Filt(n,  b, a)
@@ -406,67 +407,70 @@ Filt(x1, b)
 @test is_full_row_rank(op)    == true
 @test is_full_column_rank(op) == true
 
-####### FiniteDiff ############
+###### FiniteDiff ############
 n= 10
 op = FiniteDiff(Float64,(n,))
 x1 = randn(n)
 y1 = test_op(op, x1, randn(n-1), verb)
-y1 = op*collect(linspace(0,1,n))
-@test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
+y1 = op*collect(range(0,stop=1,length=n))
+@test all(norm.(y1 .- 1/9) .<= 1e-12)
 
-B = -spdiagm(ones(n-1),0,n-1,n)+spdiagm(ones(n-1),1,n-1,n)
+I1, J1, V1 = SparseArrays.spdiagm_internal(0 => ones(n-1))
+I2, J2, V2 = SparseArrays.spdiagm_internal(1 => ones(n-1))
+B = -sparse(I1,J1,V1,n-1,n)+sparse(I2,J2,V2,n-1,n)
+
 @test norm(B*x1-op*x1) <= 1e-8
 
 n,m= 10,5
 op = FiniteDiff(Float64,(n,m))
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n-1,m), verb)
-y1 = op*repmat(collect(linspace(0,1,n)),1,m)
-@test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
+y1 = op*repeat(collect(range(0,stop=1,length=n)),1,m)
+@test all(norm.(y1 .- 1/9) .<= 1e-12)
 
 n,m= 10,5
 op = FiniteDiff(Float64,(n,m),2)
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n,m-1), verb)
-y1 = op*repmat(collect(linspace(0,1,n)),1,m)
-@test all(vecnorm.(y1) .<= 1e-12)
+y1 = op*repeat(collect(range(0,stop=1,length=n)),1,m)
+@test all(norm.(y1) .<= 1e-12)
 
 n,m,l= 10,5,7
 op = FiniteDiff(Float64,(n,m,l))
 x1 = randn(n,m,l)
 y1 = test_op(op, x1, randn(n-1,m,l), verb)
-y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
-@test all(vecnorm.(y1 .- 1/9) .<= 1e-12)
+y1 = op*reshape(repeat(collect(range(0,stop=1,length=n)),1,m*l),n,m,l)
+@test all(norm.(y1 .- 1/9) .<= 1e-12)
 
 n,m,l= 10,5,7
 op = FiniteDiff(Float64,(n,m,l),2)
 x1 = randn(n,m,l)
 y1 = test_op(op, x1, randn(n,m-1,l), verb)
-y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
-@test all(vecnorm.(y1) .<= 1e-12)
+y1 = op*reshape(repeat(collect(range(0,stop=1,length=n)),1,m*l),n,m,l)
+@test all(norm.(y1) .<= 1e-12)
 
 n,m,l= 10,5,7
 op = FiniteDiff(Float64,(n,m,l),3)
 x1 = randn(n,m,l)
 y1 = test_op(op, x1, randn(n,m,l-1), verb)
-y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
-@test all(vecnorm.(y1) .<= 1e-12)
+y1 = op*reshape(repeat(collect(range(0,stop=1,length=n)),1,m*l),n,m,l)
+@test all(norm.(y1) .<= 1e-12)
 
 n,m,l,i = 5,6,2,3
 op = FiniteDiff(Float64,(n,m,l,i),1)
 x1 = randn(n,m,l,i)
 y1 = test_op(op, x1, randn(n-1,m,l,i), verb)
-y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l*i),n,m,l,i)
-@test all(vecnorm.(y1 .- 1/(n-1)) .<= 1e-12)
+y1 = op*reshape(repeat(collect(range(0,stop=1,length=n)),1,m*l*i),n,m,l,i)
+@test all(norm.(y1 .- 1/(n-1)) .<= 1e-12)
 
 n,m,l,i = 5,6,2,3
 op = FiniteDiff(Float64,(n,m,l,i),4)
 x1 = randn(n,m,l,i)
 y1 = test_op(op, x1, randn(n,m,l,i-1), verb)
-y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l*i),n,m,l,i)
-@test vecnorm(y1) <= 1e-12
+y1 = op*reshape(repeat(collect(range(0,stop=1,length=n)),1,m*l*i),n,m,l,i)
+@test norm(y1) <= 1e-12
 
-@test_throws ErrorException op = FiniteDiff(Float64,(n,m,l), 4)
+@test_throws ErrorException FiniteDiff(Float64,(n,m,l), 4)
 
 ## other constructors
 FiniteDiff((n,m))
@@ -491,7 +495,7 @@ op = GetIndex(Float64,(n,),(1:k,))
 x1 = randn(n)
 y1 = test_op(op, x1, randn(k), verb)
 
-@test all(vecnorm.(y1 .- x1[1:k]) .<= 1e-12)
+@test all(norm.(y1 .- x1[1:k]) .<= 1e-12)
 
 n,m = 5,4
 k = 3
@@ -499,27 +503,27 @@ op = GetIndex(Float64,(n,m),(1:k,:))
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(k,m), verb)
 
-@test all(vecnorm.(y1 .- x1[1:k,:]) .<= 1e-12)
+@test all(norm.(y1 .- x1[1:k,:]) .<= 1e-12)
 
 n,m = 5,4
 op = GetIndex(Float64,(n,m),(:,2))
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n), verb)
 
-@test all(vecnorm.(y1 .- x1[:,2]) .<= 1e-12)
+@test all(norm.(y1 .- x1[:,2]) .<= 1e-12)
 
 n,m,l = 5,4,3
 op = GetIndex(Float64,(n,m,l),(1:3,2,:))
 x1 = randn(n,m,l)
 y1 = test_op(op, x1, randn(3,3), verb)
 
-@test all(vecnorm.(y1 .- x1[1:3,2,:]) .<= 1e-12)
+@test all(norm.(y1 .- x1[1:3,2,:]) .<= 1e-12)
 
 # other constructors
 GetIndex((n,m), (1:k,:))
 GetIndex(x1, (1:k,:))
 
-@test_throws ErrorException op = GetIndex(Float64,(n,m),(1:k,:,:))
+@test_throws ErrorException GetIndex(Float64,(n,m),(1:k,:,:))
 op = GetIndex(Float64,(n,m),(1:n,1:m))
 @test typeof(op) <: Eye
 
@@ -540,7 +544,7 @@ op = GetIndex(Float64,(n,),(1:k,))
 
 @test diag_AAc(op) == 1
 
-######## MatrixOp ############
+####### MatrixOp ############
 
 # real matrix, real input
 n,m = 5,4
@@ -574,13 +578,13 @@ x1 = randn(m)
 y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
 y2 = A*x1
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # complex matrix, real matrix input
 c = 3
 op = MatrixOp(Float64,(m,c),A)
-@test_throws ErrorException op = MatrixOp(Float64,(m,c,3),A)
-@test_throws MethodError op = MatrixOp(Float64,(m,c),randn(n,m,2))
+@test_throws ErrorException MatrixOp(Float64,(m,c,3),A)
+@test_throws MethodError MatrixOp(Float64,(m,c),randn(n,m,2))
 x1 = randn(m,c)
 y1 = test_op(op, x1, randn(n,c).+randn(n,c), verb)
 y2 = A*x1
@@ -604,11 +608,11 @@ op = convert(LinearOperator, Complex{Float64}, size(x1), A)
 @test is_AAc_diagonal(op)     == false
 @test is_orthogonal(op)       == false
 @test is_invertible(op)       == false
-@test is_full_row_rank(MatrixOp(randn(srand(0),3,4)))    == true
-@test is_full_column_rank(MatrixOp(randn(srand(0),3,4))) == false
+@test is_full_row_rank(MatrixOp(randn(Random.seed!(0),3,4)))    == true
+@test is_full_column_rank(MatrixOp(randn(Random.seed!(0),3,4))) == false
 
 
-###### LMatrixOp ############
+##### LMatrixOp ############
 
 n,m = 5,6
 b = randn(m)
@@ -617,7 +621,7 @@ x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = x1*b
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m = 5,6
 b = randn(m)+im*randn(m)
@@ -626,7 +630,7 @@ x1 = randn(n,m)+im*randn(n,m)
 y1 = test_op(op, x1, randn(n)+im*randn(n), verb)
 y2 = x1*b
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m,l = 5,6,7
 b = randn(m,l)
@@ -635,7 +639,7 @@ x1 = randn(n,m)
 y1 = test_op(op, x1, randn(n,l), verb)
 y2 = x1*b
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 n,m,l = 5,6,7
 b = randn(m,l)+im*randn(m,l)
@@ -644,7 +648,7 @@ x1 = randn(n,m)+im*randn(n,m)
 y1 = test_op(op, x1, randn(n,l)+im*randn(n,l), verb)
 y2 = x1*b
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 ## other constructors
 op = LMatrixOp(b,n)
@@ -665,13 +669,13 @@ op = LMatrixOp(b,n)
 
 n,m = 5,4;
 A = randn(n,m);
-op = MyLinOp(Float64, (m,),(n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
+op = MyLinOp(Float64, (m,),(n,), (y,x) -> mul!(y,A,x), (y,x) -> mul!(y,A',x))
 x1 = randn(m)
 y1 = test_op(op, x1, randn(n), verb)
 y2 = A*x1
 
 # other constructors
-op = MyLinOp(Float64, (m,), Float64, (n,), (y,x) -> A_mul_B!(y,A,x), (y,x) -> Ac_mul_B!(y,A,x))
+op = MyLinOp(Float64, (m,), Float64, (n,), (y,x) -> mul!(y,A,x), (y,x) -> mul!(y,A',x))
 
 
 ######### MIMOFilt ############
@@ -684,7 +688,7 @@ x1 = randn(m,n)
 y1 = test_op(op, x1, randn(m,1), verb)
 y2 = filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2])
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 m,n = 10,3; #time samples, number of inputs
 b = [[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.], ];
@@ -695,7 +699,7 @@ x1 = randn(m,n)
 y1 = test_op(op, x1, randn(m,2), verb)
 y2 = [filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2])+filt(b[3],a[3],x1[:,3]) filt(b[4],a[4],x1[:,1])+filt(b[5],a[5],x1[:,2])+filt(b[6],a[6],x1[:,3])]
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 m,n = 10,3
 b = [randn(10),randn(5),randn(10),randn(2),randn(10),randn(10)]
@@ -706,7 +710,7 @@ x1 = randn(m,n)
 y1 = test_op(op, x1, randn(m,2), verb)
 y2 = [filt(b[1],a[1],x1[:,1])+filt(b[2],a[2],x1[:,2])+filt(b[3],a[3],x1[:,3]) filt(b[4],a[4],x1[:,1])+filt(b[5],a[5],x1[:,2])+filt(b[6],a[6],x1[:,3])]
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 ## other constructors
 MIMOFilt((10,3),  b, a)
@@ -715,16 +719,16 @@ MIMOFilt(x1,  b, a)
 MIMOFilt(x1,  b)
 
 #errors
-@test_throws ErrorException op = MIMOFilt(Float64, (10,3,2) ,b,a)
+@test_throws ErrorException MIMOFilt(Float64, (10,3,2) ,b,a)
 a2 = [[1.0f0],[1.0f0],[1.0f0],[1.0f0],[1.0f0],[1.0f0]]
 b2 = convert.(Array{Float32,1},b)
-@test_throws ErrorException op = MIMOFilt(Float64, (m,n),b2,a2)
-@test_throws ErrorException op = MIMOFilt(Float64, (m,n),b,a[1:end-1])
+@test_throws ErrorException MIMOFilt(Float64, (m,n),b2,a2)
+@test_throws ErrorException MIMOFilt(Float64, (m,n),b,a[1:end-1])
 push!(a2,[1.0f0])
 push!(b2,randn(Float32,10))
-@test_throws ErrorException op = MIMOFilt(Float32, (m,n),b2,a2)
+@test_throws ErrorException MIMOFilt(Float32, (m,n),b2,a2)
 a[1][1] = 0.
-@test_throws ErrorException op = MIMOFilt(Float64, (m,n) ,b,a)
+@test_throws ErrorException MIMOFilt(Float64, (m,n) ,b,a)
 
 b = [randn(10),randn(5),randn(10),randn(2),randn(10),randn(10)]
 a = [[1.],[1.],[1.],[1.],[1.],[1.]]
@@ -749,31 +753,31 @@ op = Variation(Float64,(n,m))
 x1 = randn(n,m)
 y1 = test_op(op, x1, randn(m*n,2), verb)
 
-y1 = op*repmat(collect(linspace(0,1,n)),1,m)
-@test all(vecnorm.(y1[:,1] .- 1/(n-1) ) .<= 1e-12)
-@test all(vecnorm.(y1[:,2] ) .<= 1e-12)
+y1 = op*repeat(collect(range(0,stop=1,length=n)),1,m)
+@test all(norm.(y1[:,1] .- 1/(n-1) ) .<= 1e-12)
+@test all(norm.(y1[:,2] ) .<= 1e-12)
 
-Dx = spdiagm(ones(n),0,n,n)-spdiagm(ones(n-1),-1,n,n)
+Dx = spdiagm(0 => ones(n), -1 => -ones(n-1))
 Dx[1,1],Dx[1,2] = -1,1 
-Dy = spdiagm(ones(m),0,m,m)-spdiagm(ones(m-1),-1,m,m)
+Dy = spdiagm(0 => ones(m), -1 => -ones(m-1))
 Dy[1,1],Dy[1,2] = -1,1 
 
-Dxx = kron(eye(m),Dx)
-Dyy = kron(Dy,eye(n))
+Dxx = kron(sparse(I,m,m),Dx)
+Dyy = kron(Dy,sparse(I,n,n))
 TV = [Dxx;Dyy]
 
 x1 = randn(n,m)
-@test vecnorm(op*x1-reshape(TV*(x1[:]),n*m,2))<1e-12
+@test norm(op*x1-reshape(TV*(x1[:]),n*m,2))<1e-12
 
 n,m,l = 10,5,3
 op = Variation(Float64,(n,m,l))
 x1 = randn(n,m,l)
 y1 = test_op(op, x1, randn(m*n*l,3), verb)
 
-y1 = op*reshape(repmat(collect(linspace(0,1,n)),1,m*l),n,m,l)
-@test all(vecnorm.(y1[:,1] .- 1/(n-1) ) .<= 1e-12)
-@test all(vecnorm.(y1[:,2] ) .<= 1e-12)
-@test all(vecnorm.(y1[:,3] ) .<= 1e-12)
+y1 = op*reshape(repeat(collect(range(0,stop=1,length=n)),1,m*l),n,m,l)
+@test all(norm.(y1[:,1] .- 1/(n-1) ) .<= 1e-12)
+@test all(norm.(y1[:,2] ) .<= 1e-12)
+@test all(norm.(y1[:,3] ) .<= 1e-12)
 
 ### other constructors
 Variation(Float64, n,m)
@@ -782,7 +786,7 @@ Variation(n,m)
 Variation(x1)
 
 ##errors
-@test_throws ErrorException op = Variation(Float64,(n,))
+@test_throws ErrorException Variation(Float64,(n,))
 
 ###properties
 @test is_linear(op)           == true
@@ -804,7 +808,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n+m), verb)
 y2 = xcorr(x1, h)
 
-@test all(vecnorm.(y1 .- y2) .<= 1e-12)
+@test all(norm.(y1 .- y2) .<= 1e-12)
 # other constructors
 op = Xcorr(x1,h)
 
@@ -826,7 +830,7 @@ z = (5,)
 op = ZeroPad(Float64,n,z)
 x1 = randn(n)
 y1 = test_op(op, x1, randn(n.+z), verb)
-@test all(vecnorm.(y1 .- [x1;zeros(5)] ) .<= 1e-12)
+@test all(norm.(y1 .- [x1;zeros(5)] ) .<= 1e-12)
 
 n = (3,2)
 z = (5,3)
@@ -835,7 +839,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n.+z), verb)
 y2 = zeros(n.+z)
 y2[1:n[1],1:n[2]] = x1
-@test all(vecnorm.(y1 .- y2 ) .<= 1e-12)
+@test all(norm.(y1 .- y2 ) .<= 1e-12)
 
 n = (3,2,2)
 z = (5,3,1)
@@ -844,7 +848,7 @@ x1 = randn(n)
 y1 = test_op(op, x1, randn(n.+z), verb)
 y2 = zeros(n.+z)
 y2[1:n[1],1:n[2],1:n[3]] = x1
-@test all(vecnorm.(y1 .- y2 ) .<= 1e-12)
+@test all(norm.(y1 .- y2 ) .<= 1e-12)
 
 # other constructors
 ZeroPad(n, z...)
@@ -854,8 +858,8 @@ ZeroPad(x1, z)
 ZeroPad(x1, z...)
 
 #errors
-@test_throws ErrorException op = ZeroPad(Float64,n,(1,2))
-@test_throws ErrorException op = ZeroPad(Float64,n,(1,-2,3))
+@test_throws ErrorException ZeroPad(Float64,n,(1,2))
+@test_throws ErrorException ZeroPad(Float64,n,(1,-2,3))
 
 #properties
 @test is_linear(op)           == true

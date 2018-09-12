@@ -27,7 +27,6 @@ true
 
 ```
 """
-
 struct Hadamard{M, C, V <: VCAT{M}} <: NonLinearOperator
 	A::V
 	buf::C
@@ -64,8 +63,8 @@ function Hadamard(L1::AbstractOperator,L2::AbstractOperator)
 end
 
 # Mappings
-function A_mul_B!(y, H::Hadamard{M,C,V}, b) where {M,C,V}
-	A_mul_B!(H.buf,H.A,b)
+function mul!(y, H::Hadamard{M,C,V}, b) where {M,C,V}
+	mul!(H.buf,H.A,b)
 
 	y .= H.buf[1]
     for i = 2:length(H.buf)
@@ -77,12 +76,13 @@ end
 Jacobian(A::H, x::D) where {M, D<:Tuple, C, V, H <: Hadamard{M,C,V}} =
 HadamardJacobian(Jacobian(A.A,x),A.buf,A.buf2)
 
-function Ac_mul_B!(y, J::HadamardJacobian{M,C,V}, b) where {M,C,V}
+function mul!(y, A::AdjointOperator{HadamardJacobian{M,C,V}}, b) where {M,C,V}
+    J = A.A
     for i = 1:length(J.buf)
 		c = (J.buf[1:i-1]...,J.buf[i+1:end]...,b)
 		J.buf2[i] .= (.*)(c...)
 	end
-	Ac_mul_B!(y, J.A, J.buf2)
+	mul!(y, J.A', J.buf2)
 
 end
 
@@ -93,15 +93,13 @@ size(P::HadamardJacobian) = size(P.A[1],1), size(P.A[1],2)
 fun_name(L::Hadamard) = "⊙"
 fun_name(L::HadamardJacobian) = "J(⊙)"
 
-domainType(L::Hadamard)   = domainType.(L.A[1])
+domainType(L::Hadamard)   = domainType.(Ref(L.A[1]))
 codomainType(L::Hadamard) = codomainType(L.A[1])
 
-domainType(L::HadamardJacobian)   = domainType.(L.A[1])
+domainType(L::HadamardJacobian)   = domainType.(Ref(L.A[1]))
 codomainType(L::HadamardJacobian) = codomainType(L.A[1])
 
 # utils
-import Base: permute
-
 function permute(H::Hadamard, p::AbstractVector{Int})
     A = VCAT([permute(a,p) for a in H.A.A]...)
     Hadamard(A,H.buf,H.buf2)

@@ -29,8 +29,8 @@ struct Filt{T,N} <: LinearOperator
 			b ./= norml
 		end
 		# Pad the coefficients with zeros if needed
-		bs<sz   && (b = copy!(zeros(eltype(b), sz), b))
-		1<as<sz && (a = copy!(zeros(eltype(a), sz), a))
+		bs<sz   && (b = copyto!(zeros(eltype(b), sz), b))
+		1<as<sz && (a = copyto!(zeros(eltype(a), sz), a))
 
 		si = zeros(promote_type(eltype(b), eltype(a)), max(length(a), length(b))-1)
 		new(dim_in,b,a,si)
@@ -71,15 +71,16 @@ Filt(size(x), b)
 
 # Mappings
 
-function A_mul_B!(y::AbstractArray{T},L::Filt,x::AbstractArray{T}) where {T}
+function mul!(y::AbstractArray{T},L::Filt{T,N},x::AbstractArray{T}) where {T,N}
 	for col = 1:size(x,2)
 		length(L.a) != 1 ? iir!(y,L.b,L.a,x,L.si,col,col) : fir!(y,L.b,x,L.si,col,col)
 	end
 end
 
-function Ac_mul_B!(y::AbstractArray{T},L::Filt,x::AbstractArray{T}) where {T}
+function mul!(y::AbstractArray{T},L::AdjointOperator{Filt{T,N}},x::AbstractArray{T}) where {T,N}
+    A = L.A
 	for col = 1:size(x,2)
-		length(L.a) != 1 ? iir_rev!(y,L.b,L.a,x,L.si,col,col) : fir_rev!(y,L.b,x,L.si,col,col)
+		length(A.a) != 1 ? iir_rev!(y,A.b,A.a,x,A.si,col,col) : fir_rev!(y,A.b,x,A.si,col,col)
 	end
 end
 

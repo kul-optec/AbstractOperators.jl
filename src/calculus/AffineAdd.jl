@@ -46,17 +46,17 @@ end
 
 # Mappings
 # array
-function A_mul_B!(y::DD, T::AffineAdd{L, D, true}, x) where {L <: AbstractOperator, DD, D} 
-    A_mul_B!(y,T.A,x)
+function mul!(y::DD, T::AffineAdd{L, D, true}, x) where {L <: AbstractOperator, DD, D} 
+    mul!(y,T.A,x)
     y .+= T.d
 end
 
-function A_mul_B!(y::DD, T::AffineAdd{L, D, false}, x) where {L <: AbstractOperator, DD, D} 
-    A_mul_B!(y,T.A,x)
+function mul!(y::DD, T::AffineAdd{L, D, false}, x) where {L <: AbstractOperator, DD, D} 
+    mul!(y,T.A,x)
     y .-= T.d
 end
 
-Ac_mul_B!(y, T::AffineAdd{L, D}, x) where {L <: AbstractOperator, D} = Ac_mul_B!(y,T.A,x)
+mul!(y, T::AdjointOperator{AffineAdd{L, D, S}}, x) where {L <: AbstractOperator, D, S} = mul!(y,T.A.A',x)
 
 # Properties
 
@@ -93,7 +93,7 @@ function permute(T::AffineAdd{L,D,S}, p::AbstractVector{Int}) where {L,D,S}
     return AffineAdd(A,T.d,S) 
 end
 
-displacement(A::AffineAdd{L,D,true})  where {L,D} =  A.d+displacement(A.A)
-displacement(A::AffineAdd{L,D,false}) where {L,D} = -A.d+displacement(A.A)
+displacement(A::AffineAdd{L,D,true})  where {L,D} =  A.d .+ displacement(A.A)
+displacement(A::AffineAdd{L,D,false}) where {L,D} = -A.d .+ displacement(A.A)
 
 remove_displacement(A::AffineAdd) = remove_displacement(A.A)

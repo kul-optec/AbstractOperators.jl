@@ -20,13 +20,14 @@ end
 Exp(DomainDim::NTuple{N,Int}) where {N} = Exp{Float64,N}(DomainDim)
 Exp(DomainDim::Vararg{Int}) = Exp{Float64,length(DomainDim)}(DomainDim)
 
-function A_mul_B!(y::AbstractArray{T,N}, L::Exp{T,N}, x::AbstractArray{T,N}) where {T,N}
+function mul!(y::AbstractArray{T,N}, L::Exp{T,N}, x::AbstractArray{T,N}) where {T,N}
 	y .= exp.(x)
 end
 
-function Ac_mul_B!(y::AbstractArray{T,N}, 
-		   L::Jacobian{A}, 
-		   b::AbstractArray{T,N}) where {T,N, A<: Exp{T,N}}
+function mul!(y::AbstractArray, 
+              J::AdjointOperator{Jacobian{A,TT}}, 
+              b::AbstractArray) where {T,N, A<: Exp{T,N}, TT <: AbstractArray{T,N} }
+    L = J.A
     y .= conj.(exp.(L.x)).*b
 end
 

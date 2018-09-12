@@ -9,7 +9,7 @@ op = 30*A
 y, grad = test_NLop(op,x,r,verb)
 
 Y = 30*(A*x)
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 m = 3
 x = randn(m)
@@ -20,7 +20,7 @@ op = -A
 y, grad = test_NLop(op,x,r,verb)
 
 Y = -A*x
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 #testing DCAT
 n,m = 4,3
@@ -33,8 +33,8 @@ op = DCAT(MatrixOp(A),B)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = (A*x[1],B*x[2]) 
-@test vecnorm(Y[1]-y[1]) <1e-8
-@test vecnorm(Y[2]-y[2]) <1e-8
+@test norm(Y[1]-y[1]) <1e-8
+@test norm(Y[2]-y[2]) <1e-8
 
 #testing HCAT
 n,m = 4,3
@@ -47,7 +47,7 @@ op = HCAT(MatrixOp(A),B)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = A*x[1]+B*x[2]
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 m,n = 3,5
 x = (randn(m),randn(n))
@@ -60,10 +60,10 @@ op = HCAT(A,B)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = A*x[1]+M*x[2]
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 p = [2,1]
-opP = permute(op,p)
+opP = AbstractOperators.permute(op,p)
 J = Jacobian(opP,x[p])'
 println(size(J,1))
 y, grad = test_NLop(opP,x[p],r,verb)
@@ -79,8 +79,8 @@ op = VCAT(MatrixOp(A),B)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = (A*x,B*x)
-@test vecnorm(Y[1]-y[1]) <1e-8
-@test vecnorm(Y[2]-y[2]) <1e-8
+@test norm(Y[1]-y[1]) <1e-8
+@test norm(Y[2]-y[2]) <1e-8
 
 #testing HCAT of VCAT
 n,m1,m2,m3 = 4,3,2,7
@@ -103,8 +103,8 @@ op = HCAT(op1,op2,op3)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = (A1*x1+A2*x2+A3*x3,B1*x1+B2*x2+B3*x3)
-@test vecnorm(Y[1]-y[1]) <1e-8
-@test vecnorm(Y[2]-y[2]) <1e-8
+@test norm(Y[1]-y[1]) <1e-8
+@test norm(Y[2]-y[2]) <1e-8
 
 #testing VCAT of HCAT
 m1,m2,m3,n1,n2 = 3,4,5,6,7
@@ -127,8 +127,8 @@ op = VCAT(op1,op2)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = (A1*x1+B1*x2+C1*x3,A2*x1+B2*x2+C2*x3)
-@test vecnorm(Y[1]-y[1]) <1e-8
-@test vecnorm(Y[2]-y[2]) <1e-8
+@test norm(Y[1]-y[1]) <1e-8
+@test norm(Y[2]-y[2]) <1e-8
 
 
 #testing Compose
@@ -146,7 +146,7 @@ op = Compose(opA,Compose(opB,opC))
 y, grad = test_NLop(op,x,r,verb)
 
 Y = A*(opB*(opC*x)) 
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 ## NN
 m,n,l = 4,7,5
@@ -159,7 +159,6 @@ A1 = HCAT(LMatrixOp(b,n) ,Eye(n))
 op = Compose(opS1,A1)
 y, grad = test_NLop(op,x,r,verb)
 
-
 ###testing Reshape
 n = 4
 x = randn(n)
@@ -170,7 +169,7 @@ op = Reshape(opS,2,2)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = reshape(opS*x,2,2)
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 ###testing BroadCast
 n,l = 4,7
@@ -182,7 +181,7 @@ op = BroadCast(opS,(n,l))
 y, grad = test_NLop(op,x,r,verb)
 
 Y = (opS*x).*ones(n,l)
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 n,l = 1,7
 x = randn(n)
@@ -193,7 +192,7 @@ op = BroadCast(opS,(n,l))
 y, grad = test_NLop(op,x,r,verb)
 
 Y = (opS*x).*ones(n,l)
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
 ##testing Sum
 m = 5
@@ -207,9 +206,9 @@ op = Sum(opA,opB)
 y, grad = test_NLop(op,x,r,verb)
 
 Y = A*x+opB*x
-@test vecnorm(Y-y) <1e-8
+@test norm(Y-y) <1e-8
 
-# testing NonLinearCompose
+## testing NonLinearCompose
 
 ##with vectors inner product
 n,m = 3,4
@@ -223,7 +222,7 @@ y, grad = test_NLop(P,x,r,verb)
 Y = x[1]*(A*x[2])
 @test norm(Y - y) <= 1e-12
 
-#with vectors outer product
+##with vectors outer product
 n, m = 3, 5
 x = (randn(n),randn(1,m))
 r = randn(n,m)
@@ -271,8 +270,8 @@ Y = A*x[1]*B*x[2]
 
 #further test on gradient with analytical formulas
 grad2 =  (A'*r)*(B*x[2])', B'*(A*x[1])'*r
-@test vecnorm(grad[1]-grad2[1]) <1e-7
-@test vecnorm(grad[2]-grad2[2]) <1e-7
+@test norm(grad[1]-grad2[1]) <1e-7
+@test norm(grad[2]-grad2[2]) <1e-7
 
 #with complex matrices
 l,m1,m2,n1,n2 = 2,3,4,5,6
@@ -289,8 +288,8 @@ Y = A*x[1]*B*x[2]
 
 ##test on gradient with analytical formulas
 grad2 =  (A'*r)*(B*x[2])', B'*(A*x[1])'*r
-@test vecnorm(grad[1]-grad2[1]) <1e-7
-@test vecnorm(grad[2]-grad2[2]) <1e-7
+@test norm(grad[1]-grad2[1]) <1e-7
+@test norm(grad[2]-grad2[2]) <1e-7
 
 #nested NonLinearOp
 l1,l2,m1,m2,n1,n2 = 2,3,4,5,6,7
@@ -309,12 +308,12 @@ Y = A*x[1]*B*x[2]*C*x[3]
 
 #further test on gradient with analytical formulas
 grad2 =  A'*(r*(B*x[2]*C*x[3])'), B'*((r'*A*x[1])'*(C*x[3])'), C'*(B*x[2])'*(A*x[1])'*r
-@test vecnorm(grad[1]-grad2[1]) <1e-7
-@test vecnorm(grad[2]-grad2[2]) <1e-7
-@test vecnorm(grad[3]-grad2[3]) <1e-7
+@test norm(grad[1]-grad2[1]) <1e-7
+@test norm(grad[2]-grad2[2]) <1e-7
+@test norm(grad[3]-grad2[3]) <1e-7
 
 p = randperm(length(x))
-Pp = permute(P,p)
+Pp = AbstractOperators.permute(P,p)
 y, grad = test_NLop(Pp,x[p],r,verb)
 
 ## DNN
@@ -340,7 +339,7 @@ Y = opS3*(x[1]*(opS2*(x[2]*(opS1*(x[3]*b+x[4])))))
 @test norm(Y - y) <= 1e-12
 
 p = randperm(length(x))
-L3p = permute(L3,p)
+L3p = AbstractOperators.permute(L3,p)
 y, grad = test_NLop(L3p,x[p],r,verb)
 
 # Hadamard
@@ -356,7 +355,7 @@ y, grad = test_NLop(H,x,r,verb)
 @test norm(y-(op1.A*x[1]).*(op2.A*x[2])) < 1e-9
 
 p = [2;1]
-Hp = permute(H,p)
+Hp = AbstractOperators.permute(H,p)
 y, grad = test_NLop(Hp,x[p],r,verb)
 @test norm(y-(op1.A*x[1]).*(op2.A*x[2])) < 1e-9
 
@@ -373,20 +372,20 @@ y, grad = test_NLop(H,x,r,verb)
 @test norm(y-(op1.A*x[1]).*(op2.A*x[2]).*(op3.A*x[3])) < 1e-9
 
 p = [2;1;3]
-Hp = permute(H,p)
+Hp = AbstractOperators.permute(H,p)
 y, grad = test_NLop(Hp,x[p],r,verb)
 @test norm(y-(op1.A*x[1]).*(op2.A*x[2]).*(op3.A*x[3])) < 1e-9
 
 l,m,n = 10,3,7
 A = randn(n,m)+im*randn(n,m)
 op1 = MatrixOp(A)
-op3 = DFT(n)
+op3 = AbstractOperators.DFT(n)
 H = Hadamard(op1,op3)
 
 x = randn(m)+im*randn(m),randn(n)
 
 y = H*x
-@test vecnorm(y - (A*x[1]).*(fft(x[2])) ) <1e-9
+@test norm(y - (A*x[1]).*(fft(x[2])) ) <1e-9
 grad = Jacobian(H,x)'*y
 # TODO add test on gradient
 
@@ -402,7 +401,7 @@ x = randn.(size(H,2))
 y, grad = test_NLop(H,x,r,verb)
 
 p = [2;1;3]
-Hp = permute(H,p)
+Hp = AbstractOperators.permute(H,p)
 y, grad = test_NLop(Hp,x[p],r,verb)
 
 ## Hadamard of Hadamard with NonLinear operators
@@ -425,7 +424,7 @@ T = AffineAdd(Exp(n),d,false)
 r = randn(n) 
 x = randn(size(T,2)) 
 y, grad = test_NLop(T,x,r,verb)
-@test vecnorm( y - (exp.(x)-d) ) < 1e-8
+@test norm( y - (exp.(x)-d) ) < 1e-8
 
 ## AffineAdd and Compose NonLinearOperator
 n = 10
@@ -436,7 +435,7 @@ T = Compose(AffineAdd(Sin(n),d2),AffineAdd(Eye(n),d1))
 r = randn(n) 
 x = randn(size(T,2)) 
 y, grad = test_NLop(T,x,r,verb)
-@test vecnorm( y - (sin.(x+d1)+d2) ) < 1e-8
+@test norm( y - (sin.(x+d1)+d2) ) < 1e-8
 
 n = 10
 d1 = randn(n)
@@ -447,7 +446,7 @@ T = Compose( AffineAdd(Sin(n),d3), Compose( AffineAdd(Exp(n),d2,false),AffineAdd
 r = randn(n) 
 x = randn(size(T,2)) 
 y, grad = test_NLop(T,x,r,verb)
-@test vecnorm( y -( sin.(exp.(x+d1)-d2)+d3 )) < 1e-8
+@test norm( y -( sin.(exp.(x+d1)-d2).+d3 )) < 1e-8
 
 ## AffineAdd and NonLinearCompose
 l,m1,m2,n1,n2 = 2,3,4,5,6

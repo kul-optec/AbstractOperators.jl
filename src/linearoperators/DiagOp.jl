@@ -19,7 +19,6 @@ julia> D*ones(2,2)
 ```
 
 """
-
 struct DiagOp{N, D, C, T <: Union{AbstractArray{C,N}, Number}} <: LinearOperator
 	dim_in::NTuple{N,Int}
 	d::T
@@ -46,16 +45,16 @@ DiagOp(DomainDim::NTuple{N,Int}, d::A) where {N, A <: Number} = DiagOp(Float64, 
 
 # Mappings
 
-function A_mul_B!(y::AbstractArray{C,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{D,N}) where {N, D, C, T}
+function mul!(y::AbstractArray{C,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{D,N}) where {N, D, C, T}
 	y .= L.d.*b
 end
 
-function Ac_mul_B!(y::AbstractArray{D,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{C,N}) where {N, D, C, T}
-	y .= conj.(L.d).*b
+function mul!(y::AbstractArray{D,N}, L::AdjointOperator{DiagOp{N, D, C, T}}, b::AbstractArray{C,N}) where {N, D, C, T}
+	y .= conj.(L.A.d).*b
 end
 
-function Ac_mul_B!(y::AbstractArray{D,N}, L::DiagOp{N, D, C, T}, b::AbstractArray{C,N}) where {N, D <: Real, C <: Complex, T}
-    y .= real.(conj.(L.d).*b)
+function mul!(y::AbstractArray{D,N}, L::AdjointOperator{DiagOp{N, D, C, T}}, b::AbstractArray{C,N}) where {N, D <: Real, C <: Complex, T}
+    y .= real.(conj.(L.A.d).*b)
 end
 
 # Transformations (we'll see about this)
