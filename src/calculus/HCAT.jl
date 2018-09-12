@@ -129,7 +129,7 @@ HCAT(A::AbstractOperator) = A
 		# build mul!(y, H.A[1], b[H.idxs[1]])  
 		bb = :(b[H.idxs[1]])
 	else
-		# staked operator 
+		# stacked operator 
 		# build mul!(y, H.A[1],( b[H.idxs[1][1]], b[H.idxs[1][2]] ...  ))
 		bb = ""
 		for ii in eachindex(fieldnames(fieldtype(P,1)))
@@ -146,7 +146,7 @@ HCAT(A::AbstractOperator) = A
 		# build mul!(H.buf, H.A[i], b[H.idxs[i]])  
 			bb = :(b[H.idxs[$i]])
 		else
-		# staked operator 
+		# stacked operator 
 		# build mul!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
 			bb = ""
 			for ii in eachindex(fieldnames(fieldtype(P,i)))
@@ -183,7 +183,7 @@ end
 		# build mul!(y[H.idxs[i]], H.A[i]', b)  
 			yy = :(y[H.idxs[$i]])
 		else
-		# staked operator 
+		# stacked operator 
 		# build mul!(( y[H.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i]', b)
 			yy = ""
 			for ii in eachindex(fieldnames(fieldtype(P,i)))

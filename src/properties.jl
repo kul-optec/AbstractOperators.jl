@@ -86,7 +86,7 @@ julia> ndoms(hcat(DFT(10,10),DFT(10,10)))
 julia> ndoms(hcat(DFT(10,10),DFT(10,10)),2)
 2
 
-julia> ndoms(blkdiag(DFT(10,10),DFT(10,10))
+julia> ndoms(DCAT(DFT(10,10),DFT(10,10)))
 (2,2)
 ```
 """

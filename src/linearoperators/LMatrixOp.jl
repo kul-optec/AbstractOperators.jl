@@ -25,7 +25,7 @@ julia> op*ones(3,4)
 
 """
 struct LMatrixOp{T, A <: Union{AbstractVector,AbstractMatrix}, 
-		 B <:Union{Adjoint,AbstractMatrix}} <: LinearOperator
+		 B <: AbstractMatrix} <: LinearOperator
 	b::A
 	bt::B
 	n_row_in::Integer

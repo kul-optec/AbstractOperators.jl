@@ -14,17 +14,15 @@ This is particularly useful in iterative algorithms and in first order large-sca
 
 ## Installation
 
-To install the package, use the following in the Julia command line
+To install the package, hit `]` from the Julia command line to enter the package manager, then
 
 ```julia
-Pkg.add("AbstractOperators")
+pkg> add AbstractOperators
 ```
-
-Remember to `Pkg.update()` to keep the package up to date.
 
 ## Usage
 
-With `using AbstractOperators` the package imports several methods like multiplication `*`  and transposition `'` (and their in-place methods `A_mul_B!`, `Ac_mul_B!`).
+With `using AbstractOperators` the package imports several methods like multiplication `*`  and adjoint transposition `'` (and their in-place methods `mul!`).
 
 For example, one can create a 2-D Discrete Fourier Transform as follows:
 
@@ -45,13 +43,13 @@ julia> y = A*x
  -0.905575+1.98446im  0.441199-0.913338im  0.315788+3.29666im  0.174273+0.318065im
  -0.905575-1.98446im  0.174273-0.318065im  0.315788-3.29666im  0.441199+0.913338im
 
-julia> A_mul_B!(y,A,x) == A*x #in-place evaluation
+julia> mul!(y, A, x) == A*x #in-place evaluation
 true
 
 julia> all(A'*y - *(size(x)...)*x .< 1e-12) 
 true
 
-julia> Ac_mul_B!(x,A,y) #in-place evaluation
+julia> mul!(x, A',y) #in-place evaluation
 3×4 Array{Float64,2}:
   -2.99091   9.45611  -19.799     1.6327 
  -11.1841   11.2365   -26.3614   11.7261 

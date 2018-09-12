@@ -3,17 +3,13 @@ export DCAT
 """
 `DCAT(A::AbstractOperator...)`
 
-Shorthand constructor: 
-
-`blkdiag(α::Number,A::AbstractOperator)` 
-
 Block-diagonally concatenate `AbstractOperator`s.
 
 ```julia
 julia> D = DCAT(HCAT(Eye(2),Eye(2)),DFT(3))
 [[I,I],0;0,ℱ]  ℝ^2  ℝ^2  ℝ^4 -> ℝ^2  ℂ^3
 
-julia> blkdiag(Eye(10),Eye(10),FiniteDiff((4,4)))
+julia> DCAT(Eye(10),Eye(10),FiniteDiff((4,4)))
 DCAT  ℝ^10  ℝ^10  ℝ^(4, 4) -> ℝ^10  ℝ^10  ℝ^(3, 4)
 ```
 
@@ -74,11 +70,11 @@ end
 
 		if fieldtype(P2,i) <: Int 
 		# flatten operator  
-		# build A_mul_B!(y[H.idxC[i]], H.A[i], b)  
+		# build mul!(y[H.idxC[i]], H.A[i], b)  
 			yy = :(y[H.idxC[$i]])
 		else
-		# staked operator 
-		# build A_mul_B!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
+		# stacked operator 
+		# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
 			yy = ""
 			for ii in eachindex(fieldnames(fieldtype(P2,i)))
 				yy *= "y[H.idxC[$i][$ii]],"
@@ -88,11 +84,11 @@ end
 
 		if fieldtype(P1,i) <: Int 
 		# flatten operator  
-		# build Ac_mul_B!(H.buf, H.A[i], b[H.idxD[i]])  
+		# build mul!(H.buf, H.A[i], b[H.idxD[i]])  
 			bb = :(b[H.idxD[$i]])
 		else
-		# staked operator 
-		# build Ac_mul_B!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
+		# stacked operator 
+		# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
 			bb = ""
 			for ii in eachindex(fieldnames(fieldtype(P1,i)))
 				bb *= "b[H.idxD[$i][$ii]],"
@@ -116,11 +112,11 @@ end
 
 		if fieldtype(P1,i) <: Int 
 		# flatten operator  
-		# build Ac_mul_B!(y[H.idxD[i]], H.A[i], b)  
+		# build mul!(y[H.idxD[i]], H.A[i]', b)  
 			yy = :(y[H.idxD[$i]])
 		else
-		# staked operator 
-		# build Ac_mul_B!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i], b)
+		# stacked operator 
+		# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
 			yy = ""
 			for ii in eachindex(fieldnames(fieldtype(P1,i)))
 				yy *= "y[H.idxD[$i][$ii]],"
@@ -130,11 +126,11 @@ end
 
 		if fieldtype(P2,i) <: Int 
 		# flatten operator  
-		# build Ac_mul_B!(H.buf, H.A[i], b[H.idxC[i]])  
+		# build mul!(H.buf, H.A[i]', b[H.idxC[i]])  
 			bb = :(b[H.idxC[$i]])
 		else
-		# staked operator 
-		# build Ac_mul_B!(H.buf, H.A[i],( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
+		# stacked operator 
+		# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
 			bb = ""
 			for ii in eachindex(fieldnames(fieldtype(P2,i)))
 				bb *= "b[H.idxC[$i][$ii]],"
