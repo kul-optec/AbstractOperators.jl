@@ -20,7 +20,7 @@ Hadamard
 
 ```@docs
 Scale
-Transpose
+AdjointOperator
 AffineAdd
 BroadCast
 Reshape
