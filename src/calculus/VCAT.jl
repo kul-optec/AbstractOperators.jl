@@ -129,11 +129,8 @@ VCAT(A::AbstractOperator) = A
 	else
 		# stacked operator 
 		# build mul!(y, H.A[1]',( b[H.idxs[1][1]], b[H.idxs[1][2]] ...  ))
-		bb = ""
-		for ii in eachindex(fieldnames(fieldtype(P,1)))
-			bb *= "b[H.idxs[1][$ii]],"
-		end
-		bb = Meta.parse(bb)
+        bb = [ :(b[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,1)))]
+        bb = :( tuple( $(bb...) ) )
 	end
 	ex = :($ex; mul!(y,H.A[1]',$bb)) # write on y
 
@@ -146,11 +143,8 @@ VCAT(A::AbstractOperator) = A
 		else
 		# stacked operator 
 		# build mul!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
-			bb = ""
-			for ii in eachindex(fieldnames(fieldtype(P,i)))
-				bb *= "b[H.idxs[$i][$ii]],"
-			end
-			bb = Meta.parse(bb)
+        bb = [ :(b[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,i)))]
+        bb = :( tuple( $(bb...) ) )
 		end
 
 		ex = :($ex; mul!(H.buf,H.A[$i]',$bb)) # write on H.buf
@@ -183,11 +177,8 @@ end
 		else
 		# stacked operator 
 		# build mul!(( y[H.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i], b)
-			yy = ""
-			for ii in eachindex(fieldnames(fieldtype(P,i)))
-				yy *= "y[H.idxs[$i][$ii]],"
-			end
-			yy = Meta.parse(yy)
+        yy = [ :(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,i)))]
+        yy = :( tuple( $(yy...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i],b))
@@ -206,11 +197,8 @@ end
 	if fieldtype(P,1) <: Int 
 		bb = :(b[H.idxs[1]])
 	else
-		bb = ""
-		for ii in eachindex(fieldnames(fieldtype(P,1)))
-			bb *= "b[H.idxs[1][$ii]],"
-		end
-		bb = Meta.parse(bb)
+        bb = [:(b[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,1)))]
+        bb = :( tuple( $(bb...) ) )
 	end
 	ex = :($ex; mul!(y,H.A[1]',$bb))
 
@@ -220,11 +208,8 @@ end
 			if fieldtype(P,i) <: Int 
 				bb = :(b[H.idxs[$i]])
 			else
-				bb = ""
-				for ii in eachindex(fieldnames(fieldtype(P,i)))
-					bb *= "b[H.idxs[$i][$ii]],"
-				end
-				bb = Meta.parse(bb)
+                bb = [ :(b[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,i))) ]
+                bb = :( tuple( $(bb...) ) )
 			end
 
 			ex = :($ex; mul!(H.buf,H.A[$i]',$bb))
@@ -255,11 +240,8 @@ end
 			if fieldtype(P,i) <: Int 
 				yy = :(y[H.idxs[$i]])
 			else
-				yy = ""
-				for ii in eachindex(fieldnames(fieldtype(P,i)))
-					yy *= "y[H.idxs[$i][$ii]],"
-				end
-				yy = Meta.parse(yy)
+                yy = [:(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,i)))]
+                yy = :( tuple( $(yy...)) )
 			end
 			
 			ex = :($ex; mul!($yy,H.A[$i],b))

@@ -75,11 +75,8 @@ end
 		else
 		# stacked operator 
 		# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
-			yy = ""
-			for ii in eachindex(fieldnames(fieldtype(P2,i)))
-				yy *= "y[H.idxC[$i][$ii]],"
-			end
-			yy = Meta.parse(yy)
+        yy =  [ :(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
+        yy = :( tuple( $(yy...) ) )
 		end
 
 		if fieldtype(P1,i) <: Int 
@@ -89,11 +86,8 @@ end
 		else
 		# stacked operator 
 		# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
-			bb = ""
-			for ii in eachindex(fieldnames(fieldtype(P1,i)))
-				bb *= "b[H.idxD[$i][$ii]],"
-			end
-			bb = Meta.parse(bb)
+        bb = [ :(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i))) ]
+        bb = :( tuple( $(bb...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i],$bb))
@@ -117,11 +111,8 @@ end
 		else
 		# stacked operator 
 		# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
-			yy = ""
-			for ii in eachindex(fieldnames(fieldtype(P1,i)))
-				yy *= "y[H.idxD[$i][$ii]],"
-			end
-			yy = Meta.parse(yy)
+        yy = [ :(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i)))]
+        yy = :( tuple( $(yy...) ))
 		end
 
 		if fieldtype(P2,i) <: Int 
@@ -131,11 +122,8 @@ end
 		else
 		# stacked operator 
 		# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
-			bb = ""
-			for ii in eachindex(fieldnames(fieldtype(P2,i)))
-				bb *= "b[H.idxC[$i][$ii]],"
-			end
-			bb = Meta.parse(bb)
+        bb = [ :(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
+        bb = :( tuple( $(bb...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i]',$bb))
