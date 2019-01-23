@@ -2,12 +2,9 @@ __precompile__()
 
 module AbstractOperators
 
-using LinearAlgebra, AbstractFFTs, DSP, FFTW
+using LinearAlgebra, AbstractFFTs, DSP, FFTW, RecursiveArrayTools
 
-# Block stuff
-include("utilities/block.jl")
-using AbstractOperators.BlockArrays
-
+const RealOrComplex{R} = Union{R, Complex{R}}
 abstract type AbstractOperator end
 
 abstract type LinearOperator    <: AbstractOperator end
@@ -22,7 +19,6 @@ export LinearOperator,
 # Predicates and properties
 
 include("properties.jl")
-
 include("calculus/AdjointOperator.jl")
 
 ## Linear operators

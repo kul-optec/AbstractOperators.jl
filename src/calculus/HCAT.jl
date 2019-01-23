@@ -37,23 +37,22 @@ julia> H*(ones(3),ones(3))
 
 """
 struct HCAT{M, # number of codomains  
-	    N, # number of AbstractOperator 
-	    L <: NTuple{N,AbstractOperator},
-	    P <: NTuple{N,Union{Int,Tuple}},
-	    C <: Union{NTuple{M,AbstractArray}, AbstractArray},
-	    } <: AbstractOperator
+            N, # number of AbstractOperator 
+            L <: NTuple{N,AbstractOperator},
+            P <: NTuple{N,Union{Int,Tuple}},
+            C <: Union{NTuple{M,AbstractArray}, AbstractArray},
+           } <: AbstractOperator
 	A::L     # tuple of AbstractOperators
 	idxs::P  # indices 
 	         # H = HCAT(Eye(n),HCAT(Eye(n),Eye(n))) has H.idxs = (1,2,3) 
-		 # `AbstractOperators` are flatten
-	         # H = HCAT(Eye(n),Compose(MatrixOp(randn(n,n)),HCAT(Eye(n),Eye(n)))) 
-		 # has H.idxs = (1,(2,3))
-		 # `AbstractOperators` are stack
+           # `AbstractOperators` are flatten
+           # H = HCAT(Eye(n),Compose(MatrixOp(randn(n,n)),HCAT(Eye(n),Eye(n)))) 
+           # has H.idxs = (1,(2,3))
+           # `AbstractOperators` are stack
 	buf::C   # buffer memory
 end
 
 # Constructors
-
 function HCAT(A::L, idxs::P, buf::C, M::Int) where {N,  
 						    L <: NTuple{N,AbstractOperator},
 						    P <: NTuple{N,Union{Int,Tuple}},

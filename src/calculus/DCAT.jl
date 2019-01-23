@@ -62,9 +62,12 @@ function DCAT(A::Vararg{AbstractOperator})
 end
 
 # Mappings
-@generated function mul!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
+@generated function mul!(yy::ArrayPartition, 
+                         H::DCAT{N,L,P1,P2}, 
+                         bb::ArrayPartition) where {N,L,P1,P2} 
 
-	ex = :()
+  # extract stuff
+	ex = :(y = yy.x; b = bb.x )
 
 	for i = 1:N
 
@@ -98,9 +101,12 @@ end
 
 end
 
-@generated function mul!(y, A::AdjointOperator{DCAT{N,L,P1,P2}}, b) where {N,L,P1,P2} 
+@generated function mul!(yy::ArrayPartition, 
+                         A::AdjointOperator{DCAT{N,L,P1,P2}},
+                         bb::ArrayPartition) where {N,L,P1,P2} 
 
-	ex = :(H = A.A)
+  # extract stuff
+	ex = :(H = A.A; y = yy.x; b = bb.x )
 
 	for i = 1:N
 
@@ -196,7 +202,7 @@ remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC)
 
 # special cases
 # Eye constructor
-Eye(x::A) where {N, A <: NTuple{N,AbstractArray}} = DCAT(Eye.(x)...)
+Eye(x::ArrayPartition) = DCAT(Eye.(x.x)...)
 diag(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
 diag_AAc(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
 diag_AcA(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.

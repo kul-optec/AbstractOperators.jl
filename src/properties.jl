@@ -287,12 +287,18 @@ julia> displacement(A)
 ```
 """
 function displacement(S::AbstractOperator) 
-    d = S*blockzeros(domainType(S),size(S,2))
-    if all(y -> y == d[1], d ) 
-        return d[1]
-    else
-        return d
-    end
+  D = domainType(S)
+  if typeof(D) <: Tuple
+    x = ArrayPartition(zeros.(D, size(S, 2))...)
+  else
+	  x = zeros(D, size(S, 2))
+  end
+  d = S*x
+  if all(y -> y == d[1], d ) 
+    return d[1]
+  else
+    return d
+  end
 end
 
 """
