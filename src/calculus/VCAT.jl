@@ -118,6 +118,12 @@ VCAT(A::AbstractOperator) = A
 
 # Mappings
 
+mul!(y::C, A::AdjointOperator{VCAT{M,N,L,P,C}}, b::ArrayPartition) where {M,N,L,P,C} = 
+mul!(y,A,b.x)
+
+mul!(y::ArrayPartition, A::AdjointOperator{VCAT{M,N,L,P,C}}, b::ArrayPartition) where {M,N,L,P,C} = 
+mul!(y.x,A,b.x)
+
 @generated function mul!(y::C, A::AdjointOperator{VCAT{M,N,L,P,C}}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :(H = A.A)
@@ -164,6 +170,8 @@ VCAT(A::AbstractOperator) = A
 
 end
 
+mul!(y::ArrayPartition, H::VCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C} = mul!(y.x,H,b)
+mul!(y::ArrayPartition, H::VCAT{M,N,L,P,C}, b::ArrayPartition) where {M,N,L,P,C} = mul!(y.x,H,b.x)
 @generated function mul!(y::DD, H::VCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :()
@@ -190,6 +198,9 @@ end
 end
 
 # same as mul but skips `Zeros`
+mul_skipZeros!(y::C, H::VCAT{M,N,L,P,C}, b::ArrayPartition) where {M,N,L,P,C,DD} = 
+mul_skipZeros!(y,H,b.x)
+
 @generated function mul_skipZeros!(y::C, H::VCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
@@ -230,6 +241,9 @@ end
 end
 
 # same as mul but skips `Zeros`
+mul_skipZeros!(y::ArrayPartition, H::VCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C} = 
+mul_skipZeros!(y.x,H,b)
+
 @generated function mul_skipZeros!(y::DD, H::VCAT{M,N,L,P,C}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :()

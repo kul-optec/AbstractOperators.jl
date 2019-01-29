@@ -71,8 +71,8 @@ end
 #Jacobian of Reshape
 Jacobian(R::Reshape{N,L},x::AbstractArray) where {N,L} = Reshape(Jacobian(R.A,x),R.dim_out) 
 #Jacobian of Sum
-Jacobian(S::Sum{M,N,K,C,D},x::D) where {M,N,K,C,D} = 
-Sum(([Jacobian(a,x) for a in S.A]...,),S.bufC,S.bufD,M,N)
+Jacobian(S::Sum{K,C,D},x::D) where {K,C,D} = 
+Sum(([Jacobian(a,x) for a in S.A]...,),S.bufC,S.bufD)
 #Jacobian of Transpose
 Jacobian(T::Transpose{A}, x::AbstractArray) where {A <: AbstractOperator} = T 
 #Jacobian of BroadCast

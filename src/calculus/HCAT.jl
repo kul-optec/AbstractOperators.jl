@@ -119,6 +119,9 @@ HCAT(A::AbstractOperator) = A
 
 # Mappings
 
+mul!(y::C, H::HCAT{M,N,L,P,C}, b::ArrayPartition) where {M,N,L,P,C} = mul!(y,H,b.x)
+mul!(y::ArrayPartition, H::HCAT{M,N,L,P,C}, b::ArrayPartition) where {M,N,L,P,C} = mul!(y.x,H,b.x)
+
 @generated function mul!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
@@ -165,6 +168,10 @@ HCAT(A::AbstractOperator) = A
 
 end
 
+mul!(y::ArrayPartition, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::C) where {M,N,L,P,C} = mul!(y.x,A,b)
+mul!(y::ArrayPartition, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::ArrayPartition) where {M,N,L,P,C} = 
+mul!(y.x,A,b.x)
+
 @generated function mul!(y::DD, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :(H = A.A)
@@ -191,6 +198,11 @@ end
 end
 
 # same as mul! but skips `Zeros`
+mul_skipZeros!(y::C, H::HCAT{M,N,L,P,C}, b::ArrayPartition) where {M,N,L,P,C} =
+mul_skipZeros!(y,H,b.x)
+mul_skipZeros!(y::ArrayPartition, H::HCAT{M,N,L,P,C}, b::ArrayPartition) where {M,N,L,P,C} =
+mul_skipZeros!(y.x,H,b.x)
+
 @generated function mul_skipZeros!(y::C, H::HCAT{M,N,L,P,C}, b::DD) where {M,N,L,P,C,DD}
 
 	ex = :()
@@ -231,6 +243,11 @@ end
 end
 
 # same as mul! but skips `Zeros`
+mul_skipZeros!(y::ArrayPartition, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::C) where {M,N,L,P,C} = 
+mul_skipZeros!(y.x,A,b)
+mul_skipZeros!(y::ArrayPartition, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::ArrayPartition) where {M,N,L,P,C} = 
+mul_skipZeros!(y.x,A,b.x)
+
 @generated function mul_skipZeros!(y::DD, A::AdjointOperator{HCAT{M,N,L,P,C}}, b::C) where {M,N,L,P,C,DD}
 
 	ex = :(H = A.A)
