@@ -86,10 +86,9 @@ end
 
 function gradient_fd(op::A, 
                      y0::AbstractArray, 
-                     x0::NTuple{N,AbstractArray},
-                     r::AbstractArray) where {N, A<:AbstractOperator} 
-	
-
+                     x0::ArrayPartition,
+                     r::AbstractArray) where {A<:AbstractOperator} 
+  N = length(x0.x)
 	y = copy(y0)
 	grad = 0 .*similar(x0)
 	J =  [ zeros(*(size(op,1)...),*(sz2...)) for sz2 in size(op,2)]
@@ -98,20 +97,20 @@ function gradient_fd(op::A,
 	for ii in eachindex(J)
 		for i = 1:size(J[ii],2)
 			x = deepcopy(x0)
-			x[ii][i] = x[ii][i]+h
+			x.x[ii][i] = x.x[ii][i]+h
 			mul!(y,op,x)
 			J[ii][:,i] .= ((y.-y0)./h)[:]
 		end
-		grad[ii] .= reshape(J[ii]'*r[:],size(op,2)[ii])
+		grad.x[ii] .= reshape(J[ii]'*r[:],size(op,2)[ii])
 	end
 	return grad
 end
 
 function gradient_fd(op::A, 
-                     y0::NTuple{N,AbstractArray}, 
+                     y0::ArrayPartition, 
                      x0::AbstractArray, 
-                     r::NTuple{N,AbstractArray}) where {N, A<:AbstractOperator} 
-	
+                     r::ArrayPartition) where {A<:AbstractOperator} 
+  N = length(y0.x)
 	grad = 0 .*similar(x0)
 	y    = 0 .*similar(y0)
 	J = [ zeros(*(sz1...),*(size(op,2)...)) for sz1 in size(op,1)]
@@ -122,42 +121,42 @@ function gradient_fd(op::A,
 		x[i] = x[i]+h
 		mul!(y,op,x)
 		for ii in eachindex(J)
-			J[ii][:,i] .= ((y[ii].-y0[ii])./h)[:]
+			J[ii][:,i] .= ((y.x[ii].-y0.x[ii])./h)[:]
 		end
 	end
 	for ii in eachindex(J)
-		grad .+= reshape(J[ii]'*r[ii],size(op,2))
+		grad .+= reshape(J[ii]'*r.x[ii],size(op,2))
 	end
 	return grad
 end
 
 function gradient_fd(op::A, 
-                     y0::NTuple{N,AbstractArray}, 
-                     x0::NTuple{M,AbstractArray}, 
-                     r::NTuple{N,AbstractArray}) where {N,M, A<:AbstractOperator} 
+                     y0::ArrayPartition, 
+                     x0::ArrayPartition, 
+                     r::ArrayPartition) where {A<:AbstractOperator} 
 	grad = 0 .*similar(x0)
 	y    = 0 .*similar(y0)
+  M = length(x0.x)
+  N = length(y0.x)
 	J = [ zeros(*(size(op,1)[i]...),*(size(op,2)[ii]...)) for ii = 1:M, i = 1:N ]
 				
 
 	h = sqrt(eps())
 	for i = 1:M
-		for iii in eachindex(x[i])
+		for iii in eachindex(x.x[i])
 			x = deepcopy(x0)
-			x[i][iii] = x[i][iii]+h
+			x.x[i][iii] = x.x[i][iii]+h
 			mul!(y,op,x)
 
 			for ii = 1:N
-				J[i,ii][:,iii] .= ((y[ii].-y0[ii])./h)[:]
+				J[i,ii][:,iii] .= ((y.x[ii].-y0.x[ii])./h)[:]
 			end
 		end
 	end
 
 	for ii = 1:N, i = 1:M
-		grad[i] .+= reshape(J[i,ii]'*r[ii],size(op,2)[i])
+		grad.x[i] .+= reshape(J[i,ii]'*r.x[ii],size(op,2)[i])
 	end
-	return grad
-
-	
+  return grad
 end
 

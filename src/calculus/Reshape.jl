@@ -70,3 +70,8 @@ is_full_column_rank(  R::Reshape) = is_full_column_rank(  R.A)
 
 fun_name(R::Reshape) = "¶"*fun_name(R.A)
 remove_displacement(R::Reshape) = Reshape(remove_displacement(R.A), R.dim_out)
+
+function permute(T::Reshape{N,L}, p::AbstractVector{Int}) where {N,L}
+    A = AbstractOperators.permute(T.A,p)
+    return Reshape(A,T.dim_out) 
+end

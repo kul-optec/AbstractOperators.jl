@@ -4,6 +4,7 @@ module AbstractOperators
 
 using LinearAlgebra, AbstractFFTs, DSP, FFTW, RecursiveArrayTools
 
+
 const RealOrComplex{R} = Union{R, Complex{R}}
 abstract type AbstractOperator end
 
@@ -15,6 +16,8 @@ import LinearAlgebra: mul!
 export LinearOperator,
        NonLinearOperator,
        AbstractOperator
+# from other packages
+export ArrayPartition, mul!
 
 # Predicates and properties
 

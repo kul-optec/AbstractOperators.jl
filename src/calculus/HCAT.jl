@@ -258,8 +258,8 @@ mul_skipZeros!(y.x,A,b.x)
 			if fieldtype(P,i) <: Int 
 				yy = :(y[H.idxs[$i]])
 			else
-                yy = [ :(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,i)))]
-                yy = :( tuple( $(yy...) ) )
+        yy = [ :(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P,i)))]
+        yy = :( tuple( $(yy...) ) )
 			end
 			
 			ex = :($ex; mul!($yy,H.A[$i]',b))
