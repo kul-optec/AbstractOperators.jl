@@ -79,7 +79,7 @@ end
 		# stacked operator 
 		# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
         yy =  [ :(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
-        yy = :( tuple( $(yy...) ) )
+        yy = :( ArrayPartition( $(yy...) ) )
 		end
 
 		if fieldtype(P1,i) <: Int 
@@ -90,7 +90,7 @@ end
 		# stacked operator 
 		# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
         bb = [ :(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i))) ]
-        bb = :( tuple( $(bb...) ) )
+        bb = :( ArrayPartition( $(bb...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i],$bb))
@@ -118,7 +118,7 @@ end
 		# stacked operator 
 		# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
         yy = [ :(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i)))]
-        yy = :( tuple( $(yy...) ))
+        yy = :( ArrayPartition( $(yy...) ))
 		end
 
 		if fieldtype(P2,i) <: Int 
@@ -129,7 +129,7 @@ end
 		# stacked operator 
 		# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
         bb = [ :(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
-        bb = :( tuple( $(bb...) ) )
+        bb = :( ArrayPartition( $(bb...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i]',$bb))

@@ -40,7 +40,7 @@ function getindex(A::AbstractOperator,idx...)
 end
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex(H::A, idx::Union{AbstractArray,Int}) where {M,N,L,P,C,A<:HCAT{M,N,L,P,C}}
+function getindex(H::HCAT, idx::Union{AbstractArray,Int})
 
 	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
@@ -64,7 +64,7 @@ end
 
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex(H::A, idx::Union{AbstractArray,Int}) where {M,N,L,P,C,A<:VCAT{M,N,L,P,C}}
+function getindex(H::VCAT, idx::Union{AbstractArray,Int})
 
 	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)

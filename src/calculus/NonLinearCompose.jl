@@ -27,8 +27,8 @@ true
 ```
 """
 struct NonLinearCompose{
-			L1 <: HCAT{1},
-			L2 <: HCAT{1},
+			L1 <: HCAT,
+			L2 <: HCAT,
 			C <: AbstractArray,
 			D <: AbstractArray
 			} <: NonLinearOperator
@@ -49,8 +49,8 @@ struct NonLinearCompose{
 end
 
 struct NonLinearComposeJac{
-			   L1 <: HCAT{1},
-			   L2 <: HCAT{1},
+			   L1 <: HCAT,
+			   L2 <: HCAT,
 			   C <: AbstractArray,
 			   D <: AbstractArray 
 			   } <: LinearOperator

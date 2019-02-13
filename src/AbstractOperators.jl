@@ -17,7 +17,7 @@ export LinearOperator,
        NonLinearOperator,
        AbstractOperator
 # from other packages
-export ArrayPartition, mul!
+export mul!
 
 # Predicates and properties
 

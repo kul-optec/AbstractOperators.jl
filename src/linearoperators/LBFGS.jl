@@ -37,10 +37,10 @@ end
 #default constructor
 
 function LBFGS(x::T, M::I) where {T <: AbstractArray, I <: Integer}
-	s_M = [0 .*similar(x) for i = 1:M]
-	y_M = [0 .*similar(x) for i = 1:M]
-	s = 0 .*similar(x)
-	y = 0 .*similar(x)
+	s_M = [zero(x) for i = 1:M]
+	y_M = [zero(x) for i = 1:M]
+	s = zero(x)
+	y = zero(x)
   R = real(eltype(x))
 	ys_M = zeros(R, M)
 	alphas = zeros(R, M)
