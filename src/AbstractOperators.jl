@@ -16,7 +16,6 @@ import LinearAlgebra: mul!
 export LinearOperator,
        NonLinearOperator,
        AbstractOperator
-# from other packages
 export mul!
 
 # Predicates and properties
