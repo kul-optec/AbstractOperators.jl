@@ -134,7 +134,7 @@ function gradient_fd(op::A,
                      y0::ArrayPartition, 
                      x0::ArrayPartition, 
                      r::ArrayPartition) where {A<:AbstractOperator} 
-	grad = 0 .*similar(x0)
+	grad = zero(x0)
 	y    = 0 .*similar(y0)
   M = length(x0.x)
   N = length(y0.x)
