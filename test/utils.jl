@@ -90,7 +90,7 @@ function gradient_fd(op::A,
                      r::AbstractArray) where {A<:AbstractOperator} 
   N = length(x0.x)
 	y = copy(y0)
-	grad = 0 .*similar(x0)
+	grad = zero(x0)
 	J =  [ zeros(*(size(op,1)...),*(sz2...)) for sz2 in size(op,2)]
 
 	h = sqrt(eps())
