@@ -23,7 +23,7 @@ julia&gt; mul!(x, A&#39;,y) #in-place evaluation
 I  ℂ^(3, 4) -&gt; ℂ^(3, 4)
 
 julia&gt; H = [A B]
-[ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -&gt; ℂ^(3, 4)</code></pre><p>In this case <code>H</code> has a domain of dimensions <code>size(H,2) = ((3, 4), (3, 4))</code> and type <code>domainType(H) = (Float64, Complex{Float64})</code>.</p><p>When an <code>AbstractOperators</code> have multiple domains, this must be multiplied using an <code>ArrayPartition</code> (see <a href="https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/]">RecursiveArrayTools</a> with corresponding size and domain, for example: </p><pre><code class="language-julia">julia&gt; using RecursiveArrayTools
+[ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -&gt; ℂ^(3, 4)</code></pre><p>In this case <code>H</code> has a domain of dimensions <code>size(H,2) = ((3, 4), (3, 4))</code> and type <code>domainType(H) = (Float64, Complex{Float64})</code>.</p><p>When an <code>AbstractOperators</code> have multiple domains, this must be multiplied using an <code>ArrayPartition</code> (using <a href="https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/">RecursiveArrayTools</a> with corresponding size and domain, for example: </p><pre><code class="language-julia">julia&gt; using RecursiveArrayTools
 
 julia&gt; H*ArrayPartition(x, complex(x))
 3×4 Array{Complex{Float64},2}:
