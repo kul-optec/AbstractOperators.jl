@@ -73,7 +73,7 @@ julia> H = [A B]
 
 In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domainType(H) = (Float64, Complex{Float64})`.
 
-When an `AbstractOperators` have multiple domains, this must be multiplied using an `ArrayPartition` (see [RecursiveArrayTools](https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/]) with corresponding size and domain, for example: 
+When an `AbstractOperators` have multiple domains, this must be multiplied using an `ArrayPartition` (using [RecursiveArrayTools](https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/) with corresponding size and domain, for example: 
 
 ```julia
 julia> using RecursiveArrayTools
