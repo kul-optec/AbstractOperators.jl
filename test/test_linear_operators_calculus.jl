@@ -96,9 +96,9 @@ opC  = AffineAdd(Compose(Compose(Compose(opA4,opA3),opA2),opA1),d4)
 
 @test norm( remove_displacement(opC)*x - (A4*(A3*( A2*( A1*x ) ) ) ) )  < 1e-9
 
-#########################
-#### test DCAT    #######
-#########################
+########################
+### test DCAT    #######
+########################
 
 m1, n1, m2, n2 = 4, 7, 5, 2
 A1 = randn(m1, n1)
@@ -108,9 +108,9 @@ opA2 = MatrixOp(A2)
 opD = DCAT(opA1, opA2)
 x1 = randn(n1)
 x2 = randn(n2)
-y1 = test_op(opD, (x1, x2), (randn(m1),randn(m2)), verb)
-y2 = (A1*x1, A2*x2)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opD, ArrayPartition(x1, x2), ArrayPartition(randn(m1),randn(m2)), verb)
+y2 = ArrayPartition(A1*x1, A2*x2)
+@test norm(y1 .- y2) .<= 1e-12
 
 # test DCAT longer
 
@@ -125,9 +125,9 @@ opD = DCAT(opA1, opA2, opA3)
 x1 = randn(n1)
 x2 = randn(n2)
 x3 = randn(n3)
-y1 = test_op(opD, (x1, x2, x3), (randn(m1),randn(m2),randn(m3)), verb)
-y2 = (A1*x1, A2*x2, A3*x3)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opD, ArrayPartition(x1, x2, x3), ArrayPartition(randn(m1),randn(m2),randn(m3)), verb)
+y2 = ArrayPartition(A1*x1, A2*x2, A3*x3)
+@test norm(y1 .- y2) .<= 1e-12
 
 #properties
 @test is_linear(opD)           == true
@@ -147,8 +147,8 @@ n1, n2 = 4, 7
 x1 = randn(n1)
 x2 = randn(n2)
 
-opD = Eye((x1,x2))
-y1 = test_op(opD, (x1, x2), (randn(n1),randn(n2)), verb)
+opD = Eye(ArrayPartition(x1,x2))
+y1 = test_op(opD, ArrayPartition(x1, x2), ArrayPartition(randn(n1),randn(n2)), verb)
 
 #properties
 @test is_linear(opD)           == true
@@ -182,13 +182,13 @@ opD = DCAT(opA1, opA2, opA3)
 x1 = randn(n1)
 x2 = randn(n2)
 x3 = randn(n3)
-y1 = opD*(x1,x2,x3)
-y2 = (A1*x1+d1, A2*x2+d2, A3*x3+d3)
-@test all(norm.(y1 .- y2) .<= 1e-12)
-@test all(norm.(displacement(opD) .- (d1,d2,d3)) .<= 1e-12)
-y1 = remove_displacement(opD)*(x1,x2,x3)
-y2 = (A1*x1, A2*x2, A3*x3)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = opD*ArrayPartition(x1,x2,x3)
+y2 = ArrayPartition(A1*x1+d1, A2*x2+d2, A3*x3+d3)
+@test norm(y1 .- y2) .<= 1e-12
+@test norm(displacement(opD) .- ArrayPartition(d1,d2,d3)) .<= 1e-12
+y1 = remove_displacement(opD)*ArrayPartition(x1,x2,x3)
+y2 = ArrayPartition(A1*x1, A2*x2, A3*x3)
+@test norm(y1 .- y2) .<= 1e-12
 
 #######################
 ## test HCAT    #######
@@ -202,14 +202,14 @@ opA2 = MatrixOp(A2)
 opH = HCAT(opA1, opA2)
 x1 = randn(n1)
 x2 = randn(n2)
-y1 = test_op(opH, (x1, x2), randn(m), verb)
+y1 = test_op(opH, ArrayPartition(x1, x2), randn(m), verb)
 y2 = A1*x1 + A2*x2
 @test norm(y1-y2) <= 1e-12
 
 #permuatation 
 p = [2;1]
 opHp = opH[p]
-y1 = test_op(opHp, (x2, x1), randn(m), verb)
+y1 = test_op(opHp, ArrayPartition(x2, x1), randn(m), verb)
 @test norm(y1-y2) <= 1e-12
 
 # test HCAT longer
@@ -225,18 +225,18 @@ opH = HCAT(opA1, opA2, opA3)
 x1 = randn(n1)
 x2 = randn(n2)
 x3 = randn(n3)
-y1 = test_op(opH, (x1, x2, x3), randn(m), verb)
+y1 = test_op(opH, ArrayPartition(x1, x2, x3), randn(m), verb)
 y2 = A1*x1 + A2*x2 + A3*x3
 @test norm(y1-y2) <= 1e-12
 
 # test HCAT of HCAT
 opHH = HCAT(opH, opA2, opA3)
-y1 = test_op(opHH, (x1, x2, x3, x2, x3), randn(m), verb)
+y1 = test_op(opHH, ArrayPartition(x1, x2, x3, x2, x3), randn(m), verb)
 y2 = A1*x1 + A2*x2 + A3*x3 + A2*x2 + A3*x3
 @test norm(y1-y2) <= 1e-12
 
 opHH = HCAT(opH, opH, opA3)
-x = (x1, x2, x3, x1, x2, x3, x3)
+x = ArrayPartition(x1, x2, x3, x1, x2, x3, x3)
 y1 = test_op(opHH, x, randn(m), verb)
 y2 = A1*x1 + A2*x2 + A3*x3 + A1*x1 + A2*x2 + A3*x3 + A3*x3
 @test norm(y1-y2) <= 1e-12
@@ -252,13 +252,13 @@ opF = AbstractOperators.DFT(Complex{Float64},(m,))
 p = randperm(ndoms(opHH,2))
 opHP = AbstractOperators.permute(opHH,p)
 
-xp = x[p] 
+xp = ArrayPartition(x.x[p]...) 
 
 y1 = test_op(opHP, xp, randn(m), verb)
 
 pp = randperm(ndoms(opHH,2))
 opHPP = AbstractOperators.permute(opHH,pp)
-xpp = x[pp] 
+xpp = ArrayPartition(x.x[pp]...) 
 y1 = test_op(opHPP, xpp, randn(m), verb)
 
 #properties
@@ -310,10 +310,10 @@ opA2 = AffineAdd(MatrixOp(A2), d2)
 opH = HCAT(opA1, opA2)
 x1 = randn(n1)
 x2 = randn(n2)
-y1 = opH*(x1,x2)
+y1 = opH*ArrayPartition(x1,x2)
 y2 = A1*x1+d1 + A2*x2+d2
 @test norm(y1-y2) <= 1e-12
-y1 = remove_displacement(opH)*(x1,x2)
+y1 = remove_displacement(opH)*ArrayPartition(x1,x2)
 y2 = A1*x1 + A2*x2
 @test norm(y1-y2) <= 1e-12
 
@@ -433,9 +433,9 @@ y1 = remove_displacement(opS)*x1
 y2 = coeff*(A1*x1)
 @test norm(y1-y2) <= 1e-12
 
-#########################
-#### test Sum     #######
-#########################
+########################
+### test Sum     #######
+########################
 
 m,n = 5,7
 A1 = randn(m,n)
@@ -546,9 +546,9 @@ opA1 = MatrixOp(A1)
 opA2 = MatrixOp(A2)
 opV = VCAT(opA1, opA2)
 x1 = randn(n)
-y1 = test_op(opV, x1, (randn(m1), randn(m2)), verb)
-y2 = (A1*x1, A2*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opV, x1, ArrayPartition(randn(m1), randn(m2)), verb)
+y2 = ArrayPartition(A1*x1, A2*x1)
+@test norm(y1 - y2) .<= 1e-12
 
 m1, n = 4, 5
 A1 = randn(m1, n)+im*randn(m1, n)
@@ -556,9 +556,9 @@ opA1 = MatrixOp(A1)
 opA2 = AbstractOperators.DFT(n)'
 opV = VCAT(opA1, opA2)
 x1 = randn(n)+im*randn(n)
-y1 = test_op(opV, x1, (randn(m1)+im*randn(m1), randn(n)), verb)
-y2 = (A1*x1, opA2*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opV, x1, ArrayPartition(randn(m1)+im*randn(m1), randn(n)), verb)
+y2 = ArrayPartition(A1*x1, opA2*x1)
+@test norm(y1 - y2) .<= 1e-12
 
 #test VCAT longer
 m1, m2, m3, n = 4, 7, 3, 5
@@ -570,20 +570,20 @@ opA2 = MatrixOp(A2)
 opA3 = MatrixOp(A3)
 opV = VCAT(opA1, opA2, opA3)
 x1 = randn(n)
-y1 = test_op(opV, x1, (randn(m1), randn(m2), randn(m3)), verb)
-y2 = (A1*x1, A2*x1, A3*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opV, x1, ArrayPartition(randn(m1), randn(m2), randn(m3)), verb)
+y2 = ArrayPartition(A1*x1, A2*x1, A3*x1)
+@test norm(y1 - y2) .<= 1e-12
 
 #test VCAT of VCAT
 opVV = VCAT(opV,opA3)
-y1 = test_op(opVV, x1, (randn(m1), randn(m2), randn(m3), randn(m3)), verb)
-y2 = (A1*x1, A2*x1, A3*x1, A3*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opVV, x1, ArrayPartition(randn(m1), randn(m2), randn(m3), randn(m3)), verb)
+y2 = ArrayPartition(A1*x1, A2*x1, A3*x1, A3*x1)
+@test norm(y1 .- y2) <= 1e-12
 
 opVV = VCAT(opA1,opV,opA3)
-y1 = test_op(opVV, x1, (randn(m1), randn(m1), randn(m2), randn(m3), randn(m3)), verb)
-y2 = (A1*x1, A1*x1, A2*x1, A3*x1, A3*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opVV, x1, ArrayPartition(randn(m1), randn(m1), randn(m2), randn(m3), randn(m3)), verb)
+y2 = ArrayPartition(A1*x1, A1*x1, A2*x1, A3*x1, A3*x1)
+@test norm(y1 - y2) <= 1e-12
 
 opA3 = MatrixOp(randn(m1,m1))
 @test_throws Exception VCAT(opA1,opA2,opA3)
@@ -625,11 +625,11 @@ d2 = randn(m2)
 opV = VCAT(AffineAdd(opA1,d1), AffineAdd(opA2,d2))
 x1 = randn(n)
 y1 = opV*x1
-y2 = (A1*x1+d1, A2*x1+d2)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y2 = ArrayPartition(A1*x1+d1, A2*x1+d2)
+@test norm(y1 - y2) <= 1e-12
 y1 = remove_displacement(opV)*x1
-y2 = (A1*x1, A2*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y2 = ArrayPartition(A1*x1, A2*x1)
+@test norm(y1 - y2) <= 1e-12
 
 #########################
 #### test BroadCast #####
@@ -680,9 +680,9 @@ y2 .= x1
 @test norm(y1-y2) <= 1e-12
 
 op = HCAT(Eye(m,l),opR)
-x1 = (randn(m,l),randn(1,l))
+x1 = ArrayPartition(randn(m,l),randn(1,l))
 y1 = test_op(op, x1, randn(dim_out), verb)
-y2 = x1[1].+x1[2]
+y2 = x1.x[1].+x1.x[2]
 @test norm(y1-y2) <= 1e-12
 
 m, n, l  = 2, 5, 8
@@ -814,16 +814,16 @@ n,m = 5,6
 A = randn(n,m)
 d = randn(n)
 opH = HCAT(Eye(n),MatrixOp(A))
-x = (randn(n),randn(m))
+x = ArrayPartition(randn(n),randn(m))
 opHT = AffineAdd(opH,d)
 
-@test norm(opHT*x-(x[1]+A*x[2].+d)) < 1e-12
+@test norm(opHT*x-(x.x[1]+A*x.x[2].+d)) < 1e-12
 p = [2;1]
-@test norm(AbstractOperators.permute(opHT,p)*x[p]-(x[1]+A*x[2].+d)) < 1e-12
+@test norm(AbstractOperators.permute(opHT,p)*ArrayPartition(x.x[p]...)-(x.x[1]+A*x.x[2].+d)) < 1e-12
 
-#############################
-######## test combin. #######
-#############################
+############################
+####### test combin. #######
+############################
 
 ## test Compose of HCAT
 m1, m2, m3, m4 = 4, 7, 3, 2
@@ -836,14 +836,14 @@ opA3 = MatrixOp(A3)
 opH = HCAT(opA1,opA2)
 opC = Compose(opA3,opH)
 x1, x2 = randn(m1), randn(m2)
-y1 = test_op(opC, (x1,x2), randn(m4), verb)
+y1 = test_op(opC, ArrayPartition(x1,x2), randn(m4), verb)
 
 y2 = A3*(A1*x1+A2*x2)
 
 @test norm(y1-y2) < 1e-9
 
 opCp = AbstractOperators.permute(opC,[2,1])
-y1 = test_op(opCp, (x2,x1), randn(m4), verb)
+y1 = test_op(opCp, ArrayPartition(x2,x1), randn(m4), verb)
 
 @test norm(y1-y2) < 1e-9
 
@@ -852,7 +852,7 @@ m5 = 10
 A4 = randn(m4,m5)
 x3 = randn(m5)
 opHC = HCAT(opC,MatrixOp(A4))
-x = (x1,x2,x3)
+x = ArrayPartition(x1,x2,x3)
 y1 = test_op(opHC, x, randn(m4), verb)
 
 @test norm(y1-(y2+A4*x3)) < 1e-9
@@ -860,15 +860,14 @@ y1 = test_op(opHC, x, randn(m4), verb)
 p = randperm(ndoms(opHC,2))
 opHP = AbstractOperators.permute(opHC,p)
 
-xp = x[p] 
+xp = ArrayPartition(x.x[p]...) 
 
 y1 = test_op(opHP, xp, randn(m4), verb)
 
 pp = randperm(ndoms(opHC,2))
 opHPP = AbstractOperators.permute(opHC,pp)
-xpp = x[pp] 
+xpp = ArrayPartition(x.x[pp]...) 
 y1 = test_op(opHPP, xpp, randn(m4), verb)
-
 
 # test VCAT of HCAT's
 m1, m2, n1 = 4, 7, 3
@@ -887,9 +886,9 @@ opH2 = HCAT(opA3,opA4)
 
 opV = VCAT(opH1,opH2)
 x1, x2 = randn(m1), randn(m2)
-y1 = test_op(opV, (x1,x2), (randn(n1),randn(n2)), verb)
-y2 = (A1*x1+A2*x2,A3*x1+A4*x2)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opV, ArrayPartition(x1,x2), ArrayPartition(randn(n1),randn(n2)), verb)
+y2 = ArrayPartition(A1*x1+A2*x2,A3*x1+A4*x2)
+@test norm(y1 - y2) <= 1e-12
 
 # test VCAT of HCAT's with complex num
 m1, m2, n1 = 4, 7, 5
@@ -906,9 +905,9 @@ opH2 = HCAT(opA3,opA4)
 
 opV = VCAT(opH1,opH2)
 x1, x2 = randn(m1)+im*randn(m1), randn(n2)
-y1 = test_op(opV, (x1,x2), (randn(n1)+im*randn(n1),randn(n2)+im*randn(n2)), verb)
-y2 = (A1*x1+fft(x2),A3*x1+fft(x2))
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y1 = test_op(opV, ArrayPartition(x1,x2), ArrayPartition(randn(n1)+im*randn(n1),randn(n2)+im*randn(n2)), verb)
+y2 = ArrayPartition(A1*x1+fft(x2),A3*x1+fft(x2))
+@test norm(y1 - y2) <= 1e-12
 
 # test HCAT of VCAT's
 
@@ -920,10 +919,10 @@ D = randn(m2, n2); opD = MatrixOp(D)
 opV = HCAT(VCAT(opA, opC), VCAT(opB, opD))
 x1 = randn(n1)
 x2 = randn(n2)
-y1 = test_op(opV, (x1, x2), (randn(m1), randn(m2)), verb)
-y2 = (A*x1 + B*x2, C*x1 + D*x2)
+y1 = test_op(opV, ArrayPartition(x1, x2), ArrayPartition(randn(m1), randn(m2)), verb)
+y2 = ArrayPartition(A*x1 + B*x2, C*x1 + D*x2)
 
-@test all(norm.(y1 .- y2) .<= 1e-12)
+@test norm(y1 - y2) <= 1e-12
 
 # test Sum of HCAT's
 
@@ -946,14 +945,14 @@ opS = Sum(opHA, opHB)
 x1 = randn(n1)
 x2 = randn(n2)
 x3 = randn(n3)
-y1 = test_op(opS, (x1, x2, x3), randn(m), verb)
+y1 = test_op(opS, ArrayPartition(x1, x2, x3), randn(m), verb)
 y2 = A1*x1 + B1*x1 + A2*x2 + B2*x2 + A3*x3 + B3*x3
 
 @test norm(y1-y2) <= 1e-12
 
 p = [3;2;1]
 opSp = AbstractOperators.permute(opS,p)
-y1 = test_op(opSp, (x1, x2, x3)[p], randn(m), verb)
+y1 = test_op(opSp, ArrayPartition(((x1, x2, x3)[p])...), randn(m), verb)
 
 # test Sum of VCAT's
 
@@ -975,10 +974,10 @@ opVB = VCAT(opB1, opB2)
 opVC = VCAT(opC1, opC2)
 opS = Sum(opVA, opVB, opVC)
 x = randn(n)
-y1 = test_op(opS, x, (randn(m1), randn(m2)), verb)
-y2 = (A1*x + B1*x +C1*x, A2*x + B2*x + C2*x)
+y1 = test_op(opS, x, ArrayPartition(randn(m1), randn(m2)), verb)
+y2 = ArrayPartition(A1*x + B1*x +C1*x, A2*x + B2*x + C2*x)
 
-@test all(norm.(y1 .- y2) .<= 1e-12)
+@test norm(y1 - y2) .<= 1e-12
 
 # test Scale of DCAT
 
@@ -993,10 +992,10 @@ coeff = randn()
 opS = Scale(coeff, opD)
 x1 = randn(n1)
 x2 = randn(n2)
-y = test_op(opS, (x1, x2), (randn(m1), randn(m2)), verb)
-z = (coeff*A1*x1, coeff*A2*x2)
+y = test_op(opS, ArrayPartition(x1, x2), ArrayPartition(randn(m1), randn(m2)), verb)
+z = ArrayPartition(coeff*A1*x1, coeff*A2*x2)
 
-@test all(norm.(y .- z) .<= 1e-12)
+@test norm(y - z) <= 1e-12
 
 # test Scale of VCAT
 
@@ -1009,10 +1008,10 @@ opV = VCAT(opA1, opA2)
 coeff = randn()
 opS = Scale(coeff, opV)
 x = randn(n)
-y = test_op(opS, x, (randn(m1), randn(m2)), verb)
-z = (coeff*A1*x, coeff*A2*x)
+y = test_op(opS, x, ArrayPartition(randn(m1), randn(m2)), verb)
+z = ArrayPartition(coeff*A1*x, coeff*A2*x)
 
-@test all(norm.(y .- z) .<= 1e-12)
+@test norm(y - z) <= 1e-12
 
 # test Scale of HCAT
 
@@ -1026,10 +1025,10 @@ coeff = randn()
 opS = Scale(coeff, opH)
 x1 = randn(n1)
 x2 = randn(n2)
-y = test_op(opS, (x1, x2), randn(m), verb)
+y = test_op(opS, ArrayPartition(x1, x2), randn(m), verb)
 z = coeff*(A1*x1 + A2*x2)
 
-@test all(norm.(y .- z) .<= 1e-12)
+@test norm(y - z) <= 1e-12
 
 # test DCAT of HCATs
 
@@ -1048,19 +1047,19 @@ opB3 = MatrixOp(B3)
 opH2 = HCAT(opB1, opB2, opB3)
 
 op = DCAT(opA1, opH2)
-x =  randn.(size(op,2))
-y0 = randn.(size(op,1))
+x =  ArrayPartition(randn.(size(op,2))...)
+y0 = ArrayPartition(randn.(size(op,1))...)
 y = test_op(op, x, y0, verb)
 
 op = DCAT(opH1, opH2)
-x =  randn.(size(op,2))
-y0 = randn.(size(op,1))
+x =  ArrayPartition(randn.(size(op,2))...) 
+y0 = ArrayPartition(randn.(size(op,1))...)
 y = test_op(op, x, y0, verb)
 
 p = randperm(ndoms(op,2))
-y2 = op[p]*x[p]
+y2 = op[p]*ArrayPartition(x.x[p]...)
 
-@test AbstractOperators.blockvecnorm(y .- y2) <= 1e-8
+@test norm(y - y2) <= 1e-8
 
 # test Scale of Sum
 

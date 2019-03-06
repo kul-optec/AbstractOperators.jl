@@ -9,7 +9,9 @@
 *.bbl
 *.blg
 *.log
+*.DS_Store
 
 
 docs/build/
 docs/site/
+docs/Manifest.toml

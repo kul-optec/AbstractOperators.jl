@@ -43,8 +43,8 @@ H = LBFGS(x, mem)
 dir  = zeros(10)
 println(H)
 
-HH = LBFGS((x, x), mem)
-dirdir = (zeros(10), zeros(10))
+HH = LBFGS(ArrayPartition(x, x), mem)
+dirdir = ArrayPartition(zeros(10), zeros(10))
 println(HH)
 
 x_old = [];
@@ -56,8 +56,12 @@ for i = 1:5
     grad = Q*x + q
 
     if i > 1
+      xx           = ArrayPartition(x, copy(x)) 
+      xx_old       = ArrayPartition(x_old, copy(x_old)) 
+      gradgrad     = ArrayPartition(grad, copy(grad)) 
+      gradgrad_old = ArrayPartition(grad_old, copy(grad_old))
         @time update!(H, x, x_old, grad, grad_old)
-        @time update!(HH, (x, x), (x_old, x_old), (grad, grad), (grad_old, grad_old))
+        @time update!(HH,xx, xx_old, gradgrad, gradgrad_old)
     end
 
     dir_ref = dirs_ref[:,i]
@@ -66,48 +70,28 @@ for i = 1:5
     @time mul!(dir, H, gradm)
     @test norm(dir-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
 
-    gradm2 = (-grad,-grad)
+    gradm2 = ArrayPartition(-grad,copy(-grad))
     @time mul!(dirdir, HH, gradm2)
-    @test norm(dirdir[1]-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
-    @test norm(dirdir[2]-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
+    @test norm(dirdir.x[1]-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
+    @test norm(dirdir.x[2]-dir_ref, Inf)/(1+norm(dir_ref, Inf)) <= 1e-15
 
     x_old = x;
     grad_old = grad;
 
 end
 
-@test blockones(size(H,1)) != H*blockones(size(H,1))
-@test blockones(size(HH,1)) != HH*blockones(size(HH,1))
-
 #testing reset
+
+
+@test ones(size(H,1)) != H*ones(size(H,1))
+@test ArrayPartition(ones.(size(HH,1))) != HH*ArrayPartition(ones.(size(HH,1))...)
 
 AbstractOperators.reset!(H)
 AbstractOperators.reset!(HH)
 
-@test blockones(size(H,1)) == H*blockones(size(H,1))
-@test blockones(size(HH,1)) == HH*blockones(size(HH,1))
+@test ones(size(H,1)) == H*ones(size(H,1))
+@test ArrayPartition(ones.(size(HH,1))) == HH*ArrayPartition(ones.(size(HH,1))...)
 
 end
 
 test_lbfgs()
-
-#test other constructors
-mem = 3
-x = (zeros(10),zeros(Complex{Float64},10))
-H = LBFGS(x, mem)
-println(H)
-
-dim = (10,)
-H = LBFGS(dim, mem)
-println(H)
-
-dim = ((10,),(10,))
-H = LBFGS(dim, mem)
-println(H)
-
-D = (Float64,Complex{Float64})
-dim = ((10,),(10,))
-H = LBFGS(D,dim, mem)
-println(H)
-
-

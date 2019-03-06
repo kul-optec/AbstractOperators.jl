@@ -14,23 +14,23 @@ Compose opeators in such fashion:
 ```julia
 julia> n1,m1,n2,m2 = 3,4,4,6 
 
-julia> x = (randn(n1,m1),randn(n2,m2)); #inputs
+julia> x = ArrayPartition(randn(n1,m1),randn(n2,m2)); #inputs
 
 julia> C = NonLinearCompose( Eye(n1,n2), Eye(m1,m2) )
 # i.e. `I(⋅)*I(⋅)`
 
-julia> Y = x[1]*x[2]
+julia> Y = x.x[1]*x.x[2]
 
 julia> C*x ≈ Y
 true
 
 ```
 """
-struct NonLinearCompose{N,
-			L1 <: HCAT{1},
-			L2 <: HCAT{1},
-			C <: Tuple{AbstractArray,AbstractArray},
-			D <: NTuple{N,Union{AbstractArray,Tuple}}
+struct NonLinearCompose{
+			L1 <: HCAT,
+			L2 <: HCAT,
+			C <: AbstractArray,
+			D <: AbstractArray
 			} <: NonLinearOperator
 	A::L1
 	B::L2
@@ -44,24 +44,20 @@ struct NonLinearCompose{N,
             ) 
                 throw(DimensionMismatch("cannot compose operators"))
         end
-		N = length(bufx)
-		new{N,L1,L2,C,D}(A,B,buf,bufx)
+		new{L1,L2,C,D}(A,B,buf,bufx)
 	end
 end
 
-struct NonLinearComposeJac{N,
-			   L1 <: HCAT{1},
-			   L2 <: HCAT{1},
-			   C <: Tuple{AbstractArray,AbstractArray},
-			   D <: NTuple{N,Union{AbstractArray,Tuple}}
+struct NonLinearComposeJac{
+			   L1 <: HCAT,
+			   L2 <: HCAT,
+			   C <: AbstractArray,
+			   D <: AbstractArray 
 			   } <: LinearOperator
 	A::L1
 	B::L2
 	buf::C
 	bufx::D
-	function NonLinearComposeJac{N}(A::L1, B::L2, buf::C, bufx::D) where {N,L1,L2,C,D}
-		new{N,L1,L2,C,D}(A,B,buf,bufx)
-	end
 end
 
 # Constructors
@@ -70,49 +66,47 @@ function NonLinearCompose(L1::AbstractOperator,L2::AbstractOperator)
 	A = HCAT(L1, Zeros( domainType(L2), size(L2,2), codomainType(L1), size(L1,1) ))
 	B = HCAT(Zeros( domainType(L1), size(L1,2), codomainType(L2), size(L2,1) ), L2 )
 
-	buf  = zeros(codomainType(A),size(A,1)),zeros(codomainType(B),size(B,1))
-	bufx = zeros(codomainType(L1),size(L1,1)), zeros(codomainType(L2),size(L2,1))
+  buf  = ArrayPartition(zeros(codomainType(A),size(A,1)),   zeros(codomainType(B),size(B,1)))
+  bufx = ArrayPartition(zeros(codomainType(L1),size(L1,1)), zeros(codomainType(L2),size(L2,1)))
 
 	NonLinearCompose(A,B,buf,bufx)
 end
 
 # Jacobian
-function Jacobian(P::NonLinearCompose{N,L,C,D},x::DD) where  {M,N,L,C,
-							      D<: NTuple{N,Union{AbstractArray,Tuple}},
-							      DD<: NTuple{M,AbstractArray},
-							      }
-	NonLinearComposeJac{N}(Jacobian(P.A,x),Jacobian(P.B,x),P.buf,P.bufx)
+function Jacobian(P::NonLinearCompose{L1,L2,C,D}, x::AbstractArray) where  {L1,L2,C,D}
+	NonLinearComposeJac(Jacobian(P.A,x),Jacobian(P.B,x),P.buf,P.bufx)
 end
 
 # Mappings
-function mul!(y, P::NonLinearCompose{N,L1,L2,C,D}, b) where {N,L1,L2,C,D}
-	mul_skipZeros!(P.buf[1],P.A,b)
-	mul_skipZeros!(P.buf[2],P.B,b)
-	mul!(y,P.buf[1],P.buf[2])
+function mul!(y, P::NonLinearCompose{L1,L2,C,D}, b) where {L1,L2,C,D}
+	mul_skipZeros!(P.buf.x[1],P.A,b)
+	mul_skipZeros!(P.buf.x[2],P.B,b)
+	mul!(y,P.buf.x[1],P.buf.x[2])
 end
 
-function mul!(y, J::AdjointOperator{NonLinearComposeJac{N,L1,L2,C,D}}, b) where {N,L1,L2,C,D}
+function mul!(y, J::AdjointOperator{NonLinearComposeJac{L1,L2,C,D}}, b) where {L1,L2,C,D}
+  P = J.A
+	mul!(P.bufx.x[1],b,P.buf.x[2]')
+	mul_skipZeros!(y,P.A',P.bufx.x[1])
 
-    P = J.A
-	mul!(P.bufx[1],b,P.buf[2]')
-	mul_skipZeros!(y,P.A',P.bufx[1])
-
-	mul!(P.bufx[2],P.buf[1]',b)
-	mul_skipZeros!(y,P.B',P.bufx[2])
-
+	mul!(P.bufx.x[2],P.buf.x[1]',b)
+	mul_skipZeros!(y,P.B',P.bufx.x[2])
 end
 
 # special case outer product  
-function mul!(y, J::AdjointOperator{NonLinearComposeJac{N,L1,L2,C,D}}, b) where {N,L1,L2,C,D <: Tuple{AbstractVector,AbstractArray}}
+function mul!(y, 
+              J::AdjointOperator{NonLinearComposeJac{L1,L2,C,D}}, 
+              b) where {
+                        T, L1,L2,C, 
+                        A <: Tuple{AbstractVector,AbstractArray}, 
+                        D <: ArrayPartition{T,A} }
+  P = J.A
+  p = reshape(P.bufx.x[1], length(P.bufx.x[1]),1)
+  mul!(p,b,P.buf.x[2]')
+  mul_skipZeros!(y,P.A',P.bufx.x[1])
 
-    P = J.A
-    p = reshape(P.bufx[1], length(P.bufx[1]),1)
-    mul!(p,b,P.buf[2]')
-	mul_skipZeros!(y,P.A',P.bufx[1])
-
-	mul!(P.bufx[2],P.buf[1]',b)
-	mul_skipZeros!(y,P.B',P.bufx[2])
-
+	mul!(P.bufx.x[2],P.buf.x[1]',b)
+	mul_skipZeros!(y,P.B',P.bufx.x[2])
 end
 
 # Properties
@@ -138,7 +132,7 @@ domainType(L::NonLinearComposeJac)   = domainType.(Ref(L.A))
 codomainType(L::NonLinearComposeJac) = codomainType(L.A)
 
 # utils
-function permute(P::NonLinearCompose{N,L,C,D}, p::AbstractVector{Int}) where {N,L,C,D}
+function permute(P::NonLinearCompose{L,C,D}, p::AbstractVector{Int}) where {L,C,D}
 	NonLinearCompose(permute(P.A,p),permute(P.B,p),P.buf,P.bufx)
 end
 

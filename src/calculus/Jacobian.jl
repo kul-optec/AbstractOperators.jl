@@ -19,17 +19,18 @@ J(σ)  ℝ^10 -> ℝ^10
 ```
 
 """
-struct Jacobian{T <: NonLinearOperator, X<:Union{AbstractArray,Tuple}} <: LinearOperator
+struct Jacobian{T <: NonLinearOperator, X<:AbstractArray} <: LinearOperator
 	A::T
 	x::X
 end
 
 #Jacobian of LinearOperator 
-Jacobian(L::T,x::X) where {T<:LinearOperator,X<:Union{AbstractArray,NTuple}} = L
+Jacobian(L::T,x::X) where {T<:LinearOperator,X<:AbstractArray} = L
 #Jacobian of Scale
 Jacobian(S::T2,x::AbstractArray) where {T,L,T2<:Scale{T,L}} = Scale(S.coeff,Jacobian(S.A,x)) 
 ##Jacobian of DCAT
-function Jacobian(H::DCAT{N,L,P1,P2},x) where {N,L,P1,P2} 
+function Jacobian(H::DCAT{N,L,P1,P2},b) where {N,L,P1,P2} 
+  x = b.x
 	A = ()
 	c = 0
     for (k, idx) in enumerate(H.idxD)
@@ -43,22 +44,23 @@ function Jacobian(H::DCAT{N,L,P1,P2},x) where {N,L,P1,P2}
 	DCAT(A,H.idxD,H.idxC)
 end
 #Jacobian of HCAT
-function Jacobian(H::HCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D} 
+function Jacobian(H::HCAT{N,L,P,C},b::ArrayPartition) where {N,L,P,C,D} 
+  x = b.x
 	A = ()
     for (k, idx) in enumerate(H.idxs)
 		if length(idx) == 1 
             A = (A...,jacobian(H.A[k],x[idx])) 
         else
-            xx = ([x[i] for i in idx]...,)
+            xx = ArrayPartition([x[i] for i in idx]...,)
             A = (A...,jacobian(H.A[k],xx)) 
         end
 	end
-	HCAT(A,H.idxs,H.buf,M)
+	HCAT(A,H.idxs,H.buf)
 end
 #Jacobian of VCAT
-function Jacobian(V::VCAT{M,N,L,P,C},x::D) where {M,N,L,P,C,D}
+function Jacobian(V::VCAT{N,L,P,C},x::AbstractArray) where {N,L,P,C,D}
     JJ = ([Jacobian(a,x) for a in V.A]...,)
-    VCAT{M,N,typeof(JJ),P,C}(JJ, V.idxs, V.buf)
+    VCAT(JJ, V.idxs, V.buf)
 end
 #Jacobian of Compose 
 function Jacobian(L::Compose, x::X) where {X<:AbstractArray} 
@@ -71,8 +73,8 @@ end
 #Jacobian of Reshape
 Jacobian(R::Reshape{N,L},x::AbstractArray) where {N,L} = Reshape(Jacobian(R.A,x),R.dim_out) 
 #Jacobian of Sum
-Jacobian(S::Sum{M,N,K,C,D},x::D) where {M,N,K,C,D} = 
-Sum(([Jacobian(a,x) for a in S.A]...,),S.bufC,S.bufD,M,N)
+Jacobian(S::Sum{K,C,D},x::D) where {K,C,D} = 
+Sum(([Jacobian(a,x) for a in S.A]...,),S.bufC,S.bufD)
 #Jacobian of Transpose
 Jacobian(T::Transpose{A}, x::AbstractArray) where {A <: AbstractOperator} = T 
 #Jacobian of BroadCast

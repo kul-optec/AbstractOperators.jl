@@ -1,5 +1,5 @@
 using AbstractOperators
-using LinearAlgebra, FFTW, DSP, SparseArrays
+using LinearAlgebra, FFTW, DSP, SparseArrays, RecursiveArrayTools
 using Printf
 using Random
 using Test
@@ -11,10 +11,6 @@ Random.seed!(0)
 verb = true
 
 @testset "AbstractOperators" begin
-
-@testset "Block Arrays" begin
-  include("test_block.jl")
-end
 
 @testset "Linear operators" begin
   include("test_linear_operators.jl")
@@ -41,4 +37,3 @@ end
 end
 
 end
-

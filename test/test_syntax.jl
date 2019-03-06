@@ -156,7 +156,7 @@ opB = MatrixOp(B)
 opC = MatrixOp(C)
 opH = HCAT(opA,opB,opC)
 opH2 = opH[1:2]
-y1 = opH2*(x1,x2)
+y1 = opH2*ArrayPartition(x1,x2)
 y2 = A*x1+B*x2
 @test all(norm.(y1 .- y2) .<= 1e-12)
 opH3 = opH[3]
@@ -165,14 +165,14 @@ y2 = C*x3
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
 opHperm = opH[[3,1,2]]
-@test norm(opH*(x1,x2,x3) - opHperm*(x3,x1,x2)) <1e-12
+@test norm(opH*ArrayPartition(x1,x2,x3) - opHperm*ArrayPartition(x3,x1,x2)) <1e-12
 
 @test opHperm[1] == opC
 @test opHperm[2] == opA
 @test opHperm[3] == opB
 
 opHperm = opH[[3,1]]
-@test norm(opC*x3+opA*x1 - opHperm*(x3,x1)) <1e-12
+@test norm(opC*x3+opA*x1 - opHperm*ArrayPartition(x3,x1)) <1e-12
 
 # slicing Affine add of HCAT
 d = randn(n)
@@ -209,12 +209,12 @@ opC = MatrixOp(C)
 opV = VCAT(opA,opB,opC)
 opV2 = opV[1:2]
 y1 = opV2*x1
-y2 = (A*x1,B*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y2 = ArrayPartition(A*x1,B*x1)
+@test norm(y1 - y2) <= 1e-12
 opV3 = opV[3]
 y1 = opV3*x3
 y2 = C*x3
-@test all(norm.(y1 .- y2) .<= 1e-12)
+@test norm(y1 - y2) <= 1e-12
 
 ###### hcat ######
 
@@ -226,14 +226,14 @@ opB = MatrixOp(B)
 opH = [opA opB]
 x1 = randn(m1)
 x2 = randn(m2)
-y1 = opH*(x1,x2)
+y1 = opH*ArrayPartition(x1,x2)
 y2 = [A B]*[x1;x2]
-@test all(norm.(y1 .- y2) .<= 1e-12)
+@test norm(y1 - y2) <= 1e-12
 
 opHH = [opH opB]
-y1 = opHH*(x1, x2, x2)
+y1 = opHH*ArrayPartition(x1, x2, x2)
 y2 = [A B B]*[x1;x2;x2]
-@test all(norm.(y1 .- y2) .<= 1e-12)
+@test norm(y1 - y2) <= 1e-12
 
 ###### vcat ######
 
@@ -245,13 +245,13 @@ opB = MatrixOp(B)
 opH = [opA; opB]
 x1 = randn(n)
 y1 = opH*x1
-y2 = (A*x1,B*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y2 = ArrayPartition(A*x1,B*x1)
+@test norm(y1 - y2) <= 1e-12
 
 opVV = [opA; opH]
 y1 = opVV*x1
-y2 = (A*x1, A*x1, B*x1)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+y2 = ArrayPartition(A*x1, A*x1, B*x1)
+@test norm(y1 - y2) <= 1e-12
 
 ###### reshape ######
 n,m =  10,5
@@ -262,7 +262,7 @@ opR = reshape(opA,2,5)
 opR = reshape(opA,(2,5))
 y1 = opR*x1
 y2 = reshape(A*x1,2,5)
-@test all(norm.(y1 .- y2) .<= 1e-12)
+@test norm(y1 - y2) <= 1e-12
 
 # testing ndims & ndoms
 L = Variation((3,4,5))

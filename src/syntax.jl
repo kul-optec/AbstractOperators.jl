@@ -11,11 +11,18 @@ adjoint(L::T) where {T <: AbstractOperator} = AdjointOperator(L)
 (-)(L1::AbstractOperator, L2::AbstractOperator) = Sum(L1, -L2 )
 
 ###### * ######
-function (*)(L::AbstractOperator, b::T) where {T <: BlockArray}
-	y = blockzeros(codomainType(L), size(L, 1))
+function (*)(L::AbstractOperator, b::AbstractArray)
+  C = codomainType(L)
+  if typeof(C) <: Tuple
+    y = ArrayPartition(zeros.(codomainType(L), size(L, 1))...)
+  else
+	  y = zeros(codomainType(L), size(L, 1))
+  end
 	mul!(y, L, b)
 	return y
 end
+
+#(*)(L::AbstractOperator, b::Tuple) = (*)(L, ArrayPartition(b...))
 
 *(coeff::T, L::AbstractOperator) where {T<:Number} = Scale(coeff,L)
 *(L1::AbstractOperator, L2::AbstractOperator) = Compose(L1,L2)
@@ -33,7 +40,7 @@ function getindex(A::AbstractOperator,idx...)
 end
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex(H::A, idx::Union{AbstractArray,Int}) where {M,N,L,P,C,A<:HCAT{M,N,L,P,C}}
+function getindex(H::HCAT, idx::Union{AbstractArray,Int})
 
 	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
@@ -57,7 +64,7 @@ end
 
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex(H::A, idx::Union{AbstractArray,Int}) where {M,N,L,P,C,A<:VCAT{M,N,L,P,C}}
+function getindex(H::VCAT, idx::Union{AbstractArray,Int})
 
 	unfolded = vcat([[i... ] for i in H.idxs]...)
 	if length(idx) == length(unfolded)

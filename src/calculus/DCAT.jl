@@ -16,7 +16,7 @@ DCAT  ℝ^10  ℝ^10  ℝ^(4, 4) -> ℝ^10  ℝ^10  ℝ^(3, 4)
 To evaluate `DCAT` operators multiply them with a `Tuple` of `AbstractArray` of the correct domain size and type. The output will consist as well of a `Tuple` with the codomain type and size of the `DCAT`.
 
 ```julia
-julia> D*(ones(2),ones(2),ones(3))
+julia> D*ArrayPartition(ones(2),ones(2),ones(3))
 ([2.0, 2.0], Complex{Float64}[3.0+0.0im, 0.0+0.0im, 0.0+0.0im])
 
 ```
@@ -62,9 +62,12 @@ function DCAT(A::Vararg{AbstractOperator})
 end
 
 # Mappings
-@generated function mul!(y, H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2} 
+@generated function mul!(yy::ArrayPartition, 
+                         H::DCAT{N,L,P1,P2}, 
+                         bb::ArrayPartition) where {N,L,P1,P2} 
 
-	ex = :()
+  # extract stuff
+	ex = :(y = yy.x; b = bb.x )
 
 	for i = 1:N
 
@@ -76,7 +79,7 @@ end
 		# stacked operator 
 		# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
         yy =  [ :(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
-        yy = :( tuple( $(yy...) ) )
+        yy = :( ArrayPartition( $(yy...) ) )
 		end
 
 		if fieldtype(P1,i) <: Int 
@@ -87,7 +90,7 @@ end
 		# stacked operator 
 		# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
         bb = [ :(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i))) ]
-        bb = :( tuple( $(bb...) ) )
+        bb = :( ArrayPartition( $(bb...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i],$bb))
@@ -98,9 +101,12 @@ end
 
 end
 
-@generated function mul!(y, A::AdjointOperator{DCAT{N,L,P1,P2}}, b) where {N,L,P1,P2} 
+@generated function mul!(yy::ArrayPartition, 
+                         A::AdjointOperator{DCAT{N,L,P1,P2}},
+                         bb::ArrayPartition) where {N,L,P1,P2} 
 
-	ex = :(H = A.A)
+  # extract stuff
+	ex = :(H = A.A; y = yy.x; b = bb.x )
 
 	for i = 1:N
 
@@ -112,7 +118,7 @@ end
 		# stacked operator 
 		# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
         yy = [ :(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i)))]
-        yy = :( tuple( $(yy...) ))
+        yy = :( ArrayPartition( $(yy...) ))
 		end
 
 		if fieldtype(P2,i) <: Int 
@@ -123,7 +129,7 @@ end
 		# stacked operator 
 		# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
         bb = [ :(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
-        bb = :( tuple( $(bb...) ) )
+        bb = :( ArrayPartition( $(bb...) ) )
 		end
 		
 		ex = :($ex; mul!($yy,H.A[$i]',$bb))
@@ -196,7 +202,7 @@ remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC)
 
 # special cases
 # Eye constructor
-Eye(x::A) where {N, A <: NTuple{N,AbstractArray}} = DCAT(Eye.(x)...)
+Eye(x::ArrayPartition) = DCAT(Eye.(x.x)...)
 diag(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
 diag_AAc(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
 diag_AcA(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
