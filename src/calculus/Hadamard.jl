@@ -13,14 +13,14 @@ Compose opeators such that their output is multiplied elementwise:
 ```julia
 julia> n,m = 5,10
 
-julia> x = (randn(n),randn(m)); #inputs
+julia> x = ArrayPartition(randn(n),randn(m)); #inputs
 
 julia> A = randn(m,n); #A matrix
 
 julia> C = Hadamard( MatrixOp(A), Eye(m) )
 # i.e. `A(⋅).*I(⋅)`
 
-julia> Y = (A*x[1]).*x[2]
+julia> Y = (A*x.x[1]).*x.x[2]
 
 julia> C*x ≈ Y
 true

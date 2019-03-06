@@ -2,10 +2,10 @@ using Documenter, AbstractOperators
 
 makedocs(
   modules = [AbstractOperators],
-  format = :html,
+  format = Documenter.HTML(),
   sitename = "AbstractOperators.jl",
   authors = "Niccolò Antonello and Lorenzo Stella",
-  pages = Any[
+  pages = [
   "Home"               => "index.md",
   "Abstract Operators" => "operators.md",
   "Calculus rules"     => "calculus.md",
@@ -15,9 +15,5 @@ makedocs(
 
 deploydocs(
   repo   = "github.com/kul-forbes/AbstractOperators.jl.git",
-  julia  = "0.6",
-  osname = "linux",
   target = "build",
-  deps = nothing,
-  make = nothing,
 )

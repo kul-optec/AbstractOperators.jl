@@ -14,12 +14,12 @@ Compose opeators in such fashion:
 ```julia
 julia> n1,m1,n2,m2 = 3,4,4,6 
 
-julia> x = (randn(n1,m1),randn(n2,m2)); #inputs
+julia> x = ArrayPartition(randn(n1,m1),randn(n2,m2)); #inputs
 
 julia> C = NonLinearCompose( Eye(n1,n2), Eye(m1,m2) )
 # i.e. `I(⋅)*I(⋅)`
 
-julia> Y = x[1]*x[2]
+julia> Y = x.x[1]*x.x[2]
 
 julia> C*x ≈ Y
 true

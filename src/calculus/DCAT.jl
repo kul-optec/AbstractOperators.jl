@@ -16,7 +16,7 @@ DCAT  ℝ^10  ℝ^10  ℝ^(4, 4) -> ℝ^10  ℝ^10  ℝ^(3, 4)
 To evaluate `DCAT` operators multiply them with a `Tuple` of `AbstractArray` of the correct domain size and type. The output will consist as well of a `Tuple` with the codomain type and size of the `DCAT`.
 
 ```julia
-julia> D*(ones(2),ones(2),ones(3))
+julia> D*ArrayPartition(ones(2),ones(2),ones(3))
 ([2.0, 2.0], Complex{Float64}[3.0+0.0im, 0.0+0.0im, 0.0+0.0im])
 
 ```

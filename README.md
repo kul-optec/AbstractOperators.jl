@@ -73,17 +73,19 @@ julia> H = [A B]
 
 In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domainType(H) = (Float64, Complex{Float64})`.
 
-When an `AbstractOperators` have multiple domains, this must be multiplied using a `Tuple`s of `AbstractArray`s with corresponding `size(H,2)` and `domainType(H)`, for example: 
+When an `AbstractOperators` have multiple domains, this must be multiplied using an `ArrayPartition` (see [RecursiveArrayTools](https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/]) with corresponding size and domain, for example: 
 
 ```julia
-julia> H*(x, complex(x))
+julia> using RecursiveArrayTools
+
+julia> H*ArrayPartition(x, complex(x))
 3×4 Array{Complex{Float64},2}:
  -16.3603+0.0im      52.4946-8.69342im  -129.014+0.0im      44.6712+8.69342im
   -22.051+23.8135im  16.5309-10.9601im  -22.5719+39.5599im  13.8174+3.81678im
  -5.81874-23.8135im  9.70679-3.81678im  -2.21552-39.5599im  11.5502+10.9601im
 ```
 
-Similarly, when an `AbstractOperators` have multiple codomains, this will return a `Tuple` of `AbstractArray`s with corresponding `size(H,1)` and `codomainType(H)`, for example: 
+Similarly, when an `AbstractOperators` have multiple codomains, this will return an `ArrayPartition`, for example: 
 ```julia
 julia> V = VCAT(Eye(3,3),FiniteDiff((3,3)))
 [I;δx]  ℝ^(3, 3) -> ℝ^(3, 3)  ℝ^(2, 3)

@@ -19,7 +19,6 @@ julia> VCAT(DFT(4,4),Variation((4,4)))
 julia> V = [Eye(3); DiagOp(2*ones(3))]
 [I;╲]  ℝ^3 -> ℝ^3  ℝ^3
 
-
 julia> vcat(V,FiniteDiff((3,)))
 VCAT  ℝ^3 -> ℝ^3  ℝ^3  ℝ^2
 ```
