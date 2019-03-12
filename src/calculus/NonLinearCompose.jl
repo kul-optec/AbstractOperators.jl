@@ -5,9 +5,11 @@ export NonLinearCompose
 """
 `NonLinearCompose(A::AbstractOperator,B::AbstractOperator)`
 
-Compose opeators in such fashion:
+Compose opeators such that:
 
-`A(⋅)*B(⋅)`
+`A(x1)*B(x2)`
+
+where `x1` and `x2` are two independent inputs.
 
 # Example: Matrix multiplication
 
