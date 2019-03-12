@@ -58,7 +58,8 @@ include("calculus/Sum.jl")
 include("calculus/AffineAdd.jl")
 include("calculus/Jacobian.jl")
 include("calculus/NonLinearCompose.jl")
-include("calculus/SelfCompose.jl")
+include("calculus/Axt_mul_Bx.jl")
+include("calculus/Ax_mul_Bxt.jl")
 include("calculus/Hadamard.jl")
 
 # Non-Linear operators
