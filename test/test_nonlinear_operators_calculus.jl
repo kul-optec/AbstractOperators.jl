@@ -565,44 +565,43 @@
 #Y = (A*x.x[1]+d1)*(B*x.x[2]+d2)
 #@test norm(Y[:] - y) <= 1e-12
 #
-#
-###### Axt_mul_Bx
-#n = 10
-#A,B = Eye(n),Sin(n)
-#P = Axt_mul_Bx(A,B)
-#
-#x = randn(n)
-#r = randn(1)
-#y, grad = test_NLop(P,x,r,verb)
-#@test norm([(A*x)'*(B*x)]-y) < 1e-8
-#
-#n,m = 3,4
-#A,B = MatrixOp(randn(n,m)), MatrixOp(randn(n,m))
-#P = Axt_mul_Bx(A,B)
-#
-#x = randn(m)
-#r = randn(1)
-#y, grad = test_NLop(P,x,r,verb)
-#@test norm([(A*x)'*(B*x)]-y) < 1e-8
-#
-#n,m,l = 3,7,5
-#A,B = MatrixOp(randn(n,m),l), MatrixOp(randn(n,m),l)
-#P = Axt_mul_Bx(A,B)
-#x = randn(m,l)
-#r = randn(l,l)
-#y, grad = test_NLop(P,x,r,verb)
-#@test norm((A*x)'*(B*x)-y) < 1e-8
-#
-#n,m = 3,7
-#A,B = Sin(n,m), Cos(n,m)
-#P = Axt_mul_Bx(A,B)
-#x = randn(n,m)
-#r = randn(m,m)
-#y, grad = test_NLop(P,x,r,verb)
-#@test norm((A*x)'*(B*x)-y) < 1e-8
-#
-#@test_throws Exception Axt_mul_Bx(Eye(2,2), Eye(2,1))
-#@test_throws Exception Axt_mul_Bx(Eye(2,2,2), Eye(2,2,2))
+#### Axt_mul_Bx
+n = 10
+A,B = Eye(n),Sin(n)
+P = Axt_mul_Bx(A,B)
+
+x = randn(n)
+r = randn(1)
+y, grad = test_NLop(P,x,r,verb)
+@test norm([(A*x)'*(B*x)]-y) < 1e-8
+
+n,m = 3,4
+A,B = MatrixOp(randn(n,m)), MatrixOp(randn(n,m))
+P = Axt_mul_Bx(A,B)
+
+x = randn(m)
+r = randn(1)
+y, grad = test_NLop(P,x,r,verb)
+@test norm([(A*x)'*(B*x)]-y) < 1e-8
+
+n,m,l = 3,7,5
+A,B = MatrixOp(randn(n,m),l), MatrixOp(randn(n,m),l)
+P = Axt_mul_Bx(A,B)
+x = randn(m,l)
+r = randn(l,l)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)'*(B*x)-y) < 1e-8
+
+n,m = 3,7
+A,B = Sin(n,m), Cos(n,m)
+P = Axt_mul_Bx(A,B)
+x = randn(n,m)
+r = randn(m,m)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)'*(B*x)-y) < 1e-8
+
+@test_throws Exception Axt_mul_Bx(Eye(2,2), Eye(2,1))
+@test_throws Exception Axt_mul_Bx(Eye(2,2,2), Eye(2,2,2))
 
 ###### Ax_mul_Bxt
 n = 10
@@ -613,3 +612,55 @@ x = randn(n)
 r = randn(n,n)
 y, grad = test_NLop(P,x,r,verb)
 @test norm((A*x)*(B*x)'-y) < 1e-9
+
+n,m = 3,4
+A,B = MatrixOp(randn(n,m)), MatrixOp(randn(n,m))
+P = Ax_mul_Bxt(A,B)
+
+x = randn(m)
+r = randn(n,n)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)*(B*x)'-y) < 1e-8
+
+n,m,l = 3,7,5
+A,B = MatrixOp(randn(n,m),l), MatrixOp(randn(n,m),l)
+P = Ax_mul_Bxt(A,B)
+x = randn(m,l)
+r = randn(n,n)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)*(B*x)'-y) < 1e-8
+
+n,m = 3,7
+A,B = Sin(n,m), Cos(n,m)
+P = Ax_mul_Bxt(A,B)
+x = randn(n,m)
+r = randn(n,n)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)*(B*x)'-y) < 1e-8
+
+@test_throws Exception Axt_mul_Bx(Eye(2,2), Eye(2,1))
+@test_throws Exception Axt_mul_Bx(Eye(2,2,2), Eye(2,2,2))
+
+n = 3
+A,B = Eye(n,n), Eye(n,n)
+P = Ax_mul_Bx(A,B)
+x = randn(n,n)
+r = randn(n,n)
+y, grad = test_NLop(P,x,r,verb)
+@test norm(x*x-y) < 1e-9
+
+n = 3
+A,B = Sin(n,n), Cos(n,n)
+P = Ax_mul_Bx(A,B)
+x = randn(n,n)
+r = randn(n,n)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)*(B*x)-y) < 1e-9
+
+n,l = 2,3
+A,B = MatrixOp(randn(l,n),l), MatrixOp(randn(l,n),l)
+P = Ax_mul_Bx(A,B)
+x = randn(n,l)
+r = randn(l,l)
+y, grad = test_NLop(P,x,r,verb)
+@test norm((A*x)*(B*x)-y) < 1e-8

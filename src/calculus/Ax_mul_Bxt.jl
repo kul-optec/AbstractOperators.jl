@@ -7,7 +7,7 @@ export Ax_mul_Bxt
 
 Compose opeators such that:
 
-`(Ax)'*(Bx)`
+`(Ax)*(Bx)'`
 
 # Example: Matrix multiplication
 
@@ -15,16 +15,16 @@ Compose opeators such that:
 julia> A,B = randn(4,4),randn(4,4);
 
 julia> P = Ax_mul_Bxt(MatrixOp(A),MatrixOp(B))
-▒*▒  ℝ^4 -> ℝ^1
+▒*▒  ℝ^4 -> ℝ^(4, 4)
 
 julia> x = randn(4);
 
-julia> P*x ≈ [(A*x)'*(B*x)]
+julia> P*x ≈ (A*x)*(B*x)'
 true
 
 ```
 """
-struct Ax_mul_Bxt{N,
+struct Ax_mul_Bxt{
                    L1 <: AbstractOperator,
                    L2 <: AbstractOperator,
                    C <: AbstractArray,
@@ -40,12 +40,11 @@ struct Ax_mul_Bxt{N,
     if size(A) != size(B) || ndims(A,1) > 2 
       throw(CimensionMismatch("Cannot compose operators"))
     end
-    N = ndims(A,1)
-    new{N,L1,L2,C,D}(A,B,bufA,bufB,bufC,bufD)
+    new{L1,L2,C,D}(A,B,bufA,bufB,bufC,bufD)
   end
 end
 
-struct Ax_mul_BxtJac{N,
+struct Ax_mul_BxtJac{
                       L1 <: AbstractOperator,
                       L2 <: AbstractOperator,
                       C <: AbstractArray,
@@ -69,50 +68,31 @@ function Ax_mul_Bxt(A::AbstractOperator,B::AbstractOperator)
 end
 
 # Jacobian
-function Jacobian(P::Ax_mul_Bxt{N,L1,L2,C,D}, x::AbstractArray) where {N,L1,L2,C,D}
+function Jacobian(P::Ax_mul_Bxt{L1,L2,C,D}, x::AbstractArray) where {L1,L2,C,D}
   JA, JB = Jacobian(P.A, x), Jacobian(P.B, x)
-  Ax_mul_BxtJac{N,typeof(JA),typeof(JB),C,D}(JA,JB,P.bufA,P.bufB,P.bufC,P.bufD)
+  Ax_mul_BxtJac{typeof(JA),typeof(JB),C,D}(JA,JB,P.bufA,P.bufB,P.bufC,P.bufD)
 end
 
 # Mappings
-# N == 1 input is a vector
-function mul!(y, P::Ax_mul_Bxt{1,L1,L2,C,D}, b) where {L1,L2,C,D}
+function mul!(y, P::Ax_mul_Bxt{L1,L2,C,D}, b) where {L1,L2,C,D}
   mul!(P.bufA,P.A,b)
   mul!(P.bufB,P.B,b)
   mul!(y,P.bufA, P.bufB')
 end
 
-function mul!(y, J::AdjointOperator{Ax_mul_BxtJac{1,L1,L2,C,D}}, b) where {L1,L2,C,D}
-  #y .= conj(J.A.A'*J.A.bufB+J.A.B'*J.A.bufA).*b[1]
-  mul!(y, J.A.A', J.A.bufB)
-  mul!(J.A.bufD, J.A.B', J.A.bufA)
-  y .= conj.( y .+  J.A.bufD ) .* b[1]
-  return y
-end
-
-# N == 2 input is a matrix
-function mul!(y, P::Ax_mul_Bxt{2,L1,L2,C,D}, b) where {L1,L2,C,D}
-  mul!(P.bufA,P.A,b)
-  mul!(P.bufB,P.B,b)
-  mul!(y,P.bufA',P.bufB)
-  return y
-end
-
-function mul!(y, J::AdjointOperator{Ax_mul_BxtJac{2,L1,L2,C,D}}, b) where {L1,L2,C,D}
-  # y = A'*((B*x)*b') + B'*((A*x)*b)
-  mul!(J.A.bufC, J.A.bufB, b')
+function mul!(y, J::AdjointOperator{Ax_mul_BxtJac{L1,L2,C,D}}, b) where {L1,L2,C,D}
+  #y .= J.A.A'*(b*(J.A.bufB)) + J.A.B'*(b'*(J.A.bufA))
+  mul!(J.A.bufC, b, J.A.bufB)
   mul!(y, J.A.A', J.A.bufC)
-  mul!(J.A.bufC, J.A.bufA, b)
+  mul!(J.A.bufC, b', J.A.bufA)
   mul!(J.A.bufD, J.A.B', J.A.bufC)
   y .+= J.A.bufD
   return y
 end
 
-size(P::Ax_mul_Bxt{1}) = ((size(P.A,2)[1],size(P.A,2)[1]),size(P.A,2))
-size(P::Ax_mul_Bxt{2}) = ((size(P.A,1)[1],size(P.A,1)[1]),size(P.A,2))
+size(P::Ax_mul_Bxt) = ((size(P.A,1)[1],size(P.A,1)[1]),size(P.A,2))
 
-size(P::Ax_mul_BxtJac{1}) = ((size(P.A,2)[1],size(P.A,2)[1]),size(P.A,2))
-size(P::Ax_mul_BxtJac{2}) = ((size(P.A,1)[1],size(P.A,1)[1]),size(P.A,2))
+size(P::Ax_mul_BxtJac) = ((size(P.A,1)[1],size(P.A,1)[1]),size(P.A,2))
 
 fun_name(L::Ax_mul_Bxt) = fun_name(L.A)*"*"*fun_name(L.B) 
 fun_name(L::Ax_mul_BxtJac) = fun_name(L.A)*"*"*fun_name(L.B) 
