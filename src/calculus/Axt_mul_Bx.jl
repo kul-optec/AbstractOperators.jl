@@ -34,9 +34,9 @@ struct Axt_mul_Bx{N,
   B::L2
   bufA::C
   bufB::C
-  bufA2::C
+  bufC::C
   bufD::D
-  function Axt_mul_Bx(A::L1, B::L2, bufA::C, bufB::C, bufA2::C, bufD::D) where {L1,L2,C,D}
+  function Axt_mul_Bx(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1,L2,C,D}
     if ndims(A,1) == 1
       if size(A) != size(B)   
         throw(DimensionMismatch("Cannot compose operators"))
@@ -49,7 +49,7 @@ struct Axt_mul_Bx{N,
       throw(DimensionMismatch("Cannot compose operators"))
     end
     N = ndims(A,1)
-    new{N,L1,L2,C,D}(A,B,bufA,bufB,bufA2,bufD)
+    new{N,L1,L2,C,D}(A,B,bufA,bufB,bufC,bufD)
   end
 end
 
@@ -63,23 +63,26 @@ struct Axt_mul_BxJac{N,
   B::L2
   bufA::C
   bufB::C
-  bufA2::C
+  bufC::C
   bufD::D
 end
 
 # Constructors
 function Axt_mul_Bx(A::AbstractOperator,B::AbstractOperator)
-  bufA = zeros(codomainType(A),size(A,1)) 
-  bufB = zeros(codomainType(A),size(B,1)) 
-  bufA2 = zeros(codomainType(A),size(A,1)) 
-  bufD = zeros(domainType(A),size(A,2)) 
-  Axt_mul_Bx(A,B,bufA,bufB,bufA2,bufD)
+  s,t = size(A,1), codomainType(A)
+  bufA = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  s,t = size(B,1), codomainType(B)
+  bufB = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  s,t = size(A,2), domainType(A)
+  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  Axt_mul_Bx(A,B,bufA,bufB,bufC,bufD)
 end
 
 # Jacobian
 function Jacobian(P::Axt_mul_Bx{N,L1,L2,C,D}, x::AbstractArray) where {N,L1,L2,C,D}
   JA, JB = Jacobian(P.A, x), Jacobian(P.B, x)
-  Axt_mul_BxJac{N,typeof(JA),typeof(JB),C,D}(JA,JB,P.bufA,P.bufB,P.bufA2,P.bufD)
+  Axt_mul_BxJac{N,typeof(JA),typeof(JB),C,D}(JA,JB,P.bufA,P.bufB,P.bufC,P.bufD)
 end
 
 # Mappings
@@ -108,8 +111,8 @@ end
 
 function mul!(y, J::AdjointOperator{Axt_mul_BxJac{2,L1,L2,C,D}}, b) where {L1,L2,C,D}
   # y .= J.A.A'*((J.A.bufB)*b') + J.A.B'*((J.A.bufA)*b)
-  mul!(J.A.bufA2, J.A.bufB, b')
-  mul!(y, J.A.A', J.A.bufA2)
+  mul!(J.A.bufC, J.A.bufB, b')
+  mul!(y, J.A.A', J.A.bufC)
   mul!(J.A.bufB, J.A.bufA, b)
   mul!(J.A.bufD, J.A.B', J.A.bufB)
   y .+= J.A.bufD

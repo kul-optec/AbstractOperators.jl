@@ -23,28 +23,28 @@ Use  `reset!(L)` to cancel the memory of the operator.
 
 """
 mutable struct LBFGS{R, T <: AbstractArray, M, I <: Integer} <: LinearOperator
-	currmem::I
-	curridx::I
-	s::T
-	y::T
-	s_M::Array{T, 1}
-	y_M::Array{T, 1}
-	ys_M::Array{R, 1}
-	alphas::Array{R, 1}
-	H::R
+  currmem::I
+  curridx::I
+  s::T
+  y::T
+  s_M::Array{T, 1}
+  y_M::Array{T, 1}
+  ys_M::Array{R, 1}
+  alphas::Array{R, 1}
+  H::R
 end
 
 #default constructor
 
 function LBFGS(x::T, M::I) where {T <: AbstractArray, I <: Integer}
-	s_M = [zero(x) for i = 1:M]
-	y_M = [zero(x) for i = 1:M]
-	s = zero(x)
-	y = zero(x)
+  s_M = [zero(x) for i = 1:M]
+  y_M = [zero(x) for i = 1:M]
+  s = zero(x)
+  y = zero(x)
   R = real(eltype(x))
-	ys_M = zeros(R, M)
-	alphas = zeros(R, M)
-	LBFGS{R, T, M, I}(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R))
+  ys_M = zeros(R, M)
+  alphas = zeros(R, M)
+  LBFGS{R, T, M, I}(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R))
 end
 
 """
@@ -53,20 +53,20 @@ end
 See the documentation for `LBFGS`.
 """
 function update!(L::LBFGS{R, T, M, I}, x::T, x_prev::T, gradx::T, gradx_prev::T) where {R, T, M, I}
-	L.s .= x .- x_prev
-	L.y .= gradx .- gradx_prev
-	ys = real(dot(L.s, L.y))
-	if ys > 0
-		L.curridx += 1
-		if L.curridx > M L.curridx = 1 end
-		L.currmem += 1
-		if L.currmem > M L.currmem = M end
-		L.ys_M[L.curridx] = ys
-		L.s_M[L.curridx] .= L.s
-		L.y_M[L.curridx] .= L.y
-		yty = real(dot(L.y, L.y))
-		L.H = ys/yty
-	end
+  L.s .= x .- x_prev
+  L.y .= gradx .- gradx_prev
+  ys = real(dot(L.s, L.y))
+  if ys > 0
+    L.curridx += 1
+    if L.curridx > M L.curridx = 1 end
+    L.currmem += 1
+    if L.currmem > M L.currmem = M end
+    L.ys_M[L.curridx] = ys
+    L.s_M[L.curridx] .= L.s
+    L.y_M[L.curridx] .= L.y
+    yty = real(dot(L.y, L.y))
+    L.H = ys/yty
+  end
   return L
 end
 
@@ -76,8 +76,8 @@ end
 Cancels the memory of `L`.
 """
 function reset!(L::LBFGS)
-	L.currmem, L.curridx = 0, 0
-	L.H = 1.0
+  L.currmem, L.curridx = 0, 0
+  L.H = 1.0
 end
 
 # LBFGS operators are symmetric
@@ -87,32 +87,32 @@ mul!(x::T, L::AdjointOperator{LBFGS{R, T, M, I}}, y::T) where {R, T, M, I} = mul
 # Two-loop recursion
 
 function mul!(d::T, L::LBFGS{R, T, M, I}, gradx::T) where {R, T, M, I}
-	d .= gradx
-	idx = loop1!(d,L)
-	d .*= L.H
-	loop2!(d,idx,L)
+  d .= gradx
+  idx = loop1!(d,L)
+  d .*= L.H
+  loop2!(d,idx,L)
   return d
 end
 
 function loop1!(d::T, L::LBFGS{R, T, M, I}) where {R, T, M, I}
-	idx = L.curridx
-	for i = 1:L.currmem
-		L.alphas[idx] = real(dot(L.s_M[idx], d))/L.ys_M[idx]
-		d .-= L.alphas[idx] .* L.y_M[idx]
-		idx -= 1
-		if idx == 0 idx = M end
-	end
-	return idx
+  idx = L.curridx
+  for i = 1:L.currmem
+    L.alphas[idx] = real(dot(L.s_M[idx], d))/L.ys_M[idx]
+    d .-= L.alphas[idx] .* L.y_M[idx]
+    idx -= 1
+    if idx == 0 idx = M end
+  end
+  return idx
 end
 
 function loop2!(d::T, idx, L::LBFGS{R, T, M, I}) where {R, T, M, I}
-	for i = 1:L.currmem
-		idx += 1
-		if idx > M idx = 1 end
-		beta = real(dot(L.y_M[idx], d))/L.ys_M[idx]
-		d .+= (L.alphas[idx] - beta) .* L.s_M[idx]
-	end
-	return d
+  for i = 1:L.currmem
+    idx += 1
+    if idx > M idx = 1 end
+    beta = real(dot(L.y_M[idx], d))/L.ys_M[idx]
+    d .+= (L.alphas[idx] - beta) .* L.s_M[idx]
+  end
+  return d
 end
 
 # Properties

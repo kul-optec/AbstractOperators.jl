@@ -4,15 +4,15 @@ struct Sum{K,
            C <: AbstractArray,
            D <: AbstractArray,
            L <:NTuple{K,AbstractOperator}} <: AbstractOperator
-	A::L
-	bufC::C
-	bufD::D
+  A::L
+  bufC::C
+  bufD::D
   function Sum(A::L, bufC::C, bufD::D) where {C, D, K, L <: NTuple{K,AbstractOperator}}
     if any([size(a) != size(A[1]) for a in A])
       throw(DimensionMismatch("cannot sum operator of different sizes"))
     end
     if any([codomainType(A[1]) != codomainType(a) for a in A]) ||
-       any([  domainType(A[1]) !=   domainType(a) for a in A])
+      any([  domainType(A[1]) !=   domainType(a) for a in A])
       throw(DomainError(A,"cannot sum operator with different codomains"))
     end
     new{K, C, D, L}(A, bufC, bufD)
@@ -22,15 +22,15 @@ end
 Sum(A::AbstractOperator) = A
 
 function Sum(A::Vararg{AbstractOperator})
-	s = size(A[1],1)
-	t = codomainType(A[1])
+  s = size(A[1],1)
+  t = codomainType(A[1])
   bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
 
-	s = size(A[1],2)
-	t = domainType(A[1])
+  s = size(A[1],2)
+  t = domainType(A[1])
   bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
 
-	return Sum(A, bufC, bufD)
+  return Sum(A, bufC, bufD)
 end
 
 # special cases
@@ -40,41 +40,41 @@ Sum((L1,L2.A...), L2.bufC, L2.bufD)
 # Mappings
 
 @generated function mul!(y::C, S::Sum{K,C,D}, b::D) where {K,C,D}
-	ex = :(mul!(y,S.A[1],b))
-	for i = 2:K
-		ex = quote
-			$ex
-			mul!(S.bufC,S.A[$i],b)
-		end
+  ex = :(mul!(y,S.A[1],b))
+  for i = 2:K
+    ex = quote
+      $ex
+      mul!(S.bufC,S.A[$i],b)
+    end
     ex = :($ex; y .+= S.bufC)
-	end
-	ex = quote
-		$ex
-		return y
-	end
+  end
+  ex = quote
+    $ex
+    return y
+  end
 end
 
 @generated function mul!(y::D, A::AdjointOperator{Sum{K,C,D,L}}, b::C) where {K,C,D,L}
-	ex = :(S = A.A; mul!(y,S.A[1]',b))
-	for i = 2:K
-		ex = quote
-			$ex
-			mul!(S.bufD, S.A[$i]', b)
-		end
-			ex = :($ex; y .+= S.bufD)
-	end
-	ex = quote
-		$ex
-		return y
-	end
+  ex = :(S = A.A; mul!(y,S.A[1]',b))
+  for i = 2:K
+    ex = quote
+      $ex
+      mul!(S.bufD, S.A[$i]', b)
+    end
+    ex = :($ex; y .+= S.bufD)
+  end
+  ex = quote
+    $ex
+    return y
+  end
 end
 
 # Properties
 
 size(L::Sum) = size(L.A[1])
 
-  domainType(S::Sum{K, C, D, L}) where {K,C,D<:AbstractArray,L} =    domainType(S.A[1])
-  domainType(S::Sum{K, C, D, L}) where {K,C,D<:Tuple        ,L} =   domainType.(Ref(S.A[1]))
+domainType(S::Sum{K, C, D, L}) where {K,C,D<:AbstractArray,L} =    domainType(S.A[1])
+domainType(S::Sum{K, C, D, L}) where {K,C,D<:Tuple        ,L} =   domainType.(Ref(S.A[1]))
 codomainType(S::Sum{K, C, D, L}) where {K,C<:AbstractArray,D,L} =  codomainType(S.A[1])
 codomainType(S::Sum{K, C, D, L}) where {K,C<:Tuple        ,D,L} = codomainType.(Ref(S.A[1]))
 
@@ -95,8 +95,8 @@ diag(L::Sum) = (+).(diag.(L.A)...,)
 
 # utils
 function permute(S::Sum, p::AbstractVector{Int}) 
-    AA = ([permute(A,p) for A in S.A]...,) 
-    return Sum(AA, S.bufC, ArrayPartition(S.bufD.x[p]...))
+  AA = ([permute(A,p) for A in S.A]...,) 
+  return Sum(AA, S.bufC, ArrayPartition(S.bufD.x[p]...))
 end
 
 remove_displacement(S::Sum) = Sum(remove_displacement.(S.A), S.bufC, S.bufD)

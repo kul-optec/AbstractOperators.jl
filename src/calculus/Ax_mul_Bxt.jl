@@ -68,10 +68,13 @@ end
 
 # Constructors
 function Ax_mul_Bxt(A::AbstractOperator,B::AbstractOperator)
-  bufA = zeros(codomainType(A),size(A,1)) 
-  bufB = zeros(codomainType(B),size(B,1)) 
-  bufC = zeros(codomainType(A),size(A,1)) 
-  bufD = zeros(domainType(A),size(A,2)) 
+  s,t = size(A,1), codomainType(A)
+  bufA = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  s,t = size(B,1), codomainType(B)
+  bufB = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  s,t = size(A,2), domainType(A)
+  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
   Ax_mul_Bxt(A,B,bufA,bufB,bufC,bufD)
 end
 
