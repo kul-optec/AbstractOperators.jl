@@ -61,11 +61,13 @@ end
 
 # Constructors
 function SelfHadamard(A::AbstractOperator,B::AbstractOperator)
-  bufA = zeros(codomainType(A),size(A,1)) 
-  bufB = zeros(codomainType(B),size(B,1)) 
-  bufC = zeros(codomainType(B),size(B,1)) 
-  bufD = zeros(domainType(A),size(A,2)) 
-  buf = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s))
+  s,t = size(A,1), codomainType(A)
+  bufA = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  s,t = size(B,1), codomainType(B)
+  bufB = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  s,t = size(A,2), domainType(A)
+  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
   SelfHadamard(A,B,bufA,bufB,bufC,bufD)
 end
 
@@ -84,7 +86,12 @@ function mul!(y, P::SelfHadamard{L1,L2,C,D}, b) where {L1,L2,C,D}
 end
 
 function mul!(y, J::AdjointOperator{SelfHadamardJac{L1,L2,C,D}}, b) where {L1,L2,C,D}
-  y .= J.A.B' * ( J.A.bufA .*b ) + J.A.A' * ( J.A.bufB .* b )
+  #y .= J.A.B' * ( J.A.bufA .*b ) + J.A.A' * ( J.A.bufB .* b )
+  J.A.bufA .*= b
+  mul!(y, J.A.B', J.A.bufA)
+  J.A.bufB .*= b
+  mul!(J.A.bufD, J.A.A', J.A.bufB)
+  y .+= J.A.bufD
   return y
 end
 
