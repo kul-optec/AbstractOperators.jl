@@ -14,6 +14,10 @@ DCAT
 Compose
 NonLinearCompose
 Hadamard
+SelfHadamard
+Ax_mul_Bx
+Axt_mul_Bx
+Ax_mul_Bxt
 ```
 
 ## Transformations

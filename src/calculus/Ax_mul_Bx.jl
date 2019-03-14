@@ -9,17 +9,17 @@ Compose opeators such that:
 
 `(Ax)*(Bx)`
 
-# Example: Matrix multiplication
+# Example
 
 ```julia
 julia> A,B = randn(4,4),randn(4,4);
 
-julia> P = Ax_mul_Bx(MatrixOp(A),MatrixOp(B))
+julia> P = Ax_mul_Bx(MatrixOp(A,4),MatrixOp(B,4))
 ▒*▒  ℝ^4 -> ℝ^(4, 4)
 
-julia> x = randn(4);
+julia> X = randn(4,4);
 
-julia> P*x ≈ (A*x)*(B*x)'
+julia> P*X ≈ (A*X)*(B*X)
 true
 
 ```
@@ -37,7 +37,7 @@ struct Ax_mul_Bx{
   bufC::C
   bufD::D
   function Ax_mul_Bx(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1,L2,C,D}
-    if size(A,2) != size(B,2) || size(A,1)[2] != size(B,1)[1] || ndims(A,1) != 2 
+    if ndims(A,1) != 2 || size(A,2) != size(B,2) || size(A,1)[2] != size(B,1)[1]
       throw(DimensionMismatch("Cannot compose operators"))
     end
     new{L1,L2,C,D}(A,B,bufA,bufB,bufC,bufD)

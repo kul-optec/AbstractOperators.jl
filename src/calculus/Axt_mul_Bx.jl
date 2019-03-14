@@ -9,7 +9,7 @@ Compose opeators such that:
 
 `(Ax)'*(Bx)`
 
-# Example: Matrix multiplication
+# Example
 
 ```julia
 julia> A,B = randn(4,4),randn(4,4);
