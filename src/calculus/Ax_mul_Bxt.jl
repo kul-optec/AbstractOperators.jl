@@ -37,8 +37,16 @@ struct Ax_mul_Bxt{
   bufC::C
   bufD::D
   function Ax_mul_Bxt(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1,L2,C,D}
-    if size(A) != size(B) || ndims(A,1) > 2 
-      throw(CimensionMismatch("Cannot compose operators"))
+    if ndims(A,1) == 1
+      if size(A) != size(B)   
+        throw(DimensionMismatch("Cannot compose operators"))
+      end
+    elseif ndims(A,1) == 2 && ndims(B,1) == 2 && size(A,2) == size(B,2)
+      if size(A,1)[2] != size(B,1)[2]   
+        throw(DimensionMismatch("Cannot compose operators"))
+      end
+    else
+      throw(DimensionMismatch("Cannot compose operators"))
     end
     new{L1,L2,C,D}(A,B,bufA,bufB,bufC,bufD)
   end
@@ -61,7 +69,7 @@ end
 # Constructors
 function Ax_mul_Bxt(A::AbstractOperator,B::AbstractOperator)
   bufA = zeros(codomainType(A),size(A,1)) 
-  bufB = zeros(codomainType(A),size(A,1)) 
+  bufB = zeros(codomainType(B),size(B,1)) 
   bufC = zeros(codomainType(A),size(A,1)) 
   bufD = zeros(domainType(A),size(A,2)) 
   Ax_mul_Bxt(A,B,bufA,bufB,bufC,bufD)
@@ -84,24 +92,18 @@ function mul!(y, J::AdjointOperator{Ax_mul_BxtJac{L1,L2,C,D}}, b) where {L1,L2,C
   #y .= J.A.A'*(b*(J.A.bufB)) + J.A.B'*(b'*(J.A.bufA))
   mul!(J.A.bufC, b, J.A.bufB)
   mul!(y, J.A.A', J.A.bufC)
-  mul!(J.A.bufC, b', J.A.bufA)
-  mul!(J.A.bufD, J.A.B', J.A.bufC)
+  mul!(J.A.bufB, b', J.A.bufA)
+  mul!(J.A.bufD, J.A.B', J.A.bufB)
   y .+= J.A.bufD
   return y
 end
 
-size(P::Ax_mul_Bxt) = ((size(P.A,1)[1],size(P.A,1)[1]),size(P.A,2))
+size(P::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = ((size(P.A,1)[1],size(P.B,1)[1]),size(P.A,2))
 
-size(P::Ax_mul_BxtJac) = ((size(P.A,1)[1],size(P.A,1)[1]),size(P.A,2))
+fun_name(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = fun_name(L.A)*"*"*fun_name(L.B) 
 
-fun_name(L::Ax_mul_Bxt) = fun_name(L.A)*"*"*fun_name(L.B) 
-fun_name(L::Ax_mul_BxtJac) = fun_name(L.A)*"*"*fun_name(L.B) 
-
-domainType(L::Ax_mul_Bxt)   = domainType(L.A)
-codomainType(L::Ax_mul_Bxt) = codomainType(L.A)
-
-domainType(L::Ax_mul_BxtJac)   = domainType(L.A)
-codomainType(L::Ax_mul_BxtJac) = codomainType(L.A)
+domainType(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac})   = domainType(L.A)
+codomainType(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = codomainType(L.A)
 
 # utils
 function permute(P::Ax_mul_Bxt, p::AbstractVector{Int})

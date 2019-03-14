@@ -25,53 +25,61 @@ true
 ```
 """
 struct Axt_mul_Bx{N,
-                   L1 <: AbstractOperator,
-                   L2 <: AbstractOperator,
-                   C <: AbstractArray,
-                   D <: AbstractArray,
-                  } <: NonLinearOperator
+                  L1 <: AbstractOperator,
+                  L2 <: AbstractOperator,
+                  C <: AbstractArray,
+                  D <: AbstractArray,
+                 } <: NonLinearOperator
   A::L1
   B::L2
   bufA::C
   bufB::C
-  bufC::C
+  bufA2::C
   bufD::D
-  function Axt_mul_Bx(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1,L2,C,D}
-    if size(A) != size(B) || ndims(A,1) > 2 
-      throw(CimensionMismatch("Cannot compose operators"))
+  function Axt_mul_Bx(A::L1, B::L2, bufA::C, bufB::C, bufA2::C, bufD::D) where {L1,L2,C,D}
+    if ndims(A,1) == 1
+      if size(A) != size(B)   
+        throw(DimensionMismatch("Cannot compose operators"))
+      end
+    elseif ndims(A,1) == 2 && ndims(B,1) == 2 && size(A,2) == size(B,2)
+      if size(A,1)[1] != size(B,1)[1]   
+        throw(DimensionMismatch("Cannot compose operators"))
+      end
+    else
+      throw(DimensionMismatch("Cannot compose operators"))
     end
     N = ndims(A,1)
-    new{N,L1,L2,C,D}(A,B,bufA,bufB,bufC,bufD)
+    new{N,L1,L2,C,D}(A,B,bufA,bufB,bufA2,bufD)
   end
 end
 
 struct Axt_mul_BxJac{N,
-                      L1 <: AbstractOperator,
-                      L2 <: AbstractOperator,
-                      C <: AbstractArray,
-                      D <: AbstractArray,
-                     } <: LinearOperator
+                     L1 <: AbstractOperator,
+                     L2 <: AbstractOperator,
+                     C <: AbstractArray,
+                     D <: AbstractArray,
+                    } <: LinearOperator
   A::L1
   B::L2
   bufA::C
   bufB::C
-  bufC::C
+  bufA2::C
   bufD::D
 end
 
 # Constructors
 function Axt_mul_Bx(A::AbstractOperator,B::AbstractOperator)
   bufA = zeros(codomainType(A),size(A,1)) 
-  bufB = zeros(codomainType(A),size(A,1)) 
-  bufC = zeros(codomainType(A),size(A,1)) 
+  bufB = zeros(codomainType(A),size(B,1)) 
+  bufA2 = zeros(codomainType(A),size(A,1)) 
   bufD = zeros(domainType(A),size(A,2)) 
-  Axt_mul_Bx(A,B,bufA,bufB,bufC,bufD)
+  Axt_mul_Bx(A,B,bufA,bufB,bufA2,bufD)
 end
 
 # Jacobian
 function Jacobian(P::Axt_mul_Bx{N,L1,L2,C,D}, x::AbstractArray) where {N,L1,L2,C,D}
   JA, JB = Jacobian(P.A, x), Jacobian(P.B, x)
-  Axt_mul_BxJac{N,typeof(JA),typeof(JB),C,D}(JA,JB,P.bufA,P.bufB,P.bufC,P.bufD)
+  Axt_mul_BxJac{N,typeof(JA),typeof(JB),C,D}(JA,JB,P.bufA,P.bufB,P.bufA2,P.bufD)
 end
 
 # Mappings
@@ -99,29 +107,22 @@ function mul!(y, P::Axt_mul_Bx{2,L1,L2,C,D}, b) where {L1,L2,C,D}
 end
 
 function mul!(y, J::AdjointOperator{Axt_mul_BxJac{2,L1,L2,C,D}}, b) where {L1,L2,C,D}
-  # y = A'*((B*x)*b') + B'*((A*x)*b)
-  mul!(J.A.bufC, J.A.bufB, b')
-  mul!(y, J.A.A', J.A.bufC)
-  mul!(J.A.bufC, J.A.bufA, b)
-  mul!(J.A.bufD, J.A.B', J.A.bufC)
+  # y .= J.A.A'*((J.A.bufB)*b') + J.A.B'*((J.A.bufA)*b)
+  mul!(J.A.bufA2, J.A.bufB, b')
+  mul!(y, J.A.A', J.A.bufA2)
+  mul!(J.A.bufB, J.A.bufA, b)
+  mul!(J.A.bufD, J.A.B', J.A.bufB)
   y .+= J.A.bufD
   return y
 end
 
-size(P::Axt_mul_Bx{1}) = ((1,),size(P.A,2))
-size(P::Axt_mul_Bx{2}) = ((size(P.A,1)[2],size(P.A,1)[2]),size(P.A,2))
+size(P::Union{Axt_mul_Bx{1},Axt_mul_BxJac{1}}) = ((1,),size(P.A,2))
+size(P::Union{Axt_mul_Bx{2},Axt_mul_BxJac{2}}) = ((size(P.A,1)[2],size(P.B,1)[2]),size(P.A,2))
 
-size(P::Axt_mul_BxJac{1}) = ((1,),size(P.A,2))
-size(P::Axt_mul_BxJac{2}) = ((size(P.A,1)[2],size(P.A,1)[2]),size(P.A,2))
+fun_name(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = fun_name(L.A)*"*"*fun_name(L.B) 
 
-fun_name(L::Axt_mul_Bx) = fun_name(L.A)*"*"*fun_name(L.B) 
-fun_name(L::Axt_mul_BxJac) = fun_name(L.A)*"*"*fun_name(L.B) 
-
-domainType(L::Axt_mul_Bx)   = domainType(L.A)
-codomainType(L::Axt_mul_Bx) = codomainType(L.A)
-
-domainType(L::Axt_mul_BxJac)   = domainType(L.A)
-codomainType(L::Axt_mul_BxJac) = codomainType(L.A)
+domainType(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = domainType(L.A)
+codomainType(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = codomainType(L.A)
 
 # utils
 function permute(P::Axt_mul_Bx, p::AbstractVector{Int})
