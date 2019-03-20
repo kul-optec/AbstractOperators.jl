@@ -5,9 +5,9 @@ export Ax_mul_Bx
 """
 `Ax_mul_Bx(A::AbstractOperator,B::AbstractOperator)`
 
-Compose opeators such that:
+Create an operator `P` such that:
 
-`(Ax)*(Bx)`
+`P*x == (Ax)*(Bx)`
 
 # Example
 
@@ -19,7 +19,7 @@ julia> P = Ax_mul_Bx(MatrixOp(A,4),MatrixOp(B,4))
 
 julia> X = randn(4,4);
 
-julia> P*X ≈ (A*X)*(B*X)
+julia> P*X == (A*X)*(B*X)
 true
 
 ```

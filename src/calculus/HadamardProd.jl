@@ -5,9 +5,9 @@ export HadamardProd
 """
 `HadamardProd(A::AbstractOperator,B::AbstractOperator)`
 
-Compose opeators such that:
+Create an operator `P` such that:
 
-`(Ax).*(Bx)`
+`P*x == (Ax).*(Bx)`
 
 # Example
 
@@ -19,7 +19,7 @@ sin.*cos  ℝ^3 -> ℝ^3
 
 julia> x = randn(3);
 
-julia> P*x ≈ (sin.(x).*cos.(x))
+julia> P*x == (sin.(x).*cos.(x))
 true
 
 
