@@ -109,8 +109,10 @@ domainType(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac})   = domainType(L.A)
 codomainType(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = codomainType(L.A)
 
 # utils
-function permute(P::Ax_mul_Bxt, p::AbstractVector{Int})
-  Ax_mul_Bxt(permute(P.A,p),permute(P.B,p),P.buf,P.bufx)
+function permute(P::Ax_mul_Bxt{L1,L2,C,D}, 
+                 p::AbstractVector{Int}) where {L1,L2,C,D <:ArrayPartition}
+  Ax_mul_Bxt(permute(P.A,p),permute(P.B,p),P.bufA,P.bufB,P.bufC,ArrayPartition(P.bufD.x[p]) )
 end
 
-remove_displacement(N::Ax_mul_Bxt) = Ax_mul_Bxt(remove_displacement(N.A), remove_displacement(N.B), N.bufA, N.bufB)
+remove_displacement(P::Ax_mul_Bxt) = 
+Ax_mul_Bxt(remove_displacement(P.A), remove_displacement(P.B), P.bufA, P.bufB, P.bufC, P.bufD)

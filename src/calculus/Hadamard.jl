@@ -28,47 +28,47 @@ true
 ```
 """
 struct Hadamard{C, V <: VCAT} <: NonLinearOperator
-	A::V
-	buf::C
-	buf2::C
-	function Hadamard(A::V, buf::C, buf2::C) where {C, V <: VCAT}
-		any([ai != size(A,1)[1] for ai in size(A,1)]) &&
-		throw(DimensionMismatch("cannot compose operators"))
-
-		new{C, V}(A,buf,buf2)
-	end
+  A::V
+  buf::C
+  buf2::C
+  function Hadamard(A::V, buf::C, buf2::C) where {C, V <: VCAT}
+    any([ai != size(A,1)[1] for ai in size(A,1)]) &&
+    throw(DimensionMismatch("cannot compose operators"))
+    @warn "`Hadamard` will be substituted by `HadamardProd` in future versions of AbstractOperators"
+    new{C, V}(A,buf,buf2)
+  end
 end
 
 struct HadamardJacobian{C, V <: VCAT} <: LinearOperator
-	A::V
-	buf::C
-	buf2::C
-	function HadamardJacobian(A::V,buf::C,buf2::C) where {C, V <: VCAT}
-		new{C, V}(A,buf,buf2)
-	end
+  A::V
+  buf::C
+  buf2::C
+  function HadamardJacobian(A::V,buf::C,buf2::C) where {C, V <: VCAT}
+    new{C, V}(A,buf,buf2)
+  end
 end
 
 # Constructors
 function Hadamard(L1::AbstractOperator,L2::AbstractOperator)
 
-	A = HCAT(L1, Zeros( domainType(L2), size(L2,2), codomainType(L1), size(L1,1) ))
-	B = HCAT(Zeros( domainType(L1), size(L1,2), codomainType(L2), size(L2,1) ), L2 )
+  A = HCAT(L1, Zeros( domainType(L2), size(L2,2), codomainType(L1), size(L1,1) ))
+  B = HCAT(Zeros( domainType(L1), size(L1,2), codomainType(L2), size(L2,1) ), L2 )
 
   V = VCAT(A,B)
 
   buf  = ArrayPartition(zeros.(codomainType(V), size(V,1)))
   buf2 = ArrayPartition(zeros.(codomainType(V), size(V,1)))
 
-	Hadamard(V,buf,buf2)
+  Hadamard(V,buf,buf2)
 end
 
 # Mappings
 function mul!(y, H::Hadamard{C,V}, b::ArrayPartition) where {C,V}
-	mul!(H.buf,H.A,b)
-	y .= H.buf.x[1]
+  mul!(H.buf,H.A,b)
+  y .= H.buf.x[1]
   for i = 2:length(H.buf.x)
     y .*= H.buf.x[i]
-	end
+  end
 end
 
 # Jacobian
@@ -79,8 +79,8 @@ function mul!(y::ArrayPartition, A::AdjointOperator{HadamardJacobian{C,V}}, b) w
   J = A.A
   for i = 1:length(J.buf.x)
     J.buf2.x[i] .= (.*)(J.buf.x[1:i-1]...,J.buf.x[i+1:end]...,b)
-	end
-	mul!(y, J.A', J.buf2)
+  end
+  mul!(y, J.A', J.buf2)
 end
 
 # Properties
@@ -98,8 +98,8 @@ codomainType(L::HadamardJacobian) = codomainType(L.A[1])
 
 # utils
 function permute(H::Hadamard, p::AbstractVector{Int})
-    A = VCAT([permute(a,p) for a in H.A.A]...)
-    Hadamard(A,H.buf,H.buf2)
+  A = VCAT([permute(a,p) for a in H.A.A]...)
+  Hadamard(A,H.buf,H.buf2)
 end
 
 remove_displacement(N::Hadamard) = Hadamard(remove_displacement(N.A), N.buf, N.buf2)

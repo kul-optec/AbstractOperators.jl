@@ -565,7 +565,7 @@ y, grad = test_NLop(opP,xp,r,verb)
 Y = (A*x.x[1]+d1)*(B*x.x[2]+d2)
 @test norm(Y[:] - y) <= 1e-12
 
-# Axt_mul_Bx
+#### Axt_mul_Bx
 n = 10
 A,B = Eye(n),Sin(n)
 P = Axt_mul_Bx(A,B)
@@ -604,7 +604,8 @@ y, grad = test_NLop(P,x,r,verb)
 m,n = 3,5
 x = ArrayPartition(randn(m),randn(n))
 r = randn(1)
-A = Sin(Float64,(m,))
+b = randn(m)
+A = AffineAdd(Sin(Float64,(m,)),b)
 B = MatrixOp(randn(m,n))
 op1 = HCAT(A,B)
 C = Cos(Float64,(m,))
@@ -613,6 +614,17 @@ op2 = HCAT(C,D)
 P = Axt_mul_Bx(op1,op2)
 y, grad = test_NLop(P,x,r,verb)
 @test norm([(op1*x)'*(op2*x)]-y) < 1e-8
+
+#test remove_displacement
+y2, grad = test_NLop(remove_displacement(P),x,r,verb)
+@test norm([(op1*x-b)'*(op2*x)]-y2) < 1e-8
+
+# test permute
+p = [2,1]
+Pp = AbstractOperators.permute(P,p)
+xp = ArrayPartition(x.x[p])
+y2, grad = test_NLop(Pp,xp,r,verb)
+@test norm(y2-y) < 1e-8
 
 @test_throws Exception Axt_mul_Bx(Eye(2,2), Eye(2,1))
 @test_throws Exception Axt_mul_Bx(Eye(2,2,2), Eye(2,2,2))
@@ -654,7 +666,8 @@ y, grad = test_NLop(P,x,r,verb)
 m,n = 3,5
 x = ArrayPartition(randn(m),randn(n))
 r = randn(m,m)
-A = Sin(Float64,(m,))
+b = randn(m)
+A = AffineAdd(Sin(Float64,(m,)),b)
 B = MatrixOp(randn(m,n))
 op1 = HCAT(A,B)
 C = Cos(Float64,(m,))
@@ -663,6 +676,17 @@ op2 = HCAT(C,D)
 P = Ax_mul_Bxt(op1,op2)
 y, grad = test_NLop(P,x,r,verb)
 @test norm((op1*x)*(op2*x)'-y) < 1e-8
+
+#test remove_displacement
+y2, grad = test_NLop(remove_displacement(P),x,r,verb)
+@test norm((op1*x-b)*(op2*x)'-y2) < 1e-8
+
+# test permute
+p = [2,1]
+Pp = AbstractOperators.permute(P,p)
+xp = ArrayPartition(x.x[p])
+y2, grad = test_NLop(Pp,xp,r,verb)
+@test norm(y2-y) < 1e-8
 
 @test_throws Exception Ax_mul_Bxt(Eye(2,2), Eye(2,1))
 @test_throws Exception Ax_mul_Bxt(Eye(2,2,2), Eye(2,2,2))
@@ -710,7 +734,8 @@ y, grad = test_NLop(P,x,r,verb)
 m,n = 3,5
 x = ArrayPartition(randn(n,n),randn(m,n))
 r = randn(n,n)
-A = Sin(Float64,(n,n))
+b = randn(n,n)
+A = AffineAdd(Sin(Float64,(n,n)),b)
 B = MatrixOp(randn(n,m),n)
 op1 = HCAT(A,B)
 C = Sin(Float64,(n,n))
@@ -719,6 +744,17 @@ op2 = HCAT(C,D)
 P = Ax_mul_Bx(op1,op2)
 y, grad = test_NLop(P,x,r,verb)
 @test norm((op1*x)*(op2*x)-y) < 1e-8
+
+#test remove_displacement
+y2, grad = test_NLop(remove_displacement(P),x,r,verb)
+@test norm((op1*x-b)*(op2*x)-y2) < 1e-8
+
+# test permute
+p = [2,1]
+Pp = AbstractOperators.permute(P,p)
+xp = ArrayPartition(x.x[p])
+y2, grad = test_NLop(Pp,xp,r,verb)
+@test norm(y2-y) < 1e-8
 
 #### some combos of Ax_mul_Bx etc...
 n,m,l = 3,7,5
@@ -750,9 +786,11 @@ r = randn(k,l)
 y, grad = test_NLop(P2,x,r,verb)
 @test norm((C*x)*((A*x)'*(B*x))'-y) < 1e-8
 
+#### HadamardProd
+
 n = 3
 A,B = Eye(n,n), Eye(n,n)
-P = SelfHadamard(A,B)
+P = HadamardProd(A,B)
 x = randn(n,n)
 r = randn(n,n)
 y, grad = test_NLop(P,x,r,verb)
@@ -760,7 +798,7 @@ y, grad = test_NLop(P,x,r,verb)
 
 n,l = 3,2
 A,B = Sin(n,l), Cos(n,l)
-P = SelfHadamard(A,B)
+P = HadamardProd(A,B)
 x = randn(n,l)
 r = randn(n,l)
 y, grad = test_NLop(P,x,r,verb)
@@ -770,14 +808,26 @@ y, grad = test_NLop(P,x,r,verb)
 m,n = 3,5
 x = ArrayPartition(randn(m),randn(n))
 r = randn(m)
-A = Sin(Float64,(m,))
+b = randn(m)
+A = AffineAdd(Sin(Float64,(m,)),b)
 B = MatrixOp(randn(m,n))
 op1 = HCAT(A,B)
 C = Cos(Float64,(m,))
 D = MatrixOp(randn(m,n))
 op2 = HCAT(C,D)
-P = SelfHadamard(op1,op2)
+P = HadamardProd(op1,op2)
 y, grad = test_NLop(P,x,r,verb)
 @test norm((op1*x).*(op2*x)-y) < 1e-9
 
-@test_throws Exception SelfHadamard(Eye(2,2,2), Eye(1,2,2))
+#test remove_displacement
+y2, grad = test_NLop(remove_displacement(P),x,r,verb)
+@test norm((op1*x-b).*(op2*x)-y2) < 1e-8
+
+# test permute
+p = [2,1]
+Pp = AbstractOperators.permute(P,p)
+xp = ArrayPartition(x.x[p])
+y2, grad = test_NLop(Pp,xp,r,verb)
+@test norm(y2-y) < 1e-8
+
+@test_throws Exception HadamardProd(Eye(2,2,2), Eye(1,2,2))
