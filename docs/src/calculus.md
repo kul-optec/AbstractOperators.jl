@@ -12,9 +12,7 @@ DCAT
 
 ```@docs
 Compose
-NonLinearCompose
-Hadamard
-SelfHadamard
+HadamardProd
 Ax_mul_Bx
 Axt_mul_Bx
 Ax_mul_Bxt
