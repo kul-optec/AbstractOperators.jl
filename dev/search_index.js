@@ -449,19 +449,35 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "calculus/#AbstractOperators.NonLinearCompose",
+    "location": "calculus/#AbstractOperators.HadamardProd",
     "page": "Calculus rules",
-    "title": "AbstractOperators.NonLinearCompose",
+    "title": "AbstractOperators.HadamardProd",
     "category": "type",
-    "text": "NonLinearCompose(A::AbstractOperator,B::AbstractOperator)\n\nCompose opeators in such fashion:\n\nA(⋅)*B(⋅)\n\nExample: Matrix multiplication\n\njulia> n1,m1,n2,m2 = 3,4,4,6 \n\njulia> x = ArrayPartition(randn(n1,m1),randn(n2,m2)); #inputs\n\njulia> C = NonLinearCompose( Eye(n1,n2), Eye(m1,m2) )\n# i.e. `I(⋅)*I(⋅)`\n\njulia> Y = x.x[1]*x.x[2]\n\njulia> C*x ≈ Y\ntrue\n\n\n\n\n\n\n"
+    "text": "HadamardProd(A::AbstractOperator,B::AbstractOperator)\n\nCreate an operator P such that:\n\nP*x == (Ax).*(Bx)\n\nExample\n\njulia> A,B = Sin(3), Cos(3);\n\njulia> P = HadamardProd(A,B)\nsin.*cos  ℝ^3 -> ℝ^3\n\njulia> x = randn(3);\n\njulia> P*x == (sin.(x).*cos.(x))\ntrue\n\n\n\n\n\n\n\n"
 },
 
 {
-    "location": "calculus/#AbstractOperators.Hadamard",
+    "location": "calculus/#AbstractOperators.Ax_mul_Bx",
     "page": "Calculus rules",
-    "title": "AbstractOperators.Hadamard",
+    "title": "AbstractOperators.Ax_mul_Bx",
     "category": "type",
-    "text": "Hadamard(A::AbstractOperator,B::AbstractOperator)\n\nCompose opeators such that their output is multiplied elementwise:\n\nA(⋅).*B(⋅)\n\nExample\n\njulia> n,m = 5,10\n\njulia> x = ArrayPartition(randn(n),randn(m)); #inputs\n\njulia> A = randn(m,n); #A matrix\n\njulia> C = Hadamard( MatrixOp(A), Eye(m) )\n# i.e. `A(⋅).*I(⋅)`\n\njulia> Y = (A*x.x[1]).*x.x[2]\n\njulia> C*x ≈ Y\ntrue\n\n\n\n\n\n\n"
+    "text": "Ax_mul_Bx(A::AbstractOperator,B::AbstractOperator)\n\nCreate an operator P such that:\n\nP*x == (Ax)*(Bx)\n\nExample\n\njulia> A,B = randn(4,4),randn(4,4);\n\njulia> P = Ax_mul_Bx(MatrixOp(A,4),MatrixOp(B,4))\n▒*▒  ℝ^4 -> ℝ^(4, 4)\n\njulia> X = randn(4,4);\n\njulia> P*X == (A*X)*(B*X)\ntrue\n\n\n\n\n\n\n"
+},
+
+{
+    "location": "calculus/#AbstractOperators.Axt_mul_Bx",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.Axt_mul_Bx",
+    "category": "type",
+    "text": "Axt_mul_Bx(A::AbstractOperator,B::AbstractOperator)\n\nCreate an operator P such that:\n\nP*x == (Ax)\'*(Bx)\n\nExample\n\njulia> A,B = randn(4,4),randn(4,4);\n\njulia> P = Axt_mul_Bx(MatrixOp(A),MatrixOp(B))\n▒*▒  ℝ^4 -> ℝ^1\n\njulia> x = randn(4);\n\njulia> P*x == [(A*x)\'*(B*x)]\ntrue\n\n\n\n\n\n\n"
+},
+
+{
+    "location": "calculus/#AbstractOperators.Ax_mul_Bxt",
+    "page": "Calculus rules",
+    "title": "AbstractOperators.Ax_mul_Bxt",
+    "category": "type",
+    "text": "Ax_mul_Bxt(A::AbstractOperator,B::AbstractOperator)\n\nCreate an operator P such that:\n\nP == (Ax)*(Bx)\'\n\nExample: Matrix multiplication\n\njulia> A,B = randn(4,4),randn(4,4);\n\njulia> P = Ax_mul_Bxt(MatrixOp(A),MatrixOp(B))\n▒*▒  ℝ^4 -> ℝ^(4, 4)\n\njulia> x = randn(4);\n\njulia> P*x == (A*x)*(B*x)\'\ntrue\n\n\n\n\n\n\n"
 },
 
 {
@@ -469,7 +485,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Calculus rules",
     "title": "Composition",
     "category": "section",
-    "text": "Compose\nNonLinearCompose\nHadamard"
+    "text": "Compose\nHadamardProd\nAx_mul_Bx\nAxt_mul_Bx\nAx_mul_Bxt"
 },
 
 {
