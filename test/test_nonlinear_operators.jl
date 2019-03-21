@@ -9,9 +9,9 @@ op = Sigmoid(Float64,(n,),2)
 y, grad = test_NLop(op,x,r,verb)
 
 n,m,l = 4,5,6
-x = randn(n,m,l)
-r = randn(n,m,l)
-op = Sigmoid((n,m,l),2)
+x = randn(n,m)
+r = randn(n,m)
+op = Sigmoid((n,m),2)
 
 y, grad = test_NLop(op,x,r,verb)
 
@@ -61,7 +61,7 @@ op = Sin(Float64,(n,m,l))
 
 y, grad = test_NLop(op,x,r,verb)
 
- Cos
+## Cos
 n,m,l = 4,5,6
 x = randn(n,m,l)
 r = randn(n,m,l)
