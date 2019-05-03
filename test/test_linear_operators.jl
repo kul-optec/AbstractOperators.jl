@@ -96,7 +96,7 @@ x1 = randn(n,m)
 ######## DFT ############
 # seems like there is an object called DFT in Base julia 0.7 (however in 1.0 was rm)
 n = 4
-op = AbstractOperators.DFT(Float64,(n,)) 
+op = AbstractOperators.DFT(Float64,(n,))
 x1 = randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = fft(x1)
@@ -107,6 +107,63 @@ op = AbstractOperators.DFT(Complex{Float64},(n,))
 x1 = randn(n)+im*randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = fft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+n = 4
+op = AbstractOperators.DFT(Float64,(n,))
+x1 = randn(n)
+y1 = test_op(op, x1, fft(randn(n)), verb)
+y2 = fft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Complex{Float64},(n,))
+x1 = randn(n)+im*randn(n)
+y1 = test_op(op, x1, fft(randn(n)), verb)
+y2 = fft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Float64,(n,),1)
+x1 = randn(n)
+y1 = test_op(op, x1, fft(randn(n)), verb)
+y2 = fft(x1,1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Complex{Float64},(n,),1)
+x1 = randn(n)+im*randn(n)
+y1 = test_op(op, x1, fft(randn(n)), verb)
+y2 = fft(x1,1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Float64,(n,n))
+x1 = randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = fft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Complex{Float64},(n,n))
+x1 = randn(n,n)+im*randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = fft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Float64,(n,n),1)
+x1 = randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = fft(x1,1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = AbstractOperators.DFT(Complex{Float64},(n,n),2)
+x1 = randn(n,n)+im*randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = fft(x1,2)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
@@ -149,6 +206,37 @@ y1 = test_op(op, x1, fft(randn(n)), verb)
 y2 = ifft(x1)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
+
+n = 4
+op = IDFT(Float64,(n,),1)
+x1 = randn(n)
+y1 = test_op(op, x1, fft(randn(n)), verb)
+y2 = ifft(x1,1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = IDFT(Complex{Float64},(n,),1)
+x1 = randn(n)+im*randn(n)
+y1 = test_op(op, x1, fft(randn(n)), verb)
+y2 = ifft(x1,1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+n = 4
+op = IDFT(Float64,(n,n),1)
+x1 = randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = ifft(x1,1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = IDFT(Complex{Float64},(n,n),2)
+x1 = randn(n,n)+im*randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = ifft(x1,2)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
 
 # other constructors
 op = IDFT((n,))
@@ -201,7 +289,7 @@ op = RDFT(n,n)
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
 @test is_AcA_diagonal(op)     == false
-@test is_AAc_diagonal(op)     == false 
+@test is_AAc_diagonal(op)     == false
 @test is_orthogonal(op)       == false
 @test is_invertible(op)       == true
 @test is_full_row_rank(op)    == true
@@ -257,7 +345,7 @@ op = IRDFT((10,),19)
 @test is_eye(op)              == false
 @test is_diagonal(op)         == false
 @test is_AcA_diagonal(op)     == false
-@test is_AAc_diagonal(op)     == false 
+@test is_AAc_diagonal(op)     == false
 @test is_orthogonal(op)       == false
 @test is_invertible(op)       == true
 @test is_full_row_rank(op)    == true
@@ -758,9 +846,9 @@ y1 = op*repeat(collect(range(0,stop=1,length=n)),1,m)
 @test all(norm.(y1[:,2] ) .<= 1e-12)
 
 Dx = spdiagm(0 => ones(n), -1 => -ones(n-1))
-Dx[1,1],Dx[1,2] = -1,1 
+Dx[1,1],Dx[1,2] = -1,1
 Dy = spdiagm(0 => ones(m), -1 => -ones(m-1))
-Dy[1,1],Dy[1,2] = -1,1 
+Dy[1,1],Dy[1,2] = -1,1
 
 Dxx = kron(sparse(I,m,m),Dx)
 Dyy = kron(Dy,sparse(I,n,n))

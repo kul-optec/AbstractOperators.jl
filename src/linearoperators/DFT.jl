@@ -3,20 +3,20 @@ export DFT, IDFT
 abstract type FourierTransform{N,C,D,T1,T2} <: LinearOperator end
 
 """
-`DFT([domainType=Float64::Type,] dim_in::Tuple)`
+`DFT([domainType=Float64::Type,] dim_in::Tuple [,dims])`
 
 `DFT(dim_in...)`
 
-`DFT(x::AbstractArray)`
+`DFT(x::AbstractArray, [,dims])`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Fourier Transform of `x`. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Fourier Transform over dimensions `dims` of `x`.
 
 ```julia
 julia> DFT(Complex{Float64},(10,10))
-ℱ  ℂ^(10, 10) -> ℂ^(10, 10) 
+ℱ  ℂ^(10, 10) -> ℂ^(10, 10)
 
 julia> DFT(10,10)
-ℱ  ℝ^(10, 10) -> ℂ^(10, 10) 
+ℱ  ℝ^(10, 10) -> ℂ^(10, 10)
 
 julia> A = DFT(ones(3))
 ℱ  ℝ^3 -> ℂ^3
@@ -47,14 +47,14 @@ end
 
 `IDFT(x::AbstractArray)`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Fourier Transform of `x`. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Fourier Transform of `x`.
 
 ```julia
 julia> IDFT(Complex{Float64},(10,10))
-ℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) 
+ℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10)
 
 julia> IDFT(10,10)
-ℱ⁻¹ ℝ^(10, 10) -> ℂ^(10, 10) 
+ℱ⁻¹ ℝ^(10, 10) -> ℂ^(10, 10)
 
 julia> A = IDFT(ones(3))
 ℱ⁻¹  ℝ^3 -> ℂ^3
@@ -79,36 +79,36 @@ end
 
 # Constructors
 #standard constructor
-DFT(dim_in::NTuple{N,Int}) where {N} = DFT(zeros(dim_in))
+DFT(dim_in::NTuple{N,Int},dims=1:N) where {N} = DFT(zeros(dim_in),dims)
 
-function DFT(x::AbstractArray{D,N}) where {N,D<:Real}
-	A,At = plan_fft(x), plan_bfft(fft(x))
+function DFT(x::AbstractArray{D,N},dims=1:ndims(x)) where {N,D<:Real}
+	A,At = plan_fft(x,dims), plan_bfft(fft(x,dims),dims)
 	DFT{N,Complex{D},D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-function DFT(x::AbstractArray{D,N}) where {N,D<:Complex}
-	A,At = plan_fft(x), plan_bfft(fft(x))
+function DFT(x::AbstractArray{D,N},dims=1:ndims(x)) where {N,D<:Complex}
+	A,At = plan_fft(x,dims), plan_bfft(fft(x,dims),dims)
 	DFT{N,D,D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-DFT(T::Type,dim_in::NTuple{N,Int}) where {N} = DFT(zeros(T,dim_in))
+DFT(T::Type,dim_in::NTuple{N,Int},dims=1:N) where {N} = DFT(zeros(T,dim_in),dims)
 DFT(dim_in::Vararg{Int}) = DFT(dim_in)
 DFT(T::Type,dim_in::Vararg{Int}) = DFT(T,dim_in)
 
-function IDFT(x::AbstractArray{D,N}) where {N,D<:Real}
-	A,At = plan_ifft(x), plan_fft(ifft(x))
+function IDFT(x::AbstractArray{D,N},dims=1:ndims(x)) where {N,D<:Real}
+	A,At = plan_ifft(x,dims), plan_fft(ifft(x,dims),dims)
 	IDFT{N,Complex{D},D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
 #standard constructor
-IDFT(T::Type,dim_in::NTuple{N,Int}) where {N} = IDFT(zeros(T,dim_in))
+IDFT(T::Type,dim_in::NTuple{N,Int},dims=1:N) where {N} = IDFT(zeros(T,dim_in),dims)
 
-function IDFT(x::AbstractArray{D,N}) where {N,D<:Complex}
-	A,At = plan_ifft(x), plan_fft(ifft(x))
+function IDFT(x::AbstractArray{D,N},dims=1:ndims(x)) where {N,D<:Complex}
+	A,At = plan_ifft(x,dims), plan_fft(ifft(x,dims),dims)
 	IDFT{N,D,D,typeof(A),typeof(At)}(size(x),A,At)
 end
 
-IDFT(dim_in::NTuple{N,Int}) where {N} = IDFT(zeros(dim_in))
+IDFT(dim_in::NTuple{N,Int},dims=1:N) where {N} = IDFT(zeros(dim_in),dims)
 IDFT(dim_in::Vararg{Int}) = IDFT(dim_in)
 IDFT(T::Type,dim_in::Vararg{Int}) = IDFT(T,dim_in)
 
