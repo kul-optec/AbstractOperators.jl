@@ -192,7 +192,6 @@ y1 = op*x1
 @test norm(op*(op'*y1) - diag_AAc(op)*y1) <= 1e-12
 
 ######### IDFT ############
-n = 4
 op = IDFT(Float64,(n,))
 x1 = randn(n)
 y1 = test_op(op, x1, fft(randn(n)), verb)
@@ -222,7 +221,20 @@ y2 = ifft(x1,1)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
-n = 4
+op = AbstractOperators.IDFT(Float64,(n,n))
+x1 = randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = ifft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+op = IDFT(Complex{Float64},(n,n))
+x1 = randn(n,n)+im*randn(n,n)
+y1 = test_op(op, x1, fft(randn(n,n)), verb)
+y2 = ifft(x1)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
 op = IDFT(Float64,(n,n),1)
 x1 = randn(n,n)
 y1 = test_op(op, x1, fft(randn(n,n)), verb)
@@ -237,6 +249,21 @@ y2 = ifft(x1,2)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
+n,m,l = 4,19,5
+op = IDFT(Complex{Float64},(n,m,l),2)
+x1 = fft(randn(n,m,l),2)
+y1 = test_op(op, x1, ifft(x1,2), verb)
+y2 = ifft(x1,2)
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+n,m,l = 4,18,5
+op = IDFT(Complex{Float64},(n,m,l),(1,2))
+x1 = fft(randn(n,m,l),(1,2))
+y1 = test_op(op, x1, ifft(x1,(1,2)), verb)
+y2 = ifft(x1,(1,2))
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
 
 # other constructors
 op = IDFT((n,))
