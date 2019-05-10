@@ -7,7 +7,7 @@ abstract type FourierTransform{N,C,D,T1,T2} <: LinearOperator end
 
 `DFT(dim_in...)`
 
-`DFT(x::AbstractArray, [,dims])`
+`DFT(x::AbstractArray [,dims])`
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Fourier Transform over dimensions `dims` of `x`.
 
@@ -41,11 +41,11 @@ end
 
 
 """
-`IDFT([domainType=Float64::Type,] dim_in::Tuple)`
+`IDFT([domainType=Float64::Type,] dim_in::Tuple [,dims])`
 
 `IDFT(dim_in...)`
 
-`IDFT(x::AbstractArray)`
+`IDFT(x::AbstractArray [,dims])`
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Fourier Transform over dimensions `dims` of `x`.
 
