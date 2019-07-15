@@ -1,6 +1,6 @@
 name = "AbstractOperators"
 uuid = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
