@@ -3,7 +3,6 @@ using LinearAlgebra, FFTW, DSP, SparseArrays, RecursiveArrayTools
 using Printf
 using Random
 using Test
-using Profile
 
 include("utils.jl")
 Random.seed!(0)
