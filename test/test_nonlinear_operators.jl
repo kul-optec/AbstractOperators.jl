@@ -88,6 +88,15 @@ op = Tanh(Float64,(n,))
 
 y, grad = test_NLop(op,x,r,verb)
 
+# Sech
+n = 10
+x = randn(n)
+r = randn(n)
+op = Sech(n)
+op = Sech(Float64,(n,))
+
+y, grad = test_NLop(op,x,r,verb)
+
 # Pow
 n = 10
 x = randn(n)

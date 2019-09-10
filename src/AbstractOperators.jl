@@ -1,5 +1,3 @@
-__precompile__()
-
 module AbstractOperators
 
 using LinearAlgebra, AbstractFFTs, DSP, FFTW, RecursiveArrayTools
@@ -69,6 +67,7 @@ include("nonlinearoperators/Sin.jl")
 include("nonlinearoperators/Cos.jl")
 include("nonlinearoperators/Atan.jl")
 include("nonlinearoperators/Tanh.jl")
+include("nonlinearoperators/Sech.jl")
 include("nonlinearoperators/Sigmoid.jl")
 include("nonlinearoperators/SoftMax.jl")
 include("nonlinearoperators/SoftPlus.jl")

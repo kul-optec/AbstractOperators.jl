@@ -61,6 +61,7 @@ Cos
 Sin
 Atan
 Tanh
+Sech
 ```
 
 ## Sigmoids
