@@ -1,7 +1,6 @@
 # AbstractOperators.jl
 
-[![Build Status](https://travis-ci.org/kul-forbes/AbstractOperators.jl.svg?branch=master)](https://travis-ci.org/kul-forbes/AbstractOperators.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/lfrmkg2s1awyxtk8/branch/master?svg=true)](https://ci.appveyor.com/project/nantonel/abstractoperators-jl/branch/master)
+[![Build status](https://github.com/kul-forbes/AbstractOperators.jl/workflows/CI/badge.svg)](https://github.com/kul-forbes/AbstractOperators.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/kul-forbes/AbstractOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/kul-forbes/AbstractOperators.jl)
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/stable)
