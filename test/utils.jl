@@ -58,7 +58,7 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
 	if all(isreal.(grad))  # currently finite difference gradient not working with complex variables 
 		grad3 = gradient_fd(A,Ax,x,y) #calculate gradient using finite differences
 
-		@test norm(grad .- grad3) < 1e-4
+		@test norm(grad .- grad3) < 5e-4
 	end
 
 	return Ax, grad

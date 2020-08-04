@@ -929,7 +929,7 @@ h = randn(m)
 op = Xcorr(Float64,(n,),h)
 x1 = randn(n)
 y1 = test_op(op, x1, randn(n+m), verb)
-y2 = xcorr(x1, h)
+y2 = xcorr(x1, h; padmode=:longest)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 # other constructors

@@ -25,7 +25,7 @@ Xcorr(x::H, h::H) where {H} = Xcorr(eltype(x), size(x), h)
 # Mappings
 
 function mul!(y::H,A::Xcorr{T,H},b::H) where {T,H}
-	y .= xcorr(b,A.h)
+	y .= xcorr(b,A.h; padmode=:longest)
 end
 
 function mul!(y::H,L::AdjointOperator{Xcorr{T,H}},b::H) where {T,H}
