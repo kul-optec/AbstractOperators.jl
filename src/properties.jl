@@ -210,15 +210,15 @@ false
 is_orthogonal(      L::AbstractOperator) = false
 
 """
-`is_invertable(A::AbstractOperator)`
+`is_invertible(A::AbstractOperator)`
 
-Test whether `A` is easily invertable.
+Test whether `A` is easily invertible.
 
 ```julia
 julia> is_invertible(DFT(10))
 true
 
-julia> is_invertable(MatrixOp(randn(3,4)))
+julia> is_invertible(MatrixOp(randn(3,4)))
 false
 
 ```
@@ -228,7 +228,7 @@ is_invertible(      L::AbstractOperator) = false
 """
 `is_full_row_rank(A::AbstractOperator)`
 
-Test whether `A` is easily invertable.
+Test whether `A` is easily invertible.
 
 ```julia
 julia> is_full_row_rank(MatrixOp(randn(3,4)))
@@ -243,7 +243,7 @@ is_full_row_rank(   L::AbstractOperator) = false
 """
 `is_full_row_rank(A::AbstractOperator)`
 
-Test whether `A` is easily invertable.
+Test whether `A` is easily invertible.
 
 ```julia
 julia> is_full_column_rank(MatrixOp(randn(4,3)))
