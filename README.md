@@ -1,10 +1,10 @@
 # AbstractOperators.jl
 
-[![Build status](https://github.com/kul-forbes/AbstractOperators.jl/workflows/CI/badge.svg)](https://github.com/kul-forbes/AbstractOperators.jl/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/kul-forbes/AbstractOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/kul-forbes/AbstractOperators.jl)
+[![Build status](https://github.com/kul-optec/AbstractOperators.jl/workflows/CI/badge.svg)](https://github.com/kul-optec/AbstractOperators.jl/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/kul-optec/AbstractOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/kul-optec/AbstractOperators.jl)
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/stable)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/latest)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://kul-optec.github.io/AbstractOperators.jl/stable)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://kul-optec.github.io/AbstractOperators.jl/latest)
 
 ## Description
 
@@ -94,13 +94,13 @@ julia> V*ones(3,3)
 
 ```
 
-A list of the available `AbstractOperators` and calculus rules can be found in the [documentation](https://kul-forbes.github.io/AbstractOperators.jl/latest).
+A list of the available `AbstractOperators` and calculus rules can be found in the [documentation](https://kul-optec.github.io/AbstractOperators.jl/latest).
 
 ## Related packages
 
-* [ProximalOperators.jl](https://github.com/kul-forbes/ProximalOperators.jl)
-* [ProximalAlgorithms.jl](https://github.com/kul-forbes/ProximalAlgorithms.jl)
-* [StructuredOptimization.jl](https://github.com/kul-forbes/StructuredOptimization.jl)
+* [ProximalOperators.jl](https://github.com/kul-optec/ProximalOperators.jl)
+* [ProximalAlgorithms.jl](https://github.com/kul-optec/ProximalAlgorithms.jl)
+* [StructuredOptimization.jl](https://github.com/kul-optec/StructuredOptimization.jl)
 
 ## Credits
 
