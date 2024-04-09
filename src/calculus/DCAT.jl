@@ -40,14 +40,14 @@ function DCAT(A::Vararg{AbstractOperator})
 
 	# build H.idxs
 	idxD,idxC = (),()
-	for d in (1,2) 
+	for d in (1,2)
 		idxs = []
 		K = 0
 		for i in eachindex(ndoms.(A,d))
 			if ndoms(A[i],d) == 1 # flatten operator
 				K += 1
 				push!(idxs,K)
-			else                   # stacked operator 
+			else                   # stacked operator
 				idxs = push!(idxs,(collect(K+1:K+ndoms(A[i],d))...,) )
 				for ii = 1:ndoms(A[i],d)
 					K += 1
@@ -62,37 +62,37 @@ function DCAT(A::Vararg{AbstractOperator})
 end
 
 # Mappings
-@generated function mul!(yy::ArrayPartition, 
-                         H::DCAT{N,L,P1,P2}, 
-                         bb::ArrayPartition) where {N,L,P1,P2} 
+@generated function mul!(yy::ArrayPartition,
+                         H::DCAT{N,L,P1,P2},
+                         bb::ArrayPartition) where {N,L,P1,P2}
 
   # extract stuff
 	ex = :(y = yy.x; b = bb.x )
 
 	for i = 1:N
 
-		if fieldtype(P2,i) <: Int 
-		# flatten operator  
-		# build mul!(y[H.idxC[i]], H.A[i], b)  
+		if fieldtype(P2,i) <: Int
+		# flatten operator
+		# build mul!(y[H.idxC[i]], H.A[i], b)
 			yy = :(y[H.idxC[$i]])
 		else
-		# stacked operator 
+		# stacked operator
 		# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
         yy =  [ :(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
         yy = :( ArrayPartition( $(yy...) ) )
 		end
 
-		if fieldtype(P1,i) <: Int 
-		# flatten operator  
-		# build mul!(H.buf, H.A[i], b[H.idxD[i]])  
+		if fieldtype(P1,i) <: Int
+		# flatten operator
+		# build mul!(H.buf, H.A[i], b[H.idxD[i]])
 			bb = :(b[H.idxD[$i]])
 		else
-		# stacked operator 
+		# stacked operator
 		# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
         bb = [ :(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i))) ]
         bb = :( ArrayPartition( $(bb...) ) )
 		end
-		
+
 		ex = :($ex; mul!($yy,H.A[$i],$bb))
 
 	end
@@ -101,37 +101,37 @@ end
 
 end
 
-@generated function mul!(yy::ArrayPartition, 
+@generated function mul!(yy::ArrayPartition,
                          A::AdjointOperator{DCAT{N,L,P1,P2}},
-                         bb::ArrayPartition) where {N,L,P1,P2} 
+                         bb::ArrayPartition) where {N,L,P1,P2}
 
   # extract stuff
 	ex = :(H = A.A; y = yy.x; b = bb.x )
 
 	for i = 1:N
 
-		if fieldtype(P1,i) <: Int 
-		# flatten operator  
-		# build mul!(y[H.idxD[i]], H.A[i]', b)  
+		if fieldtype(P1,i) <: Int
+		# flatten operator
+		# build mul!(y[H.idxD[i]], H.A[i]', b)
 			yy = :(y[H.idxD[$i]])
 		else
-		# stacked operator 
+		# stacked operator
 		# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
         yy = [ :(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i)))]
         yy = :( ArrayPartition( $(yy...) ))
 		end
 
-		if fieldtype(P2,i) <: Int 
-		# flatten operator  
-		# build mul!(H.buf, H.A[i]', b[H.idxC[i]])  
+		if fieldtype(P2,i) <: Int
+		# flatten operator
+		# build mul!(H.buf, H.A[i]', b[H.idxC[i]])
 			bb = :(b[H.idxC[$i]])
 		else
-		# stacked operator 
+		# stacked operator
 		# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
         bb = [ :(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
         bb = :( ArrayPartition( $(bb...) ) )
 		end
-		
+
 		ex = :($ex; mul!($yy,H.A[$i]',$bb))
 
 	end
@@ -141,13 +141,13 @@ end
 end
 
 # Properties
-size(H::DCAT) = size(H,1),size(H,2) 
+size(H::DCAT) = size(H,1),size(H,2)
 
-function size(H::DCAT, i::Int) 
+function size(H::DCAT, i::Int)
 
 	sz = []
 	for s in size.(H.A,i)
-		eltype(s) <: Int ? push!(sz,s) : push!(sz,s...) 
+		eltype(s) <: Int ? push!(sz,s) : push!(sz,s...)
 	end
 	p = vcat([[idx... ] for idx in (i == 1 ? H.idxC : H.idxD) ]...)
 	invpermute!(sz,p)
@@ -158,13 +158,13 @@ end
 fun_name(L::DCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*",0;0,"*fun_name(L.A[2])*"]" :
 "DCAT"
 
-function domainType(H::DCAT) 
+function domainType(H::DCAT)
 	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxD]...)
 	invpermute!(domain,p)
 	return (domain...,)
 end
-function codomainType(H::DCAT) 
+function codomainType(H::DCAT)
 	codomain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in codomainType.(H.A)]...)
 	p = vcat([[idx... ] for idx in H.idxC]...)
 	invpermute!(codomain,p)
@@ -185,7 +185,7 @@ is_full_column_rank(L::DCAT) = all(is_full_column_rank.(L.A))
 function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
 
 
-	unfolded = vcat([[idx... ] for idx in H.idxD]...) 
+	unfolded = vcat([[idx... ] for idx in H.idxD]...)
 	invpermute!(unfolded,p)
 
 	new_part = ()

@@ -13,7 +13,7 @@ struct Exp{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Exp(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} 
+function Exp(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 	Exp{DomainType,N}(DomainDim)
 end
 
@@ -24,8 +24,8 @@ function mul!(y::AbstractArray{T,N}, L::Exp{T,N}, x::AbstractArray{T,N}) where {
 	y .= exp.(x)
 end
 
-function mul!(y::AbstractArray, 
-              J::AdjointOperator{Jacobian{A,TT}}, 
+function mul!(y::AbstractArray,
+              J::AdjointOperator{Jacobian{A,TT}},
               b::AbstractArray) where {T,N, A<: Exp{T,N}, TT <: AbstractArray{T,N} }
     L = J.A
     y .= conj.(exp.(L.x)).*b

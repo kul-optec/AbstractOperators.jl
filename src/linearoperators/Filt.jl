@@ -5,7 +5,7 @@ export Filt
 
 `Filt(x::AbstractVector, b::AbstractVector, [a::AbstractVector,])`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns a vector `y` filtered by an IIR filter of coefficients `b` and `a`. If only `b` is provided a FIR is used to comute `y` instead. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns a vector `y` filtered by an IIR filter of coefficients `b` and `a`. If only `b` is provided a FIR is used to comute `y` instead.
 
 """
 struct Filt{T,N} <: LinearOperator
@@ -151,7 +151,7 @@ size(L::Filt) = L.dim_in, L.dim_in
 
 fun_name(L::Filt)  = size(L.a,1) != 1 ? "IIR" : "FIR"
 
-#TODO find out a way to verify this, 
+#TODO find out a way to verify this,
 # probably for IIR it means zeros inside unit circle
 is_full_row_rank(L::Filt)    = true
 is_full_column_rank(L::Filt) = true

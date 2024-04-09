@@ -26,7 +26,7 @@ end
 
 # Constructors
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-Eye(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} = Eye{DomainType,N}(DomainDim)  
+Eye(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} = Eye{DomainType,N}(DomainDim)
 ###
 
 Eye(t::Type, dims::Vararg{Integer}) = Eye(t,dims)

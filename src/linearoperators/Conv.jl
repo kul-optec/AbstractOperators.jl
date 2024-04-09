@@ -5,7 +5,7 @@ export Conv
 
 `Conv(x::AbstractVector, h::AbstractVector)`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the convolution between `x` and `h`. Uses `conv` and hence FFT algorithm. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the convolution between `x` and `h`. Uses `conv` and hence FFT algorithm.
 
 """
 struct Conv{T,
@@ -24,7 +24,7 @@ end
 # Constructors
 
 ###standard constructor
-function Conv(DomainType::Type, dim_in::Tuple{Int},  h::H) where {H<:AbstractVector} 
+function Conv(DomainType::Type, dim_in::Tuple{Int},  h::H) where {H<:AbstractVector}
 	eltype(h) != DomainType && error("eltype(h) is $(eltype(h)), should be $(DomainType)")
 
 	buf = zeros(dim_in[1]+length(h)-1)
@@ -43,11 +43,11 @@ Conv(x::H, h::H) where {H} = Conv(eltype(x), size(x), h)
 function mul!(y::H, A::Conv{T,H}, b::H) where {T, H}
 	#y .= conv(A.h,b) #naive implementation
 	for i in eachindex(A.buf)
-		A.buf[i] = i <= length(A.h) ? A.h[i] : zero(T) 
+		A.buf[i] = i <= length(A.h) ? A.h[i] : zero(T)
 	end
 	mul!(A.buf_c1, A.R, A.buf)
 	for i in eachindex(A.buf)
-		A.buf[i] = i <= length(b) ? b[i] : zero(T) 
+		A.buf[i] = i <= length(b) ? b[i] : zero(T)
 	end
 	mul!(A.buf_c2, A.R, A.buf)
 	A.buf_c2 .*= A.buf_c1
@@ -59,11 +59,11 @@ function mul!(y::H, L::AdjointOperator{C}, b::H) where {T, H, C <: Conv{T,H}}
 	#y .= xcorr(b,L.A.h)[size(L.A,1)[1]:end-length(L.A.h)+1] #naive implementation
 	for i in eachindex(L.A.buf)
 		ii = length(L.A.buf)-i+1
-		L.A.buf[ii] = i <= length(L.A.h) ? L.A.h[i] : zero(T) 
+		L.A.buf[ii] = i <= length(L.A.h) ? L.A.h[i] : zero(T)
 	end
 	mul!(L.A.buf_c1, L.A.R, L.A.buf)
 	for i in eachindex(L.A.buf)
-		L.A.buf[i] = b[i] 
+		L.A.buf[i] = b[i]
 	end
 	mul!(L.A.buf_c2, L.A.R, L.A.buf)
 	L.A.buf_c2 .*= L.A.buf_c1
@@ -79,7 +79,7 @@ end
 domainType(L::Conv{T}) where {T} = T
 codomainType(L::Conv{T}) where {T} = T
 
-#TODO find out a way to verify this, 
+#TODO find out a way to verify this,
 is_full_row_rank(L::Conv)    = true
 is_full_column_rank(L::Conv) = true
 

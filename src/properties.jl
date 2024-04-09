@@ -1,9 +1,9 @@
 
-import Base: size, ndims 
-import LinearAlgebra: diag 
+import Base: size, ndims
+import LinearAlgebra: diag
 
-export ndoms, 
-       domainType, 
+export ndoms,
+       domainType,
        codomainType,
        is_linear,
        is_eye,
@@ -16,7 +16,7 @@ export ndoms,
        is_full_row_rank,
        is_full_column_rank,
        is_sliced,
-       diag_AcA, 
+       diag_AcA,
        diag_AAc,
        displacement,
        remove_displacement
@@ -55,7 +55,7 @@ codomainType
 """
 `size(A::AbstractOperator, [dom,])`
 
-Returns the size of an `AbstractOperator`. Type `size(A,1)` for the size of the codomain and `size(A,2)` for the size of the codomain. 
+Returns the size of an `AbstractOperator`. Type `size(A,1)` for the size of the codomain and `size(A,2)` for the size of the codomain.
 """
 size(L::AbstractOperator, i::Int) = size(L)[i]
 
@@ -286,7 +286,7 @@ julia> displacement(A)
 
 ```
 """
-function displacement(S::AbstractOperator) 
+function displacement(S::AbstractOperator)
   D = domainType(S)
   if typeof(D) <: Tuple
     x = ArrayPartition(zeros.(D, size(S, 2))...)
@@ -294,7 +294,7 @@ function displacement(S::AbstractOperator)
 	  x = zeros(D, size(S, 2))
   end
   d = S*x
-  if all(y -> y == d[1], d ) 
+  if all(y -> y == d[1], d )
     return d[1]
   else
     return d
@@ -322,10 +322,10 @@ function Base.show(io::IO, L::AbstractOperator)
 	print(io, fun_name(L)*" "*fun_space(L) )
 end
 
-function fun_space(L::AbstractOperator)  
+function fun_space(L::AbstractOperator)
 	dom = fun_dom(L,2)
 	codom = fun_dom(L,1)
-	return dom*"->"*codom  
+	return dom*"->"*codom
 end
 
 function fun_dom(L::AbstractOperator,n::Int)

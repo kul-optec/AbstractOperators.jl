@@ -3,9 +3,9 @@ export Scale
 """
 `Scale(α::Number,A::AbstractOperator)`
 
-Shorthand constructor: 
+Shorthand constructor:
 
-`*(α::Number,A::AbstractOperator)` 
+`*(α::Number,A::AbstractOperator)`
 
 Scale an `AbstractOperator` by a factor of `α`.
 
@@ -16,7 +16,7 @@ julia> A = FiniteDiff((10,2))
 julia> S = Scale(10,A)
 αδx  ℝ^(10, 2) -> ℝ^(9, 2)
 
-julia> 10*A         #shorthand 
+julia> 10*A         #shorthand
 αℱc  ℝ^10 -> ℝ^10
 
 ```
@@ -30,11 +30,11 @@ end
 
 # Constructors
 
-function Scale(coeff::T, L::R) where {T <: RealOrComplex, R <: AbstractOperator} 
+function Scale(coeff::T, L::R) where {T <: RealOrComplex, R <: AbstractOperator}
     coeff_conj = conj(coeff)
     coeff, coeff_conj = promote(coeff, coeff_conj)
     cT = codomainType(L)
-    isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real  
+    isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
     if isCodomainReal && T <: Complex
         error("Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.")
     end
@@ -43,10 +43,10 @@ end
 
 # Special Constructors
 # scale of scale
-Scale(coeff::T2, L::S) where {T1 <: RealOrComplex, 
-			      T2 <: RealOrComplex, 
-			      R <: AbstractOperator, 
-			      S <: Scale{T1, R}}= 
+Scale(coeff::T2, L::S) where {T1 <: RealOrComplex,
+			      T2 <: RealOrComplex,
+			      R <: AbstractOperator,
+			      S <: Scale{T1, R}}=
 Scale(*(promote(coeff,L.coeff)...), L.A)
 # scale of DiagOp
 Scale(coeff::T,L::DiagOp) where {T<:RealOrComplex} = DiagOp(coeff*diag(L))
@@ -91,7 +91,7 @@ is_null(L::Scale) = is_null(L.A)
 is_eye(L::Scale) = is_diagonal(L.A)
 is_diagonal(L::Scale) = is_diagonal(L.A)
 is_invertible(L::Scale) = L.coeff == 0 ? false : is_invertible(L.A)
-is_AcA_diagonal(L::Scale) = is_AcA_diagonal(L.A) 
+is_AcA_diagonal(L::Scale) = is_AcA_diagonal(L.A)
 is_AAc_diagonal(L::Scale) = is_AAc_diagonal(L.A)
 is_full_row_rank(L::Scale) = is_full_row_rank(L.A)
 is_full_column_rank(L::Scale) = is_full_column_rank(L.A)

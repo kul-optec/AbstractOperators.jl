@@ -9,14 +9,14 @@ abstract type CosineTransform{N,C,T1,T2} <: LinearOperator end
 
 `DCT(x::AbstractArray)`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Cosine Transform of `x`. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Cosine Transform of `x`.
 
 ```julia
 julia> DCT(Complex{Float64},(10,10))
-ℱc  ℂ^(10, 10) -> ℂ^(10, 10) 
+ℱc  ℂ^(10, 10) -> ℂ^(10, 10)
 
 julia> DCT(10,10)
-ℱc  ℝ^(10, 10) -> ℂ^(10, 10) 
+ℱc  ℝ^(10, 10) -> ℂ^(10, 10)
 
 julia> A = DCT(ones(3))
 ℱc  ℝ^3 -> ℝ^3
@@ -46,14 +46,14 @@ end
 
 `IDCT(x::AbstractArray)`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Cosine Transform of `x`. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Cosine Transform of `x`.
 
 ```julia
 julia> IDCT(Complex{Float64},(10,10))
-ℱc⁻¹  ℂ^(10, 10) -> ℂ^(10, 10) 
+ℱc⁻¹  ℂ^(10, 10) -> ℂ^(10, 10)
 
 julia> IDCT(10,10)
-ℱc⁻¹  ℝ^(10, 10) -> ℂ^(10, 10) 
+ℱc⁻¹  ℝ^(10, 10) -> ℂ^(10, 10)
 
 julia> A = IDCT(ones(3))
 ℱc⁻¹  ℝ^3 -> ℝ^3

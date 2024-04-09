@@ -27,14 +27,14 @@ end
 # Constructors
 
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::T) where {N, T <: AbstractArray} 
+function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::T) where {N, T <: AbstractArray}
 	size(d) != DomainDim && error("dimension of d must coincide with DomainDim")
     C = eltype(d) <: Complex ? complex(DomainType) : DomainType
     DiagOp{N, DomainType, C, T}(DomainDim, d)
 end
 
 ###standard constructor with Scalar
-function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::T) where {N, T <: Number} 
+function DiagOp(DomainType::Type, DomainDim::NTuple{N,Int}, d::T) where {N, T <: Number}
     C = eltype(d) <: Complex ? Complex{DomainType} : DomainType
     DiagOp{N, DomainType, C, T}(DomainDim, d)
 end

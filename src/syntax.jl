@@ -86,8 +86,8 @@ function getindex(H::VCAT, idx::Union{AbstractArray,Int})
 	end
 end
 
-getindex(H::A, idx::Union{AbstractArray,Int}) where {L <: HCAT, D, S, A<: AffineAdd{L,D,S}} = 
-AffineAdd(getindex(H.A, idx), H.d, S) 
+getindex(H::A, idx::Union{AbstractArray,Int}) where {L <: HCAT, D, S, A<: AffineAdd{L,D,S}} =
+AffineAdd(getindex(H.A, idx), H.d, S)
 
 # get index of scale
 getindex(A::S,idx...) where {T, L, S <:Scale{T,L}} = Scale(A.coeff,A.coeff_conj,getindex(A.A,idx...))

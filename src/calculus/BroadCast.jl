@@ -21,9 +21,9 @@ julia> B*[1.;2.]
 ```
 
 """
-struct BroadCast{N, 
-		 L <: AbstractOperator, 
-		 T <: AbstractArray, 
+struct BroadCast{N,
+		 L <: AbstractOperator,
+		 T <: AbstractArray,
 		 D <: AbstractArray,
 		 M,
 		 C <: NTuple{M,Colon},
@@ -36,14 +36,14 @@ struct BroadCast{N,
 	cols::C
 	idxs::I
 
-	function BroadCast(A::L,dim_out::NTuple{N,Int},bufC::T, bufD::D) where {N, 
-								      L<:AbstractOperator, 
+	function BroadCast(A::L,dim_out::NTuple{N,Int},bufC::T, bufD::D) where {N,
+								      L<:AbstractOperator,
 								      T<:AbstractArray,
 								      D<:AbstractArray
 								      }
 		Base.Broadcast.check_broadcast_shape(dim_out,size(A,1))
 		if size(A,1) != (1,)
-			M = length(size(A,1)) 
+			M = length(size(A,1))
 			cols = ([Colon() for i = 1:M]...,)
 			idxs = CartesianIndices((dim_out[M+1:end]...,))
 			new{N,L,T,D,M,typeof(cols),typeof(idxs)}(A,dim_out,bufC,bufD,cols,idxs)
@@ -52,7 +52,7 @@ struct BroadCast{N,
 			idxs = CartesianIndices((1,))
 			new{N,L,T,D,M,NTuple{0,Colon},typeof(idxs)}(A,dim_out,bufC,bufD,(),idxs)
 		end
-		
+
 	end
 end
 
@@ -92,7 +92,7 @@ function mul!(y::CC, A::AdjointOperator{BroadCast{N,L,T,D,0,C,I}}, b::DD) where 
 end
 
 #TODO make this more general
-#length(dim_out) == size(A,1) e.g. a .= b; size(a) = (m,n) size(b) = (1,n) matrix out, column in 
+#length(dim_out) == size(A,1) e.g. a .= b; size(a) = (m,n) size(b) = (1,n) matrix out, column in
 function mul!(y::CC, A::AdjointOperator{BroadCast{2,L,T,D,2,C,I}}, b::DD) where {L,T,D,C,I,CC,DD}
     R = A.A
 	fill!(y, 0.)

@@ -22,21 +22,21 @@ struct Zeros{C,N,D,M} <: LinearOperator
 end
 
 # Constructors
-#default 
-Zeros(domainType::Type, dim_in::NTuple{M,Int}, 
+#default
+Zeros(domainType::Type, dim_in::NTuple{M,Int},
       codomainType::Type, dim_out::NTuple{N,Int}) where {N,M} =
 Zeros{codomainType,N,domainType,M}(dim_out,dim_in)
 
-Zeros(domainType::Type, dim_in::NTuple{M,Int}, dim_out::NTuple{N,Int}) where {N,M} = 
+Zeros(domainType::Type, dim_in::NTuple{M,Int}, dim_out::NTuple{N,Int}) where {N,M} =
 Zeros{domainType,N,domainType,M}(dim_out,dim_in)
 
-function Zeros(domainType::NTuple{NN,Type}, dim_in::NTuple{NN,Tuple}, 
+function Zeros(domainType::NTuple{NN,Type}, dim_in::NTuple{NN,Tuple},
 	       codomainType::Type, dim_out::Tuple) where {NN}
 	HCAT([Zeros(domainType[i], dim_in[i], codomainType, dim_out) for i =1:NN]...)
 end
 
-function Zeros(domainType::Type, dim_in::Tuple, 
-	       codomainType::NTuple{NN,Type}, dim_out::NTuple{NN,Tuple}) where {NN} 
+function Zeros(domainType::Type, dim_in::Tuple,
+	       codomainType::NTuple{NN,Type}, dim_out::NTuple{NN,Tuple}) where {NN}
 	VCAT([Zeros(domainType, dim_in, codomainType[i], dim_out[i]) for i =1:NN]...)
 end
 

@@ -38,11 +38,11 @@ struct Ax_mul_Bxt{
   bufD::D
   function Ax_mul_Bxt(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1,L2,C,D}
     if ndims(A,1) == 1
-      if size(A) != size(B)   
+      if size(A) != size(B)
         throw(DimensionMismatch("Cannot compose operators"))
       end
     elseif ndims(A,1) == 2 && ndims(B,1) == 2 && size(A,2) == size(B,2)
-      if size(A,1)[2] != size(B,1)[2]   
+      if size(A,1)[2] != size(B,1)[2]
         throw(DimensionMismatch("Cannot compose operators"))
       end
     else
@@ -103,16 +103,16 @@ end
 
 size(P::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = ((size(P.A,1)[1],size(P.B,1)[1]),size(P.A,2))
 
-fun_name(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = fun_name(L.A)*"*"*fun_name(L.B) 
+fun_name(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = fun_name(L.A)*"*"*fun_name(L.B)
 
 domainType(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac})   = domainType(L.A)
 codomainType(L::Union{Ax_mul_Bxt,Ax_mul_BxtJac}) = codomainType(L.A)
 
 # utils
-function permute(P::Ax_mul_Bxt{L1,L2,C,D}, 
+function permute(P::Ax_mul_Bxt{L1,L2,C,D},
                  p::AbstractVector{Int}) where {L1,L2,C,D <:ArrayPartition}
   Ax_mul_Bxt(permute(P.A,p),permute(P.B,p),P.bufA,P.bufB,P.bufC,ArrayPartition(P.bufD.x[p]) )
 end
 
-remove_displacement(P::Ax_mul_Bxt) = 
+remove_displacement(P::Ax_mul_Bxt) =
 Ax_mul_Bxt(remove_displacement(P.A), remove_displacement(P.B), P.bufA, P.bufB, P.bufC, P.bufD)

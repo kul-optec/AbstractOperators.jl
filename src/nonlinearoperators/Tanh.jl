@@ -13,7 +13,7 @@ struct Tanh{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Tanh(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} 
+function Tanh(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 	Tanh{DomainType,N}(DomainDim)
 end
 
@@ -24,8 +24,8 @@ function mul!(y::AbstractArray{T,N}, L::Tanh{T,N}, x::AbstractArray{T,N}) where 
 	y .= tanh.(x)
 end
 
-function mul!(y::AbstractArray, 
-              J::AdjointOperator{Jacobian{A,TT}}, 
+function mul!(y::AbstractArray,
+              J::AdjointOperator{Jacobian{A,TT}},
               b::AbstractArray) where {T,N, A<: Tanh{T,N}, TT <: AbstractArray{T,N}}
     L = J.A
     y .= conj.(sech.(L.x).^2).*b

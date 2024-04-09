@@ -14,7 +14,7 @@ struct SoftMax{T,N} <: NonLinearOperator
 	buf::Array{T,N}
 end
 
-function SoftMax(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} 
+function SoftMax(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 	SoftMax{DomainType,N}(DomainDim,zeros(DomainType,DomainDim))
 end
 
@@ -25,15 +25,15 @@ function mul!(y::AbstractArray{T,N}, L::SoftMax{T,N}, x::AbstractArray{T,N}) whe
 	y ./= sum(y)
 end
 
-function mul!(y::AbstractArray, 
-              J::AdjointOperator{Jacobian{A,TT}}, 
+function mul!(y::AbstractArray,
+              J::AdjointOperator{Jacobian{A,TT}},
               b::AbstractArray) where {T, N, A<: SoftMax{T,N}, TT <: AbstractArray{T,N} }
     L = J.A
 	fill!(y,zero(T))
 	L.A.buf .= exp.(L.x.-maximum(L.x))
 	L.A.buf ./= sum(L.A.buf)
 	for i in eachindex(y)
-		y[i] = -L.A.buf[i]*dot(L.A.buf,b) 
+		y[i] = -L.A.buf[i]*dot(L.A.buf,b)
 		y[i] += L.A.buf[i]*b[i]
 	end
 	return y

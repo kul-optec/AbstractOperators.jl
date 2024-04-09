@@ -11,7 +11,7 @@ Creates a `LinearOperator` which, when multiplied with `x`, returns `x[idx]`.
 julia> x = collect(linspace(1,10,10));
 
 julia> G = GetIndex(Float64,(10,), 1:3)
-↓  ℝ^10 -> ℝ^3 
+↓  ℝ^10 -> ℝ^3
 
 julia> G*x
 3-element Array{Float64,1}:
@@ -33,7 +33,7 @@ struct GetIndex{N,M,T<:Tuple} <: LinearOperator
 end
 
 # Constructors
-# default 
+# default
 function GetIndex(domainType::Type,dim_in::NTuple{M,Int},idx::T) where {M,T<:Tuple}
 	length(idx) > M && error("cannot slice object of dimension $dim_in with $idx")
 	dim_out = get_dim_out(dim_in,idx...)
@@ -82,7 +82,7 @@ function get_dim_out(dim, args...)
 	if length(args) != 1
 		dim2 = ()
 		for i in eachindex(args)
-			if args[i] != Colon() 
+			if args[i] != Colon()
 				!(typeof(args[i]) <: Int) && ( dim2 = (dim2..., length(args[i]) ) )
 			else
 				dim2 = (dim2..., dim[i])

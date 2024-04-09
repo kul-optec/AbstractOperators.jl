@@ -3,7 +3,7 @@ export AffineAdd
 """
 `AffineAdd(A::AbstractOperator, d, [sign = true])`
 
-Affine addition to `AbstractOperator` with an array or scalar `d`. 
+Affine addition to `AbstractOperator` with an array or scalar `d`.
 
 Use `sign = false` to perform subtraction.
 
@@ -26,17 +26,17 @@ true
 struct AffineAdd{L <: AbstractOperator, D <: Union{AbstractArray, Number}, S} <: AbstractOperator
   A::L
   d::D
-  function AffineAdd(A::L, d::D, sign::Bool = true) where {L, D <: AbstractArray} 
-      if size(d) != size(A,1) 
+  function AffineAdd(A::L, d::D, sign::Bool = true) where {L, D <: AbstractArray}
+      if size(d) != size(A,1)
           throw(DimensionMismatch("codomain size of $A not compatible with array `d` of size $(size(d))"))
       end
-      if eltype(d) != codomainType(A) 
+      if eltype(d) != codomainType(A)
           error("cannot tilt opertor having codomain type $(codomainType(A)) with array of type $(eltype(d))")
       end
       new{L,D,sign}(A,d)
   end
   # scalar
-  function AffineAdd(A::L, d::D, sign::Bool = true) where {L, D <: Number} 
+  function AffineAdd(A::L, d::D, sign::Bool = true) where {L, D <: Number}
       if typeof(d) <: Complex && codomainType(A) <: Real
           error("cannot tilt opertor having codomain type $(codomainType(A)) with array of type $(eltype(d))")
       end
@@ -46,12 +46,12 @@ end
 
 # Mappings
 # array
-function mul!(y::DD, T::AffineAdd{L, D, true}, x) where {L <: AbstractOperator, DD, D} 
+function mul!(y::DD, T::AffineAdd{L, D, true}, x) where {L <: AbstractOperator, DD, D}
     mul!(y,T.A,x)
     y .+= T.d
 end
 
-function mul!(y::DD, T::AffineAdd{L, D, false}, x) where {L <: AbstractOperator, DD, D} 
+function mul!(y::DD, T::AffineAdd{L, D, false}, x) where {L <: AbstractOperator, DD, D}
     mul!(y,T.A,x)
     y .-= T.d
 end
@@ -70,7 +70,7 @@ is_null(L::AffineAdd) = is_null(L.A)
 is_eye(L::AffineAdd) = is_diagonal(L.A)
 is_diagonal(L::AffineAdd) = is_diagonal(L.A)
 is_invertible(L::AffineAdd) = is_invertible(L.A)
-is_AcA_diagonal(L::AffineAdd) = is_AcA_diagonal(L.A) 
+is_AcA_diagonal(L::AffineAdd) = is_AcA_diagonal(L.A)
 is_AAc_diagonal(L::AffineAdd) = is_AAc_diagonal(L.A)
 is_full_row_rank(L::AffineAdd) = is_full_row_rank(L.A)
 is_full_column_rank(L::AffineAdd) = is_full_column_rank(L.A)
@@ -90,7 +90,7 @@ sign(T::AffineAdd{L,D, true}) where {L,D} =  1
 
 function permute(T::AffineAdd{L,D,S}, p::AbstractVector{Int}) where {L,D,S}
     A = permute(T.A,p)
-    return AffineAdd(A,T.d,S) 
+    return AffineAdd(A,T.d,S)
 end
 
 displacement(A::AffineAdd{L,D,true})  where {L,D} =  A.d .+ displacement(A.A)

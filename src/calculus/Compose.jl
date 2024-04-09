@@ -3,9 +3,9 @@ export Compose
 """
 `Compose(A::AbstractOperator,B::AbstractOperator)`
 
-Shorthand constructor: 
+Shorthand constructor:
 
-`A*B` 
+`A*B`
 
 Compose different `AbstractOperator`s. Notice that the domain and codomain of the operators `A` and `B` must match, i.e. `size(A,2) == size(B,1)` and `domainType(A) == codomainType(B)`.
 

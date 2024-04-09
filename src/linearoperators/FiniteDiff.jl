@@ -7,7 +7,7 @@ export FiniteDiff
 
 `FiniteDiff(x::AbstractArray, direction = 1)`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the discretized gradient over the specified `direction` obtained using forward finite differences. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the discretized gradient over the specified `direction` obtained using forward finite differences.
 
 ```julia
 julia> FiniteDiff(Float64,(3,))
@@ -66,7 +66,7 @@ end
 	idx = CartesianIndex(z...)
 	ex = quote
 		for I in CartesianIndices(size(y))
-			y[I] = 
+			y[I] =
 			I[$D] == 1 ? -b[I]  :
 			I[$D] == size(y,$D) ?   b[I-$idx]  : -b[I]+b[I-$idx]
 		end
@@ -79,7 +79,7 @@ end
 domainType(L::FiniteDiff{T, N}) where {T, N} = T
 codomainType(L::FiniteDiff{T, N}) where {T, N} = T
 
-function size(L::FiniteDiff{T,N,D}) where {T,N,D} 
+function size(L::FiniteDiff{T,N,D}) where {T,N,D}
 	dim_out = [L.dim_in...]
 	dim_out[D] = dim_out[D]-1
 	return ((dim_out...,), L.dim_in)
@@ -92,5 +92,3 @@ fun_name(L::FiniteDiff{T,N,D}) where {T,N,D}  = "δx$D"
 
 
 is_full_row_rank(L::FiniteDiff) = true
-
-
