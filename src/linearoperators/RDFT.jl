@@ -40,8 +40,8 @@ end
 
 function RDFT(x::AbstractArray{T,N}, dims::Int=1) where {T<:Real,N}
 	A = plan_rfft(x,dims)
-	b2 = zeros(complex(T),size(x))
-	y2 = zeros(complex(T),size(x))
+	b2 = similar(x,complex(T),size(x))
+	y2 = similar(x,complex(T),size(x))
 	At = plan_bfft(y2,dims)
 	dim_in = size(x)
 	dim_out = ()

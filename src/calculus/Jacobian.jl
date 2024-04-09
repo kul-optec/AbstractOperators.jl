@@ -44,7 +44,7 @@ function Jacobian(H::DCAT{N,L,P1,P2},b) where {N,L,P1,P2}
 	DCAT(A,H.idxD,H.idxC)
 end
 #Jacobian of HCAT
-function Jacobian(H::HCAT{N,L,P,C},b::ArrayPartition) where {N,L,P,C,D}
+function Jacobian(H::HCAT{N,L,P,C},b::ArrayPartition) where {N,L,P,C}
   x = b.x
 	A = ()
     for (k, idx) in enumerate(H.idxs)
@@ -58,7 +58,7 @@ function Jacobian(H::HCAT{N,L,P,C},b::ArrayPartition) where {N,L,P,C,D}
 	HCAT(A,H.idxs,H.buf)
 end
 #Jacobian of VCAT
-function Jacobian(V::VCAT{N,L,P,C},x::AbstractArray) where {N,L,P,C,D}
+function Jacobian(V::VCAT{N,L,P,C},x::AbstractArray) where {N,L,P,C}
     JJ = ([Jacobian(a,x) for a in V.A]...,)
     VCAT(JJ, V.idxs, V.buf)
 end

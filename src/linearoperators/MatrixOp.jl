@@ -64,7 +64,7 @@ mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) 
 
 # Special Case, real b, complex matrix
 function mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) where {D <: Real , T <: Complex, M}
-	yc = zeros(T,size(y))
+	yc = similar(y,T,size(y))
 	mul!(yc, L.A.A', b)
 	y .= real.(yc)
 end

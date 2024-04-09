@@ -22,14 +22,8 @@ end
 Sum(A::AbstractOperator) = A
 
 function Sum(A::Vararg{AbstractOperator})
-  s = size(A[1],1)
-  t = codomainType(A[1])
-  bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-
-  s = size(A[1],2)
-  t = domainType(A[1])
-  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-
+  bufC = allocateInCodomain(A[1])
+  bufD = allocateInDomain(A[1])
   return Sum(A, bufC, bufD)
 end
 

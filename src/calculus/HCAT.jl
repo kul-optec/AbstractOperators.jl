@@ -76,10 +76,8 @@ function HCAT(A::Vararg{AbstractOperator})
 		buf = A[findfirst( (<:).(typeof.(A),HCAT) ) ].buf
 	else
 		AA = A
-		s = size(AA[1],1)
-		t = codomainType(AA[1])
 		# generate buffer
-    buf = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s))
+        buf = allocateInCodomain(AA[1])
 	end
 
 	return HCAT(AA, buf)

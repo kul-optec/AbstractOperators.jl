@@ -59,12 +59,9 @@ end
 
 # Constructors
 function HadamardProd(A::AbstractOperator,B::AbstractOperator)
-  s,t = size(A,1), codomainType(A)
-  bufA = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  s,t = size(B,1), codomainType(B)
-  bufB = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  s,t = size(A,2), domainType(A)
-  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  bufA = allocateInCodomain(A)
+  bufB = allocateInCodomain(B)
+  bufD = allocateInDomain(A)
   HadamardProd(A,B,bufA,bufB,bufD)
 end
 

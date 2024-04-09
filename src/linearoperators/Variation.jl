@@ -46,7 +46,6 @@ Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 
 @generated function mul!(y::AbstractArray{T,2},
                          A::Variation{T,N}, b::AbstractArray{T,N}) where {T,N}
-
 	ex = :()
 
 	for i = 1:N

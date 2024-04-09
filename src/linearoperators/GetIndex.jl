@@ -51,13 +51,13 @@ GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
 
 # Mappings
 
-function mul!(y::Array{T1,N},L::GetIndex{N,M,T2},b::Array{T1,M}) where {T1,N,M,T2}
+function mul!(y::AbstractArray{T1,N}, L::GetIndex{N,M,T2}, b::AbstractArray{T1,M}) where {T1,N,M,T2}
 	y .= view(b,L.idx...)
 end
 
-function mul!(y::Array{T1,M},L::AdjointOperator{GetIndex{N,M,T2}},b::AbstractArray{T1,N}) where {T1,N,M,T2}
-	fill!(y,0.)
-	setindex!(y,b,L.A.idx...)
+function mul!(y::AbstractArray{T1,M}, L::AdjointOperator{GetIndex{N,M,T2}}, b::AbstractArray{T1,N}) where {T1,N,M,T2}
+	fill!(y, 0.)
+	setindex!(y, b, L.A.idx...)
 end
 
 # Properties

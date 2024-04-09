@@ -74,10 +74,8 @@ function VCAT(A::Vararg{AbstractOperator})
 		buf = A[findfirst( (<:).(typeof.(A),VCAT) ) ].buf
 	else
 		AA = A
-		s = size(AA[1],2)
-		t = domainType(AA[1])
 		# generate buffer
-    buf = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s))
+        buf = allocateInDomain(AA[1])
 	end
 
 	return VCAT(AA, buf)

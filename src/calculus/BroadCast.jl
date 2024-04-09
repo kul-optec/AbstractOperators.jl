@@ -52,14 +52,13 @@ struct BroadCast{N,
 			idxs = CartesianIndices((1,))
 			new{N,L,T,D,M,NTuple{0,Colon},typeof(idxs)}(A,dim_out,bufC,bufD,(),idxs)
 		end
-
 	end
 end
 
 # Constructors
 
 BroadCast(A::L, dim_out::NTuple{N,Int}) where {N,L<:AbstractOperator} =
-BroadCast(A, dim_out, zeros(codomainType(A),size(A,1)), zeros(domainType(A),size(A,2)) )
+BroadCast(A, dim_out, allocateInCodomain(A), allocateInDomain(A))
 
 # Mappings
 
@@ -82,7 +81,7 @@ end
 function mul!(y::CC, A::AdjointOperator{BroadCast{N,L,T,D,0,C,I}}, b::DD) where {N,L,T,D,C,I,CC,DD}
     R = A.A
 	fill!(y, 0.)
-	bii = zeros(eltype(b),1)
+	bii = allocateInCodomain(R.A)
 	for bi in b
 		bii[1] = bi
 		mul!(R.bufD, R.A', bii)

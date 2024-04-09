@@ -11,7 +11,11 @@ Creates the softmax non-linear operator with input dimensions `dim_in`.
 """
 struct SoftMax{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
-	buf::Array{T,N}
+	buf::AbstractArray{T,N}
+end
+
+function SoftMax(x::AbstractArray{T,N}) where {T,N}
+    SoftMax{N,T}(size(x),similar(x))
 end
 
 function SoftMax(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}

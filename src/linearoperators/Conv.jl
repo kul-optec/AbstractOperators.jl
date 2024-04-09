@@ -10,7 +10,7 @@ Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVect
 """
 struct Conv{T,
 	    H  <: AbstractVector{T},
-	    Hc <: AbstractVector{Complex{T}},
+	    Hc <: AbstractVector,
 	    } <: LinearOperator
 	dim_in::Tuple{Int}
 	h::H
@@ -23,15 +23,25 @@ end
 
 # Constructors
 
+isTypeReal(::Type{T}) where {T} = T <: Real
+
 ###standard constructor
 function Conv(DomainType::Type, dim_in::Tuple{Int},  h::H) where {H<:AbstractVector}
 	eltype(h) != DomainType && error("eltype(h) is $(eltype(h)), should be $(DomainType)")
 
-	buf = zeros(dim_in[1]+length(h)-1)
-	R = plan_rfft(buf)
-	buf_c1 = zeros(Complex{eltype(h)}, div(dim_in[1]+length(h)-1,2)+1)
-	buf_c2 = zeros(Complex{eltype(h)}, div(dim_in[1]+length(h)-1,2)+1)
-	I = plan_irfft(buf_c1,dim_in[1]+length(h)-1)
+    if isTypeReal(DomainType)
+        buf = zeros(DomainType,dim_in[1]+length(h)-1)
+        R = plan_rfft(buf)
+        buf_c1 = zeros(Complex{DomainType}, div(dim_in[1]+length(h)-1,2)+1)
+        buf_c2 = zeros(Complex{DomainType}, div(dim_in[1]+length(h)-1,2)+1)
+        I = plan_irfft(buf_c1,dim_in[1]+length(h)-1)
+    else
+        buf = zeros(DomainType,dim_in[1]+length(h)-1)
+        R = plan_fft(buf)
+        buf_c1 = zeros(DomainType, div(dim_in[1]+length(h)-1,2)+1)
+        buf_c2 = zeros(DomainType, div(dim_in[1]+length(h)-1,2)+1)
+        I = plan_ifft(buf_c1,dim_in[1]+length(h)-1)
+    end
 	Conv{DomainType, H, typeof(buf_c1)}(dim_in,h,buf,buf_c1,buf_c2,R,I)
 end
 

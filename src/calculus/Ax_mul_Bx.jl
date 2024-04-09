@@ -60,13 +60,10 @@ end
 
 # Constructors
 function Ax_mul_Bx(A::AbstractOperator,B::AbstractOperator)
-  s,t = size(A,1), codomainType(A)
-  bufA = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  s,t = size(B,1), codomainType(B)
-  bufB = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  s,t = size(A,2), domainType(A)
-  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  bufA = allocateInCodomain(A)
+  bufB = allocateInCodomain(B)
+  bufC = allocateInCodomain(B)
+  bufD = allocateInDomain(A)
   Ax_mul_Bx(A,B,bufA,bufB,bufC,bufD)
 end
 
@@ -103,7 +100,7 @@ codomainType(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = codomainType(L.A)
 # utils
 function permute(P::Ax_mul_Bx{L1,L2,C,D},
                  p::AbstractVector{Int}) where {L1,L2,C,D <:ArrayPartition}
-  Ax_mul_Bx(permute(P.A,p),permute(P.B,p),P.bufA,P.bufB,P.bufC,ArrayPartition(P.bufD.x[p]) )
+  Ax_mul_Bx(permute(P.A,p),permute(P.B,p),P.bufA,P.bufB,P.bufC,ArrayPartition(P.bufD.x[p]))
 end
 
 remove_displacement(P::Ax_mul_Bx) =
