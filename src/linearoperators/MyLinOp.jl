@@ -38,8 +38,8 @@ MyLinOp{N,M, domainType, codomainType}(dim_out, dim_in, Fwd!, Adj! )
 
 # Mappings
 
-mul!(y::Array{C,N}, L::MyLinOp{N,M,C,D}, b::Array{D,M}) where {N,M,C,D} = L.Fwd!(y,b)
-mul!(y::Array{C,N}, L::AdjointOperator{MyLinOp{N,M,C,D}}, b::Array{D,M}) where {N,M,C,D} = L.A.Adj!(y,b)
+mul!(y::AbstractArray{C,N}, L::MyLinOp{N,M,C,D}, b::AbstractArray{D,M}) where {N,M,C,D} = L.Fwd!(y,b)
+mul!(y::AbstractArray{C,N}, L::AdjointOperator{MyLinOp{N,M,C,D}}, b::AbstractArray{D,M}) where {N,M,C,D} = L.A.Adj!(y,b)
 
 # Properties
 

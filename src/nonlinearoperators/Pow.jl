@@ -11,7 +11,7 @@ struct Pow{T,N,I<:Real} <: NonLinearOperator
     p::I
 end
 
-function Pow(DomainType::Type, DomainDim::NTuple{N,Int}, p::I) where {N, I <: Real} 
+function Pow(DomainType::Type, DomainDim::NTuple{N,Int}, p::I) where {N, I <: Real}
 	Pow{DomainType, N, I}(DomainDim, p)
 end
 
@@ -21,8 +21,8 @@ function mul!(y::AbstractArray{T,N}, L::Pow{T,N,I}, x::AbstractArray{T,N}) where
 	y .= x.^L.p
 end
 
-function mul!(y::AbstractArray, 
-              J::AdjointOperator{Jacobian{Pow{T, N, I},TT}}, 
+function mul!(y::AbstractArray,
+              J::AdjointOperator{Jacobian{Pow{T, N, I},TT}},
               b::AbstractArray) where {T, N, I, TT <: AbstractArray{T,N}}
     L = J.A
     y .= conj.(L.A.p.*(L.x).^(L.A.p-1)).*b

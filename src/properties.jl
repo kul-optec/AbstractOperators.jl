@@ -1,10 +1,12 @@
 
-import Base: size, ndims 
-import LinearAlgebra: diag 
+import Base: size, ndims
+import LinearAlgebra: diag
 
-export ndoms, 
-       domainType, 
+export ndoms,
+       domainType,
        codomainType,
+       domainStorageType,
+       codomainStorageType,
        is_linear,
        is_eye,
        is_null,
@@ -16,7 +18,7 @@ export ndoms,
        is_full_row_rank,
        is_full_column_rank,
        is_sliced,
-       diag_AcA, 
+       diag_AcA,
        diag_AAc,
        displacement,
        remove_displacement
@@ -53,9 +55,62 @@ julia> codomainType(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
 codomainType
 
 """
+`inputStorageType(A::AbstractOperator)`
+
+Returns the type of the storage for the input of the operator.
+
+```julia
+julia> inputStorageType(DFT(10))
+Array{Complex{Float64},1}
+
+julia> inputStorageType(hcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
+ArrayPartition{Complex{Float64},1,Array{Complex{Float64},1},Array{Complex{Float64},1}}
+```
+"""
+function domainStorageType(L::AbstractOperator)
+    dt = domainType(L)
+    return if dt isa Tuple
+        arrayTypes = Tuple{[Array{t, d} for (t, d) in zip(dt, length.(size(L,2)))]...}
+        ArrayPartition{promote_type(dt...), arrayTypes}
+    else
+        Array{dt, length(size(L,2))}
+    end
+end
+
+"""
+`outputStorageType(A::AbstractOperator)`
+
+Returns the type of the storage of for the output of the operator.
+
+```julia
+julia> outputStorageType(DFT(10))
+Array{Complex{Float64},1}
+
+julia> outputStorageType(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
+ArrayPartition{Complex{Float64},1,Array{Complex{Float64},1},Array{Complex{Float64},1}}
+```
+"""
+function codomainStorageType(L::AbstractOperator)
+    dt = codomainType(L)
+    return if dt isa Tuple
+        arrayTypes = Tuple{[Array{t, d} for (t, d) in zip(dt, length.(size(L,1)))]...}
+        ArrayPartition{promote_type(dt...), arrayTypes}
+    else
+        Array{dt, length(size(L,1))}
+    end
+end
+
+allocateInDomain(L::AbstractOperator, dims...=size(L,2)...) = allocate(domainStorageType(L), dims...)
+allocateInCodomain(L::AbstractOperator, dims...=size(L,1)...) = allocate(codomainStorageType(L), dims...)
+
+allocate(::Type{T}, dims...) where {T <: AbstractArray} = T(undef, dims...)
+allocate(::Type{ArrayPartition{T,S}}, dims...) where {T,S} =
+    ArrayPartition([allocate(s, d...) for (s,d) in zip(S.parameters, dims)]...)
+
+"""
 `size(A::AbstractOperator, [dom,])`
 
-Returns the size of an `AbstractOperator`. Type `size(A,1)` for the size of the codomain and `size(A,2)` for the size of the codomain. 
+Returns the size of an `AbstractOperator`. Type `size(A,1)` for the size of the codomain and `size(A,2)` for the size of the codomain.
 """
 size(L::AbstractOperator, i::Int) = size(L)[i]
 
@@ -286,19 +341,15 @@ julia> displacement(A)
 
 ```
 """
-function displacement(S::AbstractOperator) 
-  D = domainType(S)
-  if typeof(D) <: Tuple
-    x = ArrayPartition(zeros.(D, size(S, 2))...)
-  else
-	  x = zeros(D, size(S, 2))
-  end
-  d = S*x
-  if all(y -> y == d[1], d ) 
-    return d[1]
-  else
-    return d
-  end
+function displacement(S::AbstractOperator)
+    x = allocateInDomain(S)
+    fill!(x, 0)
+    d = S*x
+    if all(y -> y == d[1], d)
+        return d[1]
+    else
+        return d
+    end
 end
 
 """
@@ -319,13 +370,13 @@ end
 
 #printing
 function Base.show(io::IO, L::AbstractOperator)
-	print(io, fun_name(L)*" "*fun_space(L) )
+	print(io, fun_name(L)*" "*fun_space(L))
 end
 
-function fun_space(L::AbstractOperator)  
+function fun_space(L::AbstractOperator)
 	dom = fun_dom(L,2)
 	codom = fun_dom(L,1)
-	return dom*"->"*codom  
+	return dom*"->"*codom
 end
 
 function fun_dom(L::AbstractOperator,n::Int)

@@ -37,7 +37,7 @@ struct HadamardProd{
   bufB::C
   bufD::D
   function HadamardProd(A::L1, B::L2, bufA::C, bufB::C, bufD::D) where {L1,L2,C,D}
-    if size(A) != size(B)  
+    if size(A) != size(B)
       throw(DimensionMismatch("Cannot compose operators"))
     end
     new{L1,L2,C,D}(A,B,bufA,bufB,bufD)
@@ -59,12 +59,9 @@ end
 
 # Constructors
 function HadamardProd(A::AbstractOperator,B::AbstractOperator)
-  s,t = size(A,1), codomainType(A)
-  bufA = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  s,t = size(B,1), codomainType(B)
-  bufB = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-  s,t = size(A,2), domainType(A)
-  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
+  bufA = allocateInCodomain(A)
+  bufB = allocateInCodomain(B)
+  bufD = allocateInDomain(A)
   HadamardProd(A,B,bufA,bufB,bufD)
 end
 
@@ -94,16 +91,16 @@ end
 
 size(P::Union{HadamardProd,HadamardProdJac}) = (size(P.A,1),size(P.A,2))
 
-fun_name(L::Union{HadamardProd,HadamardProdJac}) = fun_name(L.A)*".*"*fun_name(L.B) 
+fun_name(L::Union{HadamardProd,HadamardProdJac}) = fun_name(L.A)*".*"*fun_name(L.B)
 
 domainType(L::Union{HadamardProd,HadamardProdJac})   = domainType(L.A)
 codomainType(L::Union{HadamardProd,HadamardProdJac}) = codomainType(L.A)
 
 # utils
-function permute(P::HadamardProd{L1,L2,C,D}, 
+function permute(P::HadamardProd{L1,L2,C,D},
                  p::AbstractVector{Int}) where {L1,L2,C,D <:ArrayPartition}
   HadamardProd(permute(P.A,p),permute(P.B,p),P.bufA,P.bufB,ArrayPartition(P.bufD.x[p]) )
 end
 
-remove_displacement(P::HadamardProd) = 
+remove_displacement(P::HadamardProd) =
 HadamardProd(remove_displacement(P.A), remove_displacement(P.B), P.bufA, P.bufB, P.bufD)

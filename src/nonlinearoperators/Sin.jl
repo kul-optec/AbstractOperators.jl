@@ -13,7 +13,7 @@ struct Sin{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Sin(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} 
+function Sin(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 	Sin{DomainType,N}(DomainDim)
 end
 
@@ -24,8 +24,8 @@ function mul!(y::AbstractArray{T,N}, L::Sin{T,N}, x::AbstractArray{T,N}) where {
 	y .= sin.(x)
 end
 
-function mul!(y::AbstractArray, 
-              J::AdjointOperator{Jacobian{A,TT}}, 
+function mul!(y::AbstractArray,
+              J::AdjointOperator{Jacobian{A,TT}},
               b::AbstractArray) where {T,N, A<: Sin{T,N}, TT <: AbstractArray{T,N}}
     L = J.A
     y .= conj.(cos.(L.x)).*b

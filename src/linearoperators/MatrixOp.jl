@@ -13,7 +13,7 @@ The input `x` can be also a matrix: the number of columns must be given either i
 
 ```julia
 julia> MatrixOp(Float64,(10,),randn(20,10))
-▒  ℝ^10 -> ℝ^20 
+▒  ℝ^10 -> ℝ^20
 
 julia> MatrixOp(randn(20,10))
 ▒  ℝ^10 -> ℝ^20
@@ -36,8 +36,8 @@ end
 
 ##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-function MatrixOp(DomainType::Type, DomainDim::NTuple{N,Int}, A::M) where {N, T, M <: AbstractMatrix{T}} 
-	N > 2 && error("cannot multiply a Matrix by a n-dimensional Variable with n > 2") 
+function MatrixOp(DomainType::Type, DomainDim::NTuple{N,Int}, A::M) where {N, T, M <: AbstractMatrix{T}}
+	N > 2 && error("cannot multiply a Matrix by a n-dimensional Variable with n > 2")
 	size(A,2) != DomainDim[1] && error("wrong input dimensions")
 	if N == 1
 		MatrixOp{DomainType, T, M}(A, 1)
@@ -63,8 +63,8 @@ mul!(y::AbstractArray, L::MatrixOp{D, T, M}, b::AbstractArray) where {D, T, M} =
 mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) where {D, T, M} = mul!(y, L.A.A', b)
 
 # Special Case, real b, complex matrix
-function mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) where {D <: Real , T <: Complex, M} 
-	yc = zeros(T,size(y))
+function mul!(y::AbstractArray, L::AdjointOperator{MatrixOp{D, T, M}}, b::AbstractArray) where {D <: Real , T <: Complex, M}
+	yc = similar(y,T,size(y))
 	mul!(yc, L.A.A', b)
 	y .= real.(yc)
 end

@@ -5,14 +5,14 @@ export MIMOFilt
 
 `MIMOFilt(x::AbstractMatrix, b::Vector{AbstractVector}, [a::Vector{AbstractVector},])`
 
-Creates a `LinearOperator` which, when multiplied with a matrix `X`, returns a matrix `Y`. Here a Multiple Input Multiple Output system is evaluated: the columns of `X` and `Y` represent the input signals and output signals respectively. 
+Creates a `LinearOperator` which, when multiplied with a matrix `X`, returns a matrix `Y`. Here a Multiple Input Multiple Output system is evaluated: the columns of `X` and `Y` represent the input signals and output signals respectively.
 
 ```math
-\\mathbf{y}_i = \\sum_{j = 1}^{M} \\mathbf{h}_{i,j} * \\mathbf{x}_j 
+\\mathbf{y}_i = \\sum_{j = 1}^{M} \\mathbf{h}_{i,j} * \\mathbf{x}_j
 ```
 where ``\\mathbf{y}_i`` and ``\\mathbf{x}_j`` are the ``i``-th and ``j``-th columns of the output `Y` and input `X` matrices respectively.
 
-The filters ``\\mathbf{h}_{i,j}`` can be represented either by providing coefficients `B` and `A` (IIR) or `B` alone (FIR). These coefficients must be given in a `Vector` of `Vector`s. 
+The filters ``\\mathbf{h}_{i,j}`` can be represented either by providing coefficients `B` and `A` (IIR) or `B` alone (FIR). These coefficients must be given in a `Vector` of `Vector`s.
 
 For example for a `3` by `2` MIMO system (i.e. `size(X,2) == 3` inputs and `size(Y,2) == 2` outputs) `B` must be:
 
@@ -30,7 +30,7 @@ julia> A  = [[1.;1.;1.],[2.;2.;2.],[      3.],[      4.],[      5.],[      6.], 
       #A = [   a11   ,     a12   ,    a13   ,   a21    ,   a22,       a23    , ]
 
 julia> op = MIMOFilt(Float64, (m,n), B, A)
-※  ℝ^(10, 3) -> ℝ^(10, 2) 
+※  ℝ^(10, 3) -> ℝ^(10, 2)
 
 julia> X = randn(m,n); #input signals
 
@@ -160,7 +160,7 @@ codomainType(L::MIMOFilt{T, M}) where {T, M} = T
 
 size(L::MIMOFilt) = L.dim_out, L.dim_in
 
-#TODO find out a way to verify this, 
+#TODO find out a way to verify this,
 # probably for IIR it means zeros inside unit circle
 is_full_row_rank(L::MIMOFilt)    = true
 is_full_column_rank(L::MIMOFilt) = true

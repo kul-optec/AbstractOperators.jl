@@ -6,7 +6,7 @@ export Xcorr
 
 `Xcorr(x::AbstractVector, h::AbstractVector)`
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the cross correlation between `x` and `h`. Uses `xcross`. 
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the cross correlation between `x` and `h`. Uses `xcross`.
 
 """
 struct Xcorr{T,H <:AbstractVector{T}} <: LinearOperator
@@ -15,7 +15,7 @@ struct Xcorr{T,H <:AbstractVector{T}} <: LinearOperator
 end
 
 # Constructors
-function Xcorr(DomainType::Type, DomainDim::NTuple{N,Int},  h::H) where {H<:AbstractVector, N} 
+function Xcorr(DomainType::Type, DomainDim::NTuple{N,Int},  h::H) where {H<:AbstractVector, N}
 	eltype(h) != DomainType && error("eltype(h) is $(eltype(h)), should be $(DomainType)")
 	N != 1 && error("Xcorr treats only SISO, check Filt and MIMOFilt for MIMO")
 	Xcorr{DomainType,H}(DomainDim,h)
@@ -40,7 +40,7 @@ end
 domainType(L::Xcorr{T}) where {T} = T
 codomainType(L::Xcorr{T}) where {T} = T
 
-#TODO find out a way to verify this, 
+#TODO find out a way to verify this,
 is_full_row_rank(L::Xcorr)    = true
 is_full_column_rank(L::Xcorr) = true
 

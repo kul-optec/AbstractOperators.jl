@@ -13,7 +13,7 @@ struct Sech{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Sech(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} 
+function Sech(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
 	Sech{DomainType,N}(DomainDim)
 end
 
@@ -24,8 +24,8 @@ function mul!(y::AbstractArray{T,N}, L::Sech{T,N}, x::AbstractArray{T,N}) where 
 	y .= sech.(x)
 end
 
-function mul!(y::AbstractArray, 
-              J::AdjointOperator{Jacobian{A,TT}}, 
+function mul!(y::AbstractArray,
+              J::AdjointOperator{Jacobian{A,TT}},
               b::AbstractArray) where {T,N, A<: Sech{T,N}, TT <: AbstractArray{T,N}}
     L = J.A
     y .= -conj.( tanh.(L.x) .* sech.(L.x) ).*b

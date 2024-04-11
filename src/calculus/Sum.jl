@@ -22,14 +22,8 @@ end
 Sum(A::AbstractOperator) = A
 
 function Sum(A::Vararg{AbstractOperator})
-  s = size(A[1],1)
-  t = codomainType(A[1])
-  bufC = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-
-  s = size(A[1],2)
-  t = domainType(A[1])
-  bufD = eltype(s) <: Int ? zeros(t,s) : ArrayPartition(zeros.(t,s)...)
-
+  bufC = allocateInCodomain(A[1])
+  bufD = allocateInDomain(A[1])
   return Sum(A, bufC, bufD)
 end
 
@@ -85,17 +79,17 @@ fun_name(S::Sum) =
 length(S.A) == 2 ? fun_name(S.A[1])*"+"*fun_name(S.A[2]) : "Σ"
 
 
-is_linear(L::Sum)        = all(is_linear.(L.A))            
-is_null(L::Sum)          = all(is_null.(L.A))            
-is_diagonal(L::Sum)      = all(is_diagonal.(L.A))        
+is_linear(L::Sum)        = all(is_linear.(L.A))
+is_null(L::Sum)          = all(is_null.(L.A))
+is_diagonal(L::Sum)      = all(is_diagonal.(L.A))
 is_full_row_rank(L::Sum) = any(is_full_row_rank.(L.A))
 is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
 
 diag(L::Sum) = (+).(diag.(L.A)...,)
 
 # utils
-function permute(S::Sum, p::AbstractVector{Int}) 
-  AA = ([permute(A,p) for A in S.A]...,) 
+function permute(S::Sum, p::AbstractVector{Int})
+  AA = ([permute(A,p) for A in S.A]...,)
   return Sum(AA, S.bufC, ArrayPartition(S.bufD.x[p]...))
 end
 

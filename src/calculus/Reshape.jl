@@ -4,9 +4,9 @@ export Reshape
 """
 `Reshape(A::AbstractOperator, dim_out...)`
 
-Shorthand constructor: 
+Shorthand constructor:
 
-`reshape(A, idx...)` 
+`reshape(A, idx...)`
 
 Reshape the codomain dimensions of an `AbstractOperator`.
 
@@ -61,11 +61,11 @@ is_linear(      R::Reshape) = is_linear(R.A)
 is_null(        R::Reshape) = is_null(R.A)
 is_eye(        R::Reshape)  = is_eye(R.A)
 is_diagonal(    R::Reshape) = is_diagonal(R.A)
-is_AcA_diagonal(R::Reshape) = is_AcA_diagonal(R.A) 
+is_AcA_diagonal(R::Reshape) = is_AcA_diagonal(R.A)
 is_AAc_diagonal(R::Reshape) = is_AAc_diagonal(R.A)
 is_orthogonal(  R::Reshape) = is_orthogonal(  R.A)
 is_invertible(  R::Reshape) = is_invertible(R.A)
-is_full_row_rank(  R::Reshape)    = is_full_row_rank(     R.A)   
+is_full_row_rank(  R::Reshape)    = is_full_row_rank(     R.A)
 is_full_column_rank(  R::Reshape) = is_full_column_rank(  R.A)
 
 fun_name(R::Reshape) = "¶"*fun_name(R.A)
@@ -73,5 +73,5 @@ remove_displacement(R::Reshape) = Reshape(remove_displacement(R.A), R.dim_out)
 
 function permute(T::Reshape{N,L}, p::AbstractVector{Int}) where {N,L}
     A = AbstractOperators.permute(T.A,p)
-    return Reshape(A,T.dim_out) 
+    return Reshape(A,T.dim_out)
 end

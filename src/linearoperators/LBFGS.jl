@@ -27,10 +27,10 @@ mutable struct LBFGS{R, T <: AbstractArray, M, I <: Integer} <: LinearOperator
   curridx::I
   s::T
   y::T
-  s_M::Array{T, 1}
-  y_M::Array{T, 1}
-  ys_M::Array{R, 1}
-  alphas::Array{R, 1}
+  s_M::AbstractArray{T, 1}
+  y_M::AbstractArray{T, 1}
+  ys_M::AbstractArray{R, 1}
+  alphas::AbstractArray{R, 1}
   H::R
 end
 
@@ -42,8 +42,10 @@ function LBFGS(x::T, M::I) where {T <: AbstractArray, I <: Integer}
   s = zero(x)
   y = zero(x)
   R = real(eltype(x))
-  ys_M = zeros(R, M)
-  alphas = zeros(R, M)
+  ys_M = similar(x, R, M)
+  fill!(ys_M, one(R))
+  alphas = similar(x, R, M)
+  fill!(alphas, one(R))
   LBFGS{R, T, M, I}(0, 0, s, y, s_M, y_M, ys_M, alphas, one(R))
 end
 

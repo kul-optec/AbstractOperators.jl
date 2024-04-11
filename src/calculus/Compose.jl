@@ -3,9 +3,9 @@ export Compose
 """
 `Compose(A::AbstractOperator,B::AbstractOperator)`
 
-Shorthand constructor: 
+Shorthand constructor:
 
-`A*B` 
+`A*B`
 
 Compose different `AbstractOperator`s. Notice that the domain and codomain of the operators `A` and `B` must match, i.e. `size(A,2) == size(B,1)` and `domainType(A) == codomainType(B)`.
 
@@ -28,19 +28,22 @@ end
 
 function Compose(L1::AbstractOperator, L2::AbstractOperator)
 	if size(L1,2) != size(L2,1)
-		throw(DimensionMismatch("cannot compose operators"))
+		throw(DimensionMismatch("cannot compose operators with different domain and codomain sizes"))
 	end
 	if domainType(L1) != codomainType(L2)
-		throw(DomainError())
+		throw(DomainError((domainType(L1),codomainType(L2)), "cannot compose operators with different domain and codomain types"))
 	end
-	Compose( L1, L2, Array{domainType(L1)}(undef,size(L2,1)) )
+    if domainStorageType(L1) != codomainStorageType(L2)
+        throw(DomainError((domainStorageType(L1),codomainStorageType(L2)), "cannot compose operators with different input and output storage types"))
+    end
+	Compose(L1, L2, allocateInCodomain(L2))
 end
 
 Compose(L1::AbstractOperator,L2::AbstractOperator,buf::AbstractArray) =
-Compose( (L2,L1), (buf,))
+Compose((L2,L1), (buf,))
 
 Compose(L1::Compose,       L2::AbstractOperator,buf::AbstractArray) =
-Compose( (L2,L1.A...), (buf,L1.buf...))
+Compose((L2,L1.A...), (buf,L1.buf...))
 
 Compose(L1::AbstractOperator,L2::Compose,       buf::AbstractArray) =
 Compose((L2.A...,L1), (L2.buf...,buf))

@@ -9,7 +9,7 @@ Creates a `LinearOperator` which, when multiplied with a complex array `x`, retu
 
 ```julia
 julia> A = IRDFT(Complex{Float64},(10,),19)
-ℱ⁻¹  ℂ^10 -> ℝ^19 
+ℱ⁻¹  ℂ^10 -> ℝ^19
 
 julia> A = IRDFT((5,10,8),19,2)
 ℱ⁻¹  ℂ^(5, 10, 8) -> ℝ^(5, 19, 8)
@@ -23,7 +23,7 @@ struct IRDFT{T <:Number,
 	     T1<:AbstractFFTs.Plan,
 	     T2<:AbstractFFTs.Plan,
 	     T3<:NTuple{N,Any}
-	     } <: LinearOperator 
+	     } <: LinearOperator
 	dim_in::NTuple{N,Int}
 	dim_out::NTuple{N,Int}
 	A::T1
@@ -35,7 +35,7 @@ end
 #standard constructor
 
 function IRDFT(x::AbstractArray{Complex{T},N}, d::Int, dims::Int=1) where {T<:Number,N}
-	A = plan_irfft(x,d,dims) 
+	A = plan_irfft(x,d,dims)
 	dim_in = size(x)
 	dim_out = ()
 	idx = ()
@@ -43,7 +43,7 @@ function IRDFT(x::AbstractArray{Complex{T},N}, d::Int, dims::Int=1) where {T<:Nu
 		dim_out = i == dims ? (dim_out...,               d) : (dim_out...,dim_in[i]   )
         idx     = i == dims ? (idx...    , 2:ceil(Int,d/2)) : (idx...    ,Colon()     )
 	end
-	At = plan_rfft(zeros(dim_out),dims)
+	At = plan_rfft(similar(x, T, dim_out),dims)
 	IRDFT{T,N,dims,typeof(A),typeof(At),typeof(idx)}(dim_in,dim_out,A,At,idx)
 end
 
@@ -63,7 +63,7 @@ function mul!(y::C2,
               L::AdjointOperator{IRDFT{T,N,D,T1,T2,T3}},
               b::C1) where {N,T,D,T1,T2,T3,C1<:AbstractArray{T,N},
 				 C2<:AbstractArray{Complex{T},N}}
-	
+
     A = L.A
 	mul!(y,A.At,b)
 	y ./= size(b,D)

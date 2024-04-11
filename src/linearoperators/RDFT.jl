@@ -7,7 +7,7 @@ export RDFT
 
 `RDFT(x::AbstractArray [,dims=1])`
 
-Creates a `LinearOperator` which, when multiplied with a real array `x`, returns the DFT over the dimension `dims`, exploiting Hermitian symmetry. 
+Creates a `LinearOperator` which, when multiplied with a real array `x`, returns the DFT over the dimension `dims`, exploiting Hermitian symmetry.
 
 ```julia
 julia> RDFT(Float64,(10,10))
@@ -24,7 +24,7 @@ struct RDFT{T <:Number,
 	       T1<:AbstractFFTs.Plan,
 	       T2<:AbstractFFTs.Plan,
 	       T3<:AbstractArray{Complex{T},N}
-	      } <: LinearOperator 
+	      } <: LinearOperator
 	dim_in::NTuple{N,Int}
 	dim_out::NTuple{N,Int}
 	A::T1
@@ -39,9 +39,9 @@ end
 #standard constructor
 
 function RDFT(x::AbstractArray{T,N}, dims::Int=1) where {T<:Real,N}
-	A = plan_rfft(x,dims) 
-	b2 = zeros(complex(T),size(x))
-	y2 = zeros(complex(T),size(x))
+	A = plan_rfft(x,dims)
+	b2 = similar(x,complex(T),size(x))
+	y2 = similar(x,complex(T),size(x))
 	At = plan_bfft(y2,dims)
 	dim_in = size(x)
 	dim_out = ()
