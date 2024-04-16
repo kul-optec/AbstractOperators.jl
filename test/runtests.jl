@@ -1,5 +1,5 @@
 using AbstractOperators
-using LinearAlgebra, FFTW, DSP, SparseArrays, RecursiveArrayTools
+using LinearAlgebra, FFTW, DSP, SparseArrays, RecursiveArrayTools, CUDA
 using Printf
 using Random
 using Test

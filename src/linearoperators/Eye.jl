@@ -1,5 +1,7 @@
 export Eye
 
+abstract type AbstractEye{T,N,S<:AbstractArray} <: LinearOperator end
+
 """
 `Eye([domainType=Float64::Type,] dim_in::Tuple)`
 
@@ -20,42 +22,50 @@ true
 ```
 
 """
-struct Eye{T, N} <: LinearOperator
-	dim::NTuple{N, Integer}
+struct Eye{T,N,S<:AbstractArray{T,N}} <: AbstractEye{T,N,S}
+    dim::NTuple{N,Integer}
 end
 
 # Constructors
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
-Eye(DomainType::Type, DomainDim::NTuple{N,Int}) where {N} = Eye{DomainType,N}(DomainDim)
+function Eye(
+    domainType::Type{T}, domainDim::NTuple{N,Int}, storageType::Type{S}=Array{T,N}
+) where {N,T,S<:AbstractArray{T,N}}
+    return Eye{domainType,N,storageType}(domainDim)
+end
 ###
 
-Eye(t::Type, dims::Vararg{Integer}) = Eye(t,dims)
-Eye(dims::NTuple{N, Integer}) where {N} = Eye(Float64,dims)
-Eye(dims::Vararg{Integer}) = Eye(Float64,dims)
-Eye(x::A) where {A <: AbstractArray} = Eye(eltype(x), size(x))
+Eye(t::Type, dims::Vararg{Integer}) = Eye(t, dims)
+Eye(dims::NTuple{N,Integer}) where {N} = Eye(Float64, dims)
+Eye(dims::Vararg{Integer}) = Eye(Float64, dims)
+Eye(x::A) where {A<:AbstractArray} = Eye(eltype(x), size(x), typeof(x))
 
 # Mappings
 
-mul!(y::AbstractArray{T, N}, L::Eye{T, N}, b::AbstractArray{T, N}) where {T, N} = y .= b
-mul!(y::AbstractArray{T, N}, L::AdjointOperator{Eye{T, N}}, b::AbstractArray{T, N}) where {T, N} = mul!(y, L.A, b)
+mul!(y::AbstractArray{T,N}, ::AbstractEye{T,N}, b::AbstractArray{T,N}) where {T,N} = y .= b
+mul!(
+    y::AbstractArray{T,N}, ::AdjointOperator{E}, b::AbstractArray{T,N}
+) where {T,N,E<:AbstractEye{T,N}} = y .= b
 
 # Properties
-diag(L::Eye) = 1.
-diag_AcA(L::Eye) = 1.
-diag_AAc(L::Eye) = 1.
+diag(::AbstractEye) = 1.0
+diag_AcA(::AbstractEye) = 1.0
+diag_AAc(::AbstractEye) = 1.0
 
-domainType(L::Eye{T, N}) where {T, N} = T
-codomainType(L::Eye{T, N}) where {T, N} = T
+domainType(::AbstractEye{T,N}) where {T,N} = T
+codomainType(::AbstractEye{T,N}) where {T,N} = T
+domainStorageType(::AbstractEye{T,N,S}) where {T,N,S} = S
+codomainStorageType(::AbstractEye{T,N,S}) where {T,N,S} = S
 
-size(L::Eye) = (L.dim, L.dim)
+size(L::AbstractEye) = (L.dim, L.dim)
 
-fun_name(L::Eye) = "I"
+fun_name(::AbstractEye) = "I"
 
-is_eye(L::Eye) = true
-is_diagonal(L::Eye) = true
-is_AcA_diagonal(L::Eye) = true
-is_AAc_diagonal(L::Eye) = true
-is_orthogonal(L::Eye) = true
-is_invertible(L::Eye) = true
-is_full_row_rank(L::Eye) = true
-is_full_column_rank(L::Eye) = true
+is_eye(::AbstractEye) = true
+is_diagonal(::AbstractEye) = true
+is_AcA_diagonal(::AbstractEye) = true
+is_AAc_diagonal(::AbstractEye) = true
+is_orthogonal(::AbstractEye) = true
+is_invertible(::AbstractEye) = true
+is_full_row_rank(::AbstractEye) = true
+is_full_column_rank(::AbstractEye) = true

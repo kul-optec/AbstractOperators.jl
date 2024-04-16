@@ -10,8 +10,23 @@ y2 = conv(x1,h)
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
+z1 = op' * y1;
+z2 = xcorr(y1, h)[size(op.h,1)[1]:end-length(op.h)+1];
+@test all(norm.(z1 .- z2) .<= 1e-12)
+
 # other constructors
 op = Conv(x1,h)
+
+# CUDA
+if CUDA.functional()
+    cu_h = CuArray(h)
+    cu_op = Conv(Float64,(n,),cu_h)
+    cu_x1 = CuArray(x1)
+    cu_y1 = cu_op * cu_x1
+    @test all(norm.(y1 .- Array(cu_y1)) .<= 1e-12)
+    cu_z1 = cu_op' * cu_y1
+    @test all(norm.(z1 .- Array(cu_z1)) .<= 1e-12)
+end
 
 #properties
 @test is_linear(op)           == true

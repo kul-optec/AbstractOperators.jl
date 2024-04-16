@@ -107,6 +107,9 @@ allocate(::Type{T}, dims...) where {T <: AbstractArray} = T(undef, dims...)
 allocate(::Type{ArrayPartition{T,S}}, dims...) where {T,S} =
     ArrayPartition([allocate(s, d...) for (s,d) in zip(S.parameters, dims)]...)
 
+storageTypeDisplayString(::Type{T}) where {T <: AbstractArray} = ""
+storageDisplayString(L::AbstractOperator) = storageTypeDisplayString(codomainStorageType(L))
+
 """
 `size(A::AbstractOperator, [dom,])`
 
@@ -370,7 +373,7 @@ end
 
 #printing
 function Base.show(io::IO, L::AbstractOperator)
-	print(io, fun_name(L)*" "*fun_space(L))
+	print(io, fun_name(L)*storageDisplayString(L)*" "*fun_space(L))
 end
 
 function fun_space(L::AbstractOperator)

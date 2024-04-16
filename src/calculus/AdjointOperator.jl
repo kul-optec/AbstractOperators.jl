@@ -35,6 +35,8 @@ size(L::AdjointOperator) = size(L.A,2), size(L.A,1)
 
 domainType(L::AdjointOperator) = codomainType(L.A)
 codomainType(L::AdjointOperator) = domainType(L.A)
+domainStorageType(L::AdjointOperator) = codomainStorageType(L.A)
+codomainStorageType(L::AdjointOperator) = domainStorageType(L.A)
 
 fun_name(L::AdjointOperator)  = fun_name(L.A)*"ᵃ"
 
