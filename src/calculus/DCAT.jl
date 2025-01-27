@@ -1,7 +1,7 @@
 export DCAT
 
 """
-`DCAT(A::AbstractOperator...)`
+	DCAT(A::AbstractOperator...)
 
 Block-diagonally concatenate `AbstractOperator`s.
 
@@ -18,19 +18,19 @@ To evaluate `DCAT` operators multiply them with a `Tuple` of `AbstractArray` of 
 ```julia
 julia> D*ArrayPartition(ones(2),ones(2),ones(3))
 ([2.0, 2.0], Complex{Float64}[3.0+0.0im, 0.0+0.0im, 0.0+0.0im])
-
+	
 ```
-
 """
-struct DCAT{N,
-	    L  <: NTuple{N,AbstractOperator},
-	    P1 <: NTuple{N,Union{Int,Tuple}},
-	    P2 <: NTuple{N,Union{Int,Tuple}}
-	    } <: AbstractOperator
+struct DCAT{
+	N,
+	L<:NTuple{N,AbstractOperator},
+	P1<:NTuple{N,Union{Int,Tuple}},
+	P2<:NTuple{N,Union{Int,Tuple}},
+} <: AbstractOperator
 	A::L
 	idxD::P1
 	idxC::P2
-	DCAT(A::L, idxD::P1, idxC::P2) where {L, P1, P2} = new{length(A), L, P1, P2}(A,idxD,idxC)
+	DCAT(A::L, idxD::P1, idxC::P2) where {L,P1,P2} = new{length(A),L,P1,P2}(A, idxD, idxC)
 end
 
 # Constructors
@@ -39,17 +39,17 @@ DCAT(A::AbstractOperator) = A
 function DCAT(A::Vararg{AbstractOperator})
 
 	# build H.idxs
-	idxD,idxC = (),()
-	for d in (1,2)
+	idxD, idxC = (), ()
+	for d in (1, 2)
 		idxs = []
 		K = 0
-		for i in eachindex(ndoms.(A,d))
-			if ndoms(A[i],d) == 1 # flatten operator
+		for i in eachindex(ndoms.(A, d))
+			if ndoms(A[i], d) == 1 # flatten operator
 				K += 1
-				push!(idxs,K)
+				push!(idxs, K)
 			else                   # stacked operator
-				idxs = push!(idxs,(collect(K+1:K+ndoms(A[i],d))...,) )
-				for ii = 1:ndoms(A[i],d)
+				idxs = push!(idxs, (collect((K + 1):(K + ndoms(A[i], d)))...,))
+				for ii in 1:ndoms(A[i], d)
 					K += 1
 				end
 			end
@@ -57,117 +57,114 @@ function DCAT(A::Vararg{AbstractOperator})
 		d == 1 ? (idxC = (idxs...,)) : (idxD = (idxs...,))
 	end
 
-	return DCAT(A,idxD,idxC)
-
+	return DCAT(A, idxD, idxC)
 end
 
 # Mappings
-@generated function mul!(yy::ArrayPartition,
-                         H::DCAT{N,L,P1,P2},
-                         bb::ArrayPartition) where {N,L,P1,P2}
+@generated function mul!(
+	yy::ArrayPartition, H::DCAT{N,L,P1,P2}, bb::ArrayPartition
+) where {N,L,P1,P2}
 
-  # extract stuff
-	ex = :(y = yy.x; b = bb.x )
+	# extract stuff
+	ex = :(y = yy.x; b = bb.x)
 
-	for i = 1:N
-
-		if fieldtype(P2,i) <: Int
-		# flatten operator
-		# build mul!(y[H.idxC[i]], H.A[i], b)
+	for i in 1:N
+		if fieldtype(P2, i) <: Int
+			# flatten operator
+			# build mul!(y[H.idxC[i]], H.A[i], b)
 			yy = :(y[H.idxC[$i]])
 		else
-		# stacked operator
-		# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
-        yy =  [ :(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
-        yy = :( ArrayPartition( $(yy...) ) )
+			# stacked operator
+			# build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
+			yy = [:(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2, i)))]
+			yy = :(ArrayPartition($(yy...)))
 		end
 
-		if fieldtype(P1,i) <: Int
-		# flatten operator
-		# build mul!(H.buf, H.A[i], b[H.idxD[i]])
+		if fieldtype(P1, i) <: Int
+			# flatten operator
+			# build mul!(H.buf, H.A[i], b[H.idxD[i]])
 			bb = :(b[H.idxD[$i]])
 		else
-		# stacked operator
-		# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
-        bb = [ :(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i))) ]
-        bb = :( ArrayPartition( $(bb...) ) )
+			# stacked operator
+			# build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
+			bb = [:(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1, i)))]
+			bb = :(ArrayPartition($(bb...)))
 		end
 
-		ex = :($ex; mul!($yy,H.A[$i],$bb))
-
+		ex = :($ex; mul!($yy, H.A[$i], $bb))
 	end
 	ex = :($ex; return y)
 	return ex
-
 end
 
-@generated function mul!(yy::ArrayPartition,
-                         A::AdjointOperator{DCAT{N,L,P1,P2}},
-                         bb::ArrayPartition) where {N,L,P1,P2}
+@generated function mul!(
+	yy::ArrayPartition, A::AdjointOperator{DCAT{N,L,P1,P2}}, bb::ArrayPartition
+) where {N,L,P1,P2}
 
-  # extract stuff
-	ex = :(H = A.A; y = yy.x; b = bb.x )
+	# extract stuff
+	ex = :(H = A.A; y = yy.x; b = bb.x)
 
-	for i = 1:N
-
-		if fieldtype(P1,i) <: Int
-		# flatten operator
-		# build mul!(y[H.idxD[i]], H.A[i]', b)
+	for i in 1:N
+		if fieldtype(P1, i) <: Int
+			# flatten operator
+			# build mul!(y[H.idxD[i]], H.A[i]', b)
 			yy = :(y[H.idxD[$i]])
 		else
-		# stacked operator
-		# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
-        yy = [ :(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1,i)))]
-        yy = :( ArrayPartition( $(yy...) ))
+			# stacked operator
+			# build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
+			yy = [:(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1, i)))]
+			yy = :(ArrayPartition($(yy...)))
 		end
 
-		if fieldtype(P2,i) <: Int
-		# flatten operator
-		# build mul!(H.buf, H.A[i]', b[H.idxC[i]])
+		if fieldtype(P2, i) <: Int
+			# flatten operator
+			# build mul!(H.buf, H.A[i]', b[H.idxC[i]])
 			bb = :(b[H.idxC[$i]])
 		else
-		# stacked operator
-		# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
-        bb = [ :(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2,i)))]
-        bb = :( ArrayPartition( $(bb...) ) )
+			# stacked operator
+			# build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
+			bb = [:(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2, i)))]
+			bb = :(ArrayPartition($(bb...)))
 		end
 
-		ex = :($ex; mul!($yy,H.A[$i]',$bb))
-
+		ex = :($ex; mul!($yy, H.A[$i]', $bb))
 	end
 	ex = :($ex; return y)
 	return ex
-
 end
 
 # Properties
-size(H::DCAT) = size(H,1),size(H,2)
+size(H::DCAT) = size(H, 1), size(H, 2)
 
 function size(H::DCAT, i::Int)
-
 	sz = []
-	for s in size.(H.A,i)
-		eltype(s) <: Int ? push!(sz,s) : push!(sz,s...)
+	for s in size.(H.A, i)
+		eltype(s) <: Int ? push!(sz, s) : push!(sz, s...)
 	end
-	p = vcat([[idx... ] for idx in (i == 1 ? H.idxC : H.idxD) ]...)
-	invpermute!(sz,p)
+	p = vcat([[idx...] for idx in (i == 1 ? H.idxC : H.idxD)]...)
+	invpermute!(sz, p)
 
-	(sz...,)
+	return (sz...,)
 end
 
-fun_name(L::DCAT) = length(L.A) == 2 ? "["*fun_name(L.A[1])*",0;0,"*fun_name(L.A[2])*"]" :
-"DCAT"
+function fun_name(L::DCAT)
+	return if length(L.A) == 2
+		"[" * fun_name(L.A[1]) * ",0;0," * fun_name(L.A[2]) * "]"
+	else
+		"DCAT"
+	end
+end
 
 function domainType(H::DCAT)
-	domain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in domainType.(H.A)]...)
-	p = vcat([[idx... ] for idx in H.idxD]...)
-	invpermute!(domain,p)
+	domain = vcat([typeof(d) <: Tuple ? [d...] : d for d in domainType.(H.A)]...)
+	p = vcat([[idx...] for idx in H.idxD]...)
+	invpermute!(domain, p)
 	return (domain...,)
 end
 function codomainType(H::DCAT)
-	codomain = vcat([typeof(d)<:Tuple ? [d...] : d  for d in codomainType.(H.A)]...)
-	p = vcat([[idx... ] for idx in H.idxC]...)
-	invpermute!(codomain,p)
+	codomain = vcat([typeof(d) <: Tuple ? [d...] : d for d in codomainType.(H.A)]...)
+	p = vcat([[idx...] for idx in H.idxC]...)
+	invpermute!(codomain, p)
 	return (codomain...,)
 end
 
@@ -183,19 +180,19 @@ is_full_column_rank(L::DCAT) = all(is_full_column_rank.(L.A))
 
 # utils
 function permute(H::DCAT{N,L,P1,P2}, p::AbstractVector{Int}) where {N,L,P1,P2}
-
-
-	unfolded = vcat([[idx... ] for idx in H.idxD]...)
-	invpermute!(unfolded,p)
+	unfolded = vcat([[idx...] for idx in H.idxD]...)
+	invpermute!(unfolded, p)
 
 	new_part = ()
 	cnt = 0
 	for z in length.(H.idxD)
-		new_part = (new_part..., z == 1 ? unfolded[cnt+1] : (unfolded[cnt+1:z+cnt]...,))
+		new_part = (
+			new_part..., z == 1 ? unfolded[cnt + 1] : (unfolded[(cnt + 1):(z + cnt)]...,)
+		)
 		cnt += z
 	end
 
-	DCAT(H.A,new_part,H.idxC)
+	return DCAT(H.A, new_part, H.idxC)
 end
 
 remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC)
@@ -203,6 +200,6 @@ remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC)
 # special cases
 # Eye constructor
 Eye(x::ArrayPartition) = DCAT(Eye.(x.x)...)
-diag(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
-diag_AAc(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
-diag_AcA(L::DCAT{N,NTuple{N,E}}) where {N, E <: Eye} = 1.
+diag(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
+diag_AAc(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
+diag_AcA(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0

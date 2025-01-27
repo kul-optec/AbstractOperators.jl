@@ -1,19 +1,17 @@
 module AbstractOperators
 
-using LinearAlgebra, AbstractFFTs, DSP, FFTW, RecursiveArrayTools
+using LinearAlgebra, DSP, FFTW, RecursiveArrayTools
 
-
-const RealOrComplex{R} = Union{R, Complex{R}}
+const RealOrComplex{R} = Union{R,Complex{R}}
 abstract type AbstractOperator end
 
-abstract type LinearOperator    <: AbstractOperator end
+abstract type LinearOperator <: AbstractOperator end
 abstract type NonLinearOperator <: AbstractOperator end
 
 import LinearAlgebra: mul!
+import Base: size, ndims
 
-export LinearOperator,
-       NonLinearOperator,
-       AbstractOperator
+export LinearOperator, NonLinearOperator, AbstractOperator
 export mul!
 
 # Predicates and properties

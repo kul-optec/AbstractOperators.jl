@@ -3,9 +3,8 @@ export Eye
 abstract type AbstractEye{T,N,S<:AbstractArray} <: LinearOperator end
 
 """
-`Eye([domainType=Float64::Type,] dim_in::Tuple)`
-
-`Eye([domainType=Float64::Type,] dims...)`
+	Eye([domainType=Float64::Type,] dim_in::Tuple)
+	Eye([domainType=Float64::Type,] dims...)
 
 Create the identity operator.
 
@@ -18,20 +17,19 @@ I  ℝ^(2, 3, 4) -> ℝ^(2, 3, 4)
 
 julia> op*ones(2,3,4) == ones(2,3,4)
 true
-
+	
 ```
-
 """
 struct Eye{T,N,S<:AbstractArray{T,N}} <: AbstractEye{T,N,S}
-    dim::NTuple{N,Integer}
+	dim::NTuple{N,Integer}
 end
 
 # Constructors
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
 function Eye(
-    domainType::Type{T}, domainDim::NTuple{N,Int}, storageType::Type{S}=Array{T,N}
+	domainType::Type{T}, domainDim::NTuple{N,Int}, storageType::Type{S}=Array{T,N}
 ) where {N,T,S<:AbstractArray{T,N}}
-    return Eye{domainType,N,storageType}(domainDim)
+	return Eye{domainType,N,storageType}(domainDim)
 end
 ###
 
@@ -43,9 +41,11 @@ Eye(x::A) where {A<:AbstractArray} = Eye(eltype(x), size(x), typeof(x))
 # Mappings
 
 mul!(y::AbstractArray{T,N}, ::AbstractEye{T,N}, b::AbstractArray{T,N}) where {T,N} = y .= b
-mul!(
-    y::AbstractArray{T,N}, ::AdjointOperator{E}, b::AbstractArray{T,N}
-) where {T,N,E<:AbstractEye{T,N}} = y .= b
+function mul!(
+	y::AbstractArray{T,N}, ::AdjointOperator{E}, b::AbstractArray{T,N}
+) where {T,N,E<:AbstractEye{T,N}}
+	return y .= b
+end
 
 # Properties
 diag(::AbstractEye) = 1.0
@@ -54,8 +54,8 @@ diag_AAc(::AbstractEye) = 1.0
 
 domainType(::AbstractEye{T,N}) where {T,N} = T
 codomainType(::AbstractEye{T,N}) where {T,N} = T
-domainStorageType(::AbstractEye{T,N,S}) where {T,N,S} = S
-codomainStorageType(::AbstractEye{T,N,S}) where {T,N,S} = S
+domain_storage_type(::AbstractEye{T,N,S}) where {T,N,S} = S
+codomain_storage_type(::AbstractEye{T,N,S}) where {T,N,S} = S
 
 size(L::AbstractEye) = (L.dim, L.dim)
 

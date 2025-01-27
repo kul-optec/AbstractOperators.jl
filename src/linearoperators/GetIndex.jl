@@ -1,9 +1,8 @@
 export GetIndex
 
 """
-`GetIndex([domainType=Float64::Type,] dim_in::Tuple, idx...)`
-
-`GetIndex(x::AbstractArray, idx::Tuple)`
+	GetIndex([domainType=Float64::Type,] dim_in::Tuple, idx...)
+	GetIndex(x::AbstractArray, idx::Tuple)
 
 Creates a `LinearOperator` which, when multiplied with `x`, returns `x[idx]`.
 
@@ -21,9 +20,8 @@ julia> G*x
 
 julia> GetIndex(randn(10,20,30),(1:2,1:4))
 ↓  ℝ^(10, 20, 30) -> ℝ^(2, 4)
-
+	
 ```
-
 """
 struct GetIndex{N,M,T<:Tuple} <: LinearOperator
 	domainType::Type
@@ -34,45 +32,49 @@ end
 
 # Constructors
 # default
-function GetIndex(domainType::Type,dim_in::NTuple{M,Int},idx::T) where {M,T<:Tuple}
+function GetIndex(domainType::Type, dim_in::NTuple{M,Int}, idx::T) where {M,T<:Tuple}
 	length(idx) > M && error("cannot slice object of dimension $dim_in with $idx")
-	dim_out = get_dim_out(dim_in,idx...)
+	dim_out = get_dim_out(dim_in, idx...)
 	if dim_out == dim_in
-		return Eye(domainType,dim_in)
+		return Eye(domainType, dim_in)
 	else
-		return GetIndex{length(dim_out),M,T}(domainType,dim_out,dim_in,idx)
+		return GetIndex{length(dim_out),M,T}(domainType, dim_out, dim_in, idx)
 	end
 end
 
-GetIndex(domainType::Type,dim_in::Tuple, idx...) = GetIndex(domainType, dim_in, idx)
+GetIndex(domainType::Type, dim_in::Tuple, idx...) = GetIndex(domainType, dim_in, idx)
 GetIndex(dim_in::Tuple, idx...) = GetIndex(Float64, dim_in, idx)
 GetIndex(dim_in::Tuple, idx::Tuple) = GetIndex(Float64, dim_in, idx)
 GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
 
 # Mappings
 
-function mul!(y::AbstractArray{T1,N}, L::GetIndex{N,M,T2}, b::AbstractArray{T1,M}) where {T1,N,M,T2}
-	y .= view(b,L.idx...)
+function mul!(
+	y::AbstractArray{T1,N}, L::GetIndex{N,M,T2}, b::AbstractArray{T1,M}
+) where {T1,N,M,T2}
+	return y .= view(b, L.idx...)
 end
 
-function mul!(y::AbstractArray{T1,M}, L::AdjointOperator{GetIndex{N,M,T2}}, b::AbstractArray{T1,N}) where {T1,N,M,T2}
-	fill!(y, 0.)
-	setindex!(y, b, L.A.idx...)
+function mul!(
+	y::AbstractArray{T1,M}, L::AdjointOperator{GetIndex{N,M,T2}}, b::AbstractArray{T1,N}
+) where {T1,N,M,T2}
+	fill!(y, 0.0)
+	return setindex!(y, b, L.A.idx...)
 end
 
 # Properties
-diag_AAc(L::GetIndex) = 1.
+diag_AAc(L::GetIndex) = 1.0
 
 domainType(L::GetIndex) = L.domainType
 codomainType(L::GetIndex) = L.domainType
 
-size(L::GetIndex) = (L.dim_out,L.dim_in)
+size(L::GetIndex) = (L.dim_out, L.dim_in)
 
 fun_name(L::GetIndex) = "↓"
 
-is_AAc_diagonal(L::GetIndex)   = true
-is_full_row_rank(L::GetIndex)  = true
-is_sliced(L::GetIndex)   = true
+is_AAc_diagonal(L::GetIndex) = true
+is_full_row_rank(L::GetIndex) = true
+is_sliced(L::GetIndex) = true
 
 # Utils
 
@@ -83,7 +85,7 @@ function get_dim_out(dim, args...)
 		dim2 = ()
 		for i in eachindex(args)
 			if args[i] != Colon()
-				!(typeof(args[i]) <: Int) && ( dim2 = (dim2..., length(args[i]) ) )
+				!(typeof(args[i]) <: Int) && (dim2 = (dim2..., length(args[i])))
 			else
 				dim2 = (dim2..., dim[i])
 			end

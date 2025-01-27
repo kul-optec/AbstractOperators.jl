@@ -1,11 +1,9 @@
 export Variation
 
 """
-`Variation([domainType=Float64::Type,] dim_in::Tuple)`
-
-`Variation(dims...)`
-
-`Variation(x::AbstractArray)`
+	Variation([domainType=Float64::Type,] dim_in::Tuple)
+	Variation(dims...)
+	Variation(x::AbstractArray)
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns a matrix with its `i`th column consisting of the vectorized discretized gradient over the `i`th `direction obtained using forward finite differences.
 
@@ -22,9 +20,8 @@ julia> Variation(ones(2,2))*[1. 2.; 1. 2.]
  0.0  1.0
  0.0  1.0
  0.0  1.0
-
+	
 ```
-
 """
 struct Variation{T,N} <: LinearOperator
 	dim_in::NTuple{N,Int}
@@ -34,26 +31,31 @@ end
 #default constructor
 function Variation(domainType::Type, dim_in::NTuple{N,Int}) where {N}
 	N == 1 && error("use FiniteDiff instead!")
-	Variation{domainType,N}(dim_in)
+	return Variation{domainType,N}(dim_in)
 end
 
 Variation(domainType::Type, dim_in::Vararg{Int}) = Variation(domainType, dim_in)
 Variation(dim_in::NTuple{N,Int}) where {N} = Variation(Float64, dim_in)
 Variation(dim_in::Vararg{Int}) = Variation(dim_in)
-Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
+Variation(x::AbstractArray) = Variation(eltype(x), size(x))
 
 # Mappings
 
-@generated function mul!(y::AbstractArray{T,2},
-                         A::Variation{T,N}, b::AbstractArray{T,N}) where {T,N}
+@generated function mul!(
+	y::AbstractArray{T,2}, A::Variation{T,N}, b::AbstractArray{T,N}
+) where {T,N}
 	ex = :()
 
-	for i = 1:N
-		z = zeros(Int,N)
+	for i in 1:N
+		z = zeros(Int, N)
 		z[i] = 1
 		z = (z...,)
-		ex = :($ex; y[cnt,$i] = I[$i] == 1 ? b[I+CartesianIndex($z)]-b[I] :
-		       b[I]-b[I-CartesianIndex($z)])
+		ex = :($ex;
+		y[cnt, $i] = if I[$i] == 1
+			b[I + CartesianIndex($z)] - b[I]
+		else
+			b[I] - b[I - CartesianIndex($z)]
+		end)
 	end
 
 	ex2 = quote
@@ -66,23 +68,34 @@ Variation(x::AbstractArray)  = Variation(eltype(x), size(x))
 	end
 end
 
-@generated function mul!(y::AbstractArray{T,N},
-                              A::AdjointOperator{Variation{T,N}}, b::AbstractArray{T,2}) where {T,N}
+@generated function mul!(
+	y::AbstractArray{T,N}, A::AdjointOperator{Variation{T,N}}, b::AbstractArray{T,2}
+) where {T,N}
+	ex = :(y[I] = if I[1] == 1
+		-(b[cnt, 1] + b[cnt + 1, 1])
+	elseif I[1] == 2
+		b[cnt, 1] + b[cnt - 1, 1] - b[cnt + 1, 1]
+	elseif I[1] == size(y, 1)
+		b[cnt, 1]
+	else
+		b[cnt, 1] - b[cnt + 1, 1]
+	end)
 
-	ex = :(y[I] = I[1] == 1  ? -(b[cnt,1] + b[cnt+1,1]) :
-	              I[1] == 2  ?   b[cnt,1] + b[cnt-1,1] - b[cnt+1,1] :
-	       I[1] == size(y,1) ?   b[cnt,1] : b[cnt,  1] - b[cnt+1,1]
-	       )
-
-	Nx = :(size(y,1))
-	for i = 2:N
+	Nx = :(size(y, 1))
+	for i in 2:N
 		ex = quote
 			$ex
-			y[I] += I[$i] == 1  ? -(b[cnt,$i] + b[cnt+$Nx,$i]) :
-			        I[$i] == 2  ?   b[cnt,$i] + b[cnt-$Nx,$i] - b[cnt+$Nx,$i] :
-			        I[$i] == size(y,$i) ?   b[cnt,$i] : b[cnt,  $i]   - b[cnt+$Nx,$i]
+			y[I] += if I[$i] == 1
+				-(b[cnt, $i] + b[cnt + $Nx, $i])
+			elseif I[$i] == 2
+				b[cnt, $i] + b[cnt - $Nx, $i] - b[cnt + $Nx, $i]
+			elseif I[$i] == size(y, $i)
+				b[cnt, $i]
+			else
+				b[cnt, $i] - b[cnt + $Nx, $i]
+			end
 		end
-		Nx = :($Nx*size(y,$i))
+		Nx = :($Nx * size(y, $i))
 	end
 
 	ex2 = quote
@@ -97,9 +110,9 @@ end
 
 # Properties
 
-  domainType(L::Variation{T,N}) where {T,N} = T
-codomainType(L::Variation{T,N}) where {T,N} = T
+domainType(::Variation{T}) where {T} = T
+codomainType(::Variation{T}) where {T} = T
 
 size(L::Variation{T,N}) where {T,N} = ((prod(L.dim_in), N), L.dim_in)
 
-fun_name(L::Variation)  = "Ʋ"
+fun_name(L::Variation) = "Ʋ"

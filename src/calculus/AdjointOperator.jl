@@ -1,11 +1,11 @@
 export AdjointOperator
 
 """
-`AdjointOperator(A::AbstractOperator)`
+	AdjointOperator(A::AbstractOperator)
 
 Shorthand constructor:
 
-`'(A::AbstractOperator)`
+	'(A::AbstractOperator)
 
 Returns the adjoint operator of `A`.
 
@@ -15,13 +15,15 @@ julia> AdjointOperator(DFT(10))
 
 julia> [DFT(10); DCT(10)]'
 [ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10
+	
 ```
 """
-struct AdjointOperator{T <: AbstractOperator} <: AbstractOperator
+struct AdjointOperator{T<:AbstractOperator} <: AbstractOperator
 	A::T
 	function AdjointOperator(A::T) where {T<:AbstractOperator}
-		is_linear(A) == false && error("Cannot transpose a nonlinear operator. You might use `jacobian`")
-		new{T}(A)
+		is_linear(A) == false &&
+			error("Cannot transpose a nonlinear operator. You might use `jacobian`")
+		return new{T}(A)
 	end
 end
 
@@ -31,14 +33,14 @@ AdjointOperator(L::AdjointOperator) = L.A
 
 # Properties
 
-size(L::AdjointOperator) = size(L.A,2), size(L.A,1)
+size(L::AdjointOperator) = size(L.A, 2), size(L.A, 1)
 
 domainType(L::AdjointOperator) = codomainType(L.A)
 codomainType(L::AdjointOperator) = domainType(L.A)
-domainStorageType(L::AdjointOperator) = codomainStorageType(L.A)
-codomainStorageType(L::AdjointOperator) = domainStorageType(L.A)
+domain_storage_type(L::AdjointOperator) = codomain_storage_type(L.A)
+codomain_storage_type(L::AdjointOperator) = domain_storage_type(L.A)
 
-fun_name(L::AdjointOperator)  = fun_name(L.A)*"ᵃ"
+fun_name(L::AdjointOperator) = fun_name(L.A) * "ᵃ"
 
 is_linear(L::AdjointOperator) = is_linear(L.A)
 is_null(L::AdjointOperator) = is_null(L.A)
