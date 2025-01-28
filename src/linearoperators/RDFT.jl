@@ -7,7 +7,7 @@ export RDFT
 
 Creates a `LinearOperator` which, when multiplied with a real array `x`, returns the DFT over the dimension `dims`, exploiting Hermitian symmetry.
 
-```julia
+```jldoctest
 julia> RDFT(Float64,(10,10))
 ℱ  ℝ^(10, 10) -> ℂ^(6, 10)
 

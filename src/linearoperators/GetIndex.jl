@@ -6,14 +6,14 @@ export GetIndex
 
 Creates a `LinearOperator` which, when multiplied with `x`, returns `x[idx]`.
 
-```julia
-julia> x = collect(linspace(1,10,10));
+```jldoctest
+julia> x = collect(range(1,stop=10,length=10));
 
 julia> G = GetIndex(Float64,(10,), 1:3)
 ↓  ℝ^10 -> ℝ^3
 
 julia> G*x
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  1.0
  2.0
  3.0

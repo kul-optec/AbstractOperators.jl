@@ -9,7 +9,7 @@ abstract type FourierTransform{N,C,D,T1,T2} <: LinearOperator end
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Fourier Transform over dimensions `dims` of `x`.
 
-```julia
+```jldoctest
 julia> DFT(Complex{Float64},(10,10))
 ℱ  ℂ^(10, 10) -> ℂ^(10, 10)
 
@@ -20,10 +20,10 @@ julia> A = DFT(ones(3))
 ℱ  ℝ^3 -> ℂ^3
 
 julia> A*ones(3)
-3-element Array{Complex{Float64},1}:
- 3.0+0.0im
- 0.0+0.0im
- 0.0+0.0im
+3-element Vector{ComplexF64}:
+ 3.0 + 0.0im
+ 0.0 + 0.0im
+ 0.0 + 0.0im
 ```
 """
 struct DFT{
@@ -41,21 +41,21 @@ end
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Fourier Transform over dimensions `dims` of `x`.
 
-```julia
+```jldoctest
 julia> IDFT(Complex{Float64},(10,10))
 ℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10)
 
 julia> IDFT(10,10)
-ℱ⁻¹ ℝ^(10, 10) -> ℂ^(10, 10)
+ℱ⁻¹  ℝ^(10, 10) -> ℂ^(10, 10)
 
 julia> A = IDFT(ones(3))
 ℱ⁻¹  ℝ^3 -> ℂ^3
 
 julia> A*ones(3)
-3-element Array{Complex{Float64},1}:
- 1.0+0.0im
- 0.0+0.0im
- 0.0+0.0im
+3-element Vector{ComplexF64}:
+ 1.0 + 0.0im
+ 0.0 + 0.0im
+ 0.0 + 0.0im
 	
 ```
 """

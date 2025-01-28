@@ -48,6 +48,8 @@ Variation
 
 ```@docs
 LBFGS
+reset!
+update!
 ```
 
 # Nonlinear operators

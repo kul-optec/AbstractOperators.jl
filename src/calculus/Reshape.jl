@@ -9,7 +9,7 @@ Shorthand constructor:
 
 Reshape the codomain dimensions of an `AbstractOperator`.
 
-```julia
+```jldoctest
 julia> A = Reshape(DFT(10),2,5)
 ¶ℱ  ℝ^10 -> ℂ^(2, 5)
 

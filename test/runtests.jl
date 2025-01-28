@@ -3,6 +3,7 @@ using LinearAlgebra, FFTW, DSP, SparseArrays, RecursiveArrayTools, CUDA
 using Printf
 using Random
 using Test
+using Documenter
 using Aqua
 
 include("utils.jl")
@@ -33,6 +34,13 @@ verb = true
 
 	@testset "Syntax shorthands" begin
 		include("test_syntax.jl")
+	end
+
+	@testset "Documentation" begin
+		DocMeta.setdocmeta!(
+			AbstractOperators, :DocTestSetup, :(using AbstractOperators); recursive=true
+		)
+		doctest(AbstractOperators; fix=false)
 	end
 
 	Aqua.test_all(AbstractOperators)

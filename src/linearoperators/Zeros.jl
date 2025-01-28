@@ -7,7 +7,7 @@ Create a `LinearOperator` which, when multiplied with an array `x` of size `dim_
 
 For convenience `Zeros` can be constructed from any `AbstractOperator`.
 
-```julia
+```jldoctest
 julia> Zeros(Eye(10,20))
 0  ℝ^(10, 20) -> ℝ^(10, 20)
 

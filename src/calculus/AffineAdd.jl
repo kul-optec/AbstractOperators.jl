@@ -7,7 +7,7 @@ Affine addition to `AbstractOperator` with an array or scalar `d`.
 
 Use `sign = false` to perform subtraction.
 
-```julia
+```jldoctest
 julia> A = AffineAdd(Sin(3),[1.;2.;3.])
 sin+d  ℝ^3 -> ℝ^3
 

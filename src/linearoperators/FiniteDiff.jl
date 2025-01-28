@@ -8,7 +8,7 @@ export FiniteDiff
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the discretized gradient over the specified `direction` obtained using forward finite differences.
 
-```julia
+```jldoctest
 julia> FiniteDiff(Float64,(3,))
 δx  ℝ^3 -> ℝ^2
 

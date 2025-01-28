@@ -28,12 +28,12 @@ export ndoms,
 
 Returns the type of the domain.
 
-```julia
+```jldoctest
 julia> domainType(DFT(10))
 Float64
 
 julia> domainType(hcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
-(Complex{Float64}, Complex{Float64})
+(ComplexF64, ComplexF64)
 ```
 """
 domainType
@@ -43,12 +43,12 @@ domainType
 
 Returns the type of the codomain.
 
-```julia
+```jldoctest
 julia> codomainType(DFT(10))
-Complex{Float64}
+ComplexF64 (alias for Complex{Float64})
 
 julia> codomainType(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
-(Complex{Float64}, Complex{Float64})
+(ComplexF64, ComplexF64)
 ```
 """
 codomainType
@@ -58,12 +58,12 @@ codomainType
 
 Returns the type of the storage for the domain of the operator.
 
-```julia
+```jldoctest
 julia> domain_storage_type(DFT(10))
-Array{Complex{Float64},1}
+Vector{Float64} (alias for Array{Float64, 1})
 
 julia> domain_storage_type(hcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
-ArrayPartition{Complex{Float64},1,Array{Complex{Float64},1},Array{Complex{Float64},1}}
+RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Vector{ComplexF64}, Vector{ComplexF64}}}
 ```
 """
 function domain_storage_type(L::AbstractOperator)
@@ -81,12 +81,12 @@ end
 
 Returns the type of the storage of for the codomain of the operator.
 
-```julia
+```jldoctest
 julia> codomain_storage_type(DFT(10))
-Array{Complex{Float64},1}
+Vector{ComplexF64} (alias for Array{Complex{Float64}, 1})
 
 julia> codomain_storage_type(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
-ArrayPartition{Complex{Float64},1,Array{Complex{Float64},1},Array{Complex{Float64},1}}
+RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Vector{ComplexF64}, Vector{ComplexF64}}}
 ```
 """
 function codomain_storage_type(L::AbstractOperator)
@@ -141,9 +141,9 @@ count_dims(dims::NTuple) = count_dims.(dims)
 
 Returns the number of codomains and domains  of a `AbstractOperator`. Optionally you can specify the codomain (with `dom = 1`) or the domain (with `dom = 2`)
 
-```julia
-julia > ndoms(DFT(10,10))
-(1,1)
+```jldoctest
+julia> ndoms(DFT(10,10))
+(1, 1)
 
 julia> ndoms(hcat(DFT(10,10),DFT(10,10)))
 (1, 2)
@@ -152,7 +152,7 @@ julia> ndoms(hcat(DFT(10,10),DFT(10,10)),2)
 2
 
 julia> ndoms(DCAT(DFT(10,10),DFT(10,10)))
-(2,2)
+(2, 2)
 ```
 """
 ndoms(L::AbstractOperator) = length.(ndims(L))
@@ -166,7 +166,7 @@ diag_AAc(L::AbstractOperator) = error("is_AcA_diagonal($L) == false")
 
 Test whether `A` is a `LinearOperator`
 
-```julia
+```jldoctest
 julia> is_linear(Eye(2))
 true
 
@@ -183,7 +183,7 @@ is_linear(L::AbstractOperator) = false
 
 Test whether `A` is null.
 
-```julia
+```jldoctest
 julia> is_null(Zeros(Float64,(10,),(10,)))
 true
 
@@ -199,7 +199,7 @@ is_null(L::AbstractOperator) = false
 
 Test whether `A` is an Identity operator
 
-```julia
+```jldoctest
 julia> is_eye(Eye(10))
 true
 
@@ -215,7 +215,7 @@ is_eye(L::AbstractOperator) = false
 
 Test whether `A` is diagonal.
 
-```julia
+```jldoctest
 julia> is_diagonal(Eye(10))
 true
 
@@ -231,7 +231,7 @@ is_diagonal(L::AbstractOperator) = false
 
 Test whether `A'*A` is diagonal.
 
-```julia
+```jldoctest
 julia> is_AcA_diagonal(Eye(10))
 true
 
@@ -247,12 +247,12 @@ is_AcA_diagonal(L::AbstractOperator) = is_diagonal(L)
 
 Test whether `A*A'` is diagonal.
 
-```julia
+```jldoctest
 julia> is_AAc_diagonal(Eye(10))
 true
 
 julia> is_AAc_diagonal(GetIndex((10,),1:3))
-false
+true
 
 ```
 """
@@ -263,7 +263,7 @@ is_AAc_diagonal(L::AbstractOperator) = is_diagonal(L)
 
 Test whether `A` is orthogonal.
 
-```julia
+```jldoctest
 julia> is_orthogonal(DCT(10))
 true
 
@@ -279,7 +279,7 @@ is_orthogonal(L::AbstractOperator) = false
 
 Test whether `A` is easily invertible.
 
-```julia
+```jldoctest
 julia> is_invertible(DFT(10))
 true
 
@@ -295,7 +295,7 @@ is_invertible(L::AbstractOperator) = false
 
 Test whether `A` is easily invertible.
 
-```julia
+```jldoctest
 julia> is_full_row_rank(MatrixOp(randn(3,4)))
 true
 
@@ -310,7 +310,7 @@ is_full_row_rank(L::AbstractOperator) = false
 
 Test whether `A` is easily invertible.
 
-```julia
+```jldoctest
 julia> is_full_column_rank(MatrixOp(randn(4,3)))
 true
 
@@ -325,7 +325,7 @@ is_full_column_rank(L::AbstractOperator) = false
 
 Test whether `A` is a sliced operator.
 
-```julia
+```jldoctest
 julia> is_sliced(GetIndex((10,), 1:5))
 true
 
@@ -338,12 +338,12 @@ is_sliced(L::AbstractOperator) = false
 
 Returns the displacement of the operator.
 
-```julia
+```jldoctest
 julia> A = AffineAdd(Eye(4),[1.;2.;3.;4.])
 I+d  ℝ^4 -> ℝ^4
 
 julia> displacement(A)
-4-element Array{Float64,1}:
+4-element Vector{Float64}:
  1.0
  2.0
  3.0

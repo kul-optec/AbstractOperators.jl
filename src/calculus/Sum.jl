@@ -9,9 +9,9 @@ Shorthand constructor:
 
 Sum of operators.
 
-```julia
+```jldoctest
 julia> Sum(DiagOp(rand(10)), DCT(10))
-ℱ+ℱc  ℝ^10 -> ℝ^10
+╲+ℱc  ℝ^10 -> ℝ^10
 
 julia> MatrixOp(rand(ComplexF64,5,5)) + DFT(ComplexF64,5)
 ▒+ℱ  ℂ^5 -> ℂ^5

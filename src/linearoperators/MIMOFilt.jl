@@ -20,14 +20,18 @@ For example for a `3` by `2` MIMO system (i.e. `size(X,2) == 3` inputs and `size
 
 where `bij` are vector containing the filter coeffients of `h_{i,j}`.
 
-```julia
+```jldoctest
 julia> m,n = 10,3; #time samples, number of inputs
 
 julia> B  = [[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.], ];
-	  #B = [   b11   ,     b12   ,    b13   ,   b21    ,   b22,       b23    , ]
+
+julia> #B = [   b11   ,     b12   ,    b13   ,   b21    ,   b22,       b23    , ]
+
 
 julia> A  = [[1.;1.;1.],[2.;2.;2.],[      3.],[      4.],[      5.],[      6.], ];
-	  #A = [   a11   ,     a12   ,    a13   ,   a21    ,   a22,       a23    , ]
+
+julia> #A = [   a11   ,     a12   ,    a13   ,   a21    ,   a22,       a23    , ]
+
 
 julia> op = MIMOFilt(Float64, (m,n), B, A)
 ※  ℝ^(10, 3) -> ℝ^(10, 2)
@@ -35,6 +39,8 @@ julia> op = MIMOFilt(Float64, (m,n), B, A)
 julia> X = randn(m,n); #input signals
 
 julia> Y = op*X;       #output signals
+
+julia> using DSP
 
 julia> Y[:,1] ≈ filt(B[1],A[1],X[:,1])+filt(B[2],A[2],X[:,2])+filt(B[3],A[3],X[:,3])
 true

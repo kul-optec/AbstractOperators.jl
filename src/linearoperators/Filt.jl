@@ -6,7 +6,7 @@ export Filt
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns a vector `y` filtered by an IIR filter of coefficients `b` and `a`. If only `b` is provided a FIR is used to comute `y` instead.
 
-```julia
+```jldoctest
 julia> Filt(Float64, (10,), [1.0, 2.0, 1.0], [1.0, -1.0])
 IIR  ℝ^10 -> ℝ^10
 	

@@ -5,7 +5,7 @@ export MyLinOp
 
 Construct a user defined `LinearOperator` by specifing its linear mapping `Fwd!` and its adjoint `Adj!`. The functions `Fwd!` and `Adj` must be in-place functions consistent with the given dimensions `dim_in` and `dim_out` and the domain and codomain types.
 
-```julia
+```jldoctest
 julia> n,m = 5,4;
 
 julia> A = randn(n,m);

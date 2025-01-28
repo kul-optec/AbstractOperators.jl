@@ -8,6 +8,8 @@ ndims
 ndoms
 domainType
 codomainType
+domain_storage_type
+codomain_storage_type
 displacement
 remove_displacement
 ```

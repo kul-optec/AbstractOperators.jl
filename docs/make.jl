@@ -1,5 +1,9 @@
 using Documenter, AbstractOperators
 
+DocMeta.setdocmeta!(
+	AbstractOperators, :DocTestSetup, :(using AbstractOperators); recursive=true
+)
+
 makedocs(;
 	modules=[AbstractOperators],
 	format=Documenter.HTML(),

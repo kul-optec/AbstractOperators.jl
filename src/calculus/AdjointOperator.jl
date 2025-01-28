@@ -9,7 +9,7 @@ Shorthand constructor:
 
 Returns the adjoint operator of `A`.
 
-```julia
+```jldoctest
 julia> AdjointOperator(DFT(10))
 ℱᵃ  ℂ^10 -> ℝ^10
 

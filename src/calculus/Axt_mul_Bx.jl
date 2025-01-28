@@ -11,7 +11,7 @@ Create an operator `P` such that:
 
 # Example
 
-```julia
+```jldoctest
 julia> A,B = randn(4,4),randn(4,4);
 
 julia> P = Axt_mul_Bx(MatrixOp(A),MatrixOp(B))

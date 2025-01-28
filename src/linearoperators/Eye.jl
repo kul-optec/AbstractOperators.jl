@@ -8,7 +8,7 @@ abstract type AbstractEye{T,N,S<:AbstractArray} <: LinearOperator end
 
 Create the identity operator.
 
-```julia
+```jldoctest
 julia> op = Eye(Float64,(4,))
 I  ℝ^4 -> ℝ^4
 

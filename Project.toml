@@ -17,6 +17,7 @@ CudaExt = "CUDA"
 [compat]
 Aqua = "0.8"
 CUDA = "5.6"
+Documenter = "1.8"
 DSP = "0.7, 0.8"
 FFTW = "1"
 LinearAlgebra = "1"
@@ -29,11 +30,12 @@ julia = "1"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 
 [targets]
-test = ["Aqua", "CUDA", "Printf", "Random", "SparseArrays", "Test"]
+test = ["Aqua", "CUDA", "Documenter", "Printf", "Random", "SparseArrays", "Test"]

@@ -11,7 +11,7 @@ Create an operator `P` such that:
 
 # Example
 
-```julia
+```jldoctest
 julia> A,B = Sin(3), Cos(3);
 
 julia> P = HadamardProd(A,B)

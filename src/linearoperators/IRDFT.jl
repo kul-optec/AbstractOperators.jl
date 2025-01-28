@@ -6,7 +6,7 @@ export IRDFT
 
 Creates a `LinearOperator` which, when multiplied with a complex array `x`, returns the IDFT over the dimension `dims`, exploiting Hermitian symmetry. Like in the function `BASE.irfft`, `d` must satisfy `div(d,2)+1 == size(x,dims)`.
 
-```julia
+```jldoctest
 julia> A = IRDFT(Complex{Float64},(10,),19)
 ℱ⁻¹  ℂ^10 -> ℝ^19
 
