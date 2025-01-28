@@ -158,6 +158,7 @@ end
 
 domainType(::Filt{T}) where {T} = T
 codomainType(::Filt{T}) where {T} = T
+is_thread_safe(::Filt) = false
 
 size(L::Filt) = L.dim_in, L.dim_in
 

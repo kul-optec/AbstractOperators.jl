@@ -95,3 +95,4 @@ size(L::Jacobian) = size(L.A, 1), size(L.A, 2)
 
 domainType(L::Jacobian) = domainType(L.A)
 codomainType(L::Jacobian) = codomainType(L.A)
+is_thread_safe(::Jacobian) = false

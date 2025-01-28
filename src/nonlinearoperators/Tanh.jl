@@ -37,3 +37,4 @@ size(L::Tanh) = (L.dim, L.dim)
 
 domainType(::Tanh{T,N}) where {T,N} = T
 codomainType(::Tanh{T,N}) where {T,N} = T
+is_thread_safe(::Tanh) = true

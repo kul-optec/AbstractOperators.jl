@@ -82,6 +82,7 @@ end
 
 domainType(::FiniteDiff{T}) where {T} = T
 codomainType(::FiniteDiff{T}) where {T} = T
+is_thread_safe(::FiniteDiff) = true
 
 function size(L::FiniteDiff{T,N,D}) where {T,N,D}
 	dim_out = [L.dim_in...]

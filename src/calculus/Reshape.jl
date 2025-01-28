@@ -57,6 +57,7 @@ size(R::Reshape) = (R.dim_out, size(R.A, 2))
 
 domainType(R::Reshape) = domainType(R.A)
 codomainType(R::Reshape) = codomainType(R.A)
+is_thread_safe(R::Reshape) = is_thread_safe(R.A)
 
 is_linear(R::Reshape) = is_linear(R.A)
 is_null(R::Reshape) = is_null(R.A)

@@ -67,6 +67,7 @@ diag_AAc(L::GetIndex) = 1.0
 
 domainType(L::GetIndex) = L.domainType
 codomainType(L::GetIndex) = L.domainType
+is_thread_safe(L::GetIndex) = true
 
 size(L::GetIndex) = (L.dim_out, L.dim_in)
 

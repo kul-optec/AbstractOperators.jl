@@ -70,6 +70,7 @@ end
 
 domainType(::Zeros{C,N,D,M}) where {C,N,D,M} = D
 codomainType(::Zeros{C,N,D,M}) where {C,N,D,M} = C
+is_thread_safe(::Zeros) = true
 
 size(L::Zeros) = (L.dim_out, L.dim_in)
 

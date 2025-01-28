@@ -5,6 +5,8 @@ using Random
 using Test
 using Documenter
 using Aqua
+using BenchmarkTools
+using Base.Threads: nthreads, @threads
 
 include("utils.jl")
 Random.seed!(0)
@@ -30,6 +32,11 @@ verb = true
 
 	@testset "L-BFGS" begin
 		include("test_lbfgs.jl")
+	end
+
+	@testset "Batch operators" begin
+		include("test_SimpleBatchOp.jl")
+		include("test_SpreadingBatchOp.jl")
 	end
 
 	@testset "Syntax shorthands" begin

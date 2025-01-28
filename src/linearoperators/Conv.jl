@@ -90,6 +90,7 @@ domainType(::AbstractConv{T}) where {T} = T
 codomainType(::AbstractConv{T}) where {T} = T
 domain_storage_type(::AbstractConv{T,N,H}) where {T,N,H} = H
 codomain_storage_type(::AbstractConv{T,N,H}) where {T,N,H} = H
+is_thread_safe(::Conv) = false
 
 #TODO find out a way to verify this,
 is_full_row_rank(L::Conv) = true

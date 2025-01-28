@@ -180,6 +180,7 @@ end
 
 domainType(::MIMOFilt{T}) where {T} = T
 codomainType(::MIMOFilt{T}) where {T} = T
+is_thread_safe(::MIMOFilt) = false
 
 size(L::MIMOFilt) = L.dim_out, L.dim_in
 

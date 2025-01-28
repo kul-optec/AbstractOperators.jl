@@ -34,3 +34,4 @@ size(L::Pow) = (L.dim, L.dim)
 
 domainType(::Pow{T,N}) where {T,N} = T
 codomainType(::Pow{T,N}) where {T,N} = T
+is_thread_safe(::Pow) = true

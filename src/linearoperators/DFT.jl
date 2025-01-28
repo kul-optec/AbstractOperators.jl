@@ -166,6 +166,7 @@ fun_name(A::IDFT) = "ℱ⁻¹"
 
 domainType(::FourierTransform{N,C,D}) where {N,C,D} = D
 codomainType(::FourierTransform{N,C,D}) where {N,C,D} = C
+is_thread_safe(::FourierTransform) = true
 
 is_AcA_diagonal(L::FourierTransform) = true
 is_AAc_diagonal(L::FourierTransform) = true

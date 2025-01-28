@@ -37,3 +37,4 @@ size(L::Sin) = (L.dim, L.dim)
 
 domainType(::Sin{T,N}) where {T,N} = T
 codomainType(::Sin{T,N}) where {T,N} = T
+is_thread_safe(::Sin) = true

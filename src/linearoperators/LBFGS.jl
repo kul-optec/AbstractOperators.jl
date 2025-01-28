@@ -131,6 +131,7 @@ domainType(L::LBFGS) = eltype(L.y_M[1])
 domainType(L::LBFGS{R,T}) where {R,T<:ArrayPartition} = eltype.(L.y_M[1].x)
 codomainType(L::LBFGS) = eltype(L.y_M[1])
 codomainType(L::LBFGS{R,T}) where {R,T<:ArrayPartition} = eltype.(L.y_M[1].x)
+is_thread_safe(L::LBFGS) = false
 
 size(A::LBFGS{R,T}) where {R,T<:ArrayPartition} = (size.(A.s.x), size.(A.s.x))
 size(A::LBFGS) = (size(A.s), size(A.s))

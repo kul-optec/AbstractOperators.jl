@@ -90,6 +90,7 @@ size(L::Scale) = size(L.A)
 
 domainType(L::Scale) = domainType(L.A)
 codomainType(L::Scale) = codomainType(L.A)
+is_thread_safe(L::Scale) = is_thread_safe(L.A)
 
 is_linear(L::Scale) = is_linear(L.A)
 is_null(L::Scale) = is_null(L.A)

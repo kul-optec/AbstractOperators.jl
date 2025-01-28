@@ -56,6 +56,7 @@ domainType(::AbstractEye{T,N}) where {T,N} = T
 codomainType(::AbstractEye{T,N}) where {T,N} = T
 domain_storage_type(::AbstractEye{T,N,S}) where {T,N,S} = S
 codomain_storage_type(::AbstractEye{T,N,S}) where {T,N,S} = S
+is_thread_safe(::Eye) = true
 
 size(L::AbstractEye) = (L.dim, L.dim)
 

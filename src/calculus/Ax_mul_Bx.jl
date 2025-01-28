@@ -90,6 +90,7 @@ fun_name(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = fun_name(L.A) * "*" * fun_name(L.B)
 
 domainType(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = domainType(L.A)
 codomainType(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = codomainType(L.A)
+is_thread_safe(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = false
 
 # utils
 function permute(

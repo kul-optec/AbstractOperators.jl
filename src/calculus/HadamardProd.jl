@@ -88,6 +88,7 @@ fun_name(L::Union{HadamardProd,HadamardProdJac}) = fun_name(L.A) * ".*" * fun_na
 
 domainType(L::Union{HadamardProd,HadamardProdJac}) = domainType(L.A)
 codomainType(L::Union{HadamardProd,HadamardProdJac}) = codomainType(L.A)
+is_thread_safe(::HadamardProd) = false
 
 # utils
 function permute(

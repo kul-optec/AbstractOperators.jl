@@ -72,6 +72,7 @@ diag_AcA(L::DiagOp) = conj.(L.d) .* L.d
 
 domainType(::DiagOp{N,D,C}) where {N,D,C} = D
 codomainType(::DiagOp{N,D,C}) where {N,D,C} = C
+is_thread_safe(::DiagOp) = true
 
 size(L::DiagOp) = (L.dim_in, L.dim_in)
 

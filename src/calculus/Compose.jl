@@ -119,6 +119,7 @@ fun_name(L::Compose) = length(L.A) == 2 ? fun_name(L.A[2]) * "*" * fun_name(L.A[
 
 domainType(L::Compose) = domainType(L.A[1])
 codomainType(L::Compose) = codomainType(L.A[end])
+is_thread_safe(::Compose) = false
 
 is_linear(L::Compose) = all(is_linear.(L.A))
 function is_diagonal(L::Compose)

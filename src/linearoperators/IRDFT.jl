@@ -73,6 +73,7 @@ fun_name(A::IRDFT) = "ℱ⁻¹"
 
 domainType(::IRDFT{T}) where {T} = Complex{T}
 codomainType(::IRDFT{T}) where {T} = T
+is_thread_safe(::IRDFT) = true
 
 is_AAc_diagonal(L::IRDFT) = false #TODO but might be true?
 is_invertible(L::IRDFT) = true

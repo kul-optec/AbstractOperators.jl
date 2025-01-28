@@ -42,3 +42,4 @@ size(L::Sigmoid) = (L.dim, L.dim)
 
 domainType(::Sigmoid{T,N,D}) where {T,N,D} = T
 codomainType(::Sigmoid{T,N,D}) where {T,N,D} = T
+is_thread_safe(::Sigmoid) = true

@@ -86,6 +86,7 @@ end
 
 domainType(::MatrixOp{D}) where {D} = D
 codomainType(::MatrixOp{D,T}) where {D,T} = D <: Real && T <: Complex ? T : D
+is_thread_safe(::MatrixOp) = true
 
 function size(L::MatrixOp)
 	if L.n_col_in == 1

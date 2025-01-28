@@ -14,6 +14,7 @@ makedocs(;
 		"Abstract Operators" => "operators.md",
 		"Calculus rules" => "calculus.md",
 		"Properties" => "properties.md",
+		"Batch operators" => "batching.md",
 	],
 )
 

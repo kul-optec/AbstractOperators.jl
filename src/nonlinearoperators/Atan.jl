@@ -37,3 +37,4 @@ size(L::Atan) = (L.dim, L.dim)
 
 domainType(::Atan{T,N}) where {T,N} = T
 codomainType(::Atan{T,N}) where {T,N} = T
+is_thread_safe(::Atan) = true

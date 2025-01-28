@@ -245,6 +245,7 @@ function codomainType(H::VCAT)
 	return (codomain...,)
 end
 domainType(L::VCAT) = domainType.(Ref(L.A[1]))
+is_thread_safe(::VCAT) = false
 
 is_linear(L::VCAT) = all(is_linear.(L.A))
 is_AcA_diagonal(L::VCAT) = all(is_AcA_diagonal.(L.A))

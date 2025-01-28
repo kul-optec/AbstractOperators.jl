@@ -38,6 +38,7 @@ end
 
 domainType(::Xcorr{T}) where {T} = T
 codomainType(::Xcorr{T}) where {T} = T
+is_thread_safe(::Xcorr) = false
 
 #TODO find out a way to verify this,
 is_full_row_rank(L::Xcorr) = true

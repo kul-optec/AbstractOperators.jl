@@ -76,6 +76,7 @@ fun_name(A::RDFT) = "ℱ"
 
 domainType(::RDFT{T}) where {T} = T
 codomainType(::RDFT{T}) where {T} = Complex{T}
+is_thread_safe(::RDFT) = false
 
 is_AAc_diagonal(L::RDFT) = false #TODO but might be true?
 is_invertible(L::RDFT) = true

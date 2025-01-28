@@ -36,3 +36,4 @@ size(L::SoftPlus) = (L.dim, L.dim)
 
 domainType(::SoftPlus{T,N}) where {T,N} = T
 codomainType(::SoftPlus{T,N}) where {T,N} = T
+is_thread_safe(::SoftPlus) = true

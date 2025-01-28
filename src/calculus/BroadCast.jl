@@ -119,6 +119,7 @@ size(R::BroadCast) = (R.dim_out, size(R.A, 2))
 
 domainType(R::BroadCast) = domainType(R.A)
 codomainType(R::BroadCast) = codomainType(R.A)
+is_thread_safe(::BroadCast) = false
 
 is_linear(R::BroadCast) = is_linear(R.A)
 is_null(R::BroadCast) = is_null(R.A)

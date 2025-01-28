@@ -167,6 +167,7 @@ function codomainType(H::DCAT)
 	invpermute!(codomain, p)
 	return (codomain...,)
 end
+is_thread_safe(::DCAT) = all(is_thread_safe.(H.A))
 
 is_eye(L::DCAT) = all(is_eye.(L.A))
 is_linear(L::DCAT) = all(is_linear.(L.A))

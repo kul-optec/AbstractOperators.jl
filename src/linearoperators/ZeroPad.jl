@@ -115,6 +115,7 @@ end
 
 domainType(::ZeroPad{T}) where {T} = T
 codomainType(::ZeroPad{T}) where {T} = T
+is_thread_safe(::ZeroPad) = true
 
 size(L::ZeroPad) = L.dim_in .+ L.zp, L.dim_in
 

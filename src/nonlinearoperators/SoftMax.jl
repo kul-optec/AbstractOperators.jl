@@ -49,3 +49,4 @@ size(L::SoftMax) = (L.dim, L.dim)
 
 domainType(::SoftMax{T,N}) where {T,N} = T
 codomainType(::SoftMax{T,N}) where {T,N} = T
+is_thread_safe(::SoftMax) = true

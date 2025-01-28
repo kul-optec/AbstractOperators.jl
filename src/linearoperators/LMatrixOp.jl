@@ -65,6 +65,7 @@ end
 # Properties
 domainType(::LMatrixOp{T}) where {T} = T
 codomainType(::LMatrixOp{T}) where {T} = T
+is_thread_safe(::LMatrixOp) = true
 
 fun_name(L::LMatrixOp) = "(⋅)b"
 

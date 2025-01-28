@@ -75,6 +75,7 @@ size(L::AffineAdd) = size(L.A)
 
 domainType(L::AffineAdd) = domainType(L.A)
 codomainType(L::AffineAdd) = codomainType(L.A)
+is_thread_safe(L::AffineAdd) = is_thread_safe(L.A)
 
 is_linear(L::AffineAdd) = is_linear(L.A)
 is_null(L::AffineAdd) = is_null(L.A)

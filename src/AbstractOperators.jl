@@ -9,7 +9,8 @@ abstract type LinearOperator <: AbstractOperator end
 abstract type NonLinearOperator <: AbstractOperator end
 
 import LinearAlgebra: mul!
-import Base: size, ndims
+import Base: size, ndims, AbstractLock, @lock
+import Base.Threads: @spawn, @threads, nthreads
 
 export LinearOperator, NonLinearOperator, AbstractOperator
 export mul!
@@ -57,6 +58,12 @@ include("calculus/Axt_mul_Bx.jl")
 include("calculus/Ax_mul_Bxt.jl")
 include("calculus/Ax_mul_Bx.jl")
 include("calculus/HadamardProd.jl")
+
+# Batch operators
+include("batching/BatchOp.jl")
+include("batching/SimpleBatchOp.jl")
+include("batching/SpreadingBatchOp.jl")
+include("batching/threading_utils.jl")
 
 # Non-Linear operators
 include("nonlinearoperators/Pow.jl")

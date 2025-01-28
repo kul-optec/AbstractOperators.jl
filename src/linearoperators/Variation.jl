@@ -112,6 +112,7 @@ end
 
 domainType(::Variation{T}) where {T} = T
 codomainType(::Variation{T}) where {T} = T
+is_thread_safe(::Variation) = true
 
 size(L::Variation{T,N}) where {T,N} = ((prod(L.dim_in), N), L.dim_in)
 

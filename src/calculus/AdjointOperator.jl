@@ -39,6 +39,7 @@ domainType(L::AdjointOperator) = codomainType(L.A)
 codomainType(L::AdjointOperator) = domainType(L.A)
 domain_storage_type(L::AdjointOperator) = codomain_storage_type(L.A)
 codomain_storage_type(L::AdjointOperator) = domain_storage_type(L.A)
+is_thread_safe(L::AdjointOperator) = is_thread_safe(L.A)
 
 fun_name(L::AdjointOperator) = fun_name(L.A) * "ᵃ"
 

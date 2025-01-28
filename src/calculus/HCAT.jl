@@ -255,6 +255,7 @@ function domainType(H::HCAT)
 	return (domain...,)
 end
 codomainType(L::HCAT) = codomainType.(Ref(L.A[1]))
+is_thread_safe(::HCAT) = false
 
 is_linear(L::HCAT) = all(is_linear.(L.A))
 is_AAc_diagonal(L::HCAT) = all(is_AAc_diagonal.(L.A))

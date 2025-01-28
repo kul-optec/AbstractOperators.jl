@@ -21,7 +21,8 @@ export ndoms,
 	diag_AcA,
 	diag_AAc,
 	displacement,
-	remove_displacement
+	remove_displacement,
+	is_thread_safe
 
 """
 	domainType(A::AbstractOperator)
@@ -115,6 +116,13 @@ storage_type_display_string(::Type{T}) where {T<:AbstractArray} = ""
 function storage_display_string(L::AbstractOperator)
 	return storage_type_display_string(codomain_storage_type(L))
 end
+
+"""
+	is_thread_safe(L::AbstractOperator)
+
+Returns whether the operator is thread safe (i.e. it can be used on multiple arrays simulaneously).
+"""
+is_thread_safe(L::AbstractOperator) = false
 
 """
 	size(A::AbstractOperator, [dom,])
