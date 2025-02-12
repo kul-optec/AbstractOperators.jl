@@ -80,4 +80,7 @@ include("nonlinearoperators/SoftPlus.jl")
 # Syntax
 include("syntax.jl")
 
+# load extension symbols
+include("extension_symbols.jl")
+
 end

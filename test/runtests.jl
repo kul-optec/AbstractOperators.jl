@@ -7,6 +7,7 @@ using Documenter
 using Aqua
 using BenchmarkTools
 using Base.Threads: nthreads, @threads
+using NFFT
 
 include("utils.jl")
 Random.seed!(0)
@@ -51,4 +52,8 @@ verb = true
 	end
 
 	Aqua.test_all(AbstractOperators)
+end
+
+@testset "NfftExt" begin
+	include("test_NfftExt.jl")
 end
