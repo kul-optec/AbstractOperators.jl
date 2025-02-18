@@ -11,7 +11,7 @@ y2 = conv(x1, h)
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
 z1 = op' * y1;
-z2 = xcorr(y1, h)[size(op.h,1)[1]:end-length(op.h)+1];
+z2 = xcorr(y1, h)[size(op.h, 1)[1]:(end-length(op.h)+1)];
 @test all(norm.(z1 .- z2) .<= 1e-12)
 
 # other constructors
@@ -20,7 +20,7 @@ op = Conv(x1, h)
 # CUDA
 if CUDA.functional()
     cu_h = CuArray(h)
-    cu_op = Conv(Float64,(n,),cu_h)
+    cu_op = Conv(Float64, (n,), cu_h)
     cu_x1 = CuArray(x1)
     cu_y1 = cu_op * cu_x1
     @test all(norm.(y1 .- Array(cu_y1)) .<= 1e-12)
@@ -477,6 +477,46 @@ x1 = randn(n)
 @test norm(op' * (op * x1) .- diag_AcA(op) .* x1) <= 1e-12
 @test norm(op * (op' * x1) .- diag_AAc(op) .* x1) <= 1e-12
 
+########## BroadcastingDiagOp ############
+n, m = 5, 4
+d = randn(n, m)
+op = BroadcastingDiagOp(Float64, (n, 1), d)
+x1 = randn(n, 1)
+y1 = test_op(op, x1, rand(n, m), verb)
+y2 = d .* x1
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+n, m = 5, 4
+d = randn(n, m) + im * randn(n, m)
+op = BroadcastingDiagOp(Float64, (n, 1), d)
+x1 = randn(n, 1)
+y1 = test_op(op, x1, rand(n, m) .+ im * rand(n, m), verb)
+y2 = d .* x1
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+# other constructors
+x = rand(4, 1)
+w = rand(4, 5)
+op = BroadcastingDiagOp(x, w)
+
+#properties
+@test is_linear(op) == true
+@test is_null(op) == false
+@test is_eye(op) == false
+@test is_diagonal(op) == false
+@test is_AcA_diagonal(op) == false
+@test is_AAc_diagonal(op) == false
+@test is_orthogonal(op) == false
+@test is_invertible(op) == true
+@test is_full_row_rank(op) == false
+@test is_full_column_rank(op) == true
+
+w = rand(ComplexF64, 4, 5)
+op = BroadcastingDiagOp(Float64, (5, 1), w ./ sqrt.(sum(abs2, w; dims=2)))
+@test is_orthogonal(op) == true
+
 ########## Eye ############
 n = 4
 op = Eye(Float64, (n,))
@@ -813,7 +853,7 @@ y2 = A * x1
 
 # other constructors
 op = MyLinOp(
-	Float64, (m,), Float64, (n,), (y, x) -> mul!(y, A, x), (y, x) -> mul!(y, A', x)
+    Float64, (m,), Float64, (n,), (y, x) -> mul!(y, A, x), (y, x) -> mul!(y, A', x)
 )
 
 ######### MIMOFilt ############
@@ -830,43 +870,22 @@ y2 = filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2])
 
 m, n = 10, 3; #time samples, number of inputs
 b = [
-	[1.0; 0.0; 1.0],
-	[1.0; 0.0; 1.0],
-	[1.0; 0.0; 1.0],
-	[1.0; 0.0; 1.0],
-	[1.0; 0.0; 1.0],
-	[1.0; 0.0; 1.0],
+    [1.0; 0.0; 1.0],
+    [1.0; 0.0; 1.0],
+    [1.0; 0.0; 1.0],
+    [1.0; 0.0; 1.0],
+    [1.0; 0.0; 1.0],
+    [1.0; 0.0; 1.0],
 ];
 a = [[1.0; 1.0; 1.0], [2.0; 2.0; 2.0], [3.0], [4.0], [5.0], [6.0]];
 op = MIMOFilt(Float64, (m, n), b, a)
 
 x1 = randn(m, n)
 y1 = test_op(op, x1, randn(m, 2), verb)
-y2 =
-	[filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3]) filt(
-																							  b[4],
-																							  a[4],
-																							  x1[
-																								  :,
-																								  1,
-																							  ],
-																						  ) +
-																						  filt(
-																							  b[5],
-																							  a[5],
-																							  x1[
-																								  :,
-																								  2,
-																							  ],
-																						  ) +
-																						  filt(
-																							  b[6],
-																							  a[6],
-																							  x1[
-																								  :,
-																								  3,
-																							  ],
-																						  )]
+y2 = [
+    filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3]),
+    filt(b[4], a[4], x1[:, 1]) + filt(b[5], a[5], x1[:, 2]) + filt(b[6], a[6], x1[:, 3]),
+]
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
@@ -877,31 +896,10 @@ op = MIMOFilt(Float64, (m, n), b, a)
 
 x1 = randn(m, n)
 y1 = test_op(op, x1, randn(m, 2), verb)
-y2 =
-	[filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3]) filt(
-																							  b[4],
-																							  a[4],
-																							  x1[
-																								  :,
-																								  1,
-																							  ],
-																						  ) +
-																						  filt(
-																							  b[5],
-																							  a[5],
-																							  x1[
-																								  :,
-																								  2,
-																							  ],
-																						  ) +
-																						  filt(
-																							  b[6],
-																							  a[6],
-																							  x1[
-																								  :,
-																								  3,
-																							  ],
-																						  )]
+y2 = [
+    filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3]),
+    filt(b[4], a[4], x1[:, 1]) + filt(b[5], a[5], x1[:, 2]) + filt(b[6], a[6], x1[:, 3]),
+]
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
@@ -916,7 +914,7 @@ MIMOFilt(x1, b)
 a2 = [[1.0f0], [1.0f0], [1.0f0], [1.0f0], [1.0f0], [1.0f0]]
 b2 = convert.(Array{Float32,1}, b)
 @test_throws ErrorException MIMOFilt(Float64, (m, n), b2, a2)
-@test_throws ErrorException MIMOFilt(Float64, (m, n), b, a[1:(end - 1)])
+@test_throws ErrorException MIMOFilt(Float64, (m, n), b, a[1:(end-1)])
 push!(a2, [1.0f0])
 push!(b2, randn(Float32, 10))
 @test_throws ErrorException MIMOFilt(Float32, (m, n), b2, a2)

@@ -1,6 +1,6 @@
 module AbstractOperators
 
-using LinearAlgebra, DSP, FFTW, RecursiveArrayTools
+using LinearAlgebra, DSP, FFTW, RecursiveArrayTools, FastBroadcast
 
 const RealOrComplex{R} = Union{R,Complex{R}}
 abstract type AbstractOperator end
@@ -26,6 +26,7 @@ include("linearoperators/MyLinOp.jl")
 include("linearoperators/Zeros.jl")
 include("linearoperators/ZeroPad.jl")
 include("linearoperators/Eye.jl")
+include("linearoperators/BroadcastingDiagOp.jl")
 include("linearoperators/DiagOp.jl")
 include("linearoperators/GetIndex.jl")
 include("linearoperators/MatrixOp.jl")
