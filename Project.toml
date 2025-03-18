@@ -7,6 +7,7 @@ DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+OperatorCore = "3945cd23-d97e-4db0-9df2-35342dbd287d"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 
 [weakdeps]

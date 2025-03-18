@@ -12,6 +12,19 @@ import LinearAlgebra: mul!
 import Base: size, ndims, AbstractLock, @lock
 import Base.Threads: @spawn, @threads, nthreads
 
+import OperatorCore: 
+    is_linear,
+    is_eye,
+    is_null,
+    is_diagonal,
+    is_AcA_diagonal,
+    is_AAc_diagonal,
+    is_orthogonal,
+    is_invertible,
+    is_full_row_rank,
+    is_full_column_rank,
+    is_sliced
+
 export LinearOperator, NonLinearOperator, AbstractOperator
 export mul!
 
