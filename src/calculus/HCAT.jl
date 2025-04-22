@@ -98,9 +98,7 @@ function HCAT(AA::NTuple{N,AbstractOperator}, buf::C) where {N,C}
 				push!(idxs, K)
 			else                   # stacked operator
 				idxs = push!(idxs, (collect((K + 1):(K + ndoms(AA[i], 2)))...,))
-				for ii in 1:ndoms(AA[i], 2)
-					K += 1
-				end
+				K += ndoms(AA[i], 2)
 			end
 		end
 		return HCAT(AA, (idxs...,), buf)
@@ -110,17 +108,21 @@ end
 HCAT(A::AbstractOperator) = A
 
 # Mappings
-@generated function mul!(y::C, H::HCAT{N,L,P,C}, b::DD) where {N,L,P,C,DD<:ArrayPartition}
+function mul!(y::C, H::HCAT{N,L,P,C}, b::DD) where {N,L,P,C,DD<:ArrayPartition}
+	return mul!(y, H, b.x)
+end
+
+@generated function mul!(y::C, H::HCAT{N,L,P,C}, b::DD) where {N,L,P,C,DD<:Tuple}
 	ex = :()
 
 	if fieldtype(P, 1) <: Int
 		# flatten operator
-		# build mul!(y, H.A[1], b.x[H.idxs[1]])
-		bb = :(b.x[H.idxs[1]])
+		# build mul!(y, H.A[1], b[H.idxs[1]])
+		bb = :(b[H.idxs[1]])
 	else
 		# stacked operator
-		# build mul!(y, H.A[1],ArrayPartition( b.x[H.idxs[1][1]], b.x[H.idxs[1][2]] ...  ))
-		bb = [:(b.x[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, 1)))]
+		# build mul!(y, H.A[1],ArrayPartition( b[H.idxs[1][1]], b[H.idxs[1][2]] ...  ))
+		bb = [:(b[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, 1)))]
 		bb = :(ArrayPartition($(bb...)))
 	end
 	ex = :($ex; mul!(y, H.A[1], $bb)) # write on y
@@ -128,12 +130,12 @@ HCAT(A::AbstractOperator) = A
 	for i in 2:N
 		if fieldtype(P, i) <: Int
 			# flatten operator
-			# build mul!(H.buf, H.A[i], b.x[H.idxs[i]])
-			bb = :(b.x[H.idxs[$i]])
+			# build mul!(H.buf, H.A[i], b[H.idxs[i]])
+			bb = :(b[H.idxs[$i]])
 		else
 			# stacked operator
-			# build mul!(H.buf, H.A[i],( b.x[H.idxs[i][1]], b.x[H.idxs[i][2]] ...  ))
-			bb = [:(b.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
+			# build mul!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
+			bb = [:(b[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
 			bb = :(ArrayPartition($(bb...)))
 		end
 		ex = :($ex; mul!(H.buf, H.A[$i], $bb)) # write on H.buf
@@ -144,19 +146,26 @@ HCAT(A::AbstractOperator) = A
 	return ex
 end
 
-@generated function mul!(
+function mul!(
 	y::DD, A::AdjointOperator{HCAT{N,L,P,C}}, b::C
 ) where {N,L,P,C,DD<:ArrayPartition}
+	mul!(y.x, A, b)
+	return y
+end
+
+@generated function mul!(
+	y::DD, A::AdjointOperator{HCAT{N,L,P,C}}, b::C
+) where {N,L,P,C,DD<:Tuple}
 	ex = :(H = A.A)
 	for i in 1:N
 		if fieldtype(P, i) <: Int
 			# flatten operator
-			# build mul!(y.x[H.idxs[i]], H.A[i]', b)
-			yy = :(y.x[H.idxs[$i]])
+			# build mul!(y[H.idxs[i]], H.A[i]', b)
+			yy = :(y[H.idxs[$i]])
 		else
 			# stacked operator
-			# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i]', b)
-			yy = [:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
+			# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i]', b)
+			yy = [:(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
 			yy = :(ArrayPartition($(yy...)))
 		end
 		ex = :($ex; mul!($yy, H.A[$i]', b))
@@ -245,7 +254,15 @@ function size(H::HCAT)
 end
 
 function fun_name(L::HCAT)
-	return length(L.A) == 2 ? "[" * fun_name(L.A[1]) * "," * fun_name(L.A[2]) * "]" : "HCAT"
+	if length(L.A) == 2
+		if L.idxs[1] == 2 || L.idxs[2] == 1
+			return "[" * fun_name(L.A[2]) * "," * fun_name(L.A[1]) * "]"
+		else
+			return "[" * fun_name(L.A[1]) * "," * fun_name(L.A[2]) * "]"
+		end
+	else
+		return "HCAT"
+	end
 end
 
 function domainType(H::HCAT)
@@ -261,7 +278,27 @@ is_linear(L::HCAT) = all(is_linear.(L.A))
 is_AAc_diagonal(L::HCAT) = all(is_AAc_diagonal.(L.A))
 is_full_row_rank(L::HCAT) = any(is_full_row_rank.(L.A))
 
-diag_AAc(L::HCAT) = (+).(diag_AAc.(L.A)...)
+is_sliced(L::HCAT) = any(is_sliced.(L.A))
+function get_slicing_expr(L::HCAT)
+	exprs = ()
+	for i in eachindex(L.A)
+		expr = get_slicing_expr(L[i])
+		if expr isa Tuple && all(e -> e isa Tuple, expr)
+			exprs = (exprs..., expr...)
+		else
+			exprs = (exprs..., expr)
+		end
+	end
+	if length(exprs) == 1
+		return exprs[1]
+	else
+		return exprs
+	end
+end
+get_slicing_mask(L::HCAT) = get_slicing_mask.(L[i] for i in eachindex(L.A))
+remove_slicing(L::HCAT) = HCAT(remove_slicing.(Tuple(A for A in L.A)), L.idxs, L.buf)
+
+diag_AAc(L::HCAT) = (+).(diag_AAc.(L[i] for i in eachindex(L.A))...)
 
 # utils
 function permute(H::HCAT, p::AbstractVector{Int})

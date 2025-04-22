@@ -58,7 +58,11 @@ end
 function mul!(
 	y::AbstractArray{D,N}, L::AdjointOperator{DiagOp{N,D,C,T}}, b::AbstractArray{C,N}
 ) where {N,D<:Real,C<:Complex,T}
-	return y .= real.(conj.(L.A.d) .* b)
+	return @.. y = real(conj(L.A.d) * b)
+end
+
+function get_normal_op(L::DiagOp{N,D,C,T}) where {N,D,C,T}
+	return DiagOp{N,D,C,T}(L.dim_in, L.d .* conj.(L.d))
 end
 
 # Transformations (we'll see about this)
@@ -84,3 +88,5 @@ is_diagonal(L::DiagOp) = true
 is_invertible(L::DiagOp) = all(L.d .!= 0.0)
 is_full_row_rank(L::DiagOp) = is_invertible(L)
 is_full_column_rank(L::DiagOp) = is_invertible(L)
+
+LinearAlgebra.opnorm(L::DiagOp) = maximum(abs.(L.d))

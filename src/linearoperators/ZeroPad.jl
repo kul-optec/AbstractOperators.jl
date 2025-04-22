@@ -111,6 +111,10 @@ end
 	return ex = Meta.parse(ex)
 end
 
+function get_normal_op(L::ZeroPad{T,N}) where {T,N}
+	return Eye(domainType(L), size(L, 1), domain_storage_type(L))
+end
+
 # Properties
 
 domainType(::ZeroPad{T}) where {T} = T
@@ -124,3 +128,5 @@ is_AcA_diagonal(L::ZeroPad) = true
 diag_AcA(L::ZeroPad) = 1
 
 is_full_column_rank(L::ZeroPad) = true
+
+LinearAlgebra.opnorm(L::ZeroPad) = one(real(domainType(L)))

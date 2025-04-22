@@ -472,6 +472,34 @@ function mul!(
 	return out
 end
 
+function get_normal_op(L::SpreadingBatchOpSingleThreaded)
+	return SpreadingBatchOpSingleThreaded(
+		get_normal_op.(L.operators), L.domain_size, L.codomain_size, L.batch_size
+	)
+end
+function get_normal_op(L::SpreadingBatchOpThreadSafe)
+	return SpreadingBatchOpThreadSafe(
+		get_normal_op.(L.operators), L.domain_size, L.codomain_size, L.batch_indices
+	)
+end
+function get_normal_op(L::SpreadingBatchOpCopying)
+	return SpreadingBatchOpCopying(
+		get_normal_op.(L.operators), L.domain_size, L.codomain_size, L.batch_indices
+	)
+end
+function get_normal_op(L::SpreadingBatchOpLocking)
+	return SpreadingBatchOpLocking(
+		get_normal_op.(L.operators), L.domain_size, L.codomain_size, L.batch_indices,
+		L.locks
+	)
+end
+function get_normal_op(L::SpreadingBatchOpFixedOperator)
+	return SpreadingBatchOpFixedOperator(
+		get_normal_op.(L.operators), L.domain_size, L.codomain_size, L.batch_indices,
+		L.operator_indices
+	)
+end
+
 # Properties
 
 fun_name(L::SpreadingBatchOp) = "⟳" * fun_name(L.operators[1])
@@ -498,6 +526,10 @@ is_eye(L::SpreadingBatchOp) = is_eye(L.operators[1])
 is_eye(L::SpreadingBatchOpCopying) = is_eye(L.operators[1][1])
 is_thread_safe(L::SpreadingBatchOp) = is_thread_safe(L.operators[1])
 is_thread_safe(L::SpreadingBatchOpCopying) = is_thread_safe(L.operators[1][1])
+
+LinearAlgebra.opnorm(L::SpreadingBatchOp) = maximum(
+	LinearAlgebra.opnorm.(L.operators)
+)
 
 # Utility
 

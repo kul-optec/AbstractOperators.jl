@@ -23,7 +23,7 @@ julia> GetIndex(randn(10,20,30),(1:2,1:4))
 	
 ```
 """
-struct GetIndex{N,M,T<:Tuple} <: LinearOperator
+struct GetIndex{N,M,T} <: LinearOperator
 	domainType::Type
 	dim_out::NTuple{N,Int}
 	dim_in::NTuple{M,Int}
@@ -38,7 +38,17 @@ function GetIndex(domainType::Type, dim_in::NTuple{M,Int}, idx::T) where {M,T<:T
 	if dim_out == dim_in
 		return Eye(domainType, dim_in)
 	else
-		return GetIndex{length(dim_out),M,T}(domainType, dim_out, dim_in, idx)
+		return GetIndex(domainType, dim_out, dim_in, idx)
+	end
+end
+
+function GetIndex(domainType::Type, dim_in::NTuple{M,Int}, mask::T) where {M,T<:BitArray}
+	size(mask) != dim_in && error("cannot slice object of dimension $dim_in with this bitmask")
+	dim_out = (sum(mask),)
+	if dim_out[1] == prod(dim_in)
+		return reshape(Eye(domainType, dim_in), dim_out)
+	else
+		return GetIndex(domainType, dim_out, dim_in, mask)
 	end
 end
 
@@ -46,20 +56,58 @@ GetIndex(domainType::Type, dim_in::Tuple, idx...) = GetIndex(domainType, dim_in,
 GetIndex(dim_in::Tuple, idx...) = GetIndex(Float64, dim_in, idx)
 GetIndex(dim_in::Tuple, idx::Tuple) = GetIndex(Float64, dim_in, idx)
 GetIndex(x::AbstractArray, idx::Tuple) = GetIndex(eltype(x), size(x), idx)
+GetIndex(dim_in::Tuple, mask::T) where {T<:BitArray} = GetIndex(Float64, dim_in, mask)
+GetIndex(x::AbstractArray, mask::T) where {T<:BitArray} = GetIndex(eltype(x), size(x), mask)
 
 # Mappings
 
 function mul!(
 	y::AbstractArray{T1,N}, L::GetIndex{N,M,T2}, b::AbstractArray{T1,M}
-) where {T1,N,M,T2}
+) where {T1,N,M,T2<:Tuple}
 	return y .= view(b, L.idx...)
 end
 
 function mul!(
+	y::AbstractArray{T1,N}, L::GetIndex{N,M,T2}, b::AbstractArray{T1,M}
+) where {T1,N,M,T2<:BitArray}
+	return y .= view(b, L.idx)
+end
+
+function mul!(
 	y::AbstractArray{T1,M}, L::AdjointOperator{GetIndex{N,M,T2}}, b::AbstractArray{T1,N}
-) where {T1,N,M,T2}
+) where {T1,N,M,T2<:Tuple}
 	fill!(y, 0.0)
 	return setindex!(y, b, L.A.idx...)
+end
+
+function mul!(
+	y::AbstractArray{T1,M}, L::AdjointOperator{GetIndex{N,M,T2}}, b::AbstractArray{T1,N}
+) where {T1,N,M,T2<:BitArray}
+	fill!(y, 0.0)
+	return setindex!(y, b, L.A.idx)
+end
+
+struct NormalGetIndex{N,M,T} <: LinearOperator
+	domainType::Type
+	dim_in::NTuple{M,Int}
+	idx::T
+end
+
+function get_normal_op(L::GetIndex{N,M,T}) where {N,M,T}
+	return NormalGetIndex(L.domainType, L.dim_in, L.idx)
+end
+
+function mul!(
+	y::AbstractArray{T1,M}, L::NormalGetIndex{N,M,T2}, b::AbstractArray{T1,M}
+) where {T1,N,M,T2<:Tuple}
+	fill!(y, 0.0)
+	setindex!(y, view(b, L.idx), L.idx...)
+end
+function mul!(
+	y::AbstractArray{T1,M}, L::NormalGetIndex{N,M,T2}, b::AbstractArray{T1,M}
+) where {T1,N,M,T2<:BitArray}
+	fill!(y, 0.0)
+	setindex!(y, view(b, L.idx), L.idx)
 end
 
 # Properties
@@ -76,6 +124,16 @@ fun_name(L::GetIndex) = "↓"
 is_AAc_diagonal(L::GetIndex) = true
 is_full_row_rank(L::GetIndex) = true
 is_sliced(L::GetIndex) = true
+get_slicing_expr(L::GetIndex) = L.idx
+get_slicing_mask(L::GetIndex{N,M,<:BitArray}) where {N,M} = L.idx
+function get_slicing_mask(L::GetIndex{N,M,<:Tuple}) where {N,M}
+	mask = falses(L.dim_in)
+	mask[L.idx...] .= true
+	return mask
+end
+remove_slicing(L::GetIndex) = Eye(L.domainType, L.dim_out)
+
+LinearAlgebra.opnorm(L::GetIndex) = one(real(domainType(L)))
 
 # Utils
 

@@ -23,7 +23,10 @@ import OperatorCore:
     is_invertible,
     is_full_row_rank,
     is_full_column_rank,
-    is_sliced
+    is_sliced,
+    get_slicing_expr,
+    get_slicing_mask,
+    remove_slicing
 
 export LinearOperator, NonLinearOperator, AbstractOperator
 export mul!

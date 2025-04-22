@@ -86,7 +86,11 @@ is_AcA_diagonal(L::AffineAdd) = is_AcA_diagonal(L.A)
 is_AAc_diagonal(L::AffineAdd) = is_AAc_diagonal(L.A)
 is_full_row_rank(L::AffineAdd) = is_full_row_rank(L.A)
 is_full_column_rank(L::AffineAdd) = is_full_column_rank(L.A)
+
 is_sliced(L::AffineAdd) = is_sliced(L.A)
+get_slicing_expr(L::AffineAdd) = get_slicing_expr(L.A)
+get_slicing_mask(L::AffineAdd) = get_slicing_mask(L.A)
+remove_slicing(L::AffineAdd) = remove_slicing(L.A)
 
 fun_name(T::AffineAdd{L,D,S}) where {L,D,S} = "$(fun_name(T.A))" * (S ? "+" : "-") * "d"
 

@@ -47,6 +47,10 @@ function mul!(
 	return y .= b
 end
 
+function get_normal_op(L::AbstractEye{T,N}) where {T,N}
+	return Eye(domainType(L), size(L, 1), domain_storage_type(L))
+end
+
 # Properties
 diag(::AbstractEye) = 1.0
 diag_AcA(::AbstractEye) = 1.0
@@ -70,3 +74,5 @@ is_orthogonal(::AbstractEye) = true
 is_invertible(::AbstractEye) = true
 is_full_row_rank(::AbstractEye) = true
 is_full_column_rank(::AbstractEye) = true
+
+LinearAlgebra.opnorm(L::AbstractEye) = one(real(domainType(L)))

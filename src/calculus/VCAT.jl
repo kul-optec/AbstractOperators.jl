@@ -100,6 +100,34 @@ end
 VCAT(A::AbstractOperator) = A
 
 # Mappings
+
+@generated function mul!(y::DD, H::VCAT{N,L,P,C}, b::C) where {N,L,P,C,DD}
+	ex = :()
+	for i in 1:N
+		if fieldtype(P, i) <: Int
+			# flatten operator
+			# build mul!(y.x[H.idxs[i]], H.A[i], b)
+			if DD <: ArrayPartition
+				yy = :(y.x[H.idxs[$i]])
+			else
+				yy = :(y[H.idxs[$i]])
+			end
+		else
+			# stacked operator
+			# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
+			if DD <: ArrayPartition
+				yy = [:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
+				yy = :(ArrayPartition($(yy...)))
+			else
+				yy = [:(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
+			end
+		end
+		ex = :($ex; mul!($yy, H.A[$i], b))
+	end
+	ex = :($ex; return y)
+	return ex
+end
+
 @generated function mul!(
 	y::C, A::AdjointOperator{VCAT{N,L,P,C}}, b::DD
 ) where {N,L,P,C,DD<:ArrayPartition}
@@ -136,20 +164,26 @@ VCAT(A::AbstractOperator) = A
 	return ex
 end
 
-@generated function mul!(y::DD, H::VCAT{N,L,P,C}, b::C) where {N,L,P,C,DD<:ArrayPartition}
+@generated function mul_skipZeros!(
+	y::DD, H::VCAT{N,L,P,C}, b::C
+) where {N,L,P,C,DD<:ArrayPartition}
 	ex = :()
 	for i in 1:N
-		if fieldtype(P, i) <: Int
-			# flatten operator
-			# build mul!(y.x[H.idxs[i]], H.A[i], b)
-			yy = :(y.x[H.idxs[$i]])
-		else
-			# stacked operator
-			# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
-			yy = [:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-			yy = :(ArrayPartition($(yy...)))
+		if !(fieldtype(L, i) <: Zeros)
+			if fieldtype(P, i) <: Int
+				# flatten operator
+				# build mul!(y.x[H.idxs[i]], H.A[i], b)
+				yy = :(y.x[H.idxs[$i]])
+			else
+				# stacked operator
+				# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
+				yy = [
+					:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))
+				]
+				yy = :(ArrayPartition($(yy...)))
+			end
+			ex = :($ex; mul!($yy, H.A[$i], b))
 		end
-		ex = :($ex; mul!($yy, H.A[$i], b))
 	end
 	ex = :($ex; return y)
 	return ex
@@ -196,31 +230,6 @@ end
 	return ex
 end
 
-@generated function mul_skipZeros!(
-	y::DD, H::VCAT{N,L,P,C}, b::C
-) where {N,L,P,C,DD<:ArrayPartition}
-	ex = :()
-	for i in 1:N
-		if !(fieldtype(L, i) <: Zeros)
-			if fieldtype(P, i) <: Int
-				# flatten operator
-				# build mul!(y.x[H.idxs[i]], H.A[i], b)
-				yy = :(y.x[H.idxs[$i]])
-			else
-				# stacked operator
-				# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
-				yy = [
-					:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))
-				]
-				yy = :(ArrayPartition($(yy...)))
-			end
-			ex = :($ex; mul!($yy, H.A[$i], b))
-		end
-	end
-	ex = :($ex; return y)
-	return ex
-end
-
 # Properties
 
 function size(H::VCAT)
@@ -249,9 +258,46 @@ is_thread_safe(::VCAT) = false
 
 is_linear(L::VCAT) = all(is_linear.(L.A))
 is_AcA_diagonal(L::VCAT) = all(is_AcA_diagonal.(L.A))
+is_AAc_diagonal(L::VCAT) = all(is_AAc_diagonal.(L.A))
 is_full_column_rank(L::VCAT) = any(is_full_column_rank.(L.A))
 
+is_sliced(L::VCAT) = any(is_sliced.(L.A))
+function get_slicing_expr(L::VCAT)
+	return get_slicing_expr.(Tuple(L.A[i] for i in eachindex(L.A)))
+end
+function remove_slicing(L::VCAT)
+	hcat_ops = remove_slicing.(L[i] for i in eachindex(L.A))
+	if all(a -> a isa HCAT, L.A) && any(a -> any(is_null, a.A), L.A) && any(op -> size(op, 2) != size(hcat_ops[1], 2), hcat_ops)
+		expected_hcat_domain_size = Vector{Any}(nothing, length(hcat_ops))
+		for hcat_op in hcat_ops
+			for i in eachindex(hcat_op.A)
+				if !is_null(hcat_op[i]) || expected_hcat_domain_size[i] === nothing
+					expected_hcat_domain_size[i] = size(hcat_op[i], 2)
+				end
+			end
+		end
+		hcat_ops = [hcat_op for hcat_op in hcat_ops]
+		for (i, hcat_op) in enumerate(hcat_ops)
+			if any(is_null, hcat_op.A)
+				ops = ()
+				for j in eachindex(hcat_op.A)
+					op = if is_null(hcat_op[j])
+						Zeros(domainType(hcat_op[j]), expected_hcat_domain_size[j], codomainType(hcat_op[j]), size(hcat_op[j], 1))
+					else
+						hcat_op[j]
+					end
+					ops = (ops..., op)
+				end
+				hcat_ops[i] = hcat(ops...)
+			end
+		end
+		hcat_ops = tuple(hcat_ops...)
+	end
+	VCAT(hcat_ops, L.idxs, L.buf)
+end
+
 diag_AcA(L::VCAT) = (+).(diag_AcA.(L.A)...,)
+diag_AAc(L::VCAT) = Tuple(diag_AAc.(L.A))
 
 # utils
 function permute(H::VCAT{N,L,P,C}, p::AbstractVector{Int}) where {N,L,P,C}

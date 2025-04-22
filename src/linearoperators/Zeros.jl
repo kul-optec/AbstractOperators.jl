@@ -66,6 +66,10 @@ function mul!(
 	return fill!(y, zero(D))
 end
 
+function get_normal_op(L::Zeros{C,N,D,M}) where {C,N,D,M}
+	return Zeros(domainType(L), size(L, 2), domainType(L), size(L, 2))
+end
+
 # Properties
 
 domainType(::Zeros{C,N,D,M}) where {C,N,D,M} = D
@@ -77,3 +81,11 @@ size(L::Zeros) = (L.dim_out, L.dim_in)
 fun_name(A::Zeros) = "0"
 
 is_null(L::Zeros) = true
+is_AAc_diagonal(L::Zeros) = true
+is_AcA_diagonal(L::Zeros) = true
+is_diagonal(L::Zeros) = true
+
+diag_AAc(L::Zeros) = 0
+diag_AcA(L::Zeros) = 0
+
+LinearAlgebra.opnorm(L::Zeros) = zero(real(domainType(L)))

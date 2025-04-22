@@ -133,6 +133,23 @@ end
 	return ex
 end
 
+function get_normal_op(H::DCAT)
+	# build normal operator
+	normal = []
+	for i in eachindex(H.A)
+		push!(normal, get_normal_op(H.A[i]))
+	end
+
+	# build normal DCAT
+	normal = DCAT(normal...)
+
+	# build normal DCAT with the same idxs as H
+	p = vcat([[idx...] for idx in H.idxC]...)
+	invpermute!(normal.idxD, p)
+
+	return normal
+end
+
 # Properties
 size(H::DCAT) = size(H, 1), size(H, 2)
 
@@ -204,3 +221,5 @@ Eye(x::ArrayPartition) = DCAT(Eye.(x.x)...)
 diag(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 diag_AAc(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 diag_AcA(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
+
+LinearAlgebra.opnorm(L::DCAT) = maximum(opnorm.(L.A))

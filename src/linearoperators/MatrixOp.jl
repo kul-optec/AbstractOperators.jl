@@ -82,6 +82,10 @@ function mul!(
 	return y .= real.(yc)
 end
 
+function get_normal_op(L::MatrixOp{D,T,M}) where {D,T,M}
+	return MatrixOp(domainType(L), size(L, 1), L.A' * L.A)
+end
+
 # Properties
 
 domainType(::MatrixOp{D}) where {D} = D
@@ -101,3 +105,5 @@ fun_name(L::MatrixOp) = "▒"
 is_diagonal(L::MatrixOp) = isdiag(L.A)
 is_full_row_rank(L::MatrixOp) = rank(L.A) == size(L.A, 1)
 is_full_column_rank(L::MatrixOp) = rank(L.A) == size(L.A, 2)
+
+LinearAlgebra.opnorm(L::MatrixOp) = opnorm(L.A)

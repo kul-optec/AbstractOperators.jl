@@ -111,6 +111,18 @@ end
 	end
 end
 
+function get_normal_op(L::Compose)
+	combined = get_normal_op(L.A[end])
+	if combined isa Compose
+		ops = (L.A..., reverse(L.A)...)
+		bufs = (L.buf..., allocate_in_codomain(L), reverse(L.buf)...)
+	else
+		ops = (L.A[1:(end - 1)]..., combined, L.A[(end - 1):-1:1]...)
+		bufs = (L.buf[1:(end - 1)]..., allocate_in_codomain(combined), reverse(L.buf[1:(end - 1)])...)
+	end
+	return Compose(ops, bufs)
+end
+
 # Properties
 
 size(L::Compose) = (size(L.A[end], 1), size(L.A[1], 2))
@@ -126,9 +138,18 @@ function is_diagonal(L::Compose)
 	return is_sliced(L) ? (length(L.A) == 2 && is_diagonal(L.A[2])) : all(is_diagonal.(L.A))
 end
 is_invertible(L::Compose) = all(is_invertible.(L.A))
-
-is_sliced(L::Compose) = typeof(L.A[1]) <: GetIndex
 is_AAc_diagonal(L::Compose) = is_sliced(L) && length(L.A) == 2 && is_AAc_diagonal(L.A[2])
+
+is_sliced(L::Compose) = is_sliced(L.A[1])
+get_slicing_expr(L::Compose) = get_slicing_expr(L.A[1])
+get_slicing_mask(L::Compose) = get_slicing_mask(L.A[1])
+function remove_slicing(L::Compose)
+	if L.A[1] isa GetIndex
+		return length(L.A) == 2 ? L.A[2] : Compose(tuple(L.A[2:end]...), tuple(L.buf[2:end]...))
+	else
+		return Compose(tuple(remove_slicing.(L.A[1]), L.A[2:end]...), L.buf)
+	end
+end
 
 diag(L::Compose) = is_sliced(L) ? diag(L.A[2]) : prod(diag.(L.A))
 function diag_AAc(L::Compose)

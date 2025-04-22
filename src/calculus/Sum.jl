@@ -30,7 +30,22 @@ struct Sum{K,C<:AbstractArray,D<:AbstractArray,L<:NTuple{K,AbstractOperator}} <:
 		if any([codomainType(A[1]) != codomainType(a) for a in A]) || any([domainType(A[1]) != domainType(a) for a in A])
 			throw(DomainError(A, "cannot sum operator with different codomains"))
 		end
-		return new{K,C,D,L}(A, bufC, bufD)
+		if any(a isa Sum for a in A)
+			new_A = ()
+			for a in A
+				if a isa Sum
+					new_A = (new_A..., a.A...)
+				else
+					new_A = (new_A..., a)
+				end
+			end
+			A = new_A
+		end
+		A = filter(a -> !(a isa Zeros), A)
+		if length(A) == 1
+			return A[1]
+		end
+		return new{length(A),C,D,typeof(A)}(A, bufC, bufD)
 	end
 end
 
@@ -101,6 +116,8 @@ is_full_row_rank(L::Sum) = any(is_full_row_rank.(L.A))
 is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
 
 diag(L::Sum) = (+).(diag.(L.A)...,)
+
+LinearAlgebra.opnorm(S::Sum) = sum(opnorm.(S.A)) ^ 2
 
 # utils
 function permute(S::Sum, p::AbstractVector{Int})

@@ -84,6 +84,14 @@ function mul!(
 	end
 end
 
+function get_normal_op(L::Scale)
+	if is_linear(L.A)
+		return Scale(L.coeff*coeff_conj, L.coeff*coeff_conj, get_normal_op(L.A))
+	else
+		return L' * L
+	end
+end
+
 # Properties
 
 size(L::Scale) = size(L.A)
@@ -93,6 +101,10 @@ codomainType(L::Scale) = codomainType(L.A)
 is_thread_safe(L::Scale) = is_thread_safe(L.A)
 
 is_linear(L::Scale) = is_linear(L.A)
+is_sliced(L::Scale) = is_sliced(L.A)
+get_slicing_expr(L::Scale) = get_slicing_expr(L.A)
+get_slicing_mask(L::Scale) = get_slicing_mask(L.A)
+remove_slicing(L::Scale) = L.coeff * remove_slicing(L.A)
 is_null(L::Scale) = is_null(L.A)
 is_eye(L::Scale) = is_diagonal(L.A)
 is_diagonal(L::Scale) = is_diagonal(L.A)
@@ -108,3 +120,12 @@ diag(L::Scale) = L.coeff * diag(L.A)
 diag_AcA(L::Scale) = (L.coeff)^2 * diag_AcA(L.A)
 diag_AAc(L::Scale) = (L.coeff)^2 * diag_AAc(L.A)
 remove_displacement(S::Scale) = Scale(S.coeff, S.coeff_conj, remove_displacement(S.A))
+
+LinearAlgebra.opnorm(L::Scale) = L.coeff * LinearAlgebra.opnorm(L.A)
+
+# utils
+
+function permute(S::Scale, p::AbstractVector{Int})
+	A = permute(S.A, p)
+	return Scale(S.coeff, S.coeff_conj, A)
+end

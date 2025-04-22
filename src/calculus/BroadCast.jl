@@ -41,7 +41,7 @@ struct BroadCast{
 		Base.Broadcast.check_broadcast_shape(dim_out, size(A, 1))
 		if size(A, 1) != (1,)
 			M = length(size(A, 1))
-			cols = ([Colon() for i in 1:M]...,)
+			cols = ([Colon() for _ in 1:M]...,)
 			idxs = CartesianIndices((dim_out[(M + 1):end]...,))
 			new{N,L,T,D,M,typeof(cols),typeof(idxs)}(A, dim_out, bufC, bufD, cols, idxs)
 		else #singleton case
@@ -127,4 +127,12 @@ is_null(R::BroadCast) = is_null(R.A)
 fun_name(R::BroadCast) = "." * fun_name(R.A)
 function remove_displacement(B::BroadCast)
 	return BroadCast(remove_displacement(B.A), B.dim_out, B.bufC, B.bufD)
+end
+
+LinearAlgebra.opnorm(R::BroadCast) = LinearAlgebra.opnorm(R.A)
+
+# utils
+
+function permute(R::BroadCast{N,L,T,D,M,C,I}, p::AbstractVector{Int}) where {N,L,T,D,M,C,I}
+	return BroadCast(permute(R.A, p), R.dim_out, R.bufC, R.bufD)
 end

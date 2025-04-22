@@ -200,6 +200,15 @@ function mul!(
 	return out
 end
 
+function get_normal_op(L::SimpleBatchOpSingleThreaded)
+	return SimpleBatchOpSingleThreaded(get_normal_op(L.operator), L.domain_size, L.codomain_size, L.batch_size)
+end
+function get_normal_op(L::SimpleBatchOpMultiThreaded)
+	return SimpleBatchOpMultiThreaded(
+		get_normal_op.(L.operator), L.domain_size, L.codomain_size, L.batch_indices
+	)
+end
+
 # Properties
 
 fun_name(L::SimpleBatchOpSingleThreaded) = "⟳" * fun_name(L.operator)
@@ -227,3 +236,6 @@ is_eye(L::SimpleBatchOpMultiThreaded) = is_eye(L.operator[1])
 
 is_thread_safe(L::SimpleBatchOpSingleThreaded) = is_thread_safe(L.operator)
 is_thread_safe(L::SimpleBatchOpMultiThreaded) = is_thread_safe(L.operator[1])
+
+LinearAlgebra.opnorm(L::SimpleBatchOpSingleThreaded) = LinearAlgebra.opnorm(L.operator)
+LinearAlgebra.opnorm(L::SimpleBatchOpMultiThreaded) = LinearAlgebra.opnorm(L.operator[1])

@@ -2,7 +2,7 @@ import Base: adjoint, *, +, -, getindex, hcat, vcat, reshape
 export jacobian
 
 ###### ' ######
-adjoint(L::AbstractOperator) = AdjointOperator(L)
+Base.adjoint(L::AbstractOperator) = AdjointOperator(L)
 
 ######+,-######
 (+)(L::AbstractOperator) = L
@@ -16,6 +16,16 @@ function (*)(L::AbstractOperator, b::AbstractArray)
 	mul!(y, L, b)
 	return y
 end
+function (*)(L::VCAT, b::Tuple)
+	y = allocate_in_codomain(L)
+	mul!(y, L, ArrayPartition(b...))
+	return y.x
+end
+function (*)(L::HCAT, b::Tuple)
+	y = allocate_in_codomain(L)
+	mul!(y, L, ArrayPartition(b...))
+	return y
+end
 
 #(*)(L::AbstractOperator, b::Tuple) = (*)(L, ArrayPartition(b...))
 
@@ -24,7 +34,7 @@ end
 *(L1::AbstractOperator, L2::AbstractOperator) = Compose(L1, L2)
 
 # getindex
-function getindex(A::AbstractOperator, idx...)
+function Base.getindex(A::AbstractOperator, idx...)
 	if ndoms(A, 2) == 1
 		Gout = GetIndex(codomainType(A), size(A, 1), idx)
 		return Gout * A
@@ -35,8 +45,20 @@ function getindex(A::AbstractOperator, idx...)
 	end
 end
 
+function Base.getindex(A::Compose, idx...)
+	if all(is_diagonal, A.A[2:end])
+		return Compose((getindex(A.A[1], idx...), A.A[2:end]...), A.buf)
+	else
+		error("cannot split operator of type $(typeof(A))")
+	end
+end
+
+function Base.getindex(A::Sum, idx...)
+	return Sum((getindex(L, idx...) for L in A.A)...)
+end
+
 #get index of HCAT returns HCAT (or Operator)
-function getindex(H::HCAT, idx::Union{AbstractArray,Int})
+function Base.getindex(H::HCAT, idx::Union{AbstractArray,Int})
 	unfolded = vcat([[i...] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
 		return permute(H, idx)
@@ -48,7 +70,7 @@ function getindex(H::HCAT, idx::Union{AbstractArray,Int})
 					if typeof(H.idxs[ii]) <: Int
 						new_H = (new_H..., H.A[ii])
 					else
-						error("cannot split operator")
+						error("cannot split operator: $H")
 					end
 				end
 			end
@@ -58,7 +80,7 @@ function getindex(H::HCAT, idx::Union{AbstractArray,Int})
 end
 
 #get index of HCAT returns HCAT (or Operator)
-function getindex(H::VCAT, idx::Union{AbstractArray,Int})
+function Base.getindex(H::VCAT, idx::Union{AbstractArray,Int})
 	unfolded = vcat([[i...] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
 		return permute(H, idx)
@@ -79,23 +101,23 @@ function getindex(H::VCAT, idx::Union{AbstractArray,Int})
 	end
 end
 
-function getindex(
+function Base.getindex(
 	H::A, idx::Union{AbstractArray,Int}
 ) where {L<:HCAT,D,S,A<:AffineAdd{L,D,S}}
 	return AffineAdd(getindex(H.A, idx), H.d, S)
 end
 
 # get index of scale
-function getindex(A::S, idx...) where {T,L,S<:Scale{T,L}}
+function Base.getindex(A::S, idx...) where {T,L,S<:Scale{T,L}}
 	return Scale(A.coeff, A.coeff_conj, getindex(A.A, idx...))
 end
 
-hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
-vcat(L::Vararg{AbstractOperator}) = VCAT(L...)
+Base.hcat(L::Vararg{AbstractOperator}) = HCAT(L...)
+Base.vcat(L::Vararg{AbstractOperator}) = VCAT(L...)
 
 ###### reshape ######
-reshape(L::A, idx::NTuple{N,Int}) where {N,A<:AbstractOperator} = Reshape(L, idx)
-reshape(L::A, idx::Vararg{Int}) where {A<:AbstractOperator} = Reshape(L, idx)
+Base.reshape(L::A, idx::NTuple{N,Int}) where {N,A<:AbstractOperator} = Reshape(L, idx)
+Base.reshape(L::A, idx::Vararg{Int}) where {A<:AbstractOperator} = Reshape(L, idx)
 
 ###### jacobian ######
 jacobian = Jacobian

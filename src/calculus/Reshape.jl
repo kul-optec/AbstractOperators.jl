@@ -51,6 +51,10 @@ function mul!(y::D, A::AdjointOperator{Reshape{N,L}}, b::C) where {N,L,C,D}
 	return mul!(y, R.A', b_res)
 end
 
+function get_normal_op(R::Reshape{N,L}) where {N,L<:AbstractOperator}
+	return get_normal_op(R.A)
+end
+
 # Properties
 
 size(R::Reshape) = (R.dim_out, size(R.A, 2))
@@ -60,6 +64,10 @@ codomainType(R::Reshape) = codomainType(R.A)
 is_thread_safe(R::Reshape) = is_thread_safe(R.A)
 
 is_linear(R::Reshape) = is_linear(R.A)
+is_sliced(R::Reshape) = is_sliced(R.A)
+get_slicing_expr(R::Reshape) = get_slicing_expr(R.A)
+get_slicing_mask(R::Reshape) = get_slicing_mask(R.A)
+remove_slicing(R::Reshape) = Reshape(remove_slicing(R.A), R.dim_out)
 is_null(R::Reshape) = is_null(R.A)
 is_eye(R::Reshape) = is_eye(R.A)
 is_diagonal(R::Reshape) = is_diagonal(R.A)
@@ -77,3 +85,5 @@ function permute(T::Reshape{N,L}, p::AbstractVector{Int}) where {N,L}
 	A = AbstractOperators.permute(T.A, p)
 	return Reshape(A, T.dim_out)
 end
+
+LinearAlgebra.opnorm(R::Reshape) = LinearAlgebra.opnorm(R.A)

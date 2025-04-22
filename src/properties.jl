@@ -142,7 +142,7 @@ ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
 count_dims(::Tuple{}) = 0
 count_dims(::NTuple{N,Int}) where {N} = N
-count_dims(dims::NTuple) = count_dims.(dims)
+count_dims(dims::Tuple) = count_dims.(dims)
 
 """
 	ndoms(L::AbstractOperator, [dom::Int]) -> (number of codomains, number of domains)
@@ -166,8 +166,8 @@ julia> ndoms(DCAT(DFT(10,10),DFT(10,10)))
 ndoms(L::AbstractOperator) = length.(ndims(L))
 ndoms(L::AbstractOperator, i::Int) = ndoms(L)[i]
 
-diag_AcA(L::AbstractOperator) = error("is_AAc_diagonal($L) == false")
-diag_AAc(L::AbstractOperator) = error("is_AcA_diagonal($L) == false")
+diag_AcA(L::AbstractOperator) = error("is_AcA_diagonal($L) == false")
+diag_AAc(L::AbstractOperator) = error("is_AAc_diagonal($L) == false")
 
 is_linear(L::LinearOperator) = true
 
@@ -217,6 +217,39 @@ function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T<:AbstractOp
 		"cannot convert operator with size $(size(L,1)) to operator with domain $dim_in ",
 	)
 	return L
+end
+
+"""
+	get_normal_op(L::AbstractOperator)
+
+Returns the normal operator of the operator `L`. The normal operator is defined as `L' * L` where `L'` is the adjoint of `L`.
+"""
+function get_normal_op(L::AbstractOperator)
+	return L' * L
+end
+
+function LinearAlgebra.opnorm(A::AbstractOperator)
+	# Power method for estimating the operator norm
+	A = get_normal_op(A)
+	max_iter=10
+	tol=1e-6
+    x = allocate_in_domain(A)
+    x /= norm(x)
+    λ = 0.0
+    λ_old = 0.0
+
+    for _ in 1:max_iter
+        y = A * x
+        λ = norm(y)
+        x = y / λ
+
+        if abs(λ - λ_old) < tol
+            break
+        end
+        λ_old = λ
+    end
+
+    return λ
 end
 
 #printing
