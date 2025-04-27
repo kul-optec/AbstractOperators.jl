@@ -14,6 +14,10 @@ function test_nufft_op(op, plan, image, dcf)
 		mul!(image₂, op', ksp₂)
 		@test image₂ ≈ image₁
 	end
+	normal_op = AbstractOperators.get_normal_op(op)
+	image₃ = similar(image)
+	mul!(image₃, normal_op, image)
+	@test image₃ ≈ image₂
 end
 
 function test_2D_nufft_op(threaded)

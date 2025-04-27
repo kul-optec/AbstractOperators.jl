@@ -7,7 +7,8 @@ using Documenter
 using Aqua
 using BenchmarkTools
 using Base.Threads: nthreads, @threads
-using NFFT
+using NFFT, NfftOperators
+using Wavelets, WaveletOperators
 
 include("utils.jl")
 Random.seed!(0)
@@ -17,6 +18,10 @@ verb = true
 @testset "AbstractOperators" begin
 	@testset "Linear operators" begin
 		include("test_linear_operators.jl")
+	end
+
+	@testset "NfftOps" begin
+		include("test_NfftOps.jl")
 	end
 
 	@testset "Non-Linear operators" begin
@@ -52,8 +57,4 @@ verb = true
 	end
 
 	Aqua.test_all(AbstractOperators)
-end
-
-@testset "NfftExt" begin
-	include("test_NfftExt.jl")
 end

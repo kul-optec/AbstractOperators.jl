@@ -70,10 +70,10 @@ RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Vector{ComplexF64}, Vector{
 function domain_storage_type(L::AbstractOperator)
 	dt = domainType(L)
 	return if dt isa Tuple
-		arrayTypes = Tuple{[Array{t,d} for (t, d) in zip(dt, length.(size(L, 2)))]...}
+		arrayTypes = Tuple{[Array{t} for t in dt]...}
 		ArrayPartition{promote_type(dt...),arrayTypes}
 	else
-		Array{dt,length(size(L, 2))}
+		Array{dt}
 	end
 end
 
@@ -93,10 +93,10 @@ RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Vector{ComplexF64}, Vector{
 function codomain_storage_type(L::AbstractOperator)
 	dt = codomainType(L)
 	return if dt isa Tuple
-		arrayTypes = Tuple{[Array{t,d} for (t, d) in zip(dt, length.(size(L, 1)))]...}
+		arrayTypes = Tuple{[Array{t} for t in dt]...}
 		ArrayPartition{promote_type(dt...),arrayTypes}
 	else
-		Array{dt,length(size(L, 1))}
+		Array{dt}
 	end
 end
 

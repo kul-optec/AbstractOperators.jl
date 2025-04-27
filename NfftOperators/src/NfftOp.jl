@@ -1,24 +1,4 @@
-module NfftExt
-
-export NfftOp
-
-using LinearAlgebra
-using AbstractOperators
-using FastBroadcast
-import LinearAlgebra: mul!
-import Base: size
-import NFFT: NFFT
-import AbstractOperators:
-	NfftOp,
-	set_thread_counts_expr,
-	thread_count_functions,
-	domainType,
-	codomainType,
-	fun_name
-import Base.Threads: nthreads
-using FFTW
-
-struct NfftOpData{T,D} <: AbstractOperators.LinearOperator
+struct NfftOp{T,D} <: AbstractOperators.LinearOperator
 	plan::NFFT.AbstractNFFTPlan{T,D}
 	ksp_buffer::AbstractMatrix{Complex{T}}
 	dcf::AbstractMatrix{T}
@@ -58,15 +38,16 @@ IEEE Transactions on Signal Processing, 51(2), 560-574.
 
 # Examples
 ```jldoctest
-julia> using NFFT # import NFFT to trigger loading NfftOp implementation
+julia> using NfftOperators # note that NfftOp is located in a separate package
 
-julia> image_size = (128, 128)
+julia> image_size = (128, 128);
 
 julia> trajectory = rand(2, 128, 50) .- 0.5;
 
 julia> dcf = rand(128, 50);
 
 julia> op = NfftOp(image_size, trajectory, dcf)
+𝒩  ℂ^(128, 128) -> ℂ^(128, 50)
 
 julia> image = rand(ComplexF64, image_size);
 
@@ -88,7 +69,7 @@ function NfftOp(
 	ksp_buffer = similar(
 		trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
 	)
-	return NfftOpData{T,D}(plan, ksp_buffer, dcf, threaded)
+	return NfftOp{T,D}(plan, ksp_buffer, dcf, threaded)
 end
 
 function NfftOp(
@@ -104,9 +85,9 @@ function NfftOp(
 	ksp_buffer = similar(
 		trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
 	)
-	raw_dcf = sdc(plan; iters=dcf_estimation_iterations)
+	raw_dcf = NFFTTools.sdc(plan; iters=dcf_estimation_iterations)
 	dcf = dcf_correction_function(reshape(raw_dcf, size(ksp_buffer)))
-	return NfftOpData{T,D}(plan, ksp_buffer, dcf, threaded)
+	return NfftOp{T,D}(plan, ksp_buffer, dcf, threaded)
 end
 
 function set_nfft_threading_expr(threading_state_expr, thread_count_expr, body_expr)
@@ -127,7 +108,7 @@ macro disable_nfft_threading(expr)
 	return set_nfft_threading_expr(false, 1, expr)
 end
 
-function mul!(ksp::AbstractArray, op::NfftOpData, img::AbstractArray)
+function mul!(ksp::AbstractArray, op::NfftOp, img::AbstractArray)
 	AbstractOperators.check(img, ksp, op)
 	if op.threaded
 		@enable_nfft_threading mul!(vec(ksp), op.plan, img)
@@ -139,7 +120,7 @@ end
 
 function mul!(
 	img::AbstractArray,
-	op::AbstractOperators.AdjointOperator{<:NfftOpData},
+	op::AbstractOperators.AdjointOperator{<:NfftOp},
 	ksp::AbstractArray,
 )
 	op = op.A
@@ -155,10 +136,10 @@ end
 
 # Properties
 
-size(L::NfftOpData) = size(L.ksp_buffer), NFFT.size_in(L.plan)
-fun_name(::NfftOpData) = "𝒩"
-domainType(::NfftOpData{T}) where {T} = complex(T)
-codomainType(::NfftOpData{T}) where {T} = complex(T)
+size(L::NfftOp) = size(L.ksp_buffer), NFFT.size_in(L.plan)
+fun_name(::NfftOp) = "𝒩"
+domainType(::NfftOp{T}) where {T} = complex(T)
+codomainType(::NfftOp{T}) where {T} = complex(T)
 
 # Utility
 
@@ -182,50 +163,6 @@ function create_plan(trajectory, image_size, threaded; kwargs...)
 	end
 end
 
-function sdc(p::NFFT.AbstractNFFTPlan{T,D,1}; iters=20) where {T,D}
-	# Weights for sample density compensation.
-	# Uses method of Pipe & Menon, 1999. Mag Reson Med, 186, 179.
-	weights = similar(p.tmpVec, Complex{T}, p.J)
-	weights .= one(Complex{T})
-	weights_tmp = similar(weights)
-	scaling_factor = zero(T)
-
-	# Pre-weighting to correct non-uniform sample density
-	for i in 1:iters
-		NFFT.convolve_transpose!(p, weights, p.tmpVec)
-		if i == 1
-			scaling_factor = maximum(abs.(p.tmpVec))
-		end
-
-		p.tmpVec ./= scaling_factor
-		NFFT.convolve!(p, p.tmpVec, weights_tmp)
-		weights_tmp ./= scaling_factor
-		weights ./= (abs.(weights_tmp) .+ eps(T))
-	end
-	# Post weights to correct image scaling
-	# This finds c, where ||u - c*v||_2^2 = 0 and then uses
-	# c to scale all weights by a scalar factor.
-	u = similar(weights, Complex{T}, p.N)
-	u .= one(Complex{T})
-
-	# conversion to Array is a workaround for CuNFFT. Without it we get strange
-	# results that indicate some synchronization issue
-	#f = Array( p * u ) 
-	#b = f .* Array(weights) # apply weights from above
-	#v = Array( adjoint(p) * convert(typeof(weights), b) )
-	#c = vec(v) \ vec(Array(u))  # least squares diff
-	#return abs.(convert(typeof(weights), c * Array(weights))) 
-
-	# non converting version
-	f = similar(p.tmpVec, Complex{T}, p.J)
-	mul!(f, p, u)
-	f .*= weights # apply weights from above
-	v = similar(p.tmpVec, Complex{T}, p.N)
-	mul!(v, adjoint(p), f)
-	c = vec(v) \ vec(u)  # least squares diff
-	return abs.(c * weights)
-end
-
 function NFFTPlan(
 	k::Matrix{T},
 	N::NTuple{D,Int};
@@ -244,8 +181,8 @@ function NFFTPlan(
 	tmpVec = Array{Complex{T},D}(undef, Ñ)
 
 	fftflags_ = (fftflags !== nothing) ? (flags=fftflags,) : NamedTuple()
-	FP = plan_fft!(tmpVec, dims_; num_threads=FFTW.get_num_threads(), fftflags_...)
-	BP = plan_bfft!(tmpVec, dims_; num_threads=FFTW.get_num_threads(), fftflags_...)
+	FP = FFTW.plan_fft!(tmpVec, dims_; num_threads=FFTW.get_num_threads(), fftflags_...)
+	BP = FFTW.plan_bfft!(tmpVec, dims_; num_threads=FFTW.get_num_threads(), fftflags_...)
 
 	calcBlocks =
 		(
@@ -291,5 +228,3 @@ function NFFTPlan(
 		B,
 	)
 end
-
-end # module NfftExt

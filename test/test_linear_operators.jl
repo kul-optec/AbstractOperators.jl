@@ -514,7 +514,7 @@ op = BroadcastingDiagOp(x, w)
 @test is_full_column_rank(op) == true
 
 w = rand(ComplexF64, 4, 5)
-op = BroadcastingDiagOp(Float64, (5, 1), w ./ sqrt.(sum(abs2, w; dims=2)))
+op = BroadcastingDiagOp(Float64, (4, 1), w ./ sqrt.(sum(abs2, w; dims=2)))
 @test is_orthogonal(op) == true
 
 ########## Eye ############
@@ -882,10 +882,9 @@ op = MIMOFilt(Float64, (m, n), b, a)
 
 x1 = randn(m, n)
 y1 = test_op(op, x1, randn(m, 2), verb)
-y2 = [
-    filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3]),
-    filt(b[4], a[4], x1[:, 1]) + filt(b[5], a[5], x1[:, 2]) + filt(b[6], a[6], x1[:, 3]),
-]
+col1 = filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3])
+col2 = filt(b[4], a[4], x1[:, 1]) + filt(b[5], a[5], x1[:, 2]) + filt(b[6], a[6], x1[:, 3])
+y2 = [col1 col2]
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
@@ -896,10 +895,9 @@ op = MIMOFilt(Float64, (m, n), b, a)
 
 x1 = randn(m, n)
 y1 = test_op(op, x1, randn(m, 2), verb)
-y2 = [
-    filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3]),
-    filt(b[4], a[4], x1[:, 1]) + filt(b[5], a[5], x1[:, 2]) + filt(b[6], a[6], x1[:, 3]),
-]
+col1 = filt(b[1], a[1], x1[:, 1]) + filt(b[2], a[2], x1[:, 2]) + filt(b[3], a[3], x1[:, 3])
+col2 = filt(b[4], a[4], x1[:, 1]) + filt(b[5], a[5], x1[:, 2]) + filt(b[6], a[6], x1[:, 3])
+y2 = [col1 col2]
 
 @test all(norm.(y1 .- y2) .<= 1e-12)
 
@@ -1086,3 +1084,20 @@ y1 = test_op(op, x1, randn(m) + im * randn(m), verb)
 @test is_invertible(op) == false
 @test is_full_row_rank(op) == false
 @test is_full_column_rank(op) == false
+
+########## WaveletOp ############
+n = 8
+op = WaveletOp(Float64, wavelet(WT.db4), (n,))
+x1 = randn(n)
+y1 = test_op(op, x1, randn(n), verb)
+y2 = dwt(x1, wavelet(WT.db4))
+
+@test all(norm.(y1 .- y2) .<= 1e-12)
+
+n = 8
+op = WaveletOp(ComplexF64, wavelet(WT.db4), (n,))
+x1 = randn(ComplexF64, n)
+y1 = test_op(op, x1, randn(ComplexF64, n), verb)
+y2 = dwt(x1, wavelet(WT.db4))
+
+@test all(norm.(y1 .- y2) .<= 1e-12)

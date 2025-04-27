@@ -12,11 +12,9 @@ RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 
 [weakdeps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-NFFT = "efe261a4-0d2b-5849-be55-fc731d526b0d"
 
 [extensions]
 CudaExt = "CUDA"
-NfftExt = "NFFT"
 
 [compat]
 Aqua = "0.8"
@@ -27,12 +25,16 @@ Documenter = "1.8"
 FFTW = "1"
 FastBroadcast = "0.3.5"
 LinearAlgebra = "1"
-NFFT = "0.13.6"
+NFFT = "0.13.7"
+NfftOperators = "0.1"
+OperatorCore = "0.1"
 Printf = "1"
 Random = "1"
 RecursiveArrayTools = "2, 3"
 SparseArrays = "1"
 Test = "1"
+Wavelets = "0.10.1"
+WaveletOperators = "0.1"
 julia = "1"
 
 [extras]
@@ -41,10 +43,17 @@ BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 NFFT = "efe261a4-0d2b-5849-be55-fc731d526b0d"
+NfftOperators = "35a93202-2abf-4a13-bc94-0aee2f861ee0"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Wavelets = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
+WaveletOperators = "f3582904-6f60-4bbd-985d-55eab799bc9d"
+
+[sources]
+WaveletOperators = {path="./WaveletOperators"}
+NfftOperators = {path="./NfftOperators"}
 
 [targets]
-test = ["Aqua", "BenchmarkTools", "CUDA", "Documenter", "Printf", "Random", "SparseArrays", "Test", "NFFT"]
+test = ["Aqua", "BenchmarkTools", "CUDA", "Documenter", "NFFT", "NfftOperators", "Printf", "Random", "SparseArrays", "Test", "Wavelets", "WaveletOperators"]
