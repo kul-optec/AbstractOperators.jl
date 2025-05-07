@@ -133,21 +133,10 @@ end
 	return ex
 end
 
+has_optimized_normalop(L::DCAT) = any(has_optimized_normalop.(L.A))
 function get_normal_op(H::DCAT)
-	# build normal operator
-	normal = []
-	for i in eachindex(H.A)
-		push!(normal, get_normal_op(H.A[i]))
-	end
-
-	# build normal DCAT
-	normal = DCAT(normal...)
-
-	# build normal DCAT with the same idxs as H
-	p = vcat([[idx...] for idx in H.idxC]...)
-	invpermute!(normal.idxD, p)
-
-	return normal
+	idxs = tuple((1:length(H.A))...)
+	DCAT(tuple([get_normal_op(H.A[i]) for i in eachindex(H.A)]...), idxs, idxs)
 end
 
 # Properties

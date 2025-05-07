@@ -200,34 +200,12 @@ function mul!(
 	return out
 end
 
-function get_normal_op(L::SimpleBatchOpSingleThreaded)
-	return SimpleBatchOpSingleThreaded(get_normal_op(L.operator), L.domain_size, L.codomain_size, L.batch_size)
-end
-function get_normal_op(L::SimpleBatchOpMultiThreaded)
-	return SimpleBatchOpMultiThreaded(
-		get_normal_op.(L.operator), L.domain_size, L.codomain_size, L.batch_indices
-	)
-end
-
 # Properties
 
 fun_name(L::SimpleBatchOpSingleThreaded) = "⟳" * fun_name(L.operator)
 fun_name(L::SimpleBatchOpMultiThreaded) = "⟳" * fun_name(L.operator[1])
 
 size(L::SimpleBatchOp) = L.codomain_size, L.domain_size
-
-function domain_storage_type(L::SimpleBatchOpSingleThreaded)
-	return extend_domain_storage_type(L, L.operator)
-end
-function domain_storage_type(L::SimpleBatchOpMultiThreaded)
-	return extend_domain_storage_type(L, L.operator[1])
-end
-function codomain_storage_type(L::SimpleBatchOpSingleThreaded)
-	return extend_codomain_storage_type(L, L.operator)
-end
-function codomain_storage_type(L::SimpleBatchOpMultiThreaded)
-	return extend_codomain_storage_type(L, L.operator[1])
-end
 
 is_linear(L::SimpleBatchOpSingleThreaded) = is_linear(L.operator)
 is_linear(L::SimpleBatchOpMultiThreaded) = is_linear(L.operator[1])
@@ -236,6 +214,17 @@ is_eye(L::SimpleBatchOpMultiThreaded) = is_eye(L.operator[1])
 
 is_thread_safe(L::SimpleBatchOpSingleThreaded) = is_thread_safe(L.operator)
 is_thread_safe(L::SimpleBatchOpMultiThreaded) = is_thread_safe(L.operator[1])
+
+has_optimized_normalop(L::SimpleBatchOpSingleThreaded) = has_optimized_normalop(L.operator)
+has_optimized_normalop(L::SimpleBatchOpMultiThreaded) = has_optimized_normalop(L.operator[1])
+function get_normal_op(L::SimpleBatchOpSingleThreaded)
+	return SimpleBatchOpSingleThreaded(get_normal_op(L.operator), L.domain_size, L.codomain_size, L.batch_size)
+end
+function get_normal_op(L::SimpleBatchOpMultiThreaded)
+	return SimpleBatchOpMultiThreaded(
+		get_normal_op.(L.operator), L.domain_size, L.codomain_size, L.batch_indices
+	)
+end
 
 LinearAlgebra.opnorm(L::SimpleBatchOpSingleThreaded) = LinearAlgebra.opnorm(L.operator)
 LinearAlgebra.opnorm(L::SimpleBatchOpMultiThreaded) = LinearAlgebra.opnorm(L.operator[1])

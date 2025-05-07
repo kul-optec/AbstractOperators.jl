@@ -14,7 +14,7 @@ julia> Conv((10,),randn(5))
 	
 ```
 """
-struct Conv{T,N,H<:AbstractArray{T,N},Hc} <: AbstractConv{T,N,H}
+struct Conv{T,N,H<:AbstractArray{T},Hc} <: AbstractConv{T,N,H}
 	dim_in::NTuple{N,Int}
 	h::H
 	buf::H

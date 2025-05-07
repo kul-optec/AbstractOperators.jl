@@ -157,10 +157,6 @@ function mul!(
 	return y .= real.(y2) .* L.A.A.scale
 end
 
-function get_normal_op(L::FourierTransform)
-	return Eye(domainType(L), size(L, 1), domain_storage_type(L))
-end
-
 # Properties
 
 size(L::FourierTransform) = (L.dim_in, L.dim_in)
@@ -183,5 +179,10 @@ diag_AAc(L::DFT) = float(prod(size(L, 1)))
 
 diag_AcA(L::IDFT) = 1 / prod(size(L, 1))
 diag_AAc(L::IDFT) = 1 / prod(size(L, 1))
+
+has_optimized_normalop(L::FourierTransform) = true
+has_optimized_normalop(L::AdjointOperator{<:FourierTransform}) = true
+get_normal_op(L::FourierTransform) = Scale(diag_AAc(L), Eye(allocate_in_domain(L)))
+get_normal_op(L::AdjointOperator{<:FourierTransform}) = Scale(diag_AAc(L), Eye(allocate_in_domain(L)))
 
 LinearAlgebra.opnorm(L::FourierTransform) = one(real(domainType(L)))

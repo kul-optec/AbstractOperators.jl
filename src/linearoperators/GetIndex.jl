@@ -93,10 +93,6 @@ struct NormalGetIndex{N,M,T} <: LinearOperator
 	idx::T
 end
 
-function get_normal_op(L::GetIndex{N,M,T}) where {N,M,T}
-	return NormalGetIndex(L.domainType, L.dim_in, L.idx)
-end
-
 function mul!(
 	y::AbstractArray{T1,M}, L::NormalGetIndex{N,M,T2}, b::AbstractArray{T1,M}
 ) where {T1,N,M,T2<:Tuple}
@@ -132,6 +128,9 @@ function get_slicing_mask(L::GetIndex{N,M,<:Tuple}) where {N,M}
 	return mask
 end
 remove_slicing(L::GetIndex) = Eye(L.domainType, L.dim_out)
+
+has_optimized_normalop(L::GetIndex) = true
+get_normal_op(L::GetIndex) = NormalGetIndex(L.domainType, L.dim_in, L.idx)
 
 LinearAlgebra.opnorm(L::GetIndex) = one(real(domainType(L)))
 

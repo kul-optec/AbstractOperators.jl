@@ -9,14 +9,6 @@ codomainType(::BatchOp{dT,cT}) where {dT,cT} = cT
 
 # Utility
 
-extend_storage_type(T::Type{<:AbstractArray}, D) = T.name.wrapper{eltype(T),D}
-function extend_domain_storage_type(outer_op, inner_op)
-	return extend_storage_type(domain_storage_type(inner_op), ndims(outer_op, 2))
-end
-function extend_codomain_storage_type(outer_op, inner_op)
-	return extend_storage_type(codomain_storage_type(inner_op), ndims(outer_op, 1))
-end
-
 get_domain_batch_dim_mask(::Type{<:BatchOp{T1,T2,dM,cM}}) where {T1,T2,dM,cM} = dM
 get_codomain_batch_dim_mask(::Type{<:BatchOp{T1,T2,dM,cM}}) where {T1,T2,dM,cM} = cM
 
@@ -25,7 +17,7 @@ function copy_op(x::T) where {T<:AbstractOperator}
 	return if AbstractOperators.is_thread_safe(x)
 		x
 	else
-		T([copy_op(getfield(x, k)) for k in fieldnames(T)]...)
+		T.name.wrapper([copy_op(getfield(x, k)) for k in fieldnames(T)]...)
 	end
 end
 

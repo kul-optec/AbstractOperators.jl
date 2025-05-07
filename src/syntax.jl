@@ -46,7 +46,10 @@ function Base.getindex(A::AbstractOperator, idx...)
 end
 
 function Base.getindex(A::Compose, idx...)
-	if all(is_diagonal, A.A[2:end])
+	if ndoms(A, 2) == 1
+		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		return Gout * A
+	elseif all(is_diagonal, A.A[2:end])
 		return Compose((getindex(A.A[1], idx...), A.A[2:end]...), A.buf)
 	else
 		error("cannot split operator of type $(typeof(A))")
@@ -54,6 +57,10 @@ function Base.getindex(A::Compose, idx...)
 end
 
 function Base.getindex(A::Sum, idx...)
+	if ndoms(A, 2) == 1
+		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		return Gout * A
+	end
 	return Sum((getindex(L, idx...) for L in A.A)...)
 end
 
@@ -79,7 +86,7 @@ function Base.getindex(H::HCAT, idx::Union{AbstractArray,Int})
 	end
 end
 
-#get index of HCAT returns HCAT (or Operator)
+#get index of VCAT returns VCAT (or Operator)
 function Base.getindex(H::VCAT, idx::Union{AbstractArray,Int})
 	unfolded = vcat([[i...] for i in H.idxs]...)
 	if length(idx) == length(unfolded)
@@ -92,7 +99,7 @@ function Base.getindex(H::VCAT, idx::Union{AbstractArray,Int})
 					if typeof(H.idxs[ii]) <: Int
 						new_H = (new_H..., H.A[ii])
 					else
-						error("cannot split operator")
+						error("cannot split operator: $H")
 					end
 				end
 			end
@@ -101,14 +108,20 @@ function Base.getindex(H::VCAT, idx::Union{AbstractArray,Int})
 	end
 end
 
-function Base.getindex(
-	H::A, idx::Union{AbstractArray,Int}
-) where {L<:HCAT,D,S,A<:AffineAdd{L,D,S}}
-	return AffineAdd(getindex(H.A, idx), H.d, S)
+function Base.getindex(H::A, idx...) where {L<:HCAT,D,S,A<:AffineAdd{L,D,S}}
+	if ndoms(H, 2) == 1
+		Gout = GetIndex(codomainType(H), size(H, 1), idx)
+		return Gout * H
+	end
+	return AffineAdd(getindex(H.A, idx...), H.d, S)
 end
 
 # get index of scale
 function Base.getindex(A::S, idx...) where {T,L,S<:Scale{T,L}}
+	if ndoms(A, 2) == 1
+		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		return Gout * A
+	end
 	return Scale(A.coeff, A.coeff_conj, getindex(A.A, idx...))
 end
 

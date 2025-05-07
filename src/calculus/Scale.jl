@@ -21,36 +21,34 @@ julia> 10*A         #shorthand
 	
 ```
 """
-struct Scale{T<:RealOrComplex,L<:AbstractOperator} <: AbstractOperator
+struct Scale{T<:Number,L<:AbstractOperator} <: AbstractOperator
 	coeff::T
 	coeff_conj::T
 	A::L
+	function Scale(coeff, coeff_conj, L)
+		cT = codomainType(L)
+		isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
+		if isCodomainReal && typeof(coeff) <: Complex
+			error(
+				"Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
+			)
+		end
+		return new{typeof(coeff),typeof(L)}(coeff, coeff_conj, L)
+	end
 end
 
 # Constructors
-
-function Scale(coeff::T, L::R) where {T<:RealOrComplex,R<:AbstractOperator}
+function Scale(coeff, L)
 	coeff_conj = conj(coeff)
 	coeff, coeff_conj = promote(coeff, coeff_conj)
-	cT = codomainType(L)
-	isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
-	if isCodomainReal && T <: Complex
-		error(
-			"Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
-		)
-	end
-	return Scale{typeof(coeff),R}(coeff, coeff_conj, L)
+	return Scale(coeff, coeff_conj, L)
 end
 
 # Special Constructors
 # scale of scale
-function Scale(
-	coeff::T2, L::S
-) where {T1<:RealOrComplex,T2<:RealOrComplex,R<:AbstractOperator,S<:Scale{T1,R}}
+function Scale(coeff::Number, L::Scale)
 	return Scale(*(promote(coeff, L.coeff)...), L.A)
 end
-# scale of DiagOp
-Scale(coeff::T, L::DiagOp) where {T<:RealOrComplex} = DiagOp(coeff * diag(L))
 
 # Mappings
 
@@ -84,6 +82,7 @@ function mul!(
 	end
 end
 
+has_optimized_normalop(L::Scale) = is_linear(L.A) && has_optimized_normalop(L.A)
 function get_normal_op(L::Scale)
 	if is_linear(L.A)
 		return Scale(L.coeff*coeff_conj, L.coeff*coeff_conj, get_normal_op(L.A))

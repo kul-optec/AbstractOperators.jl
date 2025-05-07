@@ -53,6 +53,8 @@ struct AffineAdd{L<:AbstractOperator,D<:Union{AbstractArray,Number},S} <: Abstra
 	end
 end
 
+Scale(coeff::Number, T::AffineAdd{L,D,S}) where {L,D,S} = AffineAdd(Scale(coeff, T.A), coeff * T.d, S)
+
 # Mappings
 # array
 function mul!(y::DD, T::AffineAdd{L,D,true}, x) where {L<:AbstractOperator,DD,D}
@@ -78,8 +80,8 @@ codomainType(L::AffineAdd) = codomainType(L.A)
 is_thread_safe(L::AffineAdd) = is_thread_safe(L.A)
 
 is_linear(L::AffineAdd) = is_linear(L.A)
-is_null(L::AffineAdd) = is_null(L.A)
-is_eye(L::AffineAdd) = is_diagonal(L.A)
+is_null(L::AffineAdd) = is_null(L.A) && all(displacement(L) .== 0)
+is_eye(L::AffineAdd) = is_eye(L.A) && all(displacement(L) .== 0)
 is_diagonal(L::AffineAdd) = is_diagonal(L.A)
 is_invertible(L::AffineAdd) = is_invertible(L.A)
 is_AcA_diagonal(L::AffineAdd) = is_AcA_diagonal(L.A)
@@ -97,6 +99,9 @@ fun_name(T::AffineAdd{L,D,S}) where {L,D,S} = "$(fun_name(T.A))" * (S ? "+" : "-
 diag(L::AffineAdd) = diag(L.A)
 diag_AcA(L::AffineAdd) = diag_AcA(L.A)
 diag_AAc(L::AffineAdd) = diag_AAc(L.A)
+
+has_optimized_normalop(T::AffineAdd) = has_optimized_normalop(T.A)
+get_normal_op(T::AffineAdd{L,D,S}) where {L,D,S} = AffineAdd(get_normal_op(T.A), T.A' * T.d, S)
 
 # utils
 import Base: sign

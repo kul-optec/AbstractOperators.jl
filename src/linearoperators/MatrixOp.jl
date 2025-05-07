@@ -55,6 +55,17 @@ function MatrixOp(D::Type, A::M, n::Integer) where {M<:AbstractMatrix}
 	return MatrixOp(D, (size(A, 2), n), A)
 end
 
+function Scale(coeff::Number, A::MatrixOp)
+	cT = codomainType(A)
+	isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
+	if isCodomainReal && typeof(coeff) <: Complex
+		error(
+			"Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
+		)
+	end
+	return MatrixOp(coeff * A.A, A.n_col_in)
+end
+
 import Base: convert
 convert(::Type{LinearOperator}, L::M) where {T,M<:AbstractMatrix{T}} = MatrixOp{T,T,M}(L, 1)
 function convert(::Type{LinearOperator}, L::M, n::Integer) where {T,M<:AbstractMatrix{T}}
@@ -82,10 +93,6 @@ function mul!(
 	return y .= real.(yc)
 end
 
-function get_normal_op(L::MatrixOp{D,T,M}) where {D,T,M}
-	return MatrixOp(domainType(L), size(L, 1), L.A' * L.A)
-end
-
 # Properties
 
 domainType(::MatrixOp{D}) where {D} = D
@@ -103,7 +110,18 @@ end
 fun_name(L::MatrixOp) = "▒"
 
 is_diagonal(L::MatrixOp) = isdiag(L.A)
+is_AAc_diagonal(L::MatrixOp) = isdiag(L.A * L.A')
+is_AcA_diagonal(L::MatrixOp) = isdiag(L.A' * L.A)
+is_null(L::MatrixOp) = L.A == 0 * I
+is_eye(L::MatrixOp) = L.A == I
+is_invertible(L::MatrixOp) =
+	size(L.A, 1) == size(L.A, 2) &&
+	!isapprox(det(BigFloat.(L.A)), 0, atol = eps(eltype(L.A)) * 10)
+is_orthogonal(L::MatrixOp) = size(L.A, 1) == size(L.A, 2) && L.A' * L.A == I
 is_full_row_rank(L::MatrixOp) = rank(L.A) == size(L.A, 1)
 is_full_column_rank(L::MatrixOp) = rank(L.A) == size(L.A, 2)
+
+has_optimized_normalop(::MatrixOp) = true
+get_normal_op(L::MatrixOp) = MatrixOp(domainType(L), size(L, 1), L.A' * L.A)
 
 LinearAlgebra.opnorm(L::MatrixOp) = opnorm(L.A)

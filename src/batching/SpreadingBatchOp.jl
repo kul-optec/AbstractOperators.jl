@@ -472,6 +472,22 @@ function mul!(
 	return out
 end
 
+# Properties
+
+fun_name(L::SpreadingBatchOp) = "⟳" * fun_name(L.operators[1])
+fun_name(L::SpreadingBatchOpCopying) = "⟳" * fun_name(L.operators[1][1])
+
+size(L::SpreadingBatchOp) = L.codomain_size, L.domain_size
+
+is_linear(L::SpreadingBatchOp) = is_linear(L.operators[1])
+is_linear(L::SpreadingBatchOpCopying) = is_linear(L.operators[1][1])
+is_eye(L::SpreadingBatchOp) = is_eye(L.operators[1])
+is_eye(L::SpreadingBatchOpCopying) = is_eye(L.operators[1][1])
+is_thread_safe(L::SpreadingBatchOp) = is_thread_safe(L.operators[1])
+is_thread_safe(L::SpreadingBatchOpCopying) = is_thread_safe(L.operators[1][1])
+
+has_optimized_normalop(L::SpreadingBatchOp) = has_optimized_normalop(L.operators[1])
+has_optimized_normalop(L::SpreadingBatchOpCopying) = has_optimized_normalop(L.operators[1][1])
 function get_normal_op(L::SpreadingBatchOpSingleThreaded)
 	return SpreadingBatchOpSingleThreaded(
 		get_normal_op.(L.operators), L.domain_size, L.codomain_size, L.batch_size
@@ -499,33 +515,6 @@ function get_normal_op(L::SpreadingBatchOpFixedOperator)
 		L.operator_indices
 	)
 end
-
-# Properties
-
-fun_name(L::SpreadingBatchOp) = "⟳" * fun_name(L.operators[1])
-fun_name(L::SpreadingBatchOpCopying) = "⟳" * fun_name(L.operators[1][1])
-
-size(L::SpreadingBatchOp) = L.codomain_size, L.domain_size
-
-function domain_storage_type(L::SpreadingBatchOp)
-	return extend_domain_storage_type(L, L.operators[1])
-end
-function domain_storage_type(L::SpreadingBatchOpCopying)
-	return extend_domain_storage_type(L, L.operators[1][1])
-end
-function codomain_storage_type(L::SpreadingBatchOp)
-	return extend_codomain_storage_type(L, L.operators[1])
-end
-function codomain_storage_type(L::SpreadingBatchOpCopying)
-	return extend_codomain_storage_type(L, L.operators[1][1])
-end
-
-is_linear(L::SpreadingBatchOp) = is_linear(L.operators[1])
-is_linear(L::SpreadingBatchOpCopying) = is_linear(L.operators[1][1])
-is_eye(L::SpreadingBatchOp) = is_eye(L.operators[1])
-is_eye(L::SpreadingBatchOpCopying) = is_eye(L.operators[1][1])
-is_thread_safe(L::SpreadingBatchOp) = is_thread_safe(L.operators[1])
-is_thread_safe(L::SpreadingBatchOpCopying) = is_thread_safe(L.operators[1][1])
 
 LinearAlgebra.opnorm(L::SpreadingBatchOp) = maximum(
 	LinearAlgebra.opnorm.(L.operators)

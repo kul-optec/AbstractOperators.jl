@@ -477,46 +477,6 @@ x1 = randn(n)
 @test norm(op' * (op * x1) .- diag_AcA(op) .* x1) <= 1e-12
 @test norm(op * (op' * x1) .- diag_AAc(op) .* x1) <= 1e-12
 
-########## BroadcastingDiagOp ############
-n, m = 5, 4
-d = randn(n, m)
-op = BroadcastingDiagOp(Float64, (n, 1), d)
-x1 = randn(n, 1)
-y1 = test_op(op, x1, rand(n, m), verb)
-y2 = d .* x1
-
-@test all(norm.(y1 .- y2) .<= 1e-12)
-
-n, m = 5, 4
-d = randn(n, m) + im * randn(n, m)
-op = BroadcastingDiagOp(Float64, (n, 1), d)
-x1 = randn(n, 1)
-y1 = test_op(op, x1, rand(n, m) .+ im * rand(n, m), verb)
-y2 = d .* x1
-
-@test all(norm.(y1 .- y2) .<= 1e-12)
-
-# other constructors
-x = rand(4, 1)
-w = rand(4, 5)
-op = BroadcastingDiagOp(x, w)
-
-#properties
-@test is_linear(op) == true
-@test is_null(op) == false
-@test is_eye(op) == false
-@test is_diagonal(op) == false
-@test is_AcA_diagonal(op) == false
-@test is_AAc_diagonal(op) == false
-@test is_orthogonal(op) == false
-@test is_invertible(op) == true
-@test is_full_row_rank(op) == false
-@test is_full_column_rank(op) == true
-
-w = rand(ComplexF64, 4, 5)
-op = BroadcastingDiagOp(Float64, (4, 1), w ./ sqrt.(sum(abs2, w; dims=2)))
-@test is_orthogonal(op) == true
-
 ########## Eye ############
 n = 4
 op = Eye(Float64, (n,))
@@ -777,7 +737,8 @@ op = convert(LinearOperator, A)
 op = convert(LinearOperator, A, c)
 op = convert(LinearOperator, Complex{Float64}, size(x1), A)
 
-##properties
+#properties
+@test is_sliced(op) == false
 @test is_linear(op) == true
 @test is_null(op) == false
 @test is_eye(op) == false
@@ -1077,13 +1038,16 @@ y1 = test_op(op, x1, randn(m) + im * randn(m), verb)
 @test is_linear(op) == true
 @test is_null(op) == true
 @test is_eye(op) == false
-@test is_diagonal(op) == false
-@test is_AcA_diagonal(op) == false
-@test is_AAc_diagonal(op) == false
+@test is_diagonal(op) == true
+@test is_AcA_diagonal(op) == true
+@test is_AAc_diagonal(op) == true
 @test is_orthogonal(op) == false
 @test is_invertible(op) == false
 @test is_full_row_rank(op) == false
 @test is_full_column_rank(op) == false
+
+diag_AcA(op) == 0
+diag_AAc(op) == 0
 
 ########## WaveletOp ############
 n = 8

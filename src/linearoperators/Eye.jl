@@ -20,15 +20,15 @@ true
 	
 ```
 """
-struct Eye{T,N,S<:AbstractArray{T,N}} <: AbstractEye{T,N,S}
+struct Eye{T,N,S<:AbstractArray{T}} <: AbstractEye{T,N,S}
 	dim::NTuple{N,Integer}
 end
 
 # Constructors
 ###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
 function Eye(
-	domainType::Type{T}, domainDim::NTuple{N,Int}, storageType::Type{S}=Array{T,N}
-) where {N,T,S<:AbstractArray{T,N}}
+	domainType::Type{T}, domainDim::NTuple{N,Int}, storageType::Type{S}=Array{T}
+) where {N,T,S<:AbstractArray{T}}
 	return Eye{domainType,N,storageType}(domainDim)
 end
 ###
@@ -36,7 +36,7 @@ end
 Eye(t::Type, dims::Vararg{Integer}) = Eye(t, dims)
 Eye(dims::NTuple{N,Integer}) where {N} = Eye(Float64, dims)
 Eye(dims::Vararg{Integer}) = Eye(Float64, dims)
-Eye(x::A) where {A<:AbstractArray} = Eye(eltype(x), size(x), typeof(x))
+Eye(x::A) where {A<:AbstractArray} = Eye(eltype(x), size(x), Array{eltype(x)})
 
 # Mappings
 
@@ -45,10 +45,6 @@ function mul!(
 	y::AbstractArray{T,N}, ::AdjointOperator{E}, b::AbstractArray{T,N}
 ) where {T,N,E<:AbstractEye{T,N}}
 	return y .= b
-end
-
-function get_normal_op(L::AbstractEye{T,N}) where {T,N}
-	return Eye(domainType(L), size(L, 1), domain_storage_type(L))
 end
 
 # Properties
@@ -74,5 +70,8 @@ is_orthogonal(::AbstractEye) = true
 is_invertible(::AbstractEye) = true
 is_full_row_rank(::AbstractEye) = true
 is_full_column_rank(::AbstractEye) = true
+
+has_optimized_normalop(::AbstractEye) = true
+get_normal_op(L::AbstractEye) = L
 
 LinearAlgebra.opnorm(L::AbstractEye) = one(real(domainType(L)))

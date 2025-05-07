@@ -40,6 +40,11 @@ end
 # other constructors
 DiagOp(d::A) where {A<:AbstractArray} = DiagOp(eltype(d), size(d), d)
 DiagOp(DomainDim::NTuple{N,Int}, d::A) where {N,A<:Number} = DiagOp(Float64, DomainDim, d)
+# scale of DiagOp
+function Scale(coeff::T, L::DiagOp{N,D,C,T2}) where {T<:Number,N,D,C,T2}
+	new_d = coeff * diag(L)
+	return DiagOp{N,D,eltype(new_d),typeof(new_d)}(L.dim_in, new_d)
+end
 
 # Mappings
 
@@ -59,10 +64,6 @@ function mul!(
 	y::AbstractArray{D,N}, L::AdjointOperator{DiagOp{N,D,C,T}}, b::AbstractArray{C,N}
 ) where {N,D<:Real,C<:Complex,T}
 	return @.. y = real(conj(L.A.d) * b)
-end
-
-function get_normal_op(L::DiagOp{N,D,C,T}) where {N,D,C,T}
-	return DiagOp{N,D,C,T}(L.dim_in, L.d .* conj.(L.d))
 end
 
 # Transformations (we'll see about this)
@@ -88,5 +89,9 @@ is_diagonal(L::DiagOp) = true
 is_invertible(L::DiagOp) = all(L.d .!= 0.0)
 is_full_row_rank(L::DiagOp) = is_invertible(L)
 is_full_column_rank(L::DiagOp) = is_invertible(L)
+
+has_optimized_normalop(L::DiagOp) = true
+has_optimized_normalop(L::AdjointOperator{<:DiagOp}) = true
+get_normal_op(L::DiagOp{N,D,C,T}) where {N,D,C,T} = DiagOp{N,D,C,T}(L.dim_in, L.d .* conj.(L.d))
 
 LinearAlgebra.opnorm(L::DiagOp) = maximum(abs.(L.d))

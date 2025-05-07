@@ -51,9 +51,8 @@ function mul!(y::D, A::AdjointOperator{Reshape{N,L}}, b::C) where {N,L,C,D}
 	return mul!(y, R.A', b_res)
 end
 
-function get_normal_op(R::Reshape{N,L}) where {N,L<:AbstractOperator}
-	return get_normal_op(R.A)
-end
+has_optimized_normalop(R::Reshape) = true
+get_normal_op(R::Reshape) = get_normal_op(R.A)
 
 # Properties
 

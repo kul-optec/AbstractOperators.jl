@@ -40,7 +40,7 @@ y3 = A3 * A2 * A1 * x
 
 opS1 = Compose(opA2, opA1)
 opS1c = Scale(pi, opS1)
-@test typeof(opS1c.A[end]) <: Scale
+@test opS1c isa MatrixOp
 
 #properties
 @test is_sliced(opC) == false
@@ -52,8 +52,8 @@ opS1c = Scale(pi, opS1)
 @test is_AAc_diagonal(opC1) == false
 @test is_orthogonal(opC1) == false
 @test is_invertible(opC1) == false
-@test is_full_row_rank(opC1) == false
-@test is_full_column_rank(opC1) == false
+@test is_full_row_rank(opC1) == (rank(opC1.A) == size(opC1.A, 1))
+@test is_full_column_rank(opC1) == (rank(opC1.A) == size(opC1.A, 2))
 
 # properties special case
 opC = DCT((5,)) * GetIndex((10,), 1:5)

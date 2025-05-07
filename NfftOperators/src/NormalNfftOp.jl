@@ -53,6 +53,7 @@ function _mul!(y, op::NfftNormalOp, x)
 	return y
 end
 
+AbstractOperators.has_optimized_normalop(::NfftOp) = true
 function AbstractOperators.get_normal_op(op::NfftOp)
     return if op.threaded
         @enable_nfft_threading _get_normal_op(op)

@@ -39,7 +39,7 @@ end
 	IDCT(dim_in...)
 	IDCT(x::AbstractArray)
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete Cosine Transform of `x`.
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional inverse Discrete Cosine Transform of `x`.
 
 ```jldoctest
 julia> IDCT(Complex{Float64},(10,10))
@@ -117,10 +117,6 @@ function mul!(
 	return mul!(y, A.A.At, b)
 end
 
-function get_normal_op(L::CosineTransform)
-	return Eye(domainType(L), size(L, 1), domain_storage_type(L))
-end
-
 # Properties
 
 size(L::CosineTransform) = (L.dim_in, L.dim_in)
@@ -141,5 +137,8 @@ is_full_column_rank(L::CosineTransform) = true
 
 diag_AcA(L::CosineTransform) = 1.0
 diag_AAc(L::CosineTransform) = 1.0
+
+has_optimized_normalop(L::CosineTransform) = true
+get_normal_op(L::CosineTransform) = Eye(allocate_in_domain(L))
 
 LinearAlgebra.opnorm(L::CosineTransform) = one(real(domainType(L)))

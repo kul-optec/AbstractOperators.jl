@@ -35,6 +35,7 @@ export mul!
 
 include("properties.jl")
 include("calculus/AdjointOperator.jl")
+include("calculus/Scale.jl")
 
 ## Linear operators
 
@@ -42,7 +43,6 @@ include("linearoperators/MyLinOp.jl")
 include("linearoperators/Zeros.jl")
 include("linearoperators/ZeroPad.jl")
 include("linearoperators/Eye.jl")
-include("linearoperators/BroadcastingDiagOp.jl")
 include("linearoperators/DiagOp.jl")
 include("linearoperators/GetIndex.jl")
 include("linearoperators/MatrixOp.jl")
@@ -61,7 +61,6 @@ include("linearoperators/LBFGS.jl")
 
 # Calculus rules
 
-include("calculus/Scale.jl")
 include("calculus/DCAT.jl")
 include("calculus/HCAT.jl")
 include("calculus/VCAT.jl")
@@ -94,7 +93,8 @@ include("nonlinearoperators/Sigmoid.jl")
 include("nonlinearoperators/SoftMax.jl")
 include("nonlinearoperators/SoftPlus.jl")
 
-# Syntax
+# Others
 include("syntax.jl")
+include("combination_rules.jl")
 
 end

@@ -30,6 +30,7 @@ verb = true
 
 	@testset "Linear Calculus rules" begin
 		include("test_linear_operators_calculus.jl")
+		include("test_combination_rules.jl")
 	end
 
 	@testset "Nonlinear Calculus rules" begin

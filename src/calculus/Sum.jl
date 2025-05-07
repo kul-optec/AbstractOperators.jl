@@ -117,6 +117,15 @@ is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
 
 diag(L::Sum) = (+).(diag.(L.A)...,)
 
+has_optimized_normalop(S::Sum) = all(has_optimized_normalop.(S.A) .&& is_diagonal.(S.A))
+function get_normal_op(S::Sum)
+	if all(has_optimized_normalop.(S.A))
+		return Sum(get_normal_op.(S.A), S.bufC, bufD)
+	else
+		return S' * S
+	end
+end
+
 LinearAlgebra.opnorm(S::Sum) = sum(opnorm.(S.A)) ^ 2
 
 # utils

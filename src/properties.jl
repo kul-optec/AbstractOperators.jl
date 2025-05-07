@@ -22,7 +22,9 @@ export ndoms,
 	diag_AAc,
 	displacement,
 	remove_displacement,
-	is_thread_safe
+	is_thread_safe,
+	has_optimized_normalop,
+	get_normal_op
 
 """
 	domainType(A::AbstractOperator)
@@ -61,10 +63,10 @@ Returns the type of the storage for the domain of the operator.
 
 ```jldoctest
 julia> domain_storage_type(DFT(10))
-Vector{Float64} (alias for Array{Float64, 1})
+Array{Float64}
 
 julia> domain_storage_type(hcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
-RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Vector{ComplexF64}, Vector{ComplexF64}}}
+RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{ComplexF64}}}
 ```
 """
 function domain_storage_type(L::AbstractOperator)
@@ -84,10 +86,10 @@ Returns the type of the storage of for the codomain of the operator.
 
 ```jldoctest
 julia> codomain_storage_type(DFT(10))
-Vector{ComplexF64} (alias for Array{Complex{Float64}, 1})
+Array{ComplexF64}
 
 julia> codomain_storage_type(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
-RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Vector{ComplexF64}, Vector{ComplexF64}}}
+RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{ComplexF64}}}
 ```
 """
 function codomain_storage_type(L::AbstractOperator)
@@ -218,6 +220,68 @@ function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T<:AbstractOp
 	)
 	return L
 end
+
+"""
+	can_be_combined(L::AbstractOperator, R::AbstractOperator) = false
+
+Returns whether the operators `L` and `R` can be merged when they are multiplied.
+
+Examples:
+```jldoctest
+julia> AbstractOperators.can_be_combined(DFT(10), DFT(10))
+false
+
+julia> AbstractOperators.can_be_combined(DFT(10), Eye(10))
+true
+
+julia> AbstractOperators.can_be_combined(IDFT(10), DFT(10))
+true
+```
+"""
+can_be_combined(L, R) = is_eye(L) || is_eye(R) || is_null(L) || (is_null(R) && is_linear(L) && all(displacement(L) .== 0))
+
+"""
+	combine(L::AbstractOperator, R::AbstractOperator)
+Returns the combined operator of `L` and `R`. The combined operator is defined as `L * R` where `L` and `R` are the operators to be combined.
+
+Examples:
+```jldoctest
+julia> AbstractOperators.combine(IDFT(10), DFT(10))
+αI  ℝ^10 -> ℝ^10
+
+julia> AbstractOperators.combine(DFT(10), Eye(10))
+ℱ  ℝ^10 -> ℂ^10
+```
+"""
+function combine(L, R)
+	if is_eye(L)
+		return R
+	elseif is_eye(R)
+		return L
+	elseif is_null(L)
+		if size(R, 1) == size(R, 2) && domainType(R) == codomainType(R)
+			return L
+		else
+			return Zeros(domainType(R), size(R, 2), codomainType(L), size(L, 1))
+		end
+	elseif is_null(R) && is_linear(L) && all(displacement(L) .== 0)
+		if size(L, 1) == size(L, 2) && domainType(L) == codomainType(L)
+			return R
+		else
+			return Zeros(domainType(R), size(R, 2), codomainType(L), size(L, 1))
+		end
+	else
+		error("cannot combine operators")
+	end
+end
+
+"""
+	has_optimized_normalop(L::AbstractOperator)
+
+Returns whether the operator `L` has an optimized normal operator.
+The normal operator is defined as `L' * L` where `L'` is the adjoint of `L`.
+"""
+has_optimized_normalop(L::AbstractOperator) = false
 
 """
 	get_normal_op(L::AbstractOperator)

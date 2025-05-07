@@ -21,6 +21,33 @@ julia> MatrixOp(randn(20,10))*DCT(10)
 struct Compose{N,M,L<:NTuple{N,Any},T<:NTuple{M,Any}} <: AbstractOperator
 	A::L
 	buf::T       # memory in the bufdle of the operators
+	function Compose(A::L, buf::T) where {N,M,L<:NTuple{N,Any},T<:NTuple{M,Any}}
+		if length(A) - 1 != length(buf)
+			throw(
+				DimensionMismatch(
+					"number of operators $(length(A)) and buffers $(length(buf)) do not match"
+				),
+			)
+		end
+		# check for adjacent operators that can be combined
+		i = 1
+		while i < length(A)
+			if can_be_combined(A[i + 1], A[i])
+				new_op = combine(A[i + 1], A[i])
+				A = (A[1:i-1]..., new_op, A[(i + 2):end]...)
+				buf = (buf[1:i]..., buf[(i + 2):end]...)
+				if i > 1
+					i -= 1 # maybe the previous operator can be combined with the new one
+				end
+			else
+				i += 1
+			end
+		end
+		if length(A) == 1
+			return A[1]
+		end
+		return new{length(A),length(buf),NTuple{length(A),Any},NTuple{length(buf),Any}}(A, buf)
+	end
 end
 
 # Constructors
@@ -69,13 +96,7 @@ function Compose(L1::Compose, L2::Compose, buf::AbstractArray)
 end
 
 #special cases
-Scale(coeff, L::Compose) = Compose((L.A[1:(end - 1)]..., Scale(coeff, L.A[end])), L.buf)
-Compose(L1::Scale, ::Eye) = L1
-Compose(::Eye, L2::Scale) = L2
-
-Compose(L1::AbstractOperator, ::Eye) = L1
 Compose(::Eye, L2::AbstractOperator) = L2
-Compose(L1::Eye, ::Eye) = L1
 
 # Mappings
 
@@ -111,14 +132,15 @@ end
 	end
 end
 
+has_optimized_normalop(L::Compose) = has_optimized_normalop(L.A[end])
 function get_normal_op(L::Compose)
-	combined = get_normal_op(L.A[end])
-	if combined isa Compose
-		ops = (L.A..., reverse(L.A)...)
-		bufs = (L.buf..., allocate_in_codomain(L), reverse(L.buf)...)
-	else
+	if has_optimized_normalop(L.A[end])
+		combined = get_normal_op(L.A[end])
 		ops = (L.A[1:(end - 1)]..., combined, L.A[(end - 1):-1:1]...)
 		bufs = (L.buf[1:(end - 1)]..., allocate_in_codomain(combined), reverse(L.buf[1:(end - 1)])...)
+	else
+		ops = (reverse(adjoint.(L.A))..., L.A...)
+		bufs = (reverse(L.buf)..., allocate_in_codomain(L), L.buf...)
 	end
 	return Compose(ops, bufs)
 end

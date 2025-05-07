@@ -65,11 +65,19 @@ function Jacobian(V::VCAT{N,L,P,C}, x::AbstractArray) where {N,L,P,C}
 end
 #Jacobian of Compose
 function Jacobian(L::Compose, x::X) where {X<:AbstractArray}
-	return Compose(Jacobian.(L.A, (x, L.buf...)), L.buf)
+	x_vec = AbstractArray[x]
+	for A in L.A[1:end-1]
+		push!(x_vec, A * x_vec[end])
+	end
+	return Compose(Jacobian.(L.A, tuple(x_vec...)), L.buf)
 end
 
 function Jacobian(L::Compose, x::X) where {N,X<:NTuple{N,AbstractArray}}
-	return Compose(Jacobian.(L.A, (x, L.buf...)), L.buf)
+	x_vec = AbstractArray[x]
+	for A in L.A[1:end-1]
+		push!(x_vec, A * x_vec[end])
+	end
+	return Compose(Jacobian.(L.A, tuple(x_vec...)), L.buf)
 end
 #Jacobian of Reshape
 function Jacobian(R::Reshape{N,L}, x::AbstractArray) where {N,L}
