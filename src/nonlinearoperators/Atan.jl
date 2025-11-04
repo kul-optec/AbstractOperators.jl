@@ -1,7 +1,7 @@
 export Atan
 
 """
-	Atan([domainType=Float64::Type,] dim_in::Tuple)
+	Atan([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates an inverse tangent non-linear operator with input dimensions `dim_in`:
 ```math
@@ -13,8 +13,8 @@ struct Atan{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Atan(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return Atan{DomainType,N}(DomainDim)
+function Atan(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return Atan{domain_type,N}(DomainDim)
 end
 
 Atan(DomainDim::NTuple{N,Int}) where {N} = Atan{Float64,N}(DomainDim)
@@ -35,6 +35,6 @@ fun_name(L::Atan) = "atan"
 
 size(L::Atan) = (L.dim, L.dim)
 
-domainType(::Atan{T,N}) where {T,N} = T
-codomainType(::Atan{T,N}) where {T,N} = T
+domain_type(::Atan{T,N}) where {T,N} = T
+codomain_type(::Atan{T,N}) where {T,N} = T
 is_thread_safe(::Atan) = true

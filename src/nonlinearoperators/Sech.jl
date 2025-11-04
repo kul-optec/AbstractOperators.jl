@@ -1,7 +1,7 @@
 export Sech
 
 """
-	Sech([domainType=Float64::Type,] dim_in::Tuple)
+	Sech([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates an hyperbolic secant non-linear operator with input dimensions `dim_in`:
 ```math
@@ -13,8 +13,8 @@ struct Sech{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Sech(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return Sech{DomainType,N}(DomainDim)
+function Sech(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return Sech{domain_type,N}(DomainDim)
 end
 
 Sech(DomainDim::NTuple{N,Int}) where {N} = Sech{Float64,N}(DomainDim)
@@ -35,6 +35,6 @@ fun_name(L::Sech) = "sech"
 
 size(L::Sech) = (L.dim, L.dim)
 
-domainType(::Sech{T,N}) where {T,N} = T
-codomainType(::Sech{T,N}) where {T,N} = T
+domain_type(::Sech{T,N}) where {T,N} = T
+codomain_type(::Sech{T,N}) where {T,N} = T
 is_thread_safe(::Sech) = true

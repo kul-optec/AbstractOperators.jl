@@ -1,7 +1,7 @@
 export Cos
 
 """
-	Cos([domainType=Float64::Type,] dim_in::Tuple)
+	Cos([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates a cosine non-linear operator with input dimensions `dim_in`:
 ```math
@@ -13,8 +13,8 @@ struct Cos{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Cos(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return Cos{DomainType,N}(DomainDim)
+function Cos(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return Cos{domain_type,N}(DomainDim)
 end
 
 Cos(DomainDim::NTuple{N,Int}) where {N} = Cos{Float64,N}(DomainDim)
@@ -35,6 +35,6 @@ fun_name(L::Cos) = "cos"
 
 size(L::Cos) = (L.dim, L.dim)
 
-domainType(::Cos{T,N}) where {T,N} = T
-codomainType(::Cos{T,N}) where {T,N} = T
+domain_type(::Cos{T,N}) where {T,N} = T
+codomain_type(::Cos{T,N}) where {T,N} = T
 is_thread_safe(::Cos) = true

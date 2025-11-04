@@ -1,7 +1,7 @@
 export ZeroPad
 
 """
-	ZeroPad([domainType::Type,] dim_in::Tuple, zp::Tuple)
+	ZeroPad([domain_type::Type,] dim_in::Tuple, zp::Tuple)
 	ZeroPad(x::AbstractArray, zp::Tuple)
 
 Create a `LinearOperator` which, when multiplied to an array `x` of size `dim_in`, returns an expanded array `y` of size `dim_in .+ zp` where `y[1:dim_in[1], 1:dim_in[2] ... ] = x` and zero elsewhere.
@@ -24,15 +24,15 @@ end
 
 # Constructors
 #standard constructor
-function ZeroPad(domainType::Type, dim_in::NTuple{N,Int}, zp::NTuple{M,Int}) where {N,M}
+function ZeroPad(domain_type::Type, dim_in::NTuple{N,Int}, zp::NTuple{M,Int}) where {N,M}
 	M != N && error("dim_in and zp must have the same length")
 	any([zp...] .< 0) && error("zero padding cannot be negative")
-	return ZeroPad{domainType,N}(dim_in, zp)
+	return ZeroPad{domain_type,N}(dim_in, zp)
 end
 
 ZeroPad(dim_in::Tuple, zp::NTuple{N,Int}) where {N} = ZeroPad(Float64, dim_in, zp)
-function ZeroPad(domainType::Type, dim_in::Tuple, zp::Vararg{Int,N}) where {N}
-	return ZeroPad(domainType, dim_in, zp)
+function ZeroPad(domain_type::Type, dim_in::Tuple, zp::Vararg{Int,N}) where {N}
+	return ZeroPad(domain_type, dim_in, zp)
 end
 ZeroPad(dim_in::Tuple, zp::Vararg{Int,N}) where {N} = ZeroPad(Float64, dim_in, zp)
 ZeroPad(x::AbstractArray, zp::NTuple{N,Int}) where {N} = ZeroPad(eltype(x), size(x), zp)
@@ -112,21 +112,28 @@ end
 end
 
 function get_normal_op(L::ZeroPad{T,N}) where {T,N}
-	return Eye(domainType(L), size(L, 1), domain_storage_type(L))
+	return Eye(domain_type(L), size(L, 2), domain_storage_type(L))
 end
 
 # Properties
 
-domainType(::ZeroPad{T}) where {T} = T
-codomainType(::ZeroPad{T}) where {T} = T
+domain_type(::ZeroPad{T}) where {T} = T
+codomain_type(::ZeroPad{T}) where {T} = T
 is_thread_safe(::ZeroPad) = true
 
 size(L::ZeroPad) = L.dim_in .+ L.zp, L.dim_in
 
 fun_name(L::ZeroPad) = "[I;0]"
+is_AAc_diagonal(L::ZeroPad) = true
+function diag_AAc(L::ZeroPad)
+	input = allocate_in_domain(L)
+	fill!(input, 1)
+	L * L' * input
+end
 is_AcA_diagonal(L::ZeroPad) = true
 diag_AcA(L::ZeroPad) = 1
 
 is_full_column_rank(L::ZeroPad) = true
 
-LinearAlgebra.opnorm(L::ZeroPad) = one(real(domainType(L)))
+has_fast_opnorm(::ZeroPad) = true
+LinearAlgebra.opnorm(L::ZeroPad) = one(real(domain_type(L)))

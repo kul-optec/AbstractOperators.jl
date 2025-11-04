@@ -1,7 +1,7 @@
 export Pow
 
 """
-	Pow([domainType=Float64::Type,] dim_in::Tuple)
+	Pow([domain_type=Float64::Type,] dim_in::Tuple)
 
 Elementwise power `p` non-linear operator with input dimensions `dim_in`.
 
@@ -11,8 +11,8 @@ struct Pow{T,N,I<:Real} <: NonLinearOperator
 	p::I
 end
 
-function Pow(DomainType::Type, DomainDim::NTuple{N,Int}, p::I) where {N,I<:Real}
-	return Pow{DomainType,N,I}(DomainDim, p)
+function Pow(domain_type::Type, DomainDim::NTuple{N,Int}, p::I) where {N,I<:Real}
+	return Pow{domain_type,N,I}(DomainDim, p)
 end
 
 Pow(DomainDim::NTuple{N,Int}, p::I) where {N,I<:Real} = Pow{Float64,N,I}(DomainDim, p)
@@ -32,6 +32,6 @@ fun_name(L::Pow) = "『"
 
 size(L::Pow) = (L.dim, L.dim)
 
-domainType(::Pow{T,N}) where {T,N} = T
-codomainType(::Pow{T,N}) where {T,N} = T
+domain_type(::Pow{T,N}) where {T,N} = T
+codomain_type(::Pow{T,N}) where {T,N} = T
 is_thread_safe(::Pow) = true

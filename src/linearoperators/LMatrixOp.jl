@@ -1,7 +1,7 @@
 export LMatrixOp
 
 """
-	LMatrixOp(domainType=Float64::Type, dim_in::Tuple, b::Union{AbstractVector,AbstractMatrix})
+	LMatrixOp(domain_type=Float64::Type, dim_in::Tuple, b::Union{AbstractVector,AbstractMatrix})
 	LMatrixOp(b::AbstractVector, number_of_rows::Int)
 
 Creates a `LinearOperator` which, when multiplied with a matrix `X::AbstractMatrix`, returns the product `X*b`.
@@ -28,13 +28,13 @@ struct LMatrixOp{T,A<:Union{AbstractVector,AbstractMatrix},B<:AbstractMatrix} <:
 	n_row_in::Integer
 end
 
-##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
+##TODO decide what to do when domain_type is given, with conversion one loses pointer to data...
 # Constructors
 function LMatrixOp(
-	DomainType::Type, DomainDim::Tuple{Int,Int}, b::A
+	domain_type::Type, DomainDim::Tuple{Int,Int}, b::A
 ) where {A<:Union{AbstractVector,AbstractMatrix}}
 	bt = b'
-	return LMatrixOp{DomainType,A,typeof(bt)}(b, bt, DomainDim[1])
+	return LMatrixOp{domain_type,A,typeof(bt)}(b, bt, DomainDim[1])
 end
 
 function LMatrixOp(
@@ -63,8 +63,8 @@ function mul!(
 end
 
 # Properties
-domainType(::LMatrixOp{T}) where {T} = T
-codomainType(::LMatrixOp{T}) where {T} = T
+domain_type(::LMatrixOp{T}) where {T} = T
+codomain_type(::LMatrixOp{T}) where {T} = T
 is_thread_safe(::LMatrixOp) = true
 
 fun_name(L::LMatrixOp) = "(⋅)b"

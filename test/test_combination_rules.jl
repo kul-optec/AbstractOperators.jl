@@ -1,6 +1,9 @@
-using Test
-using LinearAlgebra
-using AbstractOperators
+if !isdefined(Main, :verb)
+    verb = false
+end
+if !isdefined(Main, :test_op)
+    include("./utils.jl")
+end
 using AbstractOperators: can_be_combined, combine
 
 @testset "Combination Rules" begin
@@ -41,23 +44,6 @@ using AbstractOperators: can_be_combined, combine
 
     end
 
-    @testset "BroadCast Combinations" begin
-        n = 4
-        A = randn(n, n)
-        
-        # Create operators
-        diag_op = MatrixOp(A)
-        broad_op = BroadCast(DiagOp(ones(n)), (n, 2n))
-        
-        @test can_be_combined(diag_op, broad_op)
-        @test !can_be_combined(broad_op, diag_op)  # Size mismatch
-        
-        # Test combination
-        combined = combine(diag_op, broad_op)
-        @test combined isa BroadCast
-        @test size(combined) == ((4, 8), (4,))
-    end
-
     @testset "Compose Combinations" begin
         n = 3
         A = randn(n, n)
@@ -81,6 +67,25 @@ using AbstractOperators: can_be_combined, combine
         combined_single = combine(single_op, composed_op)
         @test combined_single isa MatrixOp
         @test combined_single.A ≈ A * B
+
+        # Compose of Composes with Matrices
+        n = 4
+        A = randn(n, n)
+        B = randn(n, n)
+        comp1 = Compose(MatrixOp(A), FiniteDiff((n+1,)))    # A*(diff(x))
+        comp2 = Compose(FiniteDiff((n,)), MatrixOp(B))      # diff(B*x)
+        @test can_be_combined(comp2, comp1)
+        combined_cc = combine(comp2, comp1)
+        x = randn(n+1)
+        @test combined_cc * x ≈ comp2 * (comp1 * x)
+
+        # Left matrix with Compose (generic combine(L, R::Compose) path)
+        C = randn(n, n)
+        left_mat = MatrixOp(C)
+        @test can_be_combined(left_mat, comp1)
+        combined_lc = combine(left_mat, comp1)
+        x = randn(n+1)
+        @test combined_lc * x ≈ left_mat * (comp1 * x)
     end
 
     @testset "DCAT Combinations" begin
@@ -184,30 +189,6 @@ using AbstractOperators: can_be_combined, combine
         @test combined.A[2].A ≈ Diagonal(d) * B
     end
 
-    @testset "Transform Combinations" begin
-        n = 8  # Power of 2 for DCT
-        
-        # Test DCT combinations
-        dct_op = DCT(n)
-        idct_op = IDCT(n)
-        
-        @test can_be_combined(dct_op, idct_op)
-        @test can_be_combined(idct_op, dct_op)
-        
-        combined_dct = combine(dct_op, idct_op)
-        @test combined_dct isa Eye
-        
-        # Test DFT combinations
-        dft_op = DFT(n)
-        idft_op = IDFT(n)
-        
-        @test can_be_combined(dft_op, idft_op)
-        @test can_be_combined(idft_op, dft_op)
-        
-        combined_dft = combine(dft_op, idft_op)
-        @test combined_dft isa Scale{<:Number,<:Eye}
-    end
-
     @testset "MatrixOp Combinations" begin
         n = 4
         m = 3
@@ -297,8 +278,8 @@ using AbstractOperators: can_be_combined, combine
         combined_diag2 = combine(zeros_op3, diag_op)
         @test combined_diag2 isa Zeros
         @test size(combined_diag2) == ((m,), (n,))
-        @test domainType(combined_diag2) == Float64
-        @test codomainType(combined_diag2) == Float32
+        @test domain_type(combined_diag2) == Float64
+        @test codomain_type(combined_diag2) == Float32
 
         # type-changing DiagOp with Zeros
         diag_op2 = DiagOp(Float64, (m,), rand(ComplexF64, m))
@@ -306,8 +287,8 @@ using AbstractOperators: can_be_combined, combine
         combined_diag3 = combine(diag_op2, zeros_op3)
         @test combined_diag3 isa Zeros
         @test size(combined_diag3) == ((m,), (n,))
-        @test domainType(combined_diag3) == Float64
-        @test codomainType(combined_diag3) == ComplexF64
+        @test domain_type(combined_diag3) == Float64
+        @test codomain_type(combined_diag3) == ComplexF64
     end
 
     @testset "DiagOp Combinations" begin
@@ -366,5 +347,202 @@ using AbstractOperators: can_be_combined, combine
         @test can_be_combined(eye_op, adj_eye)
         combined_adj = combine(eye_op, adj_eye)
         @test combined_adj isa Eye
+    end
+
+    @testset "Mixed Combinations" begin
+        # Helper square matrices
+        n = 4
+        A = randn(n, n)
+        B = randn(n, n)
+        C = randn(n, n)
+        D = randn(n, n)
+        S = randn(n, n)
+        α = 1.7
+        β = -0.9
+
+        comp1 = Compose(MatrixOp(A), FiniteDiff((n+1,)))    # A*(diff(x))
+        comp2 = Compose(FiniteDiff((n,)), MatrixOp(B))      # diff(B*x)
+
+        # Scale with Compose (combine(L::Scale, R::Compose))
+        scale_left = Scale(α, FiniteDiff((n,)))
+        @test can_be_combined(scale_left, comp1)
+        combined_sc = combine(scale_left, comp1)
+        x = randn(n+1)
+        @test combined_sc * x ≈ scale_left * (comp1 * x)
+
+        # Adjoint Scale with Compose (combine(L::AdjointOperator{<:Scale}, R::Compose))
+        scale_left_adj = scale_left'
+        @test can_be_combined(scale_left_adj, comp2)
+        combined_sac = combine(scale_left_adj, comp2)
+        x = randn(n)
+        @test combined_sac * x ≈ scale_left_adj * (comp2 * x)
+
+        # Compose with Scale (combine(L::Compose, R::Scale))
+        scale_right = Scale(β, FiniteDiff((n+1,)))
+        @test can_be_combined(comp2, scale_right)
+        combined_cs = combine(comp2, scale_right)
+        x = randn(n+1)
+        @test combined_cs * x ≈ comp2 * (scale_right * x)
+
+        # Compose with Adjoint Scale (combine(L::Compose, R::AdjointOperator{<:Scale}))
+        scale_right = Scale(β, FiniteDiff((n,)))
+        scale_right_adj = scale_right'
+        @test can_be_combined(comp2, scale_right_adj)
+        combined_csa = combine(comp2, scale_right_adj)
+        @test combined_csa * x ≈ comp2 * (scale_right_adj * x)
+
+        # Adjoint Scale with DiagOp (combine(T1::AdjointOperator{<:Scale}, T2::DiagOp))
+        scale_left = Scale(α, FiniteDiff((n+1,)))
+        scale_left_adj = scale_left'
+        dvec = randn(n)
+        diag_op = DiagOp(dvec)
+        @test can_be_combined(scale_left_adj, diag_op)
+        combined_asd = combine(scale_left_adj, diag_op)
+        x = randn(n)
+        @test combined_asd * x ≈ scale_left_adj * (diag_op * x)
+
+        # DiagOp' with Scale (combine(T1::AdjointOperator{<:DiagOp}, T2::Scale))
+        scale_right = Scale(β, FiniteDiff((n+1,)))
+        diag_op_adj = diag_op'
+        @test can_be_combined(diag_op_adj, scale_right)
+        combined_das = combine(diag_op_adj, scale_right)
+        x = randn(n+1)
+        @test combined_das * x ≈ diag_op_adj * (scale_right * x)
+
+        # Scale' with DiagOp' (combine(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:DiagOp}))
+        scale_left = Scale(α, FiniteDiff((n+1,)))
+        scale_left_adj = scale_left'
+        @test can_be_combined(scale_left_adj, diag_op_adj)
+        combined_sad = combine(scale_left_adj, diag_op_adj)
+        x = randn(n)
+        @test combined_sad * x ≈ scale_left_adj * (diag_op_adj * x)
+
+        # Adjoint DiagOp with MatrixOp (both orders to exercise can_be_combined variants)
+        mat_op = MatrixOp(A)
+        @test can_be_combined(diag_op_adj, mat_op)
+        combined_dm = combine(diag_op_adj, mat_op)
+        @test combined_dm * x ≈ diag_op_adj * (mat_op * x)
+        @test can_be_combined(mat_op, diag_op_adj)
+        combined_md = combine(mat_op, diag_op_adj)
+        @test combined_md * x ≈ mat_op * (diag_op_adj * x)
+
+        # Scale' with MatrixOp' (combine(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:MatrixOp}))
+        mat_op_adj = mat_op'
+        scale_left = Scale(α, FiniteDiff((n+1,)))
+        scale_left_adj = scale_left'
+        @test can_be_combined(scale_left_adj, mat_op_adj)
+        combined_sma = combine(scale_left_adj, mat_op_adj)
+        x = randn(n)
+        @test combined_sma * x ≈ scale_left_adj * (mat_op_adj * x)
+
+        # Branch: combine(L, R::Compose) -> if branch (combined isa Compose)
+        M = MatrixOp(rand(n,n-2))
+        S = Scale(α, FiniteDiff((n-1,)) * FiniteDiff((n,)))
+        C = S * FiniteDiff((n+1,))
+        @test can_be_combined(M, C)
+        combined = combine(M, C)
+        x = randn(n+1)
+        @test combined * x ≈ M.A * (α * diff(diff(diff(x))))
+
+        # Branch: combine(L::Compose, R::Compose) -> if branch (combined isa Compose)
+        C1 = Compose(FiniteDiff((n,)), MatrixOp(A))
+        C2 = Scale(α, FiniteDiff((n+1,))) * FiniteDiff((n+2,))
+        @test can_be_combined(C1, C2)
+        combined_cc = combine(C1, C2)
+        x = randn(n+2)
+        @test combined_cc * x ≈ C1 * (C2 * x)
+
+        # Branch: combine(L::Scale, R::Compose) -> if branch (can_be_combined(L.A, R.A[end]))
+        C3 = Scale(α, FiniteDiff((n+1,))) * FiniteDiff((n+2,))
+        @test can_be_combined(S, C3)
+        combined_sc = combine(S, C3)
+        x = randn(n+2)
+        @test combined_sc * x ≈ S * (C3 * x)
+
+        # Branch: combine(L::Scale, R::Compose) -> if branch (can_be_combined(L.A, R.A[end]))
+        n2 = 5
+        A1 = randn(n2, n2)
+        A2 = randn(n2, n2)
+        A3 = randn(n2, n2)
+        comp_tail = Compose(MatrixOp(A2), FiniteDiff((n2+1,))) # last is MatrixOp so combinable with MatrixOp(A1)
+        scl = Scale(2.3, MatrixOp(A1))
+        comb_sc_if = combine(scl, comp_tail)
+        x2 = randn(n2+1)
+        @test comb_sc_if * x2 ≈ scl * (comp_tail * x2)
+
+        # Branch: combine(L::AdjointOperator{<:Scale}, R::Compose) -> if branch
+        scl_adj = scl'
+        comp_tail2 = Compose(MatrixOp(A2), FiniteDiff((n2+1,)))
+        comb_sac_if = combine(scl_adj, comp_tail2)
+        @test comb_sac_if * x2 ≈ scl_adj * (comp_tail2 * x2)
+
+        # Branch: combine(L::Compose, R::Scale) -> if branch
+        comp_head = Compose(FiniteDiff((n2,)), MatrixOp(A2))
+        scl_r = Scale(-1.1, FiniteDiff((n2+1,)))
+        comb_cs_if = combine(comp_head, scl_r)
+        @test comb_cs_if * x2 ≈ comp_head * (scl_r * x2)
+
+        # Branch: combine(L::Compose, R::AdjointOperator{<:Scale}) -> if branch
+        scl_r = Scale(-1.1, FiniteDiff((n2,)))
+        scl_r_adj = scl_r'
+        comb_csa_if = combine(comp_head, scl_r_adj)
+        x3 = randn(n2-1)
+        @test comb_csa_if * x3 ≈ comp_head * (scl_r_adj * x3)
+
+        # Branch: combine(T1::Scale, T2::MatrixOp) -> if branch (can_be_combined)
+        scl_mat_if = Scale(0.7, FiniteDiff((n2,)))
+        mat2 = MatrixOp(A2)
+        comb_scale_mat_if = combine(scl_mat_if, mat2)
+        x3 = randn(n2)
+        @test comb_scale_mat_if * x3 ≈ scl_mat_if * (mat2 * x3)
+
+        # Branch: combine(T1::Scale, T2::DiagOp) -> else branch (non-combinable path)
+        # Use FiniteDiff so scaled_diagop cannot be combined further
+        fd = FiniteDiff((n2+1,))
+        scl_fd = Scale(1.5, fd)
+        dvec = randn(n2+1)
+        diag_long = DiagOp(dvec)
+        # Adjust x dimension for FiniteDiff input (n2+1)
+        comb_scale_diag_else = combine(scl_fd, diag_long)
+        @test comb_scale_diag_else * x2 ≈ scl_fd * (diag_long * x2)
+
+        # Branch: combine(T1::AdjointOperator{<:Scale}, T2::DiagOp) -> if branch
+        sclA = Scale(1.2, FiniteDiff((n2+1,)))
+        sclA_adj = sclA'
+        diagA = DiagOp(randn(n2))
+        comb_asd_if = combine(sclA_adj, diagA)
+        @test comb_asd_if * x3 ≈ sclA_adj * (diagA * x3)
+
+        # Branch: combine(T1::DiagOp, T2::Scale) else branch (non-combinable)
+        # Make second scale wrap FiniteDiff so scaled_diagop cannot be combined
+        scl_fd2 = Scale(-0.4, FiniteDiff((n2+1,)))
+        diag_diff = DiagOp(randn(n2))
+        comb_diag_scale_else = combine(diag_diff, scl_fd2)
+        @test comb_diag_scale_else * x2 ≈ diag_diff * (scl_fd2 * x2)
+
+        # Branch: combine(T1::AdjointOperator{<:DiagOp}, T2::Scale) -> if branch
+        diag_if = DiagOp(randn(n2))
+        diag_if_adj = diag_if'
+        scl_lin = Scale(0.9, FiniteDiff((n2+1,)))
+        comb_adjdiag_scale_if = combine(diag_if_adj, scl_lin)
+        @test comb_adjdiag_scale_if * x2 ≈ diag_if_adj * (scl_lin * x2)
+
+        # Branch: combine(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:DiagOp}) -> if branch
+        scl_lin_adj = scl_lin'
+        diag_if_adj2 = diag_if'
+        comb_sad_if = combine(scl_lin_adj, diag_if_adj2)
+        @test comb_sad_if * x3 ≈ scl_lin_adj * (diag_if_adj2 * x3)
+
+        # Exercise can_be_combined variants for matrix/diag adjoint combinations
+        mat_op2 = MatrixOp(A2)
+        diag_base = DiagOp(randn(n2))
+        @test can_be_combined(diag_base, mat_op2)
+        @test can_be_combined(mat_op2, diag_base)
+        @test can_be_combined(diag_base', mat_op2)
+        @test can_be_combined(mat_op2, diag_base')
+        @test can_be_combined(mat_op2', diag_base)
+        @test can_be_combined(diag_base, mat_op2')
+        @test can_be_combined(diag_base', mat_op2')
+        @test can_be_combined(mat_op2', diag_base')
     end
 end

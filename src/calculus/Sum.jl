@@ -10,11 +10,11 @@ Shorthand constructor:
 Sum of operators.
 
 ```jldoctest
-julia> Sum(DiagOp(rand(10)), DCT(10))
-╲+ℱc  ℝ^10 -> ℝ^10
+julia> Sum(DiagOp(rand(10)), Eye(10))
+╲+I  ℝ^10 -> ℝ^10
 
-julia> MatrixOp(rand(ComplexF64,5,5)) + DFT(ComplexF64,5)
-▒+ℱ  ℂ^5 -> ℂ^5
+julia> MatrixOp(randn(5,5)) + Eye(5)
+▒+I  ℝ^5 -> ℝ^5
 	
 ```
 """
@@ -27,7 +27,7 @@ struct Sum{K,C<:AbstractArray,D<:AbstractArray,L<:NTuple{K,AbstractOperator}} <:
 		if any([size(a) != size(A[1]) for a in A])
 			throw(DimensionMismatch("cannot sum operator of different sizes"))
 		end
-		if any([codomainType(A[1]) != codomainType(a) for a in A]) || any([domainType(A[1]) != domainType(a) for a in A])
+		if any([codomain_type(A[1]) != codomain_type(a) for a in A]) || any([domain_type(A[1]) != domain_type(a) for a in A])
 			throw(DomainError(A, "cannot sum operator with different codomains"))
 		end
 		if any(a isa Sum for a in A)
@@ -96,12 +96,17 @@ end
 
 # Properties
 
+Base.:(==)(S1::Sum{K,C,D,L}, S2::Sum{K,C,D,L}) where {K,C,D,L} = all(S1.A .== S2.A)
 size(L::Sum) = size(L.A[1])
 
-domainType(S::Sum{K,C,D,L}) where {K,C,D<:AbstractArray,L} = domainType(S.A[1])
-domainType(S::Sum{K,C,D,L}) where {K,C,D<:Tuple,L} = domainType.(Ref(S.A[1]))
-codomainType(S::Sum{K,C,D,L}) where {K,C<:AbstractArray,D,L} = codomainType(S.A[1])
-codomainType(S::Sum{K,C,D,L}) where {K,C<:Tuple,D,L} = codomainType.(Ref(S.A[1]))
+domain_type(S::Sum{K,C,D,L}) where {K,C,D<:AbstractArray,L} = domain_type(S.A[1])
+domain_type(S::Sum{K,C,D,L}) where {K,C,D<:Tuple,L} = domain_type.(Ref(S.A[1]))
+codomain_type(S::Sum{K,C,D,L}) where {K,C<:AbstractArray,D,L} = codomain_type(S.A[1])
+codomain_type(S::Sum{K,C,D,L}) where {K,C<:Tuple,D,L} = codomain_type.(Ref(S.A[1]))
+domain_storage_type(S::Sum{K,C,D,L}) where {K,C<:AbstractArray,D,L} = domain_storage_type(S.A[1])
+domain_storage_type(S::Sum{K,C,D,L}) where {K,C<:Tuple,D,L} = domain_storage_type.(Ref(S.A[1]))
+codomain_storage_type(S::Sum{K,C,D,L}) where {K,C<:AbstractArray,D,L} = codomain_storage_type(S.A[1])
+codomain_storage_type(S::Sum{K,C,D,L}) where {K,C<:Tuple,D,L} = codomain_storage_type.(Ref(S.A[1]))
 is_thread_safe(::Sum) = false
 
 fun_domain(S::Sum) = fun_domain(S.A[1])
@@ -117,16 +122,7 @@ is_full_column_rank(L::Sum) = any(is_full_column_rank.(L.A))
 
 diag(L::Sum) = (+).(diag.(L.A)...,)
 
-has_optimized_normalop(S::Sum) = all(has_optimized_normalop.(S.A) .&& is_diagonal.(S.A))
-function get_normal_op(S::Sum)
-	if all(has_optimized_normalop.(S.A))
-		return Sum(get_normal_op.(S.A), S.bufC, bufD)
-	else
-		return S' * S
-	end
-end
-
-LinearAlgebra.opnorm(S::Sum) = sum(opnorm.(S.A)) ^ 2
+estimate_opnorm(S::Sum) = sum(estimate_opnorm.(S.A))
 
 # utils
 function permute(S::Sum, p::AbstractVector{Int})

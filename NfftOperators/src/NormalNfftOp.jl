@@ -92,8 +92,9 @@ end
 
 Base.size(op::NfftNormalOp) = op.shape, op.shape
 AbstractOperators.fun_name(::NfftNormalOp) = "(𝒩ᵃ𝒩)"
-domainType(::NfftNormalOp{N,T}) where {N,T} = T
-codomainType(::NfftNormalOp{N,T}) where {N,T} = T
+domain_type(::NfftNormalOp{N,T}) where {N,T} = T
+codomain_type(::NfftNormalOp{N,T}) where {N,T} = T
 domain_storage_type(op::NfftNormalOp{N,T}) where {N,T} = op.storage_type
 codomain_storage_type(op::NfftNormalOp{N,T}) where {N,T} = op.storage_type
-Base.adjoint(op::NfftNormalOp) = op
+is_symmetric(::NfftNormalOp) = true
+AdjointOperator(op::NfftNormalOp) = op

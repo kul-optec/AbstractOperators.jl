@@ -3,7 +3,7 @@ export FiniteDiff
 #TODO add boundary conditions
 
 """
-	FiniteDiff([domainType=Float64::Type,] dim_in::Tuple, direction = 1)
+	FiniteDiff([domain_type=Float64::Type,] dim_in::Tuple, direction = 1)
 	FiniteDiff(x::AbstractArray, direction = 1)
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the discretized gradient over the specified `direction` obtained using forward finite differences.
@@ -30,8 +30,8 @@ end
 
 # Constructors
 #default constructor
-function FiniteDiff(domainType::Type, dim_in::NTuple{N,Int}, dir::Int64=1) where {N}
-	return FiniteDiff{domainType,N,dir}(dim_in)
+function FiniteDiff(domain_type::Type, dim_in::NTuple{N,Int}, dir::Int64=1) where {N}
+	return FiniteDiff{domain_type,N,dir}(dim_in)
 end
 
 FiniteDiff(dim_in::NTuple{N,Int}, dir::Int64=1) where {N} = FiniteDiff(Float64, dim_in, dir)
@@ -80,8 +80,8 @@ end
 
 # Properties
 
-domainType(::FiniteDiff{T}) where {T} = T
-codomainType(::FiniteDiff{T}) where {T} = T
+domain_type(::FiniteDiff{T}) where {T} = T
+codomain_type(::FiniteDiff{T}) where {T} = T
 is_thread_safe(::FiniteDiff) = true
 
 function size(L::FiniteDiff{T,N,D}) where {T,N,D}
@@ -90,9 +90,9 @@ function size(L::FiniteDiff{T,N,D}) where {T,N,D}
 	return ((dim_out...,), L.dim_in)
 end
 
-fun_name(L::FiniteDiff{T,N,1}) where {T,N} = "δx"
-fun_name(L::FiniteDiff{T,N,2}) where {T,N} = "δy"
-fun_name(L::FiniteDiff{T,N,3}) where {T,N} = "δz"
-fun_name(L::FiniteDiff{T,N,D}) where {T,N,D} = "δx$D"
+fun_name(::FiniteDiff{T,N,1}) where {T,N} = "δx"
+fun_name(::FiniteDiff{T,N,2}) where {T,N} = "δy"
+fun_name(::FiniteDiff{T,N,3}) where {T,N} = "δz"
+fun_name(::FiniteDiff{T,N,D}) where {T,N,D} = "δx$D"
 
-is_full_row_rank(L::FiniteDiff) = true
+is_full_row_rank(::FiniteDiff) = true

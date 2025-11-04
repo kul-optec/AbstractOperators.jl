@@ -10,11 +10,11 @@ Shorthand constructor:
 Reshape the codomain dimensions of an `AbstractOperator`.
 
 ```jldoctest
-julia> A = Reshape(DFT(10),2,5)
-¶ℱ  ℝ^10 -> ℂ^(2, 5)
+julia> A = Reshape(Eye(10),2,5)
+¶I  ℝ^10 -> ℝ^(2, 5)
 
-julia> R = reshape(Conv((19,),randn(10)),7,2,2)
-¶★  ℝ^19 -> ℝ^(7, 2, 2)
+julia> R = reshape(Variation(rand(10,10)), (10,10,2))
+¶Ʋ  ℝ^(10, 10) -> ℝ^(10, 10, 2)
 	
 ```
 """
@@ -55,11 +55,13 @@ has_optimized_normalop(R::Reshape) = true
 get_normal_op(R::Reshape) = get_normal_op(R.A)
 
 # Properties
-
+Base.:(==)(R1::Reshape{N,L}, R2::Reshape{N,L}) where {N,L} = R1.A == R2.A && R1.dim_out == R2.dim_out
 size(R::Reshape) = (R.dim_out, size(R.A, 2))
 
-domainType(R::Reshape) = domainType(R.A)
-codomainType(R::Reshape) = codomainType(R.A)
+domain_type(R::Reshape) = domain_type(R.A)
+codomain_type(R::Reshape) = codomain_type(R.A)
+domain_storage_type(R::Reshape) = domain_storage_type(R.A)
+codomain_storage_type(R::Reshape) = codomain_storage_type(R.A)
 is_thread_safe(R::Reshape) = is_thread_safe(R.A)
 
 is_linear(R::Reshape) = is_linear(R.A)
@@ -85,4 +87,5 @@ function permute(T::Reshape{N,L}, p::AbstractVector{Int}) where {N,L}
 	return Reshape(A, T.dim_out)
 end
 
+has_fast_opnorm(R::Reshape) = has_fast_opnorm(R.A)
 LinearAlgebra.opnorm(R::Reshape) = LinearAlgebra.opnorm(R.A)

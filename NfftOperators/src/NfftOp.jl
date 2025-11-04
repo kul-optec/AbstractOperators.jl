@@ -109,7 +109,7 @@ macro disable_nfft_threading(expr)
 end
 
 function mul!(ksp::AbstractArray, op::NfftOp, img::AbstractArray)
-	AbstractOperators.check(img, ksp, op)
+	AbstractOperators.check(ksp, op, img)
 	if op.threaded
 		@enable_nfft_threading mul!(vec(ksp), op.plan, img)
 	else
@@ -124,7 +124,7 @@ function mul!(
 	ksp::AbstractArray,
 )
 	op = op.A
-	AbstractOperators.check(img, ksp, op)
+	AbstractOperators.check(ksp, op, img)
 	if op.threaded
 		@.. thread = true op.ksp_buffer = ksp * op.dcf
 		@enable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
@@ -138,8 +138,8 @@ end
 
 size(L::NfftOp) = size(L.ksp_buffer), NFFT.size_in(L.plan)
 fun_name(::NfftOp) = "𝒩"
-domainType(::NfftOp{T}) where {T} = complex(T)
-codomainType(::NfftOp{T}) where {T} = complex(T)
+domain_type(::NfftOp{T}) where {T} = complex(T)
+codomain_type(::NfftOp{T}) where {T} = complex(T)
 
 # Utility
 

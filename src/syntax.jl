@@ -36,7 +36,7 @@ end
 # getindex
 function Base.getindex(A::AbstractOperator, idx...)
 	if ndoms(A, 2) == 1
-		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		Gout = GetIndex(codomain_type(A), size(A, 1), idx)
 		return Gout * A
 	elseif length(idx) == 1 && ndoms(A, 2) == length(idx[1])
 		return permute(A, idx[1])
@@ -47,7 +47,7 @@ end
 
 function Base.getindex(A::Compose, idx...)
 	if ndoms(A, 2) == 1
-		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		Gout = GetIndex(codomain_type(A), size(A, 1), idx)
 		return Gout * A
 	elseif all(is_diagonal, A.A[2:end])
 		return Compose((getindex(A.A[1], idx...), A.A[2:end]...), A.buf)
@@ -58,7 +58,7 @@ end
 
 function Base.getindex(A::Sum, idx...)
 	if ndoms(A, 2) == 1
-		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		Gout = GetIndex(codomain_type(A), size(A, 1), idx)
 		return Gout * A
 	end
 	return Sum((getindex(L, idx...) for L in A.A)...)
@@ -110,7 +110,7 @@ end
 
 function Base.getindex(H::A, idx...) where {L<:HCAT,D,S,A<:AffineAdd{L,D,S}}
 	if ndoms(H, 2) == 1
-		Gout = GetIndex(codomainType(H), size(H, 1), idx)
+		Gout = GetIndex(codomain_type(H), size(H, 1), idx)
 		return Gout * H
 	end
 	return AffineAdd(getindex(H.A, idx...), H.d, S)
@@ -119,7 +119,7 @@ end
 # get index of scale
 function Base.getindex(A::S, idx...) where {T,L,S<:Scale{T,L}}
 	if ndoms(A, 2) == 1
-		Gout = GetIndex(codomainType(A), size(A, 1), idx)
+		Gout = GetIndex(codomain_type(A), size(A, 1), idx)
 		return Gout * A
 	end
 	return Scale(A.coeff, A.coeff_conj, getindex(A.A, idx...))

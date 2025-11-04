@@ -1,3 +1,11 @@
+using Test
+using AbstractOperators
+using RecursiveArrayTools: ArrayPartition
+using LinearAlgebra
+using Random
+
+Random.seed!(0)
+
 ########### Test for LinearOperators
 function test_op(A::AbstractOperator, x, y, verb::Bool=false)
 	verb && (println(); show(A); println())
@@ -53,7 +61,7 @@ function test_NLop(A::AbstractOperator, x, y, verb::Bool=false)
 
 	@test norm(grad .- grad2) < 1e-8
 
-	if all(isreal.(grad))  # currently finite difference gradient not working with complex variables 
+	if eltype(grad) <: Real  # currently finite difference gradient not working with complex variables 
 		grad3 = gradient_fd(A, Ax, x, y) #calculate gradient using finite differences
 
 		@test norm(grad .- grad3) < 5e-4
@@ -68,15 +76,15 @@ function gradient_fd(
 	op::A, y0::AbstractArray, x0::AbstractArray, r::AbstractArray
 ) where {A<:AbstractOperator}
 	y = copy(y0)
-	J = zeros(*(size(op, 1)...), *(size(op, 2)...))
+	J = zeros(prod(size(op, 1)), prod(size(op, 2)))
 	h = sqrt(eps())
 	for i in axes(J, 2)
 		x = copy(x0)
 		x[i] = x[i] + h
 		mul!(y, op, x)
-		J[:, i] .= ((y .- y0) ./ h)[:]
+		J[:, i] .= vec((y .- y0) ./ h)
 	end
-	return reshape(J' * r[:], size(op, 2))
+	return reshape(J' * vec(r), size(op, 2))
 end
 
 function gradient_fd(
@@ -85,7 +93,7 @@ function gradient_fd(
 	N = length(x0.x)
 	y = copy(y0)
 	grad = zero(x0)
-	J = [zeros(*(size(op, 1)...), *(sz2...)) for sz2 in size(op, 2)]
+	J = [zeros(prod(size(op, 1)), prod(sz2)) for sz2 in size(op, 2)]
 
 	h = sqrt(eps())
 	for ii in eachindex(J)
@@ -93,9 +101,9 @@ function gradient_fd(
 			x = deepcopy(x0)
 			x.x[ii][i] = x.x[ii][i] + h
 			mul!(y, op, x)
-			J[ii][:, i] .= ((y .- y0) ./ h)[:]
+			J[ii][:, i] .= vec((y .- y0) ./ h)
 		end
-		grad.x[ii] .= reshape(J[ii]' * r[:], size(op, 2)[ii])
+		grad.x[ii] .= reshape(J[ii]' * vec(r), size(op, 2)[ii])
 	end
 	return grad
 end
@@ -106,7 +114,7 @@ function gradient_fd(
 	N = length(y0.x)
 	grad = zero(x0)
 	y = zero(y0)
-	J = [zeros(*(sz1...), *(size(op, 2)...)) for sz1 in size(op, 1)]
+	J = [zeros(prod(sz1), prod(size(op, 2))) for sz1 in size(op, 1)]
 
 	h = sqrt(eps())
 	for i in eachindex(x0)
@@ -114,7 +122,7 @@ function gradient_fd(
 		x[i] = x[i] + h
 		mul!(y, op, x)
 		for ii in eachindex(J)
-			J[ii][:, i] .= ((y.x[ii] .- y0.x[ii]) ./ h)[:]
+			J[ii][:, i] .= vec((y.x[ii] .- y0.x[ii]) ./ h)
 		end
 	end
 	for ii in eachindex(J)
@@ -130,17 +138,17 @@ function gradient_fd(
 	y = zero(y0)
 	M = length(x0.x)
 	N = length(y0.x)
-	J = [zeros(*(size(op, 1)[i]...), *(size(op, 2)[ii]...)) for ii in 1:M, i in 1:N]
+	J = [zeros(prod(size(op, 1)[i]), prod(size(op, 2)[ii])) for ii in 1:M, i in 1:N]
 
 	h = sqrt(eps())
 	for i in 1:M
-		for iii in eachindex(x.x[i])
+		for iii in eachindex(x0.x[i])
 			x = deepcopy(x0)
 			x.x[i][iii] = x.x[i][iii] + h
 			mul!(y, op, x)
 
 			for ii in 1:N
-				J[i, ii][:, iii] .= ((y.x[ii] .- y0.x[ii]) ./ h)[:]
+				J[i, ii][:, iii] .= vec((y.x[ii] .- y0.x[ii]) ./ h)
 			end
 		end
 	end

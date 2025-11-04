@@ -35,36 +35,38 @@ struct AffineAdd{L<:AbstractOperator,D<:Union{AbstractArray,Number},S} <: Abstra
 				),
 			)
 		end
-		if eltype(d) != codomainType(A)
+		if eltype(d) != codomain_type(A)
 			error(
-				"cannot tilt opertor having codomain type $(codomainType(A)) with array of type $(eltype(d))",
+				"cannot tilt opertor having codomain type $(codomain_type(A)) with array of type $(eltype(d))",
 			)
 		end
 		return new{L,D,sign}(A, d)
 	end
 	# scalar
 	function AffineAdd(A::L, d::D, sign::Bool=true) where {L<:AbstractOperator,D<:Number}
-		if typeof(d) <: Complex && codomainType(A) <: Real
+		if typeof(d) <: Complex && codomain_type(A) <: Real
 			error(
-				"cannot tilt opertor having codomain type $(codomainType(A)) with array of type $(eltype(d))",
+				"cannot tilt opertor having codomain type $(codomain_type(A)) with array of type $(eltype(d))",
 			)
 		end
 		return new{L,D,sign}(A, d)
 	end
 end
 
-Scale(coeff::Number, T::AffineAdd{L,D,S}) where {L,D,S} = AffineAdd(Scale(coeff, T.A), coeff * T.d, S)
+function Scale(coeff::Number, T::AffineAdd{L,D,S}) where {L,D,S}
+	coeff == 1 ? T : AffineAdd(Scale(coeff, T.A), coeff * T.d, S)
+end
 
 # Mappings
 # array
 function mul!(y::DD, T::AffineAdd{L,D,true}, x) where {L<:AbstractOperator,DD,D}
 	mul!(y, T.A, x)
-	return y .+= T.d
+	return @.. y += T.d
 end
 
 function mul!(y::DD, T::AffineAdd{L,D,false}, x) where {L<:AbstractOperator,DD,D}
 	mul!(y, T.A, x)
-	return y .-= T.d
+	return @.. y -= T.d
 end
 
 function mul!(y, T::AdjointOperator{AffineAdd{L,D,S}}, x) where {L<:AbstractOperator,D,S}
@@ -73,10 +75,15 @@ end
 
 # Properties
 
+function Base.:(==)(L1::AffineAdd{L,D,S}, L2::AffineAdd{L,D,S}) where {L,D,S}
+	L1.A == L2.A && L1.d == L2.d
+end
 size(L::AffineAdd) = size(L.A)
 
-domainType(L::AffineAdd) = domainType(L.A)
-codomainType(L::AffineAdd) = codomainType(L.A)
+domain_type(L::AffineAdd) = domain_type(L.A)
+codomain_type(L::AffineAdd) = codomain_type(L.A)
+domain_storage_type(L::AffineAdd) = domain_storage_type(L.A)
+codomain_storage_type(L::AffineAdd) = codomain_storage_type(L.A)
 is_thread_safe(L::AffineAdd) = is_thread_safe(L.A)
 
 is_linear(L::AffineAdd) = is_linear(L.A)
@@ -101,7 +108,9 @@ diag_AcA(L::AffineAdd) = diag_AcA(L.A)
 diag_AAc(L::AffineAdd) = diag_AAc(L.A)
 
 has_optimized_normalop(T::AffineAdd) = has_optimized_normalop(T.A)
-get_normal_op(T::AffineAdd{L,D,S}) where {L,D,S} = AffineAdd(get_normal_op(T.A), T.A' * T.d, S)
+function get_normal_op(T::AffineAdd{L,D,S}) where {L,D,S}
+	AffineAdd(get_normal_op(T.A), T.A' * T.d, S)
+end
 
 # utils
 import Base: sign

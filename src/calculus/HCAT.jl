@@ -8,17 +8,17 @@ Shorthand constructors:
 	[A1 A2 ...]
 	hcat(A...)
 
-Horizontally concatenate `AbstractOperator`s. Notice that all the operators must share the same codomain dimensions and type, e.g. `size(A1,1) == size(A2,1)` and `codomainType(A1) == codomainType(A2)`.
+Horizontally concatenate `AbstractOperator`s. Notice that all the operators must share the same codomain dimensions and type, e.g. `size(A1,1) == size(A2,1)` and `codomain_type(A1) == codomain_type(A2)`.
 
 ```jldoctest
-julia> HCAT(DFT(10),DCT(Complex{Float64},20)[1:10])
-[ℱ,↓*ℱc]  ℝ^10  ℂ^20 -> ℂ^10
+julia> HCAT(Eye(10),FiniteDiff((20,))[1:10])
+[I,↓*δx]  ℝ^10  ℝ^20 -> ℝ^10
 
 julia> H = [Eye(10) DiagOp(2*ones(10))]
 [I,╲]  ℝ^10  ℝ^10 -> ℝ^10
 
-julia> hcat(H,DCT(10))
-HCAT  ℝ^10  ℝ^10  ℝ^10 -> ℝ^10
+julia> hcat(H,FiniteDiff((11,)))
+HCAT  ℝ^10  ℝ^10  ℝ^11 -> ℝ^10
 
 julia> # To evaluate `HCAT` operators multiply them with a `Tuple` of `AbstractArray` of the correct dimensions and type.
 
@@ -57,8 +57,8 @@ struct HCAT{
 		if any([size(A[1], 1) != size(a, 1) for a in A])
 			throw(DimensionMismatch("operators must have the same codomain dimension!"))
 		end
-		if any([codomainType(A[1]) != codomainType(a) for a in A])
-			throw(error("operators must all share the same codomainType!"))
+		if any([codomain_type(A[1]) != codomain_type(a) for a in A])
+			throw(error("operators must all share the same codomain_type!"))
 		end
 		return new{N,L,P,C}(A, idxs, buf)
 	end
@@ -108,11 +108,11 @@ end
 HCAT(A::AbstractOperator) = A
 
 # Mappings
-function mul!(y::C, H::HCAT{N,L,P,C}, b::DD) where {N,L,P,C,DD<:ArrayPartition}
+function mul!(y, H::HCAT, b::DD) where {DD<:ArrayPartition}
 	return mul!(y, H, b.x)
 end
 
-@generated function mul!(y::C, H::HCAT{N,L,P,C}, b::DD) where {N,L,P,C,DD<:Tuple}
+@generated function mul!(y, H::HCAT{N,L,P}, b::DD) where {N,L,P,DD<:Tuple}
 	ex = :()
 
 	if fieldtype(P, 1) <: Int
@@ -146,16 +146,12 @@ end
 	return ex
 end
 
-function mul!(
-	y::DD, A::AdjointOperator{HCAT{N,L,P,C}}, b::C
-) where {N,L,P,C,DD<:ArrayPartition}
+function mul!(y::DD, A::AdjointOperator{<:HCAT}, b) where {DD<:ArrayPartition}
 	mul!(y.x, A, b)
 	return y
 end
 
-@generated function mul!(
-	y::DD, A::AdjointOperator{HCAT{N,L,P,C}}, b::C
-) where {N,L,P,C,DD<:Tuple}
+@generated function mul!(y::DD, A::AdjointOperator{<:HCAT{N,L,P}}, b) where {N,L,P,DD<:Tuple}
 	ex = :(H = A.A)
 	for i in 1:N
 		if fieldtype(P, i) <: Int
@@ -175,9 +171,7 @@ end
 end
 
 ## same as mul! but skips `Zeros`
-@generated function mul_skipZeros!(
-	y::C, H::HCAT{N,L,P,C}, b::DD
-) where {N,L,P,C,DD<:ArrayPartition}
+@generated function mul_skipZeros!(y, H::HCAT{N,L,P}, b::DD) where {N,L,P,DD<:ArrayPartition}
 	ex = :()
 
 	if fieldtype(P, 1) <: Int
@@ -216,8 +210,8 @@ end
 end
 
 @generated function mul_skipZeros!(
-	y::DD, A::AdjointOperator{HCAT{N,L,P,C}}, b::C
-) where {N,L,P,C,DD<:ArrayPartition}
+	y::DD, A::AdjointOperator{HCAT{N,L,P}}, b
+) where {N,L,P,DD<:ArrayPartition}
 	ex = :(H = A.A)
 	for i in 1:N
 		if !(fieldtype(L, i) <: Zeros)
@@ -241,6 +235,7 @@ end
 end
 
 # Properties
+Base.:(==)(H1::HCAT{N,L1,P1}, H2::HCAT{N,L2,P2}) where {N,L1,L2,P1,P2} = H1.A == H2.A && H1.idxs == H2.idxs
 
 function size(H::HCAT)
 	size_in = []
@@ -265,13 +260,21 @@ function fun_name(L::HCAT)
 	end
 end
 
-function domainType(H::HCAT)
-	domain = vcat([typeof(d) <: Tuple ? [d...] : d for d in domainType.(H.A)]...)
+function domain_type(H::HCAT)
+	domain = vcat([typeof(d) <: Tuple ? [d...] : d for d in domain_type.(H.A)]...)
 	p = vcat([[idx...] for idx in H.idxs]...)
 	invpermute!(domain, p)
 	return (domain...,)
 end
-codomainType(L::HCAT) = codomainType.(Ref(L.A[1]))
+codomain_type(L::HCAT) = codomain_type.(Ref(L.A[1]))
+function domain_storage_type(H::HCAT)
+	domain = vcat([d <: ArrayPartition ? [d.parameters[2].types...] : d for d in domain_storage_type.(H.A)]...)
+	p = vcat([[idx...] for idx in H.idxs]...)
+	invpermute!(domain, p)
+	T = promote_type(domain_type(H)...)
+	return ArrayPartition{T, Tuple{domain...}}
+end
+codomain_storage_type(L::HCAT) = codomain_storage_type.(Ref(L.A[1]))
 is_thread_safe(::HCAT) = false
 
 is_linear(L::HCAT) = all(is_linear.(L.A))

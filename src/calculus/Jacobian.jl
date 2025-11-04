@@ -10,8 +10,8 @@ Shorthand constructor:
 Returns the jacobian of `A` evaluated at `x` (which in the case of a `LinearOperator` is `A` itself).
 
 ```jldoctest
-julia> Jacobian(DFT(10),randn(10))
-ℱ  ℝ^10 -> ℂ^10
+julia> Jacobian(DiagOp(rand(ComplexF64, 10)),randn(10))
+╲  ℂ^10 -> ℂ^10
 
 julia> Jacobian(Sigmoid((10,)),randn(10))
 J(σ)  ℝ^10 -> ℝ^10
@@ -24,13 +24,13 @@ struct Jacobian{T<:NonLinearOperator,X<:AbstractArray} <: LinearOperator
 end
 
 #Jacobian of LinearOperator
-Jacobian(L::T, x::X) where {T<:LinearOperator,X<:AbstractArray} = L
+Jacobian(L::LinearOperator, ::AbstractArray) = L
 #Jacobian of Scale
-function Jacobian(S::T2, x::AbstractArray) where {T,L,T2<:Scale{T,L}}
+function Jacobian(S::Scale, x::AbstractArray)
 	return Scale(S.coeff, Jacobian(S.A, x))
 end
 ##Jacobian of DCAT
-function Jacobian(H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2}
+function Jacobian(H::DCAT, b)
 	x = b.x
 	A = ()
 	c = 0
@@ -38,15 +38,17 @@ function Jacobian(H::DCAT{N,L,P1,P2}, b) where {N,L,P1,P2}
 		if length(idx) == 1
 			A = (A..., jacobian(H.A[k], x[idx]))
 		else
-			xx = ([x[i] for i in idx]...,)
+			xx = Tuple(x[i] for i in idx)
 			A = (A..., jacobian(H.A[k], xx))
 		end
 	end
 	return DCAT(A, H.idxD, H.idxC)
 end
 #Jacobian of HCAT
-function Jacobian(H::HCAT{N,L,P,C}, b::ArrayPartition) where {N,L,P,C}
-	x = b.x
+function Jacobian(H::HCAT, b::ArrayPartition)
+	return Jacobian(H, b.x)
+end
+function Jacobian(H::HCAT, x::Tuple)
 	A = ()
 	for (k, idx) in enumerate(H.idxs)
 		if length(idx) == 1
@@ -59,12 +61,12 @@ function Jacobian(H::HCAT{N,L,P,C}, b::ArrayPartition) where {N,L,P,C}
 	return HCAT(A, H.idxs, H.buf)
 end
 #Jacobian of VCAT
-function Jacobian(V::VCAT{N,L,P,C}, x::AbstractArray) where {N,L,P,C}
+function Jacobian(V::VCAT, x)
 	JJ = ([Jacobian(a, x) for a in V.A]...,)
 	return VCAT(JJ, V.idxs, V.buf)
 end
 #Jacobian of Compose
-function Jacobian(L::Compose, x::X) where {X<:AbstractArray}
+function Jacobian(L::Compose, x::AbstractArray)
 	x_vec = AbstractArray[x]
 	for A in L.A[1:end-1]
 		push!(x_vec, A * x_vec[end])
@@ -80,7 +82,7 @@ function Jacobian(L::Compose, x::X) where {N,X<:NTuple{N,AbstractArray}}
 	return Compose(Jacobian.(L.A, tuple(x_vec...)), L.buf)
 end
 #Jacobian of Reshape
-function Jacobian(R::Reshape{N,L}, x::AbstractArray) where {N,L}
+function Jacobian(R::Reshape, x::AbstractArray)
 	return Reshape(Jacobian(R.A, x), R.dim_out)
 end
 #Jacobian of Sum
@@ -88,19 +90,25 @@ function Jacobian(S::Sum{K,C,D}, x::D) where {K,C,D}
 	return Sum(([Jacobian(a, x) for a in S.A]...,), S.bufC, S.bufD)
 end
 #Jacobian of Transpose
-Jacobian(T::Transpose{A}, x::AbstractArray) where {A<:AbstractOperator} = T
+Jacobian(T::Transpose{<:AbstractOperator}, ::AbstractArray) = T
 #Jacobian of BroadCast
-function Jacobian(B::A, x::AbstractArray) where {A<:BroadCast}
-	return BroadCast(Jacobian(B.A, x), B.dim_out)
+Jacobian(L::NoOperatorBroadCast, ::AbstractArray) = L
+function Jacobian(B::OperatorBroadCast{T,N,M,false}, x::AbstractArray) where {T,N,M}
+	return OperatorBroadCast(Jacobian(B.A, x), B.dim_out, threaded=false)
+end
+function Jacobian(B::OperatorBroadCast{T,N,M,true}, x::AbstractArray) where {T,N,M}
+	return OperatorBroadCast(Jacobian(B.A[1], x), B.dim_out, threaded=true)
 end
 #Jacobian of AffineAdd
-Jacobian(B::A, x) where {A<:AffineAdd} = Jacobian(B.A, x)
+Jacobian(B::AffineAdd, x) = Jacobian(B.A, x)
 
 # Properties
-
+Base.:(==)(L1::Jacobian{L}, L2::Jacobian{L}) where {L} = L1.A == L2.A && L1.x == L2.x
 fun_name(L::Jacobian) = "J(" * fun_name(L.A) * ")"
 size(L::Jacobian) = size(L.A, 1), size(L.A, 2)
 
-domainType(L::Jacobian) = domainType(L.A)
-codomainType(L::Jacobian) = codomainType(L.A)
+domain_type(L::Jacobian) = domain_type(L.A)
+codomain_type(L::Jacobian) = codomain_type(L.A)
+domain_storage_type(L::Jacobian) = domain_storage_type(L.A)
+codomain_storage_type(L::Jacobian) = codomain_storage_type(L.A)
 is_thread_safe(::Jacobian) = false

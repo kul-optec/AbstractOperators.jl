@@ -82,12 +82,16 @@ function mul!(y, J::AdjointOperator{HadamardProdJac{L1,L2,C,D}}, b) where {L1,L2
 	return y
 end
 
+# Properties
+Base.:(==)(P1::HadamardProd{L1,L2,C,D}, P2::HadamardProd{L1,L2,C,D}) where {L1,L2,C,D} = P1.A == P2.A && P1.B == P2.B
 size(P::Union{HadamardProd,HadamardProdJac}) = (size(P.A, 1), size(P.A, 2))
 
 fun_name(L::Union{HadamardProd,HadamardProdJac}) = fun_name(L.A) * ".*" * fun_name(L.B)
 
-domainType(L::Union{HadamardProd,HadamardProdJac}) = domainType(L.A)
-codomainType(L::Union{HadamardProd,HadamardProdJac}) = codomainType(L.A)
+domain_type(L::Union{HadamardProd,HadamardProdJac}) = domain_type(L.A)
+codomain_type(L::Union{HadamardProd,HadamardProdJac}) = codomain_type(L.A)
+domain_storage_type(L::Union{HadamardProd,HadamardProdJac}) = domain_storage_type(L.A)
+codomain_storage_type(L::Union{HadamardProd,HadamardProdJac}) = codomain_storage_type(L.A)
 is_thread_safe(::HadamardProd) = false
 
 # utils

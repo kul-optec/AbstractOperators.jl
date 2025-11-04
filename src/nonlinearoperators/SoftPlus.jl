@@ -1,7 +1,7 @@
 export SoftPlus
 
 """
-	SoftPlus([domainType=Float64::Type,] dim_in::Tuple)
+	SoftPlus([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates the softplus non-linear operator with input dimensions `dim_in`.
 ```math
@@ -13,8 +13,8 @@ struct SoftPlus{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function SoftPlus(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return SoftPlus{DomainType,N}(DomainDim)
+function SoftPlus(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return SoftPlus{domain_type,N}(DomainDim)
 end
 
 SoftPlus(DomainDim::NTuple{N,Int}) where {N} = SoftPlus{Float64,N}(DomainDim)
@@ -34,6 +34,6 @@ fun_name(L::SoftPlus) = "σ"
 
 size(L::SoftPlus) = (L.dim, L.dim)
 
-domainType(::SoftPlus{T,N}) where {T,N} = T
-codomainType(::SoftPlus{T,N}) where {T,N} = T
+domain_type(::SoftPlus{T,N}) where {T,N} = T
+codomain_type(::SoftPlus{T,N}) where {T,N} = T
 is_thread_safe(::SoftPlus) = true

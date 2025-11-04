@@ -4,10 +4,23 @@ abstract type BatchOp{dT,cT,dM,cM} <: AbstractOperators.AbstractOperator end
 
 # Properties
 
-domainType(::BatchOp{dT}) where {dT} = dT
-codomainType(::BatchOp{dT,cT}) where {dT,cT} = cT
+domain_type(::BatchOp{dT}) where {dT} = dT
+codomain_type(::BatchOp{dT,cT}) where {dT,cT} = cT
 
 # Utility
+
+function ensure_batch_size_is_tuple(batch_size::Int)
+	return (batch_size,)
+end
+function ensure_batch_size_is_tuple(batch_size::AbstractVector)
+	return ntuple(i -> batch_size[i], length(batch_size))
+end
+function ensure_batch_size_is_tuple(batch_size::NTuple)
+	return batch_size
+end
+function ensure_batch_size_is_tuple(::Any)
+	error("Batch size must be an Int, Vector, or NTuple")
+end
 
 get_domain_batch_dim_mask(::Type{<:BatchOp{T1,T2,dM,cM}}) where {T1,T2,dM,cM} = dM
 get_codomain_batch_dim_mask(::Type{<:BatchOp{T1,T2,dM,cM}}) where {T1,T2,dM,cM} = cM
@@ -48,8 +61,8 @@ function prepare_batch_op(
 		]...,
 	)
 	@assert size(operator, 1) == output_block_size "Operator output size does not match output block size"
-	dType, cdType, opType = domainType(operator), codomainType(operator), typeof(operator)
-	return tuple(domain_batch_size...), dType, cdType, opType
+	dType, cdType = domain_type(operator), codomain_type(operator)
+	return tuple(domain_batch_size...), dType, cdType
 end
 
 function symbol_mask_to_bool(mask::NTuple{N,Symbol}) where {N}
@@ -166,36 +179,5 @@ function get_single_threaded_loop_expr(
 	return quote
 		@inbounds $loop_expr
 		return out
-	end
-end
-
-function check(domain_array, codomain_array, op)
-	if eltype(domain_array) != domainType(op)
-		throw(
-			ArgumentError(
-				"Input type $(eltype(domain_array)) does not match operator input type $(domainType(op))",
-			),
-		)
-	end
-	if size(domain_array) != size(op, 2)
-		throw(
-			ArgumentError(
-				"Input size $(size(domain_array)) does not match operator input size $(size(op, 2))",
-			),
-		)
-	end
-	if eltype(codomain_array) != codomainType(op)
-		throw(
-			ArgumentError(
-				"Output type $(eltype(codomain_array)) does not match operator output type $(codomainType(op))",
-			),
-		)
-	end
-	if size(codomain_array) != size(op, 1)
-		throw(
-			ArgumentError(
-				"Output size $(size(codomain_array)) does not match operator output size $(size(op, 1))",
-			),
-		)
 	end
 end

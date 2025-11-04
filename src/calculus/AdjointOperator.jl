@@ -10,11 +10,11 @@ Shorthand constructor:
 Returns the adjoint operator of `A`.
 
 ```jldoctest
-julia> AdjointOperator(DFT(10))
-ℱᵃ  ℂ^10 -> ℝ^10
+julia> AdjointOperator(ZeroPad((2,2),(0,2)))
+[I;0]ᵃ  ℝ^(2, 4) -> ℝ^(2, 2)
 
-julia> [DFT(10); DCT(10)]'
-[ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10
+julia> [Eye(10); FiniteDiff((10,))]'
+[I;δx]ᵃ  ℝ^10  ℝ^9 -> ℝ^10
 	
 ```
 """
@@ -33,10 +33,15 @@ AdjointOperator(L::AdjointOperator) = L.A
 
 # Properties
 
+has_fast_opnorm(L::AdjointOperator) = has_fast_opnorm(L.A)
+LinearAlgebra.opnorm(L::AdjointOperator) = opnorm(L.A)
+estimate_opnorm(L::AdjointOperator) = estimate_opnorm(L.A)
+
+Base.:(==)(L1::AdjointOperator{T}, L2::AdjointOperator{T}) where {T} = L1.A == L2.A
 size(L::AdjointOperator) = size(L.A, 2), size(L.A, 1)
 
-domainType(L::AdjointOperator) = codomainType(L.A)
-codomainType(L::AdjointOperator) = domainType(L.A)
+domain_type(L::AdjointOperator) = codomain_type(L.A)
+codomain_type(L::AdjointOperator) = domain_type(L.A)
 domain_storage_type(L::AdjointOperator) = codomain_storage_type(L.A)
 codomain_storage_type(L::AdjointOperator) = domain_storage_type(L.A)
 is_thread_safe(L::AdjointOperator) = is_thread_safe(L.A)

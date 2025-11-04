@@ -6,8 +6,8 @@ export DCAT
 Block-diagonally concatenate `AbstractOperator`s.
 
 ```jldoctest
-julia> D = DCAT(HCAT(Eye(2),Eye(2)),DFT(3))
-[[I,I],0;0,ℱ]  ℝ^2  ℝ^2  ℝ^3 -> ℝ^2  ℂ^3
+julia> D = DCAT(HCAT(Eye(2),Eye(2)),FiniteDiff((3,)))
+[[I,I],0;0,δx]  ℝ^2  ℝ^2  ℝ^3 -> ℝ^2  ℝ^2
 
 julia> DCAT(Eye(10),Eye(10),FiniteDiff((4,4)))
 DCAT  ℝ^10  ℝ^10  ℝ^(4, 4) -> ℝ^10  ℝ^10  ℝ^(3, 4)
@@ -17,7 +17,7 @@ julia> #To evaluate `DCAT` operators multiply them with a `Tuple` of `AbstractAr
 julia> using RecursiveArrayTools
 
 julia> D*ArrayPartition(ones(2),ones(2),ones(3))
-([2.0, 2.0], ComplexF64[3.0 + 0.0im, 0.0 + 0.0im, 0.0 + 0.0im])
+([2.0, 2.0], [0.0, 0.0])
 	
 ```
 """
@@ -140,6 +140,7 @@ function get_normal_op(H::DCAT)
 end
 
 # Properties
+Base.:(==)(H1::DCAT{N,L1,P1,P2}, H2::DCAT{N,L2,P1,P2}) where {N,L1,L2,P1,P2} = H1.A == H2.A && H1.idxD == H2.idxD && H1.idxC == H2.idxC
 size(H::DCAT) = size(H, 1), size(H, 2)
 
 function size(H::DCAT, i::Int)
@@ -161,19 +162,33 @@ function fun_name(L::DCAT)
 	end
 end
 
-function domainType(H::DCAT)
-	domain = vcat([typeof(d) <: Tuple ? [d...] : d for d in domainType.(H.A)]...)
+function domain_type(H::DCAT)
+	domain = vcat([typeof(d) <: Tuple ? [d...] : d for d in domain_type.(H.A)]...)
 	p = vcat([[idx...] for idx in H.idxD]...)
 	invpermute!(domain, p)
 	return (domain...,)
 end
-function codomainType(H::DCAT)
-	codomain = vcat([typeof(d) <: Tuple ? [d...] : d for d in codomainType.(H.A)]...)
+function domain_storage_type(H::DCAT)
+	domain = vcat([d <: ArrayPartition ? [d.parameters[2].types...] : d for d in domain_storage_type.(H.A)]...)
+	p = vcat([[idx...] for idx in H.idxD]...)
+	invpermute!(domain, p)
+	T = promote_type(domain_type(H)...)
+	return ArrayPartition{T, Tuple{domain...}}
+end
+function codomain_type(H::DCAT)
+	codomain = vcat([typeof(d) <: Tuple ? [d...] : d for d in codomain_type.(H.A)]...)
 	p = vcat([[idx...] for idx in H.idxC]...)
 	invpermute!(codomain, p)
 	return (codomain...,)
 end
-is_thread_safe(::DCAT) = all(is_thread_safe.(H.A))
+function codomain_storage_type(H::DCAT)
+	codomain = vcat([d <: ArrayPartition ? [d.parameters[2].types...] : d for d in codomain_storage_type.(H.A)]...)
+	p = vcat([[idx...] for idx in H.idxC]...)
+	invpermute!(codomain, p)
+	T = promote_type(codomain_type(H)...)
+	return ArrayPartition{T, Tuple{codomain...}}
+end
+is_thread_safe(H::DCAT) = all(is_thread_safe.(H.A))
 
 is_eye(L::DCAT) = all(is_eye.(L.A))
 is_linear(L::DCAT) = all(is_linear.(L.A))
@@ -211,4 +226,6 @@ diag(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 diag_AAc(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 diag_AcA(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 
+has_fast_opnorm(::DCAT) = all(has_fast_opnorm.(L.A))
 LinearAlgebra.opnorm(L::DCAT) = maximum(opnorm.(L.A))
+estimate_opnorm(L::DCAT) = maximum(estimate_opnorm.(L.A))

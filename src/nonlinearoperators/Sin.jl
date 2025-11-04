@@ -1,7 +1,7 @@
 export Sin
 
 """
-	Sin([domainType=Float64::Type,] dim_in::Tuple)
+	Sin([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates a sinusoid non-linear operator with input dimensions `dim_in`:
 ```math
@@ -13,8 +13,8 @@ struct Sin{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Sin(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return Sin{DomainType,N}(DomainDim)
+function Sin(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return Sin{domain_type,N}(DomainDim)
 end
 
 Sin(DomainDim::NTuple{N,Int}) where {N} = Sin{Float64,N}(DomainDim)
@@ -35,6 +35,6 @@ fun_name(L::Sin) = "sin"
 
 size(L::Sin) = (L.dim, L.dim)
 
-domainType(::Sin{T,N}) where {T,N} = T
-codomainType(::Sin{T,N}) where {T,N} = T
+domain_type(::Sin{T,N}) where {T,N} = T
+codomain_type(::Sin{T,N}) where {T,N} = T
 is_thread_safe(::Sin) = true

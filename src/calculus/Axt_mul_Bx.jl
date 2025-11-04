@@ -112,6 +112,11 @@ function mul!(y, J::AdjointOperator{Axt_mul_BxJac{2,L1,L2,C,D}}, b) where {L1,L2
 	return y
 end
 
+# Properties
+
+Base.:(==)(P1::Axt_mul_Bx{1,L1,L2,C,D}, P2::Axt_mul_Bx{1,L1,L2,C,D}) where {L1,L2,C,D} = P1.A == P2.A && P1.B == P2.B
+Base.:(==)(P1::Axt_mul_BxJac{1,L1,L2,C,D}, P2::Axt_mul_BxJac{1,L1,L2,C,D}) where {L1,L2,C,D} = P1.A == P2.A && P1.B == P2.B
+
 size(P::Union{Axt_mul_Bx{1},Axt_mul_BxJac{1}}) = ((1,), size(P.A, 2))
 function size(P::Union{Axt_mul_Bx{2},Axt_mul_BxJac{2}})
 	return ((size(P.A, 1)[2], size(P.B, 1)[2]), size(P.A, 2))
@@ -119,8 +124,10 @@ end
 
 fun_name(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = fun_name(L.A) * "*" * fun_name(L.B)
 
-domainType(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = domainType(L.A)
-codomainType(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = codomainType(L.A)
+domain_type(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = domain_type(L.A)
+codomain_type(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = codomain_type(L.A)
+domain_storage_type(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = domain_storage_type(L.A)
+codomain_storage_type(L::Union{Axt_mul_Bx,Axt_mul_BxJac}) = codomain_storage_type(L.B)
 is_thread_safe(::Axt_mul_Bx) = false
 
 # utils

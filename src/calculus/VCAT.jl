@@ -8,11 +8,11 @@ Shorthand constructors:
 	[A1; A2 ...]
 	vcat(A...)
 
-Vertically concatenate `AbstractOperator`s. Notice that all the operators must share the same domain dimensions and type, e.g. `size(A1,2) == size(A2,2)` and `domainType(A1) == domainType(A2)`.
+Vertically concatenate `AbstractOperator`s. Notice that all the operators must share the same domain dimensions and type, e.g. `size(A1,2) == size(A2,2)` and `domain_type(A1) == domain_type(A2)`.
 
 ```jldoctest
-julia> VCAT(DFT(4,4),Variation((4,4)))
-[ℱ;Ʋ]  ℝ^(4, 4) -> ℂ^(4, 4)  ℝ^(16, 2)
+julia> VCAT(FiniteDiff((4,4)),Variation((4,4)))
+[δx;Ʋ]  ℝ^(4, 4) -> ℝ^(3, 4)  ℝ^(16, 2)
 
 julia> V = [Eye(3); DiagOp(2*ones(3))]
 [I;╲]  ℝ^3 -> ℝ^3  ℝ^3
@@ -47,8 +47,8 @@ struct VCAT{
 		if any([size(A[1], 2) != size(a, 2) for a in A])
 			throw(DimensionMismatch("operators must have the same domain dimension!"))
 		end
-		if any([domainType(A[1]) != domainType(a) for a in A])
-			throw(error("operators must all share the same domainType!"))
+		if any([domain_type(A[1]) != domain_type(a) for a in A])
+			throw(error("operators must all share the same domain_type!"))
 		end
 		return new{N,L,P,C}(A, idxs, buf)
 	end
@@ -232,6 +232,8 @@ end
 
 # Properties
 
+Base.:(==)(H1::VCAT{N,L1,P1,C}, H2::VCAT{N,L2,P2,C}) where {N,L1,L2,P1,P2,C} = H1.A == H2.A && H1.idxs == H2.idxs
+
 function size(H::VCAT)
 	size_out = []
 	for s in size.(H.A, 1)
@@ -247,13 +249,21 @@ function fun_name(L::VCAT)
 	return length(L.A) == 2 ? "[" * fun_name(L.A[1]) * ";" * fun_name(L.A[2]) * "]" : "VCAT"
 end
 
-function codomainType(H::VCAT)
-	codomain = vcat([typeof(d) <: Tuple ? [d...] : d for d in codomainType.(H.A)]...)
+domain_type(L::VCAT) = domain_type.(Ref(L.A[1]))
+function codomain_type(H::VCAT)
+	codomain = vcat([typeof(d) <: Tuple ? [d...] : d for d in codomain_type.(H.A)]...)
 	p = vcat([[idx...] for idx in H.idxs]...)
 	invpermute!(codomain, p)
 	return (codomain...,)
 end
-domainType(L::VCAT) = domainType.(Ref(L.A[1]))
+domain_storage_type(L::VCAT) = domain_storage_type.(Ref(L.A[1]))
+function codomain_storage_type(H::VCAT)
+	codomain = vcat([d <: ArrayPartition ? [d.parameters[2].types...] : d for d in codomain_storage_type.(H.A)]...)
+	p = vcat([[idx...] for idx in H.idxs]...)
+	invpermute!(codomain, p)
+	T = promote_type(codomain_type(H)...)
+	return ArrayPartition{T, Tuple{codomain...}}
+end
 is_thread_safe(::VCAT) = false
 
 is_linear(L::VCAT) = all(is_linear.(L.A))
@@ -282,7 +292,7 @@ function remove_slicing(L::VCAT)
 				ops = ()
 				for j in eachindex(hcat_op.A)
 					op = if is_null(hcat_op[j])
-						Zeros(domainType(hcat_op[j]), expected_hcat_domain_size[j], codomainType(hcat_op[j]), size(hcat_op[j], 1))
+						Zeros(domain_type(hcat_op[j]), expected_hcat_domain_size[j], codomain_type(hcat_op[j]), size(hcat_op[j], 1))
 					else
 						hcat_op[j]
 					end
@@ -293,7 +303,7 @@ function remove_slicing(L::VCAT)
 		end
 		hcat_ops = tuple(hcat_ops...)
 	end
-	VCAT(hcat_ops, L.idxs, L.buf)
+	VCAT(tuple(hcat_ops...), L.idxs, L.buf)
 end
 
 diag_AcA(L::VCAT) = (+).(diag_AcA.(L.A)...,)

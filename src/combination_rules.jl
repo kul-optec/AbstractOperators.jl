@@ -23,13 +23,36 @@ function combine(T1, T2::AffineAdd{L,D,S}) where {L,D,S}
 	return AffineAdd(combine(T1, T2.A), new_d, S)
 end
 
-function can_be_combined(T1, T2::BroadCast)
-	return size(T1, 1) == size(T1, 2) && can_be_combined(T1, T2.A)
-end
-combine(T1, T2::BroadCast) = BroadCast(combine(T1, T2.A), T2.dim_out, T2.bufC, T2.bufD)
-
 can_be_combined(L, R::Compose) = can_be_combined(L, R.A[end])
-can_be_combined(L::Compose, R::Compose) = can_be_combined(L[1], R.A[end])
+can_be_combined(L::Compose, R::Compose) = can_be_combined(L.A[1], R.A[end])
+function can_be_combined(L::Scale, R::Compose)
+	can_be_combined(L.A, R.A[end]) || (
+		is_linear(L.A) &&
+		all(is_linear.(R.A)) &&
+		any(op -> op isa Union{Scale,DiagOp,MatrixOp,LMatrixOp}, R.A)
+	)
+end
+function can_be_combined(L::AdjointOperator{<:Scale}, R::Compose)
+	can_be_combined(L.A.A', R.A[end]) || (
+		is_linear(L.A.A') &&
+		all(is_linear.(R.A)) &&
+		any(op -> op isa Union{Scale,DiagOp,MatrixOp,LMatrixOp}, R.A)
+	)
+end
+function can_be_combined(L::Compose, R::Scale)
+	can_be_combined(L.A[end], R.A) || (
+		is_linear(R.A) &&
+		all(is_linear.(L.A)) &&
+		any(op -> op isa Union{Scale,DiagOp,MatrixOp,LMatrixOp}, L.A)
+	)
+end
+function can_be_combined(L::Compose, R::AdjointOperator{<:Scale})
+	can_be_combined(L.A[end], R.A.A') || (
+		is_linear(R.A.A') &&
+		all(is_linear.(L.A)) &&
+		any(op -> op isa Union{Scale,DiagOp,MatrixOp,LMatrixOp}, L.A)
+	)
+end
 
 function combine(L, R::Compose)
 	combined = combine(L, R.A[end])
@@ -46,12 +69,48 @@ function combine(L::Compose, R::Compose)
 	combined = combine(L.A[1], R.A[end])
 	if combined isa Compose
 		ops = (R.A[1:(end - 1)]..., combined.A..., L.A[2:end]...)
-		bufs = (R.buf[1:(end - 1)]..., allocate_in_domain(combined), L.buf[2:end]...)
+		bufs = (R.buf..., combined.buf..., L.buf...)
 	else
 		ops = (R.A[1:(end - 1)]..., combined, L.A[2:end]...)
-		bufs = (R.buf[1:(end - 1)]..., allocate_in_domain(combined), L.buf[2:end]...)
+		bufs = (R.buf..., L.buf...)
 	end
 	return Compose(ops, bufs)
+end
+function combine(L::Scale{T,O,Th}, R::Compose) where {T,O,Th}
+	threaded = Th == FastBroadcast.True()
+	if can_be_combined(L.A, R.A[end])
+		return Scale(L.coeff, L.coeff_conj, combine(L.A, R); threaded) # forward optimization task to combine function
+	else
+		return Scale(L.coeff, L.A * R; threaded) # forward optimization task to the specialized constructor of Scale(coeff, L::Compose)
+	end
+end
+function combine(L::AdjointOperator{Scale{T,O,Th}}, R::Compose) where {T,O,Th}
+	threaded = Th == FastBroadcast.True()
+	if can_be_combined(L.A.A', R.A[end])
+		return Scale(L.A.coeff_conj, L.A.coeff, combine(L.A.A', R); threaded) # forward optimization task to combine function
+	else
+		return Scale(L.A.coeff_conj, L.A.A' * R; threaded) # forward optimization task to the specialized constructor of Scale(coeff, L::Compose)
+	end
+end
+function combine(L::Compose, R::Scale{T,O,Th}) where {T<:Number,O<:AbstractOperator,Th}
+	threaded = Th == FastBroadcast.True()
+	if can_be_combined(L.A[1], R.A)
+		S = Scale(R.coeff, R.coeff_conj, combine(L.A[1], R); threaded) # forward optimization task to combine function
+		return Compose((S, L.A[2:end]...), L.buf)
+	else
+		return Scale(R.coeff, L * R.A; threaded) # forward optimization task to the specialized constructor of Scale(coeff, L::Compose)
+	end
+end
+function combine(
+	L::Compose, R::AdjointOperator{Scale{T,O,Th}}
+) where {T<:Number,O<:AbstractOperator,Th}
+	threaded = Th == FastBroadcast.True()
+	if can_be_combined(L.A[1], R.A.A')
+		S = Scale(R.A.coeff_conj, R.A.coeff, combine(L.A[1], R.A.A'); threaded) # forward optimization task to combine function
+		return Compose((S, L.A[2:end]...), L.buf)
+	else
+		return Scale(R.A.coeff_conj, L * R.A.A'; threaded) # forward optimization task to the specialized constructor of Scale(coeff, L::Compose)
+	end
 end
 
 function can_be_combined(L::DCAT, R::DCAT)
@@ -86,162 +145,141 @@ function combine(L, R::Sum)
 	return size(L, 1) == size(L, 2) ? Sum(ops, R.bufC, R.bufD) : Sum(ops...)
 end
 
-can_be_combined(T1::IDCT, T2::DCT) = true
-can_be_combined(T1::DCT, T2::IDCT) = true
-can_be_combined(T1::DCT, T2::AdjointOperator{<:DCT}) = true
-can_be_combined(T1::IDCT, T2::AdjointOperator{<:IDCT}) = true
-can_be_combined(T1::AdjointOperator{<:DCT}, T2::IDCT) = true
-can_be_combined(T1::AdjointOperator{<:IDCT}, T2::DCT) = true
-can_be_combined(T1::AdjointOperator{<:DCT}, T2::AdjointOperator{<:IDCT}) = true
-can_be_combined(T1::AdjointOperator{<:IDCT}, T2::AdjointOperator{<:DCT}) = true
-combine(::CosineTransform, T2::CosineTransform) = Eye(allocate_in_domain(T2))
-function combine(::CosineTransform, T2::AdjointOperator{<:CosineTransform})
-	return Eye(allocate_in_domain(T2))
-end
-function combine(::AdjointOperator{<:CosineTransform}, T2::CosineTransform)
-	return Eye(allocate_in_domain(T2))
-end
-function combine(
-	::AdjointOperator{<:CosineTransform}, T2::AdjointOperator{<:CosineTransform}
-)
-	return Eye(allocate_in_domain(T2))
-end
-
-can_be_combined(T1::IDFT, T2::DFT) = true
-can_be_combined(T1::DFT, T2::IDFT) = true
-can_be_combined(T1::DFT, T2::AdjointOperator{<:DFT}) = true
-can_be_combined(T1::IDFT, T2::AdjointOperator{<:IDFT}) = true
-can_be_combined(T1::AdjointOperator{<:DFT}, T2::DFT) = true
-can_be_combined(T1::AdjointOperator{<:IDFT}, T2::IDFT) = true
-can_be_combined(T1::AdjointOperator{<:DFT}, T2::AdjointOperator{<:IDFT}) = true
-can_be_combined(T1::AdjointOperator{<:IDFT}, T2::AdjointOperator{<:DFT}) = true
-function combine(::FourierTransform, T2::FourierTransform)
-	return Scale(diag_AAc(T2), Eye(allocate_in_domain(T2)))
-end
-function combine(::FourierTransform, T2::AdjointOperator{<:FourierTransform})
-	return Scale(diag_AAc(T2), Eye(allocate_in_domain(T2)))
-end
-function combine(::AdjointOperator{<:FourierTransform}, T2::FourierTransform)
-	return Scale(diag_AAc(T2), Eye(allocate_in_domain(T2)))
-end
-function combine(
-	::AdjointOperator{<:FourierTransform}, T2::AdjointOperator{<:FourierTransform}
-)
-	return Scale(diag_AAc(T2), Eye(allocate_in_domain(T2)))
-end
-
 can_be_combined(T1::DiagOp, T2::DiagOp) = true
 can_be_combined(T1::AdjointOperator{<:DiagOp}, T2::DiagOp) = true
 can_be_combined(T1::DiagOp, T2::AdjointOperator{<:DiagOp}) = true
 can_be_combined(T1::AdjointOperator{<:DiagOp}, T2::AdjointOperator{<:DiagOp}) = true
 function combine(T1::DiagOp, T2::DiagOp)
-	return DiagOp(domainType(T2), T2.dim_in, T1.d .* T2.d)
+	return DiagOp(domain_type(T2), T2.dim_in, T1.d .* T2.d)
 end
 function combine(T1::DiagOp, T2::AdjointOperator{<:DiagOp})
-	return DiagOp(domainType(T2), size(T2, 2), T1.d .* conj.(T2.A.d))
+	return DiagOp(domain_type(T2), size(T2, 2), T1.d .* conj.(T2.A.d))
 end
 function combine(T1::AdjointOperator{<:DiagOp}, T2::DiagOp)
-	return DiagOp(domainType(T2), size(T2, 2), conj.(T1.A.d) .* T2.d)
+	return DiagOp(domain_type(T2), size(T2, 2), conj.(T1.A.d) .* T2.d)
 end
 function combine(T1::AdjointOperator{<:DiagOp}, T2::AdjointOperator{<:DiagOp})
-	return DiagOp(domainType(T2), size(T2, 2), conj.(T1.A.d) .* conj.(T2.A.d))
+	return DiagOp(domain_type(T2), size(T2, 2), conj.(T1.A.d) .* conj.(T2.A.d))
 end
 
 can_be_combined(T1, ::Eye) = true
-can_be_combined(T1, ::AdjointOperator{<:Eye}) = true
 combine(T1, ::Eye) = T1
-combine(T1, ::AdjointOperator{<:Eye}) = T1
 
 can_be_combined(::MatrixOp, ::MatrixOp) = true
 can_be_combined(::AdjointOperator{<:MatrixOp}, ::MatrixOp) = true
 can_be_combined(::MatrixOp, ::AdjointOperator{<:MatrixOp}) = true
 can_be_combined(::AdjointOperator{<:MatrixOp}, ::AdjointOperator{<:MatrixOp}) = true
 function combine(T1::MatrixOp, T2::MatrixOp)
-	return MatrixOp(domainType(T2), size(T2, 2), T1.A * T2.A)
+	return MatrixOp(domain_type(T2), size(T2, 2), T1.A * T2.A)
 end
 function combine(T1::MatrixOp, T2::AdjointOperator{<:MatrixOp})
-	return MatrixOp(domainType(T2), size(T2, 2), T1.A * T2.A.A')
+	return MatrixOp(domain_type(T2), size(T2, 2), T1.A * T2.A.A')
 end
 function combine(T1::AdjointOperator{<:MatrixOp}, T2::MatrixOp)
-	return MatrixOp(domainType(T2), size(T2, 2), T1.A.A' * T2.A)
+	return MatrixOp(domain_type(T2), size(T2, 2), T1.A.A' * T2.A)
 end
 function combine(T1::AdjointOperator{<:MatrixOp}, T2::AdjointOperator{<:MatrixOp})
-	return MatrixOp(domainType(T2), size(T2, 2), T1.A.A' * T2.A.A')
+	return MatrixOp(domain_type(T2), size(T2, 2), T1.A.A' * T2.A.A')
 end
 
 can_be_combined(T1::MatrixOp, T2::Scale) = true
 can_be_combined(T1::AdjointOperator{<:MatrixOp}, T2::Scale) = true
-can_be_combined(T1::Scale, T2::MatrixOp) = can_be_combined(T1.A, T2)
-can_be_combined(T1::Scale, T2::AdjointOperator{<:MatrixOp}) = can_be_combined(T1.A, T2)
-can_be_combined(T1::AdjointOperator{<:Scale}, T2::MatrixOp) = can_be_combined(T1.A.A', T2)
-function can_be_combined(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:MatrixOp})
-	return can_be_combined(T1.A.A', T2)
-end
+can_be_combined(T1::Scale, T2::MatrixOp) = is_linear(T1.A) || can_be_combined(T1.A, T2)
+can_be_combined(T1::Scale, T2::AdjointOperator{<:MatrixOp}) = is_linear(T1.A) || can_be_combined(T1.A, T2)
+can_be_combined(T1::AdjointOperator{<:Scale}, T2::MatrixOp) = true
+can_be_combined(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:MatrixOp}) = true
 function combine(T1::MatrixOp, T2::Scale)
-	return combine(MatrixOp(domainType(T1), size(T1, 2), T2.coeff * T1.A), T2.A)
+	return Compose(MatrixOp(T2.coeff * T1.A), T2.A)
 end
 function combine(T1::AdjointOperator{<:MatrixOp}, T2::Scale)
-	return combine(MatrixOp(domainType(T1), size(T1, 2), T2.coeff * T1.A.A'), T2.A)
+	return Compose(MatrixOp(T2.coeff * T1.A.A'), T2.A)
 end
 function combine(T1::Scale, T2::MatrixOp)
-	return Scale(T1.coeff, combine(T1.A, T2))
+	if can_be_combined(T1.A, T2)
+		return Scale(T1.coeff, combine(T1.A, T2))
+	else
+		return Compose(T1.A, MatrixOp(T1.coeff * T2.A))
+	end
 end
 function combine(T1::Scale, T2::AdjointOperator{<:MatrixOp})
-	return Scale(T1.coeff, combine(T1.A, T2))
+	if can_be_combined(T1.A, T2)
+		return Scale(T1.coeff, combine(T1.A, T2))
+	else
+		return Compose(T1.A, MatrixOp(T1.coeff * T2.A.A'))
+	end
 end
 function combine(T1::AdjointOperator{<:Scale}, T2::MatrixOp)
-	return Scale(T1.A.coeff_conj, combine(T1.A.A', T2))
+	return Compose(T1.A.A', MatrixOp(T1.A.coeff_conj * T2.A))
 end
 function combine(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:MatrixOp})
-	return Scale(
-		T1.A.coeff_conj, combine(T1.A.A', MatrixOp(domainType(T2), size(T2, 2), T2.A'))
-	)
+	return Compose(T1.A.A', MatrixOp(T1.A.coeff_conj * T2.A.A'))
 end
 
-can_be_combined(T1::Scale, T2::DiagOp) = can_be_combined(T1.A, T2)
+can_be_combined(T1::Scale, T2::DiagOp) = is_linear(T1.A) || can_be_combined(T1.A, T2)
 can_be_combined(T1::AdjointOperator{<:Scale}, T2::DiagOp) = true
 can_be_combined(T1::DiagOp, T2::Scale) = true
 can_be_combined(T1::AdjointOperator{<:DiagOp}, T2::Scale) = true
 can_be_combined(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:DiagOp}) = true
 function combine(T1::Scale, T2::DiagOp)
-	return Scale(T1.coeff, combine(T1.A, T2))
+	if can_be_combined(T1.A, T2)
+		return Scale(T1.coeff, combine(T1.A, T2))
+	else
+		scaled_diagop = T1.coeff * T2
+		return T1.A * scaled_diagop
+	end
 end
 function combine(T1::AdjointOperator{<:Scale}, T2::DiagOp)
-	scaled_diagop = DiagOp(domainType(T2), size(T2, 2), T1.A.coeff_conj * T2.d)
-	return can_be_combined(T1.A.A', scaled_diagop) ? combine(T1.A.A', scaled_diagop) : T1.A.A' * scaled_diagop
+	scaled_diagop = DiagOp(domain_type(T2), size(T2, 2), T1.A.coeff_conj * T2.d)
+	return if can_be_combined(T1.A.A', scaled_diagop)
+		combine(T1.A.A', scaled_diagop)
+	else
+		T1.A.A' * scaled_diagop
+	end
 end
 function combine(T1::DiagOp, T2::Scale)
-	scaled_diagop = DiagOp(domainType(T1), size(T1, 2), T1.d .* T2.coeff)
-	return can_be_combined(scaled_diagop, T2.A) ? combine(scaled_diagop, T2.A) : scaled_diagop * T2.A
+	scaled_diagop = DiagOp(domain_type(T1), size(T1, 2), T1.d .* T2.coeff)
+	return if can_be_combined(scaled_diagop, T2.A)
+		combine(scaled_diagop, T2.A)
+	else
+		scaled_diagop * T2.A
+	end
 end
 function combine(T1::AdjointOperator{<:DiagOp}, T2::Scale)
-	scaled_diagop = DiagOp(domainType(T1), size(T1, 2), conj.(T1.A.d) .* T2.coeff)
-	return can_be_combined(scaled_diagop, T2.A) ? combine(scaled_diagop, T2.A) : scaled_diagop * T2.A
+	scaled_diagop = DiagOp(domain_type(T1), size(T1, 2), conj.(T1.A.d) .* T2.coeff)
+	return if can_be_combined(scaled_diagop, T2.A)
+		combine(scaled_diagop, T2.A)
+	else
+		scaled_diagop * T2.A
+	end
 end
 function combine(T1::AdjointOperator{<:Scale}, T2::AdjointOperator{<:DiagOp})
-	scaled_diagop = DiagOp(domainType(T2), size(T2, 2), T1.A.coeff_conj .* conj.(T2.A.d))
-	return can_be_combined(T2.A.A', scaled_diagop) ? combine(T2.A.A', scaled_diagop) : T2.A.A' * scaled_diagop
+	scaled_diagop = DiagOp(domain_type(T2), size(T2, 2), T1.A.coeff_conj .* conj.(T2.A.d))
+	return if can_be_combined(T1.A.A', scaled_diagop)
+		combine(T1.A.A', scaled_diagop)
+	else
+		T1.A.A' * scaled_diagop
+	end
 end
 
-can_be_combined(T1::DiagOp, T2::MatrixOp) = codomainType(T1) == domainType(T2)
-can_be_combined(T1::MatrixOp, T2::DiagOp) = codomainType(T1) == domainType(T2)
+can_be_combined(T1::DiagOp, T2::MatrixOp) = codomain_type(T1) == domain_type(T2)
+can_be_combined(T1::MatrixOp, T2::DiagOp) = codomain_type(T1) == domain_type(T2)
 function can_be_combined(T1::AdjointOperator{<:DiagOp}, T2::MatrixOp)
-	return codomainType(T1) == domainType(T2)
+	return codomain_type(T1) == domain_type(T2)
 end
 function can_be_combined(T1::DiagOp, T2::AdjointOperator{<:MatrixOp})
-	return codomainType(T1) == domainType(T2)
+	return codomain_type(T1) == domain_type(T2)
 end
 function can_be_combined(T1::MatrixOp, T2::AdjointOperator{<:DiagOp})
-	return codomainType(T1) == domainType(T2)
+	return codomain_type(T1) == domain_type(T2)
 end
 function can_be_combined(T1::AdjointOperator{<:MatrixOp}, T2::DiagOp)
-	return codomainType(T1) == domainType(T2)
+	return codomain_type(T1) == domain_type(T2)
 end
 function can_be_combined(T1::AdjointOperator{<:DiagOp}, T2::AdjointOperator{<:MatrixOp})
-	return codomainType(T1) == domainType(T2)
+	return codomain_type(T1) == domain_type(T2)
 end
 function can_be_combined(T1::AdjointOperator{<:MatrixOp}, T2::AdjointOperator{<:DiagOp})
-	return codomainType(T1) == domainType(T2)
+	return codomain_type(T1) == domain_type(T2)
 end
 combine_matrix(L::AbstractMatrix, R::AbstractMatrix) = L * R
 combine_matrix(L::AbstractMatrix, R::AbstractVector) = L * Diagonal(R)
@@ -249,26 +287,26 @@ combine_matrix(L::AbstractVector, R::AbstractMatrix) = Diagonal(L) * R
 combine_matrix(L::Number, R::AbstractMatrix) = L * R
 combine_matrix(L::AbstractMatrix, R::Number) = R * L
 function combine(T1::DiagOp, T2::MatrixOp)
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(T1.d, T2.A))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.d, T2.A))
 end
 function combine(T1::MatrixOp, T2::DiagOp)
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(T1.A, T2.d))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.A, T2.d))
 end
 function combine(T1::AdjointOperator{<:DiagOp}, T2::MatrixOp)
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(conj(T1.A.d), T2.A))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(conj(T1.A.d), T2.A))
 end
 function combine(T1::DiagOp, T2::AdjointOperator{<:MatrixOp})
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(T1.d, T2.A'))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.d, T2.A'))
 end
 function combine(T1::MatrixOp, T2::AdjointOperator{<:DiagOp})
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(T1.A, conj(T2.A.d)))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.A, conj(T2.A.d)))
 end
 function combine(T1::AdjointOperator{<:MatrixOp}, T2::DiagOp)
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(T1.A.A', T2.d))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.A.A', T2.d))
 end
 function combine(T1::AdjointOperator{<:DiagOp}, T2::AdjointOperator{<:MatrixOp})
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(conj(T1.A.d), T2.A.A'))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(conj(T1.A.d), T2.A.A'))
 end
 function combine(T1::AdjointOperator{<:MatrixOp}, T2::AdjointOperator{<:DiagOp})
-	return MatrixOp(domainType(T2), size(T2, 2), combine_matrix(T1.A.A', conj(T2.A.d)))
+	return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.A.A', conj(T2.A.d)))
 end

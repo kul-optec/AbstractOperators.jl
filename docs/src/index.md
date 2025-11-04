@@ -29,7 +29,7 @@ For example, one can create a 2-D Discrete Fourier Transform as follows:
 julia> A = DFT(3,4)
 ℱ  ℝ^(3, 4) -> ℂ^(3, 4)
 ```
-Here, it can be seen that `A` has a domain of dimensions `size(A,2) = (3,4)` and of type `domainType(A) = Float64` and a codomain of dimensions `size(A,1) = (3,4)` and type `codomainType(A) = Complex{Float64}`.
+Here, it can be seen that `A` has a domain of dimensions `size(A,2) = (3,4)` and of type `domain_type(A) = Float64` and a codomain of dimensions `size(A,1) = (3,4)` and type `codomain_type(A) = Complex{Float64}`.
 
 This linear transformation can be evaluated as follows: 
 
@@ -70,7 +70,7 @@ julia> H = [A B]
 [ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -> ℂ^(3, 4)
 ```
 
-In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domainType(H) = (Float64, Complex{Float64})`.
+In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domain_type(H) = (Float64, Complex{Float64})`.
 
 When an `AbstractOperators` have multiple domains, this must be multiplied using an `ArrayPartition` (using [RecursiveArrayTools](https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/) with corresponding size and domain, for example: 
 

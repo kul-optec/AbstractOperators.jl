@@ -1,7 +1,7 @@
 export Tanh
 
 """
-	Tanh([domainType=Float64::Type,] dim_in::Tuple)
+	Tanh([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates an hyperbolic tangent non-linear operator with input dimensions `dim_in`:
 ```math
@@ -13,8 +13,8 @@ struct Tanh{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Tanh(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return Tanh{DomainType,N}(DomainDim)
+function Tanh(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return Tanh{domain_type,N}(DomainDim)
 end
 
 Tanh(DomainDim::NTuple{N,Int}) where {N} = Tanh{Float64,N}(DomainDim)
@@ -35,6 +35,6 @@ fun_name(L::Tanh) = "tanh"
 
 size(L::Tanh) = (L.dim, L.dim)
 
-domainType(::Tanh{T,N}) where {T,N} = T
-codomainType(::Tanh{T,N}) where {T,N} = T
+domain_type(::Tanh{T,N}) where {T,N} = T
+codomain_type(::Tanh{T,N}) where {T,N} = T
 is_thread_safe(::Tanh) = true

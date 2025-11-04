@@ -1,10 +1,10 @@
 
-import Base: size, ndims
+import Base: size, ndims, similar, copy
 import LinearAlgebra: diag
 
 export ndoms,
-	domainType,
-	codomainType,
+	domain_type,
+	codomain_type,
 	domain_storage_type,
 	codomain_storage_type,
 	is_linear,
@@ -13,48 +13,50 @@ export ndoms,
 	is_diagonal,
 	is_AcA_diagonal,
 	is_AAc_diagonal,
+	diag_AcA,
+	diag_AAc,
 	is_orthogonal,
 	is_invertible,
 	is_full_row_rank,
 	is_full_column_rank,
+	is_symmetric,
 	is_sliced,
-	diag_AcA,
-	diag_AAc,
 	displacement,
 	remove_displacement,
 	is_thread_safe,
 	has_optimized_normalop,
-	get_normal_op
+	get_normal_op,
+	estimate_opnorm
 
 """
-	domainType(A::AbstractOperator)
+	domain_type(A::AbstractOperator)
 
 Returns the type of the domain.
 
 ```jldoctest
-julia> domainType(DFT(10))
+julia> domain_type(DiagOp(rand(10)))
 Float64
 
-julia> domainType(hcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
+julia> domain_type(hcat(Eye(Complex{Float64},(10,)),DiagOp(rand(ComplexF64, 10))))
 (ComplexF64, ComplexF64)
 ```
 """
-domainType
+domain_type
 
 """
-	codomainType(A::AbstractOperator)
+	codomain_type(A::AbstractOperator)
 
 Returns the type of the codomain.
 
 ```jldoctest
-julia> codomainType(DFT(10))
+julia> codomain_type(DiagOp(rand(ComplexF64, 10)))
 ComplexF64 (alias for Complex{Float64})
 
-julia> codomainType(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
+julia> codomain_type(vcat(Eye(Complex{Float64},(10,)),DiagOp(rand(ComplexF64, 10))))
 (ComplexF64, ComplexF64)
 ```
 """
-codomainType
+codomain_type
 
 """
 	domain_storage_type(L::AbstractOperator)
@@ -62,15 +64,15 @@ codomainType
 Returns the type of the storage for the domain of the operator.
 
 ```jldoctest
-julia> domain_storage_type(DFT(10))
+julia> domain_storage_type(DiagOp(rand(10)))
 Array{Float64}
 
-julia> domain_storage_type(hcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
+julia> domain_storage_type(hcat(Eye(Complex{Float64},(10,)),DiagOp(rand(ComplexF64, 10))))
 RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{ComplexF64}}}
 ```
 """
 function domain_storage_type(L::AbstractOperator)
-	dt = domainType(L)
+	dt = domain_type(L)
 	return if dt isa Tuple
 		arrayTypes = Tuple{[Array{t} for t in dt]...}
 		ArrayPartition{promote_type(dt...),arrayTypes}
@@ -85,15 +87,15 @@ end
 Returns the type of the storage of for the codomain of the operator.
 
 ```jldoctest
-julia> codomain_storage_type(DFT(10))
+julia> codomain_storage_type(DiagOp(rand(ComplexF64,10)))
 Array{ComplexF64}
 
-julia> codomain_storage_type(vcat(Eye(Complex{Float64},(10,)),DFT(Complex{Float64},10)))
+julia> codomain_storage_type(vcat(Eye(Complex{Float64},(10,)),DiagOp(rand(ComplexF64,10))))
 RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{ComplexF64}}}
 ```
 """
 function codomain_storage_type(L::AbstractOperator)
-	dt = codomainType(L)
+	dt = codomain_type(L)
 	return if dt isa Tuple
 		arrayTypes = Tuple{[Array{t} for t in dt]...}
 		ArrayPartition{promote_type(dt...),arrayTypes}
@@ -103,15 +105,23 @@ function codomain_storage_type(L::AbstractOperator)
 end
 
 function allocate_in_domain(L::AbstractOperator, dims...=size(L, 2)...)
-	return allocate(domain_storage_type(L), dims...)
-end
-function allocate_in_codomain(L::AbstractOperator, dims...=size(L, 1)...)
-	return allocate(codomain_storage_type(L), dims...)
+	dS = domain_storage_type(L)
+	if dS <: ArrayPartition
+		S = dS.parameters[2]
+		return ArrayPartition([similar(s, d...) for (s, d) in zip(S.parameters, dims)]...)
+	else
+		return similar(dS, dims...)
+	end
 end
 
-allocate(::Type{T}, dims...) where {T<:AbstractArray} = T(undef, dims...)
-function allocate(::Type{ArrayPartition{T,S}}, dims...) where {T,S}
-	return ArrayPartition([allocate(s, d...) for (s, d) in zip(S.parameters, dims)]...)
+function allocate_in_codomain(L::AbstractOperator, dims...=size(L, 1)...)
+	cS = codomain_storage_type(L)
+	if cS <: ArrayPartition
+		S = cS.parameters[2]
+		return ArrayPartition([similar(s, d...) for (s, d) in zip(S.parameters, dims)]...)
+	else
+		return similar(cS, dims...)
+	end
 end
 
 storage_type_display_string(::Type{T}) where {T<:AbstractArray} = ""
@@ -152,26 +162,59 @@ count_dims(dims::Tuple) = count_dims.(dims)
 Returns the number of codomains and domains  of a `AbstractOperator`. Optionally you can specify the codomain (with `dom = 1`) or the domain (with `dom = 2`)
 
 ```jldoctest
-julia> ndoms(DFT(10,10))
+julia> ndoms(Eye(10,10))
 (1, 1)
 
-julia> ndoms(hcat(DFT(10,10),DFT(10,10)))
+julia> ndoms(hcat(Eye(10,10),Eye(10,10)))
 (1, 2)
 
-julia> ndoms(hcat(DFT(10,10),DFT(10,10)),2)
+julia> ndoms(hcat(Eye(10,10),Eye(10,10)),2)
 2
 
-julia> ndoms(DCAT(DFT(10,10),DFT(10,10)))
+julia> ndoms(DCAT(Eye(10,10),Eye(10,10)))
 (2, 2)
 ```
 """
 ndoms(L::AbstractOperator) = length.(ndims(L))
 ndoms(L::AbstractOperator, i::Int) = ndoms(L)[i]
 
-diag_AcA(L::AbstractOperator) = error("is_AcA_diagonal($L) == false")
-diag_AAc(L::AbstractOperator) = error("is_AAc_diagonal($L) == false")
-
 is_linear(L::LinearOperator) = true
+
+"""
+	is_sliced(A)
+
+Returns true if `A` is a sliced operator.
+Operator `A` is sliced if it applies to only a subset of the input values.
+
+"""
+is_sliced(L) = false
+
+"""
+	get_slicing_expr(A)
+
+Returns the slicing expression of `A`.
+Operator `A` is sliced if it applies to only a subset of the input values.
+The slicing expression is either a tuple of indices or a bit array that specifies the subset of input values that `A` applies to.
+"""
+get_slicing_expr(L) = is_null(L) ? nothing : Colon()
+
+"""
+	get_slicing_mask(A)
+
+Returns the slicing mask of `A`.
+Operator `A` is sliced if it applies to only a subset of the input values.
+"""
+get_slicing_mask(L) = error("cannot get slicing mask of operator of type $(typeof(L))")
+
+"""
+	remove_slicing(A)
+
+Returns the operator `A` without slicing.
+Operator `A` is sliced if it applies to only a subset of the input values.
+"""
+remove_slicing(L) = L
+
+has_fast_opnorm(L) = false
 
 """
 	displacement(A::AbstractOperator)
@@ -212,8 +255,8 @@ remove_displacement(A::AbstractOperator) = A
 
 import Base: convert
 function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T<:AbstractOperator}
-	domainType(L) != dom && error(
-		"cannot convert operator with domain $(domainType(L)) to operator with domain $dom ",
+	domain_type(L) != dom && error(
+		"cannot convert operator with domain $(domain_type(L)) to operator with domain $dom ",
 	)
 	size(L, 1) != dim_in && error(
 		"cannot convert operator with size $(size(L,1)) to operator with domain $dim_in ",
@@ -223,22 +266,21 @@ end
 
 """
 	can_be_combined(L::AbstractOperator, R::AbstractOperator) = false
+	can_be_combined(L::AbstractOperator, M::AbstractOperator, R::AbstractOperator) = false
 
 Returns whether the operators `L` and `R` can be merged when they are multiplied.
 
 Examples:
 ```jldoctest
-julia> AbstractOperators.can_be_combined(DFT(10), DFT(10))
+julia> AbstractOperators.can_be_combined(DiagOp(rand(10)), FiniteDiff((10,)))
 false
 
-julia> AbstractOperators.can_be_combined(DFT(10), Eye(10))
-true
-
-julia> AbstractOperators.can_be_combined(IDFT(10), DFT(10))
+julia> AbstractOperators.can_be_combined(Eye(10), FiniteDiff((11,)))
 true
 ```
 """
 can_be_combined(L, R) = is_eye(L) || is_eye(R) || is_null(L) || (is_null(R) && is_linear(L) && all(displacement(L) .== 0))
+can_be_combined(L, M, R) = false
 
 """
 	combine(L::AbstractOperator, R::AbstractOperator)
@@ -246,11 +288,8 @@ Returns the combined operator of `L` and `R`. The combined operator is defined a
 
 Examples:
 ```jldoctest
-julia> AbstractOperators.combine(IDFT(10), DFT(10))
-αI  ℝ^10 -> ℝ^10
-
-julia> AbstractOperators.combine(DFT(10), Eye(10))
-ℱ  ℝ^10 -> ℂ^10
+julia> AbstractOperators.combine(Eye(10), DiagOp(rand(10)))
+╲  ℝ^10 -> ℝ^10
 ```
 """
 function combine(L, R)
@@ -259,20 +298,24 @@ function combine(L, R)
 	elseif is_eye(R)
 		return L
 	elseif is_null(L)
-		if size(R, 1) == size(R, 2) && domainType(R) == codomainType(R)
+		if size(R, 1) == size(R, 2) && domain_type(R) == codomain_type(R)
 			return L
 		else
-			return Zeros(domainType(R), size(R, 2), codomainType(L), size(L, 1))
+			return Zeros(domain_type(R), size(R, 2), codomain_type(L), size(L, 1))
 		end
 	elseif is_null(R) && is_linear(L) && all(displacement(L) .== 0)
-		if size(L, 1) == size(L, 2) && domainType(L) == codomainType(L)
+		if size(L, 1) == size(L, 2) && domain_type(L) == codomain_type(L)
 			return R
 		else
-			return Zeros(domainType(R), size(R, 2), codomainType(L), size(L, 1))
+			return Zeros(domain_type(R), size(R, 2), codomain_type(L), size(L, 1))
 		end
 	else
 		error("cannot combine operators")
 	end
+end
+
+function combine(L, M, R)
+	error("cannot combine operators")
 end
 
 """
@@ -293,27 +336,40 @@ function get_normal_op(L::AbstractOperator)
 end
 
 function LinearAlgebra.opnorm(A::AbstractOperator)
+	return powerit(A)
+end
+
+has_fast_opnorm(::AbstractOperator) = false
+
+function estimate_opnorm(A::AbstractOperator)
+	if has_fast_opnorm(A)
+		return opnorm(A)
+	else
+		return powerit(A, max_iter=20, tol=1e-4)
+	end
+end
+
+function powerit(A::AbstractOperator; max_iter=100, tol=1e-8)
 	# Power method for estimating the operator norm
-	A = get_normal_op(A)
-	max_iter=10
-	tol=1e-6
+	AHA = A' * A
     x = allocate_in_domain(A)
-    x /= norm(x)
-    λ = 0.0
-    λ_old = 0.0
+	y = similar(x)
+	Random.rand!(x)
+    normalize!(x)
+    λ = zero(real(eltype(x)))
+    λ_old = real(eltype(x))(Inf)
 
     for _ in 1:max_iter
-        y = A * x
+        mul!(y, AHA, x)
         λ = norm(y)
-        x = y / λ
-
-        if abs(λ - λ_old) < tol
+        if abs(λ - λ_old) < tol^2
             break
         end
         λ_old = λ
+        @.. thread=true x = y / λ
     end
 
-    return λ
+    return sqrt(λ)
 end
 
 #printing
@@ -328,7 +384,7 @@ function fun_space(L::AbstractOperator)
 end
 
 function fun_dom(L::AbstractOperator, n::Int)
-	dm = n == 2 ? domainType(L) : codomainType(L)
+	dm = n == 2 ? domain_type(L) : codomain_type(L)
 	sz = size(L, n)
 	return string_dom(dm, sz)
 end

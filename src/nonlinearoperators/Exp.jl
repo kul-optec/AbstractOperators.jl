@@ -1,7 +1,7 @@
 export Exp
 
 """
-	Exp([domainType=Float64::Type,] dim_in::Tuple)
+	Exp([domain_type=Float64::Type,] dim_in::Tuple)
 
 Creates the exponential non-linear operator with input dimensions `dim_in`:
 ```math
@@ -13,8 +13,8 @@ struct Exp{T,N} <: NonLinearOperator
 	dim::NTuple{N,Int}
 end
 
-function Exp(DomainType::Type, DomainDim::NTuple{N,Int}) where {N}
-	return Exp{DomainType,N}(DomainDim)
+function Exp(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
+	return Exp{domain_type,N}(DomainDim)
 end
 
 Exp(DomainDim::NTuple{N,Int}) where {N} = Exp{Float64,N}(DomainDim)
@@ -35,6 +35,6 @@ fun_name(L::Exp) = "e"
 
 size(L::Exp) = (L.dim, L.dim)
 
-domainType(::Exp{T,N}) where {T,N} = T
-codomainType(::Exp{T,N}) where {T,N} = T
+domain_type(::Exp{T,N}) where {T,N} = T
+codomain_type(::Exp{T,N}) where {T,N} = T
 is_thread_safe(::Exp) = true

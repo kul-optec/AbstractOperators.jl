@@ -1,7 +1,7 @@
 export Sigmoid
 
 """
-	Sigmoid([domainType=Float64::Type,] dim_in::Tuple, γ = 1.)
+	Sigmoid([domain_type=Float64::Type,] dim_in::Tuple, γ = 1.)
 
 Creates the sigmoid non-linear operator with input dimensions `dim_in`.
 ```math
@@ -14,8 +14,8 @@ struct Sigmoid{T,N,G<:Real} <: NonLinearOperator
 	gamma::G
 end
 
-function Sigmoid(DomainType::Type, DomainDim::NTuple{N,Int}, gamma::G=1.0) where {N,G<:Real}
-	return Sigmoid{DomainType,N,G}(DomainDim, gamma)
+function Sigmoid(domain_type::Type, DomainDim::NTuple{N,Int}, gamma::G=1.0) where {N,G<:Real}
+	return Sigmoid{domain_type,N,G}(DomainDim, gamma)
 end
 
 function Sigmoid(DomainDim::NTuple{N,Int}, gamma::G=1.0) where {N,G}
@@ -40,6 +40,6 @@ fun_name(L::Sigmoid) = "σ"
 
 size(L::Sigmoid) = (L.dim, L.dim)
 
-domainType(::Sigmoid{T,N,D}) where {T,N,D} = T
-codomainType(::Sigmoid{T,N,D}) where {T,N,D} = T
+domain_type(::Sigmoid{T,N,D}) where {T,N,D} = T
+codomain_type(::Sigmoid{T,N,D}) where {T,N,D} = T
 is_thread_safe(::Sigmoid) = true

@@ -6,8 +6,8 @@
 size
 ndims
 ndoms
-domainType
-codomainType
+domain_type
+codomain_type
 domain_storage_type
 codomain_storage_type
 displacement

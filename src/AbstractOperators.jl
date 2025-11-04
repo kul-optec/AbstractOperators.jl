@@ -1,8 +1,11 @@
 module AbstractOperators
 
-using LinearAlgebra, DSP, FFTW, RecursiveArrayTools, FastBroadcast
+using LinearAlgebra, Random
+using Base.Cartesian: @ncall, @ntuple, @nloops, @nref
+using Polyester: @batch, disable_polyester_threads
+using FastBroadcast: FastBroadcast, @..
+using RecursiveArrayTools: ArrayPartition
 
-const RealOrComplex{R} = Union{R,Complex{R}}
 abstract type AbstractOperator end
 
 abstract type LinearOperator <: AbstractOperator end
@@ -19,20 +22,22 @@ import OperatorCore:
     is_diagonal,
     is_AcA_diagonal,
     is_AAc_diagonal,
+	diag_AcA,
+	diag_AAc,
     is_orthogonal,
     is_invertible,
     is_full_row_rank,
     is_full_column_rank,
-    is_sliced,
-    get_slicing_expr,
-    get_slicing_mask,
-    remove_slicing
+    is_symmetric
 
 export LinearOperator, NonLinearOperator, AbstractOperator
 export mul!
 
+const DEBUG_COMPOSE = Ref{Bool}(false)
+
 # Predicates and properties
 
+include("utils.jl")
 include("properties.jl")
 include("calculus/AdjointOperator.jl")
 include("calculus/Scale.jl")
@@ -47,17 +52,14 @@ include("linearoperators/DiagOp.jl")
 include("linearoperators/GetIndex.jl")
 include("linearoperators/MatrixOp.jl")
 include("linearoperators/LMatrixOp.jl")
-include("linearoperators/DFT.jl")
-include("linearoperators/RDFT.jl")
-include("linearoperators/IRDFT.jl")
-include("linearoperators/DCT.jl")
 include("linearoperators/FiniteDiff.jl")
 include("linearoperators/Variation.jl")
-include("linearoperators/Conv.jl")
-include("linearoperators/Filt.jl")
-include("linearoperators/MIMOFilt.jl")
-include("linearoperators/Xcorr.jl")
 include("linearoperators/LBFGS.jl")
+
+# Batch operators
+include("batching/BatchOp.jl")
+include("batching/SimpleBatchOp.jl")
+include("batching/SpreadingBatchOp.jl")
 
 # Calculus rules
 
@@ -74,12 +76,6 @@ include("calculus/Axt_mul_Bx.jl")
 include("calculus/Ax_mul_Bxt.jl")
 include("calculus/Ax_mul_Bx.jl")
 include("calculus/HadamardProd.jl")
-
-# Batch operators
-include("batching/BatchOp.jl")
-include("batching/SimpleBatchOp.jl")
-include("batching/SpreadingBatchOp.jl")
-include("batching/threading_utils.jl")
 
 # Non-Linear operators
 include("nonlinearoperators/Pow.jl")

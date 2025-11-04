@@ -1,4 +1,4 @@
-@printf("\nTesting non linear operators\n")
+verb && @printf("\nTesting non linear operators\n")
 
 # Sigmoid
 n = 4

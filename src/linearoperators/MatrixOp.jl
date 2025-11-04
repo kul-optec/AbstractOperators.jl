@@ -1,7 +1,7 @@
 export MatrixOp
 
 """
-	MatrixOp(domainType=Float64::Type, dim_in::Tuple, A::AbstractMatrix)
+	MatrixOp(domain_type=Float64::Type, dim_in::Tuple, A::AbstractMatrix)
 	MatrixOp(A::AbstractMatrix)
 	MatrixOp(A::AbstractMatrix, n_colons)
 
@@ -31,17 +31,17 @@ end
 
 # Constructors
 
-##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
-###standard constructor Operator{N}(DomainType::Type, DomainDim::NTuple{N,Int})
+##TODO decide what to do when domain_type is given, with conversion one loses pointer to data...
+###standard constructor Operator{N}(domain_type::Type, DomainDim::NTuple{N,Int})
 function MatrixOp(
-	DomainType::Type, DomainDim::NTuple{N,Int}, A::M
+	domain_type::Type, DomainDim::NTuple{N,Int}, A::M
 ) where {N,T,M<:AbstractMatrix{T}}
 	N > 2 && error("cannot multiply a Matrix by a n-dimensional Variable with n > 2")
 	size(A, 2) != DomainDim[1] && error("wrong input dimensions")
 	if N == 1
-		MatrixOp{DomainType,T,M}(A, 1)
+		MatrixOp{domain_type,T,M}(A, 1)
 	else
-		MatrixOp{DomainType,T,M}(A, DomainDim[2])
+		MatrixOp{domain_type,T,M}(A, DomainDim[2])
 	end
 end
 ###
@@ -56,7 +56,10 @@ function MatrixOp(D::Type, A::M, n::Integer) where {M<:AbstractMatrix}
 end
 
 function Scale(coeff::Number, A::MatrixOp)
-	cT = codomainType(A)
+	if coeff == 1
+		return A
+	end
+	cT = codomain_type(A)
 	isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
 	if isCodomainReal && typeof(coeff) <: Complex
 		error(
@@ -64,6 +67,19 @@ function Scale(coeff::Number, A::MatrixOp)
 		)
 	end
 	return MatrixOp(coeff * A.A, A.n_col_in)
+end
+function Scale(coeff::Number, A::AdjointOperator{MatrixOp})
+	if coeff == 1
+		return A
+	end
+	cT = codomain_type(A)
+	isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
+	if isCodomainReal && typeof(coeff) <: Complex
+		error(
+			"Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
+		)
+	end
+	return AdjointOperator(Scale(conj(coeff), A.A))
 end
 
 import Base: convert
@@ -95,8 +111,8 @@ end
 
 # Properties
 
-domainType(::MatrixOp{D}) where {D} = D
-codomainType(::MatrixOp{D,T}) where {D,T} = D <: Real && T <: Complex ? T : D
+domain_type(::MatrixOp{D}) where {D} = D
+codomain_type(::MatrixOp{D,T}) where {D,T} = D <: Real && T <: Complex ? T : D
 is_thread_safe(::MatrixOp) = true
 
 function size(L::MatrixOp)
@@ -117,11 +133,11 @@ is_eye(L::MatrixOp) = L.A == I
 is_invertible(L::MatrixOp) =
 	size(L.A, 1) == size(L.A, 2) &&
 	!isapprox(det(BigFloat.(L.A)), 0, atol = eps(eltype(L.A)) * 10)
-is_orthogonal(L::MatrixOp) = size(L.A, 1) == size(L.A, 2) && L.A' * L.A == I
+is_orthogonal(L::MatrixOp) = size(L.A, 1) == size(L.A, 2) && all(<(eps(eltype(L.A)) * 10), L.A' * L.A - I)
 is_full_row_rank(L::MatrixOp) = rank(L.A) == size(L.A, 1)
 is_full_column_rank(L::MatrixOp) = rank(L.A) == size(L.A, 2)
 
 has_optimized_normalop(::MatrixOp) = true
-get_normal_op(L::MatrixOp) = MatrixOp(domainType(L), size(L, 1), L.A' * L.A)
+get_normal_op(L::MatrixOp) = MatrixOp(domain_type(L), size(L, 2), L.A' * L.A)
 
 LinearAlgebra.opnorm(L::MatrixOp) = opnorm(L.A)
