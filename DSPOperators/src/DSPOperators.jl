@@ -1,6 +1,6 @@
 module DSPOperators
 
-using AbstractOperators, DSP, FFTW
+using AbstractOperators, FFTW
 import LinearAlgebra: mul!
 import Base: size, ndims
 
@@ -23,4 +23,4 @@ include("Filt.jl")
 include("MIMOFilt.jl")
 include("Xcorr.jl")
 
-end # module DspOperators
+end # module DSPOperators

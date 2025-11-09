@@ -103,6 +103,7 @@ size(L::DiagOp) = (L.dim_in, L.dim_in)
 fun_name(L::DiagOp) = "╲"
 
 is_diagonal(L::DiagOp) = true
+is_symmetric(L::DiagOp) = true
 
 # TODO: probably the following allows for too-close-to-singular matrices
 is_invertible(L::DiagOp) = 0 ∉ L.d

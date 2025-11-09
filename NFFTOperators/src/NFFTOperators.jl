@@ -1,4 +1,4 @@
-module NfftOperators
+module NFFTOperators
 
 export NfftOp
 
@@ -27,4 +27,4 @@ import FFTW: FFTW
 include("NfftOp.jl")
 include("NormalNfftOp.jl")
 
-end # module NfftOperators
+end # module NFFTOperators

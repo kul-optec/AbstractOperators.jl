@@ -1,7 +1,6 @@
-name = "NfftOperators"
+name = "NFFTOperators"
 uuid = "35a93202-2abf-4a13-bc94-0aee2f861ee0"
 version = "0.1.0"
-authors = ["Tamas Hakkel <hakkelt@gmail.com>"]
 
 [deps]
 AbstractOperators = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"

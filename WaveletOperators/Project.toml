@@ -1,6 +1,5 @@
 name = "WaveletOperators"
 uuid = "f3582904-6f60-4bbd-985d-55eab799bc9d"
-authors = ["Tamas Hakkel <hakkelt@gmail.com>"]
 version = "0.1.0"
 
 [deps]
@@ -20,7 +19,6 @@ test = ["Aqua", "Random", "RecursiveArrayTools", "Test"]
 
 [sources]
 AbstractOperators = { path = ".." }
-OperatorCore = { path = "../../OperatorCore" }
 
 [compat]
 AbstractOperators = "0.4"

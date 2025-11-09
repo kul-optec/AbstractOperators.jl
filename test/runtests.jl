@@ -76,7 +76,7 @@ end
 
 include("test_LinearMapsExt.jl")
 
-for sub in ("FFTWOperators", "NfftOperators", "WaveletOperators", "DSPOperators")
+for sub in ("FFTWOperators", "NFFTOperators", "WaveletOperators", "DSPOperators")
 	pkgdir = normpath(@__DIR__, "..", sub)
 	Pkg.activate(pkgdir)
 	Pkg.test()
