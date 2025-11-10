@@ -1,8 +1,14 @@
 [deps]
 AbstractOperators = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
+DSPOperators = "d5a72628-6e2f-430e-82f5-561df0bb8116"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+FFTWOperators = "c59a084b-ba08-4f3f-af9e-f4298d6caa94"
+NFFTOperators = "35a93202-2abf-4a13-bc94-0aee2f861ee0"
+OperatorCore = "3945cd23-d97e-4db0-9df2-35342dbd287d"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
+WaveletOperators = "f3582904-6f60-4bbd-985d-55eab799bc9d"
 
 [compat]
 Documenter = "1.8"

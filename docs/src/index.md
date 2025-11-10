@@ -3,9 +3,6 @@
 [![Build status](https://github.com/kul-forbes/AbstractOperators.jl/workflows/CI/badge.svg)](https://github.com/kul-forbes/AbstractOperators.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/kul-forbes/AbstractOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/kul-forbes/AbstractOperators.jl)
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/stable)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/latest)
-
 ## Description
 
 Abstract operators extend the syntax typically used for matrices to linear mappings of arbitrary dimensions and nonlinear functions. Unlike matrices however, abstract operators apply the mappings with specific efficient algorithms that minimize memory requirements. 
@@ -19,6 +16,17 @@ To install the package, hit `]` from the Julia command line to enter the package
 pkg> add AbstractOperators
 ```
 
+To keep package loading fast, functionalities requiring extra dependencies are separated to subpackages. These have to be added separately to access their operators:
+```julia
+pkg> add FFTWOperators
+
+pkg> add DSPOperators
+
+pkg> add NFFTOperators
+
+pkg> add WaveletOperators
+```
+
 ## Usage
 
 With `using AbstractOperators` the package imports several methods like multiplication `*`  and adjoint transposition `'` (and their in-place methods `mul!`).
@@ -26,6 +34,8 @@ With `using AbstractOperators` the package imports several methods like multipli
 For example, one can create a 2-D Discrete Fourier Transform as follows:
 
 ```julia
+julia> using AbstractOperators, FFTWOperators
+
 julia> A = DFT(3,4)
 ℱ  ℝ^(3, 4) -> ℂ^(3, 4)
 ```
