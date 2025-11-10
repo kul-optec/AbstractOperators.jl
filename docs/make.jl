@@ -18,6 +18,7 @@ makedocs(;
 		"Properties" => "properties.md",
 		"Batch operators" => "batching.md",
 		"Custom Operators" => "custom.md",
+		"LinearMaps wrapper" => "linearmaps.md",
 	],
 	checkdocs=:exports
 )

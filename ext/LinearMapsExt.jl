@@ -55,6 +55,14 @@ LinearAlgebra.issymmetric(L::LinearMapWrapper) = is_symmetric(L.A) && domain_typ
 LinearAlgebra.ishermitian(L::LinearMapWrapper) = is_symmetric(L.A)
 LinearAlgebra.isposdef(L::LinearMapWrapper) = is_positive_definite(L.A)
 
+"""
+    LinearMaps.LinearMap(A::AbstractOperator)
+
+Wraps a linear `AbstractOperator` `A` as a `LinearMap`. The operator must have matching domain
+and codomain element types. The resulting `LinearMap` can be used in any algorithm working with
+only vectors, while transparently leveraging the multi-dimensional array support and in-place
+implementations of `AbstractOperators`.
+"""
 LinearMaps.LinearMap(A::AbstractOperator) = LinearMapWrapper(A)
 
 is_linear(L::LinearMapWrapper) = is_linear(L.A)
@@ -72,5 +80,11 @@ is_full_row_rank(L::LinearMapWrapper) = is_full_row_rank(L.A)
 is_full_column_rank(L::LinearMapWrapper) = is_full_column_rank(L.A)
 is_positive_definite(L::LinearMapWrapper) = is_positive_definite(L.A)
 is_positive_semidefinite(L::LinearMapWrapper) = is_positive_semidefinite(L.A)
+
+Base.show(io::IO, L::LinearMapWrapper) = begin
+    print(io, size(L, 1), "×", size(L, 2), " LinearMap{")
+    print(io, strip(string(L.A)))
+    print(io, "}")
+end
 
 end # module LinearMapsExt

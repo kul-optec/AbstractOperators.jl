@@ -106,11 +106,17 @@ julia> V*ones(3,3)
 
 A list of the available `AbstractOperators` and calculus rules can be found in the [documentation](https://kul-forbes.github.io/AbstractOperators.jl/latest).
 
-## Related packages
+## Similar packages
 
-* [ProximalOperators.jl](https://github.com/kul-forbes/ProximalOperators.jl)
-* [ProximalAlgorithms.jl](https://github.com/kul-forbes/ProximalAlgorithms.jl)
-* [StructuredOptimization.jl](https://github.com/kul-forbes/StructuredOptimization.jl)
+* [LinearMaps.jl](https://github.com/Jutho/LinearMaps.jl) provides a lightweight interface for matrix-free linear operators acting on vectors. These operators behave similarly to standard matrices, and can even be converted to dense matrices. 
+* [LinearMapsAA.jl](https://github.com/JeffFessler/LinearMapsAA.jl) is an overlay on top of LinearMaps.jl that allows multi-dimensional array domains and codomains. It also allows attaching a NamedTuple of parameters to the operator for use in algorithms.
+* [LinearOperators.jl](https://github.com/JuliaSmoothOptimizers/LinearOperators.jl) also provides abstractions for matrix-free linear operators and is mainly used within the [JuliaSmoothOptimizers](https://github.com/JuliaSmoothOptimizers) organization. Unlike matrices, the operators provided by this package never reduce to a vector or a number. It supports working on GPU arrays.
+* [LazyAlgebra.jl](https://github.com/emmt/LazyAlgebra.jl) generalizes the notion of matrices and vectors used in linear algebra, allowing multi-dimension inputs and outputs.
+* [LazyArrays.jl](https://github.com/JuliaArrays/LazyArrays.jl) supports lazy analogues of array operations like vcat, hcat, and multiplication.
+* [SciMLOperators.jl](https://github.com/SciML/SciMLOperators.jl) is a package for managing linear, nonlinear, time-dependent, and parameter dependent operators acting on vectors, (or column-vectors of matrices). It provides wrappers for matrix-free operators, fast tensor-product evaluations, pre-cached mutating evaluations, as well as Zygote-compatible non-mutating evaluations.
+* [JOLI.jl](https://github.com/slimgroup/JOLI.jl) is also a framework for constructing matrix-free linear operators with explicit domain/range type control and applying them in basic algebraic matrix-vector operations.
+
+`AbstractOperators.jl` is distinguished by its support for multi-dimensional array domains and codomains, efficient in-place implementations of both linear and nonlinear operators, and seamless integration with optimization algorithms in related packages: [ProximalOperators.jl](https://github.com/kul-forbes/ProximalOperators.jl), [ProximalAlgorithms.jl](https://github.com/kul-forbes/ProximalAlgorithms.jl), and [StructuredOptimization.jl](https://github.com/kul-forbes/StructuredOptimization.jl). It has built-in threading support for many operators, and partial (and extending) GPU support.
 
 ## Credits
 
