@@ -230,8 +230,6 @@ function get_normal_op(L::Compose)
 	return Compose(ops, bufs)
 end
 
-estimate_opnorm(L::Compose) = prod(estimate_opnorm.(L.A))
-
 # Properties
 
 Base.:(==)(L1::Compose{N,M,L,T}, L2::Compose{N,M,L,T}) where {N,M,L,T} = all(L1.A .== L2.A)
