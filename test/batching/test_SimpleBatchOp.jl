@@ -7,7 +7,7 @@ end
 using BenchmarkTools
 
 function test_simple_batchop(op, batch_op, x, y, z, threaded)
-	if threaded
+	if threaded && Threads.nthreads() > 1
 		@test batch_op.operator[1] == op
 	else
 		@test batch_op.operator == op
@@ -128,32 +128,40 @@ end
 		@testset "non-threaded" begin
 			test_shape_keeping_simple_batch_op(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			test_shape_keeping_simple_batch_op(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				test_shape_keeping_simple_batch_op(true)
+			end
 		end
 	end
 	@testset "Dimension count changing op (Variation)" begin
 		@testset "non-threaded" begin
 			test_variation_simple_batch_op(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			test_variation_simple_batch_op(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				test_variation_simple_batch_op(true)
+			end
 		end
 	end
 	@testset "Shape-changing op (DiagOp∘FiniteDiff)" begin
 		@testset "non-threaded" begin
 			test_shape_changing_simple_batch_op(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			test_shape_changing_simple_batch_op(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				test_shape_changing_simple_batch_op(true)
+			end
 		end
 	end
 	@testset "Other tests" begin
 		@testset "non-threaded" begin
 			other_tests(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			other_tests(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				other_tests(true)
+			end
 		end
 	end
 	if Threads.nthreads() > 1

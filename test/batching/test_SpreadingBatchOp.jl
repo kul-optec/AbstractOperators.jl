@@ -145,39 +145,47 @@ end
 		@testset "non-threaded" begin
 			test_shape_keeping_threadsafe_spreading_batch_op(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			test_shape_keeping_threadsafe_spreading_batch_op(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				test_shape_keeping_threadsafe_spreading_batch_op(true)
+			end
 		end
 	end
 	@testset "Shape-changing op (Variation)" begin
 		@testset "non-threaded" begin
 			test_shape_changing_threadsafe_spreading_batch_op(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			test_shape_changing_threadsafe_spreading_batch_op(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				test_shape_changing_threadsafe_spreading_batch_op(true)
+			end
 		end
 	end
 	@testset "Non-threadsafe op (Compose)" begin
 		@testset "non-threaded" begin
 			test_nonthreadsafe_spreading_batch_op(false, ThreadingStrategy.AUTO)
 		end
-		@testset "threaded (copying)" begin
-			test_nonthreadsafe_spreading_batch_op(true, ThreadingStrategy.COPYING)
-		end
-		@testset "threaded (locking)" begin
-			test_nonthreadsafe_spreading_batch_op(true, ThreadingStrategy.LOCKING)
-		end
-		@testset "threaded (fixed operator)" begin
-			test_nonthreadsafe_spreading_batch_op(true, ThreadingStrategy.FIXED_OPERATOR)
-			test_failing_nonthreadsafe_spreading_batch_op()
+		if Threads.nthreads() > 1
+			@testset "threaded (copying)" begin
+				test_nonthreadsafe_spreading_batch_op(true, ThreadingStrategy.COPYING)
+			end
+			@testset "threaded (locking)" begin
+				test_nonthreadsafe_spreading_batch_op(true, ThreadingStrategy.LOCKING)
+			end
+			@testset "threaded (fixed operator)" begin
+				test_nonthreadsafe_spreading_batch_op(true, ThreadingStrategy.FIXED_OPERATOR)
+				test_failing_nonthreadsafe_spreading_batch_op()
+			end
 		end
 	end
 	@testset "Other tests" begin
 		@testset "non-threaded" begin
 			other_spreadingbatchop_tests(false)
 		end
-		@testset "threaded (thread-safe)" begin
-			other_spreadingbatchop_tests(true)
+		if Threads.nthreads() > 1
+			@testset "threaded (thread-safe)" begin
+				other_spreadingbatchop_tests(true)
+			end
 		end
 	end
 	if Threads.nthreads() > 1
