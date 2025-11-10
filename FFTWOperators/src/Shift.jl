@@ -27,8 +27,8 @@ true
 
 julia> A2 = FFTShift((2,2), (1,2)); A2 * reshape(1.0:4.0, 2, 2)
 2×2 Matrix{Float64}:
- 4.0  3.0
- 2.0  1.0
+ 4.0  2.0
+ 3.0  1.0
 ```
 """
 struct FFTShift{T,N,M} <: ShiftOp
@@ -223,22 +223,20 @@ julia> v = collect(1.0:4.0);
 
 julia> alternate_sign!(v, 1)
 4-element Vector{Float64}:
-    1.0
-   -2.0
-    3.0
-   -4.0
+  1.0
+ -2.0
+  3.0
+ -4.0
 
-julia> M = ones(2,2);
-
-julia> alternate_sign!(M, 1, 2)
+julia> M = ones(2,2); alternate_sign!(M, 1, 2)
 2×2 Matrix{Float64}:
-    1.0  -1.0
-   -1.0   1.0
+  1.0  -1.0
+ -1.0   1.0
 
-julia> alternate_sign!(M, (1, 2)); M
+julia> M = ones(2,2); alternate_sign!(M, (1, 2))
 2×2 Matrix{Float64}:
-    1.0  -1.0
-   -1.0   1.0
+  1.0  -1.0
+ -1.0   1.0
 ```
 """
 function alternate_sign!(x::AbstractArray, dirs::Int...; threaded::Bool=true)
@@ -291,13 +289,13 @@ julia> x = reshape(1.0:4.0, 2, 2); y = similar(x);
 
 julia> alternate_sign!(y, x, 1, 2)
 2×2 Matrix{Float64}:
-    1.0  -3.0
-   -2.0   4.0
+  1.0  -3.0
+ -2.0   4.0
 
 julia> alternate_sign!(y, x, (1, 2))
 2×2 Matrix{Float64}:
-    1.0  -3.0
-   -2.0   4.0
+  1.0  -3.0
+ -2.0   4.0
 ```
 """
 function alternate_sign!(
@@ -389,10 +387,7 @@ function _check_shift_dirs(::NTuple{N,Int}, dirs::NTuple{M,Int}) where {N,M}
 end
 
 function _is_dft_op(op, side)
-    if op isa DFT ||
-        op isa IDFT ||
-        op isa AdjointOperator{<:DFT} ||
-        op isa AdjointOperator{<:IDFT}
+    if op isa DFT || op isa AdjointOperator{<:DFT}
         return true
     elseif op isa Compose
         subops = AbstractOperators.get_operators(op)
@@ -491,28 +486,28 @@ on the other side of the DFT/IDFT.
 ```jldoctest
 julia> using FFTWOperators, FFTW
 
-julia> x = rand(15);
+julia> x = rand(ComplexF64, 15);
 
 julia> F = ifftshift_op(IDFT(15); domain_shifts=(1,))
-ℱ⁻¹*⇇  ℝ^15 -> ℂ^15
+ℱ⁻¹*⇇  ℂ^15 -> ℂ^15
 
 julia> F * x ≈ FFTW.ifft(FFTW.ifftshift(x))
 true
 
 julia> F = ifftshift_op(IDFT(15); codomain_shifts=(1,))
-⇇*ℱ⁻¹  ℝ^15 -> ℂ^15
+⇇*ℱ⁻¹  ℂ^15 -> ℂ^15
 
 julia> F * x ≈ FFTW.ifftshift(FFTW.ifft(x))
 true
 
 julia> F = ifftshift_op(IDFT(15); domain_shifts=(1,), codomain_shifts=(1,))
-Π  ℝ^15 -> ℂ^15
+Π  ℂ^15 -> ℂ^15
 
 julia> F * x ≈ FFTW.ifftshift(FFTW.ifft(FFTW.ifftshift(x)))
 true
 
 julia> F = ifftshift_op(IDFT(16); codomain_shifts=(1,)) # note that 16 is even, so we get a SignAlternation (±)
-ℱ⁻¹*±  ℝ^16 -> ℂ^16
+ℱ⁻¹*±  ℂ^16 -> ℂ^16
 
 ```
 """
