@@ -1,6 +1,6 @@
 module NFFTOperators
 
-export NfftOp
+export NFFTOp
 
 using LinearAlgebra
 using AbstractOperators
@@ -24,7 +24,7 @@ import AbstractOperators:
 import Base.Threads: nthreads
 import FFTW: FFTW
 
-include("NfftOp.jl")
+include("NFFTOp.jl")
 include("NormalNfftOp.jl")
 
 end # module NFFTOperators

@@ -1,4 +1,4 @@
-struct NfftOp{T,D} <: AbstractOperators.LinearOperator
+struct NFFTOp{T,D} <: AbstractOperators.LinearOperator
 	plan::NFFT.AbstractNFFTPlan{T,D}
 	ksp_buffer::AbstractMatrix{Complex{T}}
 	dcf::AbstractMatrix{T}
@@ -6,7 +6,7 @@ struct NfftOp{T,D} <: AbstractOperators.LinearOperator
 end
 
 """
-	NfftOp(image_size::NTuple{D,Int}, trajectory::AbstractArray{T}, dcf::AbstractArray; threaded::Bool=true, kwargs...)
+	NFFTOp(image_size::NTuple{D,Int}, trajectory::AbstractArray{T}, dcf::AbstractArray; threaded::Bool=true, kwargs...)
 
 Create a non-uniform fast Fourier transform operator [1]. The operator is created with a given image 
 size, trajectory, and density compensation function (dcf). The dcf is used to correct for the 
@@ -38,7 +38,7 @@ IEEE Transactions on Signal Processing, 51(2), 560-574.
 
 # Examples
 ```jldoctest
-julia> using NfftOperators # note that NfftOp is located in a separate package
+julia> using NFFTOperators
 
 julia> image_size = (128, 128);
 
@@ -46,7 +46,7 @@ julia> trajectory = rand(2, 128, 50) .- 0.5;
 
 julia> dcf = rand(128, 50);
 
-julia> op = NfftOp(image_size, trajectory, dcf)
+julia> op = NFFTOp(image_size, trajectory, dcf)
 𝒩  ℂ^(128, 128) -> ℂ^(128, 50)
 
 julia> image = rand(ComplexF64, image_size);
@@ -57,7 +57,7 @@ julia> image_reconstructed = op' * ksp;
 
 ```
 """
-function NfftOp(
+function NFFTOp(
 	image_size::NTuple{D,Int},
 	trajectory::AbstractArray{T},
 	dcf::AbstractArray;
@@ -69,10 +69,10 @@ function NfftOp(
 	ksp_buffer = similar(
 		trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
 	)
-	return NfftOp{T,D}(plan, ksp_buffer, dcf, threaded)
+	return NFFTOp{T,D}(plan, ksp_buffer, dcf, threaded)
 end
 
-function NfftOp(
+function NFFTOp(
 	image_size::NTuple{D,Int},
 	trajectory::AbstractArray{T};
 	threaded::Bool=true,
@@ -87,7 +87,7 @@ function NfftOp(
 	)
 	raw_dcf = NFFTTools.sdc(plan; iters=dcf_estimation_iterations)
 	dcf = dcf_correction_function(reshape(raw_dcf, size(ksp_buffer)))
-	return NfftOp{T,D}(plan, ksp_buffer, dcf, threaded)
+	return NFFTOp{T,D}(plan, ksp_buffer, dcf, threaded)
 end
 
 function set_nfft_threading_expr(threading_state_expr, thread_count_expr, body_expr)
@@ -108,7 +108,7 @@ macro disable_nfft_threading(expr)
 	return set_nfft_threading_expr(false, 1, expr)
 end
 
-function mul!(ksp::AbstractArray, op::NfftOp, img::AbstractArray)
+function mul!(ksp::AbstractArray, op::NFFTOp, img::AbstractArray)
 	AbstractOperators.check(ksp, op, img)
 	if op.threaded
 		@enable_nfft_threading mul!(vec(ksp), op.plan, img)
@@ -120,7 +120,7 @@ end
 
 function mul!(
 	img::AbstractArray,
-	op::AbstractOperators.AdjointOperator{<:NfftOp},
+	op::AbstractOperators.AdjointOperator{<:NFFTOp},
 	ksp::AbstractArray,
 )
 	op = op.A
@@ -136,10 +136,10 @@ end
 
 # Properties
 
-size(L::NfftOp) = size(L.ksp_buffer), NFFT.size_in(L.plan)
-fun_name(::NfftOp) = "𝒩"
-domain_type(::NfftOp{T}) where {T} = complex(T)
-codomain_type(::NfftOp{T}) where {T} = complex(T)
+size(L::NFFTOp) = size(L.ksp_buffer), NFFT.size_in(L.plan)
+fun_name(::NFFTOp) = "𝒩"
+domain_type(::NFFTOp{T}) where {T} = complex(T)
+codomain_type(::NFFTOp{T}) where {T} = complex(T)
 
 # Utility
 

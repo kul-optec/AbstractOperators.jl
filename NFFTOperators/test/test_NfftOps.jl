@@ -26,7 +26,7 @@ function test_2D_nufft_op(threaded)
 	image_size = (128, 128)
 	image = rand(ComplexF64, image_size)
 	plan = plan_nfft(reshape(trajectory, 2, :), image_size)
-	op = NfftOp(image_size, trajectory, dcf; threaded)
+	op = NFFTOp(image_size, trajectory, dcf; threaded)
 	return test_nufft_op(op, plan, image, dcf)
 end
 
@@ -36,7 +36,7 @@ function test_3D_nufft_op(threaded)
 	image_size = (64, 64, 64)
 	image = rand(ComplexF64, image_size)
 	plan = plan_nfft(reshape(trajectory, 3, :), image_size)
-	op = NfftOp(image_size, trajectory, dcf; threaded)
+	op = NFFTOp(image_size, trajectory, dcf; threaded)
 	return test_nufft_op(op, plan, image, dcf)
 end
 
@@ -57,11 +57,11 @@ function test_realistic_2D_nufft_op(threaded)
 		end
 	end
 	plan = plan_nfft(reshape(trajectory, 2, :), image_size)
-	op = NfftOp(image_size, trajectory; threaded)
+	op = NFFTOp(image_size, trajectory; threaded)
 	return test_nufft_op(op, plan, image, nothing)
 end
 
-@testset "NfftOp" begin
+@testset "NFFTOp" begin
 	@testset "2D" begin
 		@testset "single-threaded" begin
 			test_2D_nufft_op(false)

@@ -53,8 +53,8 @@ function _mul!(y, op::NfftNormalOp, x)
 	return y
 end
 
-AbstractOperators.has_optimized_normalop(::NfftOp) = true
-function AbstractOperators.get_normal_op(op::NfftOp)
+AbstractOperators.has_optimized_normalop(::NFFTOp) = true
+function AbstractOperators.get_normal_op(op::NFFTOp)
     return if op.threaded
         @enable_nfft_threading _get_normal_op(op)
     else
@@ -62,7 +62,7 @@ function AbstractOperators.get_normal_op(op::NfftOp)
     end
 end
 
-function _get_normal_op(op::NfftOp)
+function _get_normal_op(op::NFFTOp)
 	shape = op.plan.N
 	shape_ext = 2 .* shape
 
