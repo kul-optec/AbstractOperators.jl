@@ -5,6 +5,12 @@ using Aqua
 using Pkg
 using LinearMaps
 
+if VERSION < v"1.12" # pre-1.12 Julia does not have workspace-aware environments, so we need to manually dev the parent package
+	Pkg.activate(@__DIR__)
+	Pkg.develop(PackageSpec(path=joinpath(@__DIR__, "..")))
+	Pkg.instantiate()
+end
+
 verb = false
 
 @testset "AbstractOperators" begin
@@ -76,8 +82,10 @@ end
 
 include("test_LinearMapsExt.jl")
 
-for sub in ("FFTWOperators", "NFFTOperators", "WaveletOperators", "DSPOperators")
-	pkgdir = normpath(@__DIR__, "..", sub)
-	Pkg.activate(pkgdir)
-	Pkg.test()
+if VERSION >= v"1.12"
+	for sub in ("FFTWOperators", "NFFTOperators", "WaveletOperators", "DSPOperators")
+		pkgdir = normpath(@__DIR__, "..", sub)
+		Pkg.activate(pkgdir)
+		Pkg.test()
+	end
 end

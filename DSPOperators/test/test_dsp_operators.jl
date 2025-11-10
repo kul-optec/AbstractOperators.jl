@@ -24,7 +24,7 @@
     @test is_AcA_diagonal(op) == false
     @test is_AAc_diagonal(op) == false
     @test is_orthogonal(op) == false
-    @test is_invertible(op) == false
+    @test is_invertible(op) == true
     @test is_full_row_rank(op) == true
     @test is_full_column_rank(op) == true
 end
@@ -63,7 +63,7 @@ end
     @test is_AcA_diagonal(op) == false
     @test is_AAc_diagonal(op) == false
     @test is_orthogonal(op) == false
-    @test is_invertible(op) == false
+    @test is_invertible(op) == true
     @test is_full_row_rank(op) == true
     @test is_full_column_rank(op) == true
 end
@@ -143,7 +143,7 @@ end
     @test is_AcA_diagonal(op) == false
     @test is_AAc_diagonal(op) == false
     @test is_orthogonal(op) == false
-    @test is_invertible(op) == false
+    @test is_invertible(op) == true
     @test is_full_row_rank(op) == true
     @test is_full_column_rank(op) == true
 end

@@ -140,11 +140,11 @@ import Base: size
     @test typeof(opDp) <: typeof(opD)
 
     # Test get_normal_op and has_optimized_normalop
-    struct DummyOp <: AbstractOperator end
-    AbstractOperators.has_optimized_normalop(::DummyOp) = true
-    AbstractOperators.get_normal_op(::DummyOp) = DummyOp()
-    AbstractOperators.size(::DummyOp) = ((2,), (2,))
-    opD3 = DCAT(DummyOp(), opA1)
+    struct DCATDummyOp <: AbstractOperator end
+    AbstractOperators.has_optimized_normalop(::DCATDummyOp) = true
+    AbstractOperators.get_normal_op(::DCATDummyOp) = DCATDummyOp()
+    AbstractOperators.size(::DCATDummyOp) = ((2,), (2,))
+    opD3 = DCAT(DCATDummyOp(), opA1)
     @test AbstractOperators.has_optimized_normalop(opD3) == true
     nrm = AbstractOperators.get_normal_op(opD3)
     @test typeof(nrm) <: DCAT

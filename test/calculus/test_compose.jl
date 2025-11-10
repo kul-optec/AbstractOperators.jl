@@ -172,23 +172,13 @@ end
     @test norm(remove_displacement(opC) * x - (A4 * (A3 * (A2 * (A1 * x))))) < 1e-9
 
     # Error paths: domain/codomain type/storage mismatch
-    struct DummyOp <: LinearOperator end
-    LinearAlgebra.size(::DummyOp) = ((2,), (2,))
-    AbstractOperators.domain_type(::DummyOp) = Int
-    AbstractOperators.codomain_type(::DummyOp) = Int
-    AbstractOperators.is_linear(::DummyOp) = true
-    AbstractOperators.is_diagonal(::DummyOp) = false
-    AbstractOperators.is_null(::DummyOp) = false
-    AbstractOperators.is_eye(::DummyOp) = false
-    AbstractOperators.is_AcA_diagonal(::DummyOp) = false
-    AbstractOperators.is_AAc_diagonal(::DummyOp) = false
-    AbstractOperators.is_orthogonal(::DummyOp) = false
-    AbstractOperators.is_invertible(::DummyOp) = false
-    AbstractOperators.is_full_row_rank(::DummyOp) = false
-    AbstractOperators.is_full_column_rank(::DummyOp) = false
-    AbstractOperators.diag(::DummyOp) = 1
-    AbstractOperators.fun_name(::DummyOp) = "D2"
-    opint = DummyOp()
+    struct ComposeDummyOp <: LinearOperator end
+    LinearAlgebra.size(::ComposeDummyOp) = ((2,), (2,))
+    AbstractOperators.domain_type(::ComposeDummyOp) = Int
+    AbstractOperators.codomain_type(::ComposeDummyOp) = Int
+    AbstractOperators.diag(::ComposeDummyOp) = 1
+    AbstractOperators.fun_name(::ComposeDummyOp) = "D2"
+    opint = ComposeDummyOp()
     @test_throws DomainError Compose(DiagOp(rand(2)), opint)
 
     # Show output patterns for Compose (2-term vs multi-term) instead of direct fun_name (non-exported)
