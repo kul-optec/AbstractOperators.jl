@@ -104,6 +104,8 @@ fun_name(L::DiagOp) = "╲"
 
 is_diagonal(L::DiagOp) = true
 is_symmetric(L::DiagOp) = true
+is_positive_definite(L::DiagOp) = all(@. L.d > 0)
+is_positive_semidefinite(L::DiagOp) = all(@. L.d >= 0)
 
 # TODO: probably the following allows for too-close-to-singular matrices
 is_invertible(L::DiagOp) = 0 ∉ L.d

@@ -59,13 +59,13 @@ fun_name(::AbstractEye) = "I"
 
 is_eye(::AbstractEye) = true
 is_diagonal(::AbstractEye) = true
-is_AcA_diagonal(::AbstractEye) = true
-is_AAc_diagonal(::AbstractEye) = true
 is_orthogonal(::AbstractEye) = true
 is_invertible(::AbstractEye) = true
 is_full_row_rank(::AbstractEye) = true
 is_full_column_rank(::AbstractEye) = true
 is_symmetric(::AbstractEye) = true
+is_positive_definite(::AbstractEye) = true
+is_positive_semidefinite(::AbstractEye) = true
 
 has_optimized_normalop(::AbstractEye) = true
 get_normal_op(L::AbstractEye) = L

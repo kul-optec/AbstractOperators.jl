@@ -126,6 +126,7 @@ end
 fun_name(L::MatrixOp) = "▒"
 
 is_diagonal(L::MatrixOp) = isdiag(L.A)
+is_symmetric(L::MatrixOp) = issymmetric(L.A)
 is_AAc_diagonal(L::MatrixOp) = isdiag(L.A * L.A')
 is_AcA_diagonal(L::MatrixOp) = isdiag(L.A' * L.A)
 is_null(L::MatrixOp) = L.A == 0 * I
@@ -136,6 +137,8 @@ is_invertible(L::MatrixOp) =
 is_orthogonal(L::MatrixOp) = size(L.A, 1) == size(L.A, 2) && all(<(eps(eltype(L.A)) * 10), L.A' * L.A - I)
 is_full_row_rank(L::MatrixOp) = rank(L.A) == size(L.A, 1)
 is_full_column_rank(L::MatrixOp) = rank(L.A) == size(L.A, 2)
+is_positive_definite(L::MatrixOp) = isposdef(L.A)
+is_positive_semidefinite(L::MatrixOp) = issymmetric(L.A) && all(eigvals(Symmetric(L.A)) .>= 0)
 
 has_optimized_normalop(::MatrixOp) = true
 get_normal_op(L::MatrixOp) = MatrixOp(domain_type(L), size(L, 2), L.A' * L.A)

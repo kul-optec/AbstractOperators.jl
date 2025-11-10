@@ -74,13 +74,14 @@ is_thread_safe(::Zeros) = true
 
 size(L::Zeros) = (L.dim_out, L.dim_in)
 
-fun_name(A::Zeros) = "0"
+fun_name(::Zeros) = "0"
 
-is_null(L::Zeros) = true
-is_AAc_diagonal(L::Zeros) = true
-is_AcA_diagonal(L::Zeros) = true
-is_diagonal(L::Zeros) = true
+is_null(::Zeros) = true
+is_diagonal(::Zeros) = true
+is_positive_definite(::Zeros) = false
+is_positive_semidefinite(::Zeros) = true
 
+diag(::Zeros{C}) where {C} = zero(C)
 diag_AAc(L::Zeros) = 0
 diag_AcA(L::Zeros) = 0
 

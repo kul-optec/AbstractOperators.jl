@@ -53,6 +53,7 @@ end
 
 LinearAlgebra.issymmetric(L::LinearMapWrapper) = is_symmetric(L.A) && domain_type(L.A) <: Real
 LinearAlgebra.ishermitian(L::LinearMapWrapper) = is_symmetric(L.A)
+LinearAlgebra.isposdef(L::LinearMapWrapper) = is_positive_definite(L.A)
 
 LinearMaps.LinearMap(A::AbstractOperator) = LinearMapWrapper(A)
 
