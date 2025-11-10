@@ -1,6 +1,6 @@
 
 import Base: size, ndims, similar, copy
-import LinearAlgebra: diag
+import LinearAlgebra: diag, opnorm
 
 export ndoms,
 	domain_type,
@@ -21,11 +21,10 @@ export ndoms,
 	is_full_column_rank,
 	is_symmetric,
 	is_sliced,
+	remove_slicing,
 	displacement,
 	remove_displacement,
 	is_thread_safe,
-	has_optimized_normalop,
-	get_normal_op,
 	estimate_opnorm
 
 """
@@ -140,6 +139,20 @@ is_thread_safe(L::AbstractOperator) = false
 	size(A::AbstractOperator, [dom,])
 
 Returns the size of an `AbstractOperator`. Type `size(A,1)` for the size of the codomain and `size(A,2)` for the size of the codomain.
+
+Note that the size is always returned as a `Tuple`, so for a 2D operator the size of the codomain will be `(m,)`
+and the size of the domain will be `(n,)` for an `m x n` operator.
+
+```jldoctest
+julia> size(FiniteDiff((10,20), 1))
+((9, 20), (10, 20))
+
+julia> size(FiniteDiff((10,20), 1),1)
+(9, 20)
+
+julia> size(FiniteDiff((10,20), 1),2)
+(10, 20)
+```
 """
 size(L::AbstractOperator, i::Int) = size(L)[i]
 
@@ -148,6 +161,19 @@ size(L::AbstractOperator, i::Int) = size(L)[i]
 
 Returns a `Tuple` with the number of dimensions of the codomain and domain of an `AbstractOperator`.  Type `ndims(A,1)` for the number of dimensions of the codomain and `ndims(A,2)` for the number of dimensions of the codomain.
 
+```jldoctest
+julia> V = Variation((2,3,4))
+Ʋ  ℝ^(2, 3, 4) -> ℝ^(24, 3)
+
+julia> ndims(V)
+(2, 3)
+
+julia> ndims(V,1)
+2
+
+julia> ndims(V,2)
+3
+```
 """
 ndims(L::AbstractOperator) = count_dims(size(L, 1)), count_dims(size(L, 2))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
@@ -186,6 +212,13 @@ is_linear(L::LinearOperator) = true
 Returns true if `A` is a sliced operator.
 Operator `A` is sliced if it applies to only a subset of the input values.
 
+```jldoctest
+julia> is_sliced(DiagOp(rand(10)))
+false
+
+julia> is_sliced(DiagOp(rand(10)) * GetIndex((20,), 1:10))
+true
+```
 """
 is_sliced(L) = false
 
@@ -335,21 +368,59 @@ function get_normal_op(L::AbstractOperator)
 	return L' * L
 end
 
+"""
+	LinearAlgebra.diag(A::AbstractOperator)
+
+Returns the diagonal of `A`. If `A` is not diagonal, an error is thrown.
+
+The diagonal is defined as the vector `d` such that `A * x = d .* x` for all `x` in the domain of `A`, where `.*` is the element-wise multiplication.
+"""
+LinearAlgebra.diag(::AbstractOperator) = error("cannot get diagonal of operator of type $(typeof(L))")
+
+"""
+	LinearAlgebra.opnorm(A::AbstractOperator)
+
+Returns the operator norm of `A`. The operator norm is defined as the maximum singular value of `A`.
+It is computed using the power method by default, unless the operator has a fast implementation.
+
+The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
+
+Parameters of power iteration:
+- Maximum number of iterations: 100
+- Tolerance for convergence: 1e-8
+These parameters can be adjusted in the [estimate_opnorm](@ref) function.
+"""
 function LinearAlgebra.opnorm(A::AbstractOperator)
 	return powerit(A)
 end
 
 has_fast_opnorm(::AbstractOperator) = false
 
-function estimate_opnorm(A::AbstractOperator)
+"""
+	estimate_opnorm(A::AbstractOperator)
+
+Estimates the operator norm of `A`. The operator norm is defined as the maximum singular value of `A`.
+It is computed using the power method with reduced iterations unless the operator has a fast implementation.
+
+The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
+
+Parameters of power iteration:
+- Maximum number of iterations: 20
+- Tolerance for convergence: 1e-4
+These parameters can be adjusted by passing `maxit` and `tol` keyword arguments. E.g.:
+```julia
+julia> estimate_opnorm(A; maxit=50, tol=1e-6)
+```
+"""
+function estimate_opnorm(A::AbstractOperator; maxit=20, tol=1e-4)
 	if has_fast_opnorm(A)
 		return opnorm(A)
 	else
-		return powerit(A, max_iter=20, tol=1e-4)
+		return powerit(A; maxit, tol)
 	end
 end
 
-function powerit(A::AbstractOperator; max_iter=100, tol=1e-8)
+function powerit(A::AbstractOperator; maxit=100, tol=1e-8)
 	# Power method for estimating the operator norm
 	AHA = A' * A
     x = allocate_in_domain(A)
@@ -359,7 +430,7 @@ function powerit(A::AbstractOperator; max_iter=100, tol=1e-8)
     λ = zero(real(eltype(x)))
     λ_old = real(eltype(x))(Inf)
 
-    for _ in 1:max_iter
+    for _ in 1:maxit
         mul!(y, AHA, x)
         λ = norm(y)
         if abs(λ - λ_old) < tol^2
