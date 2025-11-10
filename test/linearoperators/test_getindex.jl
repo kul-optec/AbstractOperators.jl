@@ -95,7 +95,7 @@ using LinearAlgebra
     A = GetIndex(Float64, (n, m), (1:3, :))
     xA = randn(n, m)
     yA = A * xA
-    normal = get_normal_op(A)
+    normal = AbstractOperators.get_normal_op(A)
     # normal maps full shape -> full shape
     tmp = similar(xA)
     mul!(tmp, normal, xA)
@@ -105,7 +105,7 @@ using LinearAlgebra
     @test tmp == proj
 
     # normal of adjoint is Eye on domain
-    normal_adj = get_normal_op(A')
+    normal_adj = AbstractOperators.get_normal_op(A')
     @test typeof(normal_adj) <: Eye
 
     # Slicing helpers

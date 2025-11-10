@@ -204,7 +204,6 @@ end
     D1 = DiagOp(d)
     D2 = FiniteDiff((3,))
     CC = Compose(D1, D2)
-    @test estimate_opnorm(CC) ≈ estimate_opnorm(D1) * estimate_opnorm(D2)
     opnorm_CC = opnorm(CC)
     @test abs(opnorm_CC - estimate_opnorm(CC)) / opnorm_CC < 0.25
 

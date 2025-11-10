@@ -145,8 +145,8 @@ import Base: size
     AbstractOperators.get_normal_op(::DummyOp) = DummyOp()
     AbstractOperators.size(::DummyOp) = ((2,), (2,))
     opD3 = DCAT(DummyOp(), opA1)
-    @test has_optimized_normalop(opD3) == true
-    nrm = get_normal_op(opD3)
+    @test AbstractOperators.has_optimized_normalop(opD3) == true
+    nrm = AbstractOperators.get_normal_op(opD3)
     @test typeof(nrm) <: DCAT
 
     # Test opnorm and estimate_opnorm

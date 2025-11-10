@@ -62,8 +62,8 @@ end
     @test AdjointOperator(op) === op
     @test LinearAlgebra.opnorm(op) == 1.0
     @test LinearAlgebra.opnorm(op) == estimate_opnorm(op)
-    @test has_optimized_normalop(op) == true
-    @test get_normal_op(op) === op
+    @test AbstractOperators.has_optimized_normalop(op) == true
+    @test AbstractOperators.get_normal_op(op) === op
 
     # In-place mul!
     y = similar(x1)

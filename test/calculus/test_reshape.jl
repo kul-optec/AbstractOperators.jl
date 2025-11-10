@@ -157,7 +157,7 @@ end
     nGI = 10; kGI = 7
     GI = GetIndex(Float64, (nGI,), (1:kGI,))  # sliced operator returning size kGI
     RG = Reshape(GI, (kGI, 1))
-    normal_RG = get_normal_op(RG)
+    normal_RG = AbstractOperators.get_normal_op(RG)
     @test normal_RG !== nothing
 
     # Slicing pass-through (is_sliced, expr, mask); avoid remove_slicing due to size mismatch

@@ -41,7 +41,7 @@ end
     @test size(op) == (n .+ z, n)
 
     # Normal operator should be identity on input space
-    Nop = get_normal_op(op)
+    Nop = AbstractOperators.get_normal_op(op)
     xin = randn(n)
     @test Nop * xin ≈ xin
 

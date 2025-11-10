@@ -107,8 +107,8 @@ function other_spreadingbatchop_tests(threaded)
 	@test is_sliced(bop) == is_sliced(ops[1])
 	@test is_thread_safe(bop) == is_thread_safe(ops[1])
 	# normal op
-	@test has_optimized_normalop(bop) == has_optimized_normalop(ops[1])
-	nbop = get_normal_op(bop)
+	@test AbstractOperators.has_optimized_normalop(bop) == AbstractOperators.has_optimized_normalop(ops[1])
+	nbop = AbstractOperators.get_normal_op(bop)
 	@test size(nbop, 1) == size(bop, 1) && size(nbop, 2) == size(bop, 2)
 	# opnorm / estimate_opnorm aggregate as maximum
 	@test opnorm(bop) == maximum(opnorm.(ops))

@@ -125,8 +125,8 @@ end
     nGI = 8; kGI = 5
     GI = GetIndex(Float64, (nGI,), (1:kGI,))
     SG = Scale(2.0, GI)
-    @test has_optimized_normalop(SG) == true
-    normal_SG = get_normal_op(SG)
+    @test AbstractOperators.has_optimized_normalop(SG) == true
+    normal_SG = AbstractOperators.get_normal_op(SG)
     @test normal_SG !== nothing
 
     # Slicing pass-through (is_sliced, expr, mask); avoid remove_slicing due to type

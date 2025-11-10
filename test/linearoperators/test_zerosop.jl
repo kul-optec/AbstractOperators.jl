@@ -34,7 +34,7 @@ end
     @test ybuf == zeros(eltype(ybuf), m)
 
     # Normal operator should also be zero
-    Nop = get_normal_op(op)
+    Nop = AbstractOperators.get_normal_op(op)
     @test Nop * x1 == zeros(eltype(x1), n)
 
     # Scaling real ok, complex scale allowed since codomain complex; verify

@@ -91,7 +91,7 @@ end
     @test size(op_scaled) == size(op)
 
     # get_normal_op: should produce diagonal with abs2 of original diag
-    normal_op = get_normal_op(op)
+    normal_op = AbstractOperators.get_normal_op(op)
     @test diag(normal_op) == abs2.(diag(op))
     @test is_diagonal(normal_op) == true
 
@@ -99,8 +99,8 @@ end
     @test is_thread_safe(op) == true
     @test LinearAlgebra.opnorm(op) == maximum(abs, diag(op))
     @test estimate_opnorm(op) == maximum(abs, diag(op))
-    @test has_optimized_normalop(op) == true
-    @test has_optimized_normalop(op') == true
+    @test AbstractOperators.has_optimized_normalop(op) == true
+    @test AbstractOperators.has_optimized_normalop(op') == true
 
     # invertibility false path (contains a zero)
     op_sing = DiagOp([1.0, 0.0, 2.0, 3.0])

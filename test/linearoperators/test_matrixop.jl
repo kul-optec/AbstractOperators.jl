@@ -101,7 +101,7 @@ end
     @test Sop * xS ≈ 2.0 * (invop * xS)
 
     # Normal operator A'A
-    Nop = get_normal_op(invop)
+    Nop = AbstractOperators.get_normal_op(invop)
     @test size(Nop) == ((4,), (4,))
     xN = randn(4)
     @test Nop * xN ≈ invop' * (invop * xN)

@@ -97,8 +97,8 @@ function other_tests(threaded)
 	@test is_sliced(batch_op) == is_sliced(op)
 	@test is_thread_safe(batch_op) == is_thread_safe(op)
 	# has_optimized_normalop, get_normal_op
-	@test has_optimized_normalop(batch_op) == has_optimized_normalop(op)
-	n_op = get_normal_op(batch_op)
+	@test AbstractOperators.has_optimized_normalop(batch_op) == AbstractOperators.has_optimized_normalop(op)
+	n_op = AbstractOperators.get_normal_op(batch_op)
 	@test typeof(n_op) <: typeof(batch_op)
 	# opnorm, estimate_opnorm
 	@test opnorm(batch_op) ≈ opnorm(op)
