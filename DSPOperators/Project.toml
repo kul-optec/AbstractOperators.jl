@@ -17,9 +17,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [targets]
 test = ["Aqua", "DSP", "Random", "RecursiveArrayTools", "Test"]
 
-[sources]
-AbstractOperators = { path = ".." }
-
 [compat]
 AbstractOperators = "0.4"
 Aqua = "0.8"
