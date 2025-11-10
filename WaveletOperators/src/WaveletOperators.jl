@@ -29,8 +29,10 @@ Creates a `LinearOperator` which, when multiplied with a vector `x::AbstractVect
 transform of `x` using the given `wavelet` and `levels`.
 
 ```jldoctest
+julia> using WaveletOperators
+
 julia> W = WaveletOp(wavelet(WT.db4), 4)
-〜  ℝ^4 -> ℝ^4
+𝒲  ℝ^4 -> ℝ^4
 
 julia> W * ones(4)
 4-element Vector{Float64}:

@@ -33,7 +33,7 @@ Arguments:
   It should be set to 1 for single-threaded execution (e.g., when using within a `@threads` block).
 
 ```jldoctest
-julia> using MriReconstructionToolbox, FFTW
+julia> using FFTW, FFTWOperators
 
 julia> DFT(Complex{Float64},(10,10))
 ℱ  ℂ^(10, 10) -> ℂ^(10, 10)
@@ -82,6 +82,8 @@ Arguments:
   It should be set to 1 for single-threaded execution (e.g., when using within a `@threads` block).
 
 ```jldoctest
+julia> using FFTW, FFTWOperators
+
 julia> IDFT(Complex{Float64},(10,10))
 ℱ⁻¹  ℂ^(10, 10) -> ℂ^(10, 10)
 
@@ -91,7 +93,7 @@ julia> IDFT(10,10)
 julia> op = IDFT(ones(ComplexF64, 3))
 ℱ⁻¹  ℂ^3 -> ℂ^3
 
-julia> op*ones(3) ≈ FFTW.ifft(ones(3))
+julia> op*ones(ComplexF64, 3) ≈ FFTW.ifft(ones(ComplexF64, 3))
 true
 
 ```

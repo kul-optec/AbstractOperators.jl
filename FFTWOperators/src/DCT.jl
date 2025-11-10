@@ -10,6 +10,8 @@ abstract type CosineTransform{N,C,T1,T2} <: LinearOperator end
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Inverse Discrete Cosine Transform of `x`.
 
 ```jldoctest
+julia> using FFTWOperators
+
 julia> DCT(Complex{Float64},(10,10))
 ℱc  ℂ^(10, 10) -> ℂ^(10, 10)
 
@@ -41,6 +43,8 @@ end
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional inverse Discrete Cosine Transform of `x`.
 
 ```jldoctest
+julia> using FFTWOperators
+
 julia> IDCT(Complex{Float64},(10,10))
 ℱc⁻¹  ℂ^(10, 10) -> ℂ^(10, 10)
 

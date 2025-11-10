@@ -21,6 +21,8 @@ For example for a `3` by `2` MIMO system (i.e. `size(X,2) == 3` inputs and `size
 where `bij` are vector containing the filter coeffients of `h_{i,j}`.
 
 ```jldoctest
+julia> using DSPOperators
+
 julia> m,n = 10,3; #time samples, number of inputs
 
 julia> B  = [[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.],[1.;0.;1.], ];

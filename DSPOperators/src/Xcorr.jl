@@ -7,6 +7,13 @@ export Xcorr
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the cross correlation between `x` and `h`. Uses `xcross`.
 
+Examples
+```jldoctest
+julia> using DSPOperators
+
+julia> Xcorr(Float64, (10,), [1.0, 0.5, 0.2])
+◎  ℝ^10 -> ℝ^19
+```
 """
 struct Xcorr{T,H<:AbstractVector{T}} <: LinearOperator
 	dim_in::Tuple{Int}

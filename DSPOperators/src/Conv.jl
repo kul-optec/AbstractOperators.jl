@@ -9,6 +9,8 @@ abstract type AbstractConv{T,N,H<:AbstractArray} <: LinearOperator end
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the convolution between `x` and `h`. Uses `conv` and hence FFT algorithm.
 
 ```jldoctest
+julia> using DSPOperators
+
 julia> Conv((10,),randn(5))
 ★  ℝ^10 -> ℝ^14
 	
