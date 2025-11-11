@@ -18,6 +18,8 @@ jobs:
           - windows-latest
         arch:
           - x64
+    env:
+      JULIA_NUM_THREADS: 2
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
