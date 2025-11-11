@@ -87,7 +87,7 @@ function VCAT(AA::NTuple{N,AbstractOperator}, buf::C) where {N,C}
 				K += 1
 				push!(idxs, K)
 			else                   # stacked operator
-				idxs = push!(idxs, (collect((K + 1):(K + ndoms(AA[i], 2)))...,))
+				idxs = push!(idxs, (collect((K + 1):(K + ndoms(AA[i], 1)))...,))
 				for ii in 1:ndoms(AA[i], 1)
 					K += 1
 				end
@@ -101,26 +101,18 @@ VCAT(A::AbstractOperator) = A
 
 # Mappings
 
-@generated function mul!(y::DD, H::VCAT{N,L,P,C}, b::C) where {N,L,P,C,DD}
-	ex = :()
+@generated function mul!(y::ArrayPartition, H::VCAT{N,L,P}, b::AbstractArray) where {N,L,P}
+	ex = :(check(y, H, b))
 	for i in 1:N
 		if fieldtype(P, i) <: Int
 			# flatten operator
 			# build mul!(y.x[H.idxs[i]], H.A[i], b)
-			if DD <: ArrayPartition
-				yy = :(y.x[H.idxs[$i]])
-			else
-				yy = :(y[H.idxs[$i]])
-			end
+			yy = :(y.x[H.idxs[$i]])
 		else
 			# stacked operator
 			# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
-			if DD <: ArrayPartition
-				yy = [:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-				yy = :(ArrayPartition($(yy...)))
-			else
-				yy = [:(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-			end
+			yy = [:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
+			yy = :(ArrayPartition($(yy...)))
 		end
 		ex = :($ex; mul!($yy, H.A[$i], b))
 	end
@@ -129,9 +121,9 @@ VCAT(A::AbstractOperator) = A
 end
 
 @generated function mul!(
-	y::C, A::AdjointOperator{VCAT{N,L,P,C}}, b::DD
-) where {N,L,P,C,DD<:ArrayPartition}
-	ex = :(H = A.A)
+	y::AbstractArray, A::AdjointOperator{<:VCAT{N,L,P}}, b::ArrayPartition
+) where {N,L,P}
+	ex = :(check(y, A, b); H = A.A)
 
 	if fieldtype(P, 1) <: Int
 		# flatten operator
@@ -159,72 +151,6 @@ end
 		ex = :($ex; mul!(H.buf, H.A[$i]', $bb)) # write on H.buf
 		# sum H.buf with y
 		ex = :($ex; y .+= H.buf)
-	end
-	ex = :($ex; return y)
-	return ex
-end
-
-@generated function mul_skipZeros!(
-	y::DD, H::VCAT{N,L,P,C}, b::C
-) where {N,L,P,C,DD<:ArrayPartition}
-	ex = :()
-	for i in 1:N
-		if !(fieldtype(L, i) <: Zeros)
-			if fieldtype(P, i) <: Int
-				# flatten operator
-				# build mul!(y.x[H.idxs[i]], H.A[i], b)
-				yy = :(y.x[H.idxs[$i]])
-			else
-				# stacked operator
-				# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
-				yy = [
-					:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))
-				]
-				yy = :(ArrayPartition($(yy...)))
-			end
-			ex = :($ex; mul!($yy, H.A[$i], b))
-		end
-	end
-	ex = :($ex; return y)
-	return ex
-end
-
-## same as mul! but skips `Zeros`
-@generated function mul_skipZeros!(
-	y::C, A::AdjointOperator{VCAT{N,L,P,C}}, b::DD
-) where {N,L,P,C,DD<:ArrayPartition}
-	ex = :(H = A.A)
-
-	if fieldtype(P, 1) <: Int
-		# flatten operator
-		# build mul!(y, H.A[1]', b.x[H.idxs[1]])
-		bb = :(b.x[H.idxs[1]])
-	else
-		# stacked operator
-		# build mul!(y, H.A[1]',ArrayPartition( b.x[H.idxs[1][1]], b.x[H.idxs[1][2]] ...  ))
-		bb = [:(b.x[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, 1)))]
-		bb = :(ArrayPartition($(bb...)))
-	end
-	ex = :($ex; mul!(y, H.A[1]', $bb)) # write on y
-
-	for i in 2:N
-		if !(fieldtype(L, i) <: Zeros)
-			if fieldtype(P, i) <: Int
-				# flatten operator
-				# build mul!(H.buf, H.A[i]', b.x[H.idxs[i]])
-				bb = :(b.x[H.idxs[$i]])
-			else
-				# stacked operator
-				# build mul!(H.buf, H.A[i]',( b.x[H.idxs[i][1]], b.x[H.idxs[i][2]] ...  ))
-				bb = [
-					:(b.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))
-				]
-				bb = :(ArrayPartition($(bb...)))
-			end
-			ex = :($ex; mul!(H.buf, H.A[$i]', $bb)) # write on H.buf
-			# sum H.buf with y
-			ex = :($ex; y .+= H.buf)
-		end
 	end
 	ex = :($ex; return y)
 	return ex
@@ -276,18 +202,20 @@ function get_slicing_expr(L::VCAT)
 	return get_slicing_expr.(Tuple(L.A[i] for i in eachindex(L.A)))
 end
 function remove_slicing(L::VCAT)
-	hcat_ops = remove_slicing.(L[i] for i in eachindex(L.A))
-	if all(a -> a isa HCAT, L.A) && any(a -> any(is_null, a.A), L.A) && any(op -> size(op, 2) != size(hcat_ops[1], 2), hcat_ops)
-		expected_hcat_domain_size = Vector{Any}(nothing, length(hcat_ops))
-		for hcat_op in hcat_ops
+	new_ops = remove_slicing.(L[i] for i in eachindex(L.A))
+	if !any(a -> a isa HCAT, new_ops) && all(i -> i isa Int, L.idxs)
+		return DCAT(new_ops[collect(L.idxs)]...)
+	elseif all(a -> a isa HCAT, L.A) && any(a -> any(is_null, a.A), L.A) && any(op -> size(op, 2) != size(new_ops[1], 2), new_ops)
+		expected_hcat_domain_size = Vector{Any}(nothing, length(new_ops))
+		for hcat_op in new_ops
 			for i in eachindex(hcat_op.A)
 				if !is_null(hcat_op[i]) || expected_hcat_domain_size[i] === nothing
 					expected_hcat_domain_size[i] = size(hcat_op[i], 2)
 				end
 			end
 		end
-		hcat_ops = [hcat_op for hcat_op in hcat_ops]
-		for (i, hcat_op) in enumerate(hcat_ops)
+		new_ops = collect(new_ops)
+		for (i, hcat_op) in enumerate(new_ops)
 			if any(is_null, hcat_op.A)
 				ops = ()
 				for j in eachindex(hcat_op.A)
@@ -298,12 +226,12 @@ function remove_slicing(L::VCAT)
 					end
 					ops = (ops..., op)
 				end
-				hcat_ops[i] = hcat(ops...)
+				new_ops[i] = hcat(ops...)
 			end
 		end
-		hcat_ops = tuple(hcat_ops...)
+		return VCAT(tuple(new_ops...), L.idxs, L.buf)
 	end
-	VCAT(tuple(hcat_ops...), L.idxs, L.buf)
+	error("remove_slicing is not implemented for this VCAT: $(typeof(L))")
 end
 
 diag_AcA(L::VCAT) = (+).(diag_AcA.(L.A)...,)
@@ -323,7 +251,7 @@ function permute(H::VCAT{N,L,P,C}, p::AbstractVector{Int}) where {N,L,P,C}
 		cnt += z
 	end
 
-	return VCAT{M,N,L,P,C}(H.A, new_part, H.buf)
+	return VCAT(H.A, new_part, H.buf)
 end
 
 remove_displacement(V::VCAT) = VCAT(remove_displacement.(V.A), V.idxs, V.buf)

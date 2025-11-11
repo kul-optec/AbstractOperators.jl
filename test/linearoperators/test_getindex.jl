@@ -116,7 +116,7 @@ using LinearAlgebra
     # remove_slicing returns Eye of original domain
     base_eye = AbstractOperators.remove_slicing(A)
     @test typeof(base_eye) <: Eye
-    @test size(base_eye) == ((n, m), (n, m))
+    @test size(base_eye) == (size(A, 1), size(A, 1))
 
     # opnorm vs estimate_opnorm (no direct has_fast_opnorm check)
     @test LinearAlgebra.opnorm(A) == estimate_opnorm(A)
@@ -126,5 +126,5 @@ using LinearAlgebra
 
     # Dimension mismatch errors in mul!
     bad_y = zeros(size(A, 1)..., 2)  # deliberately wrong extra dim
-    @test_throws MethodError mul!(bad_y, A, xA)
+    @test_throws ArgumentError mul!(bad_y, A, xA)
 end

@@ -245,4 +245,291 @@ end
     A1 = HCAT(LMatrixOp(b, n), Eye(n))
     op = Compose(opS1, A1)
     y, grad = test_NLop(op, x, r, verb)
+
+    # --- Additional coverage for Compose internals and edge branches ---
+
+    @testset "Compose internal buffer mismatch" begin
+        A = MatrixOp(randn(3, 3))
+        B = MatrixOp(randn(3, 3))
+        # Using the low-level constructor with wrong buffer length should throw
+        @test_throws DimensionMismatch AbstractOperators.Compose((B, A), ())
+    end
+
+    @testset "Adjacent adjoint optimized normal (GetIndex*GetIndex')" begin
+        G = GetIndex((5,), 2:4)
+        # Provide a dummy buffer (won't be used because it reduces to a single op)
+        L = AbstractOperators.Compose((G, G'), (randn(size(G, 1)),))
+        x = randn(5)
+        y_ref = G' * (G * x)
+        y = L * x
+        @test y == y_ref
+        @test is_diagonal(L)
+    end
+
+    @testset "Combine branch producing nested Compose is inlined" begin
+        M = MatrixOp(randn(3, 3))
+        S = Scale(2.0, Eye(3))
+        # Order (S, M) triggers combine(MatrixOp, Scale) which returns a Compose
+        L = AbstractOperators.Compose((S, M), (zeros(3),))
+        x = randn(3)
+        @test L * x ≈ 2.0 * (M * x)
+        # Ensure we got a valid operator (may fully reduce to MatrixOp)
+        @test L isa AbstractOperator
+    end
+
+    @testset "remove_slicing: first op is GetIndex, compose of three operators" begin
+        # First operator is GetIndex, removing slicing should keep equivalent mapping on reduced domain
+        G = GetIndex((5,), 2:4)      # 5 -> 3
+        A2 = FiniteDiff((3,))   # 3 -> 2
+        A3 = MatrixOp(randn(2,2))  # 2 -> 2
+        L = Compose(A3, Compose(A2, G))  # overall 5 -> 2, internal A = (G, A2, A3)
+        L2 = AbstractOperators.remove_slicing(L)
+        @test !is_sliced(L2)
+        @test size(L2, 2) == (3,)
+        # Functional equivalence when lifting a reduced-domain vector back to full domain
+        v = randn(3)
+        xfull = zeros(5); xfull[2:4] .= v
+        y1 = L * xfull
+        y2 = L2 * v
+        @test y1 ≈ y2
+    end
+
+    @testset "remove_slicing: sliced first op not GetIndex (Scale(GetIndex))" begin
+        # First operator is Scale(GetIndex), removing slicing should keep equivalent mapping on reduced domain
+        G = GetIndex((5,), 2:4)      # 5 -> 3
+        S = 3.0 * G                  # still 5 -> 3, sliced true
+        A2 = FiniteDiff((3,))   # 3 -> 2
+        L = Compose(A2, S)           # overall 5 -> 2, internal A = (S, A2)
+        L2 = AbstractOperators.remove_slicing(L)
+        @test !is_sliced(L2)
+        @test size(L2, 2) == (3,)
+        # Functional equivalence when lifting a reduced-domain vector back to full domain
+        v = randn(3)
+        xfull = zeros(5); xfull[2:4] .= v
+        y1 = L * xfull
+        y2 = L2 * v
+        @test y1 ≈ y2
+
+        # Compose of three operators with Scale(GetIndex) first
+        A3 = MatrixOp(randn(2,2))  # 2 -> 2
+        L = Compose(A3, L)          # overall 5 -> 2, internal A = (S, A2, A3)
+        L2 = AbstractOperators.remove_slicing(L)
+        @test !is_sliced(L2)
+        @test size(L2, 2) == (3,)
+        # Functional equivalence when lifting a reduced-domain vector back to full domain
+        v = randn(3)
+        xfull = zeros(5); xfull[2:4] .= v
+        y1 = L * xfull
+        y2 = L2 * v
+        @test y1 ≈ y2
+    end
+
+    @testset "remove_slicing error path (first not GetIndex nor sliced)" begin
+        # Build a Compose manually where the first operator is not sliced and not a GetIndex
+        op1 = MyLinOp(Float64, (3,), Float64, (3,), (y, x) -> (y .= x), (y, x) -> (y .= x))
+        op2 = MatrixOp(randn(2, 3))
+        L = AbstractOperators.Compose((op1, op2), (zeros(3),))
+        @test_throws ArgumentError AbstractOperators.remove_slicing(L)
+    end
+
+    @testset "diag_AAc on Compose (ok and error)" begin
+        d = randn(5)
+        sel = 1:3
+        L_ok = Compose(DiagOp(d[sel]), GetIndex((length(d),), sel))
+        @test is_AAc_diagonal(L_ok)
+        @test AbstractOperators.diag_AAc(L_ok) == diag_AAc(DiagOp(d[sel]))
+
+        L_bad = Compose(MatrixOp(randn(3, 3)), MatrixOp(randn(3, 3)))
+        @test !is_AAc_diagonal(L_bad)
+        @test_throws ErrorException AbstractOperators.diag_AAc(L_bad)
+    end
+
+    @testset "get_normal_op on Compose (fallback path)" begin
+        # Last operator without optimized normal => else branch in get_normal_op(Compose)
+        L = Compose(FiniteDiff((3,)), MatrixOp(randn(3, 3)))
+        N = AbstractOperators.get_normal_op(L)
+        @test N isa AbstractOperator
+        x = randn(3)
+        @test N * x ≈ L' * (L * x)
+    end
+
+    @testset "Scale(coeff, L::Compose) specialized paths" begin
+        # Linear case with combinable ops: returns a Compose (not a top-level Scale)
+        Llin = FiniteDiff((3,)) * MatrixOp(randn(3, 3)) * FiniteDiff((4,))
+        Slin = Scale(1.7, Llin)
+        @test Slin isa Compose
+        x = randn(4)
+        @test Slin * x ≈ 1.7 * (Llin * x)
+
+        # Nonlinear inside => wraps as a Scale around the Compose
+        Lnl = Compose(FiniteDiff((3,)), Sigmoid(Float64, (3,), 2))
+        Snl = Scale(2.0, Lnl)
+        @test Snl isa Scale
+        x = randn(3)
+        @test Snl * x ≈ 2.0 * (Lnl * x)
+    end
+
+    @testset "get_normal_op(Compose) else branch (no optimized normal)" begin
+        # FiniteDiff and Variation lack optimized normal operators => hit the else path
+        F1 = FiniteDiff((5,))  # domain 5, codomain 4
+        F2 = FiniteDiff((6,))  # domain 6, codomain 5
+        L = Compose(F1, F2)   # overall: domain 6, codomain 4
+        N = AbstractOperators.get_normal_op(L)
+        @test N isa AbstractOperator
+        x = randn(6)
+        # Verify N behaves like L' * L
+        @test N * x ≈ L' * (L * x)
+    end
+
+    @testset "Buffer reuse in 4-operator chain (FiniteDiff)" begin
+        # Chain 4 FiniteDiff operators to exercise buffer reuse adjacency detection
+        F1 = FiniteDiff((10,))  # domain 10, codomain 9
+        F2 = MatrixOp(rand(10,9))  # domain 9, codomain 10
+        F3 = FiniteDiff((10,))  # domain 10, codomain 9
+        F4 = MatrixOp(rand(10,10))  # domain 10, codomain 10
+        L = F1 * F2 * F3 * F4   # chains right-to-left: F4->F3->F2->F1, domain 10, codomain 9
+        @test L isa Compose
+        x = randn(10)
+        y = L * x
+        @test length(y) == 9
+        # Verify adjoint chain
+        r = randn(9)
+        g = L' * r
+        @test length(g) == 10
+        @test L.buf[1] === L.buf[3] # buffer reuse check
+    end
+
+    # Enable DEBUG_COMPOSE for combination logging branches
+    @testset "DEBUG_COMPOSE logging branches" begin
+        old_debug = AbstractOperators.DEBUG_COMPOSE[]
+        try
+            AbstractOperators.DEBUG_COMPOSE[] = true
+            
+            # Capture stdout to check logging output
+            original_stdout = stdout
+            (read_pipe, write_pipe) = redirect_stdout()
+            
+            # Trigger adjacent adjoint optimization with logging
+            G = GetIndex((5,), 2:4)
+            L1 = AbstractOperators.Compose((G, G'), (randn(3),))
+            
+            # Trigger 2-arg combination with logging
+            D1 = DiagOp(randn(3))
+            D2 = DiagOp(randn(3))
+            L2 = AbstractOperators.Compose((D1, D2), (randn(3),))
+            
+            # Restore stdout and read captured output
+            redirect_stdout(original_stdout)
+            close(write_pipe)
+            log_str = read(read_pipe, String)
+            
+            # Verify logging occurred
+            @test occursin("Replacing", log_str) || occursin("Combining", log_str)
+        finally
+            AbstractOperators.DEBUG_COMPOSE[] = old_debug
+        end
+    end
+
+    @testset "Triple combination path (requires 3-arg combine specialization)" begin
+
+        struct TripleCombTestOp <: LinearOperator end
+        LinearAlgebra.size(::TripleCombTestOp) = ((5,), (5,))
+        AbstractOperators.domain_type(::TripleCombTestOp) = Float64
+        AbstractOperators.codomain_type(::TripleCombTestOp) = Float64
+        AbstractOperators.fun_name(::TripleCombTestOp) = "TCT"
+
+        AbstractOperators.can_be_combined(::TripleCombTestOp, ::TripleCombTestOp, ::TripleCombTestOp) = true
+        AbstractOperators.combine(::TripleCombTestOp, ::TripleCombTestOp, ::TripleCombTestOp) = DiagOp(3 .* ones(5))
+        AbstractOperators.can_be_combined(::FiniteDiff, ::DiagOp, ::TripleCombTestOp) = true
+        AbstractOperators.combine(L1::FiniteDiff, L2::DiagOp, ::TripleCombTestOp) = L1 * L2
+        AbstractOperators.can_be_combined(::TripleCombTestOp, ::DiagOp, ::FiniteDiff) = true
+        AbstractOperators.combine(::TripleCombTestOp, L1::DiagOp, L2::FiniteDiff) = L1 * L2
+
+        T1, T2, T3 = TripleCombTestOp(), TripleCombTestOp(), TripleCombTestOp()
+        D1, D2 = DiagOp(randn(5)), DiagOp(randn(4))
+        F1, F2 = FiniteDiff((5,)), FiniteDiff((6,))
+
+
+        old_debug = AbstractOperators.DEBUG_COMPOSE[]
+        try
+            AbstractOperators.DEBUG_COMPOSE[] = true
+            
+            # Capture stdout to check logging output
+            original_stdout = stdout
+            (read_pipe, write_pipe) = redirect_stdout()
+
+            # Compose that triggers triple combination that reduces to DiagOp
+            L = T1 * T2 * T3
+            @test L isa DiagOp
+            @test diag(L) == 3 .* ones(5)
+
+            L = F1 * T1 * T2 * T3
+            @test L isa Compose
+            x = randn(5)
+            y = L * x
+            @test y ≈ F1 * (3 .* x)
+
+            L = T1 * T2 * T3 * F2
+            @test L isa Compose
+            x = randn(6)
+            y = L * x
+            @test y ≈ 3 .* (F2 * x)
+
+            # Compose that triggers triple combination that reduces to Compose
+            L = F1 * D1 * T1
+            @test L isa Compose
+            @test length(L.A) == 2
+            x = randn(5)
+            y = L * x
+            @test y ≈ F1 * (D1 * x)
+
+            L = F1 * D1 * T1 * F2
+            @test L isa Compose
+            @test length(L.A) == 3
+            x = randn(6)
+            y = L * x
+            @test y ≈ F1 * (D1 * (F2 * x))
+
+            L = D2 * F1 * D1 * T1
+            @test L isa Compose
+            @test length(L.A) == 3
+            x = randn(5)
+            y = L * x
+            @test y ≈ D2 * (F1 * (D1 * x))
+
+            L = D2 * F1 * D1 * T1 * F2
+            @test L isa Compose
+            @test length(L.A) == 4
+            x = randn(6)
+            y = L * x
+            @test y ≈ D2 * (F1 * (D1 * (F2 * x)))
+
+            # Double combination from right
+            L = F1 * D1 * T1 * D1 # (F1 * D1 * T1) -> (F1 * D1), then (F1 * D1) * D1 -> F1 * (D1 * D1)
+            @test L isa Compose
+            @test length(L.A) == 2
+            x = randn(5)
+            y = L * x
+            @test y ≈ F1 * ((diag(D1) .^ 2) .* x)
+
+            # Double combination from left
+            L = D1 * T1 * D1 * F2 # (T1 * D1 * F2) -> (D1 * F2), then D1 * (D1 * F2) -> (D1 * D1) * F2
+            @test L isa Compose
+            @test length(L.A) == 2
+            x = randn(6)
+            y = L * x
+            @test y ≈ ((diag(D1) .^ 2) .* (F2 * x))
+            
+            # Restore stdout and read captured output
+            redirect_stdout(original_stdout)
+            close(write_pipe)
+            log_str = read(read_pipe, String)
+            
+            # Verify logging occurred
+            @test occursin("Replacing", log_str) || occursin("Combining", log_str)
+        finally
+            AbstractOperators.DEBUG_COMPOSE[] = old_debug
+        end
+    end
 end
+

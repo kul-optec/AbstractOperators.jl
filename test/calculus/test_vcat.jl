@@ -168,4 +168,132 @@ end
 
     Y = ArrayPartition(A * x, B * x)
     @test norm(Y - y) < 1e-8
+
+    # Extended coverage tests
+
+    # Test: domain_type mismatch error
+    A_real = MatrixOp(randn(3, 4))
+    A_complex = MatrixOp(randn(ComplexF64, 3, 4))
+    @test_throws Exception VCAT(A_real, A_complex)
+
+    # Test: VCAT with stacked operators (operators with multiple codomains)
+    verb && println("Testing stacked operators with multiple codomains")
+    n = 5
+    m1, m2 = 3, 4
+    A1 = MatrixOp(randn(m1, n))
+    A2 = MatrixOp(randn(m2, n))
+    V1 = VCAT(A1, A2)  # V1 has multiple codomains
+    B1 = MatrixOp(randn(m1, n))
+    B2 = MatrixOp(randn(m2, n))
+    V2 = VCAT(B1, B2)  # V2 has multiple codomains
+    VV = VCAT(V1, V2)  # VCAT of VCATs - creates stacked structure
+    x = randn(n)
+    y = VV * x
+    @test y isa ArrayPartition
+    @test length(y.x) == 4  # Should have 4 outputs
+    y_test = ArrayPartition(randn(m1), randn(m2), randn(m1), randn(m2))
+    x_adj = VV' * y_test
+    @test length(x_adj) == n
+
+    # Test: VCAT of HCAT with Zeros (remove_slicing edge case)
+    verb && println("Testing VCAT of HCAT with Zeros")
+    n, m = 5, 6
+    A1 = MatrixOp(randn(n, m))
+    Z1 = Zeros(Float64, (m,), Float64, (n,))
+    H1 = HCAT(A1, Z1)
+    A2 = MatrixOp(randn(n, m))
+    A3 = MatrixOp(randn(n, m))
+    H2 = HCAT(A2, A3)
+    V = VCAT(H1, H2)
+    G1 = GetIndex(Float64, (2 * m,), (1:m,))
+    G2 = GetIndex(Float64, (2 * m,), ((m + 1):(2 * m),))
+    V_sliced = V * VCAT(G1, G2)
+    @test is_sliced(V_sliced)
+    V_removed = AbstractOperators.remove_slicing(V_sliced)
+    @test V == V_removed  # Should be equal after removing slicing
+
+    H1 = HCAT(A1 * G1, Z1 * G2)
+    H2 = HCAT(A2 * G1, A3 * G2)
+    V2 = VCAT(H1, H2)
+    @test is_sliced(V2)
+    V2_removed = AbstractOperators.remove_slicing(V2)
+    @test V == V2_removed  # Should be equal after removing slicing
+
+    # Test: permute function
+    verb && println("Testing permute function")
+    m1, m2, n = 3, 4, 5
+    A1 = MatrixOp(randn(m1, n))
+    A2 = MatrixOp(randn(m2, n))
+    V = VCAT(A1, A2)
+    p = [2, 1]
+    V_perm = AbstractOperators.permute(V, p)
+    @test size(V, 1) == size(V_perm, 1)[p]
+
+    # Test: Deeply nested VCAT structures
+    verb && println("Testing deeply nested VCAT")
+    n = 4
+    A1 = Eye(n)
+    A2 = DiagOp(randn(n))
+    A3 = MatrixOp(randn(n, n))
+    V1 = VCAT(A1, A2)
+    V2 = VCAT(V1, A3)  # VCAT of VCAT
+    V3 = VCAT(A1, V2, A2)  # Mix of regular and VCAT operators
+    x = randn(n)
+    y = V3 * x
+    @test y isa ArrayPartition
+    @test length(y.x) == 5  # A1, A1, A2, A3, A2
+    y_adj = ArrayPartition([randn(n) for _ in 1:5]...)
+    x_back = V3' * y_adj
+    @test length(x_back) == n
+
+    # Test: fun_name for VCAT with > 2 operators
+    A1 = Eye(3)
+    A2 = Eye(3)
+    A3 = Eye(3)
+    V2 = VCAT(A1, A2)
+    V3 = VCAT(A1, A2, A3)
+    name2 = AbstractOperators.fun_name(V2)
+    name3 = AbstractOperators.fun_name(V3)
+    @test occursin("[", name2) || occursin("]", name2)
+    @test name3 == "VCAT"
+
+    # Test: VCAT equality with different internal structures (flattened vs nested)
+    A1 = Eye(4)
+    A2 = DiagOp(randn(4))
+    A3 = MatrixOp(randn(4, 4))
+    V1 = VCAT(A1, A2, A3)
+    V_temp = VCAT(A1, A2)
+    V2 = VCAT(V_temp, A3)  # Should flatten
+    @test V1 == V2
+
+    # Test: is_full_column_rank with mixed operators
+    n, m = 5, 3
+    A1 = MatrixOp(randn(n, m))
+    A2 = Zeros(Float64, (m,), Float64, (n,))
+    V = VCAT(A1, A2)
+    @test is_full_column_rank(V) isa Bool
+
+    # Test: Adjoint with complex nested structure
+    verb && println("Testing adjoint with complex nested structure")
+    n = 4
+    m1, m2 = 3, 3
+    A1 = MatrixOp(randn(m1, n))
+    A2 = MatrixOp(randn(m2, n))
+    V1 = 2 * VCAT(A1, A2)
+    B1 = MatrixOp(randn(m1, n))
+    V2 = VCAT(V1, B1)
+    y = ArrayPartition(randn(m1), randn(m2), randn(m1))
+    x = V2' * y
+    @test length(x) == n
+    @test x isa AbstractArray
+    y2 = V2 * x
+    @test size.(y.x) == size.(y2.x)
+
+    V2 = VCAT(B1, V1)
+    y = ArrayPartition(randn(m1), randn(m1), randn(m2))
+    x = V2' * y
+    @test length(x) == n
+    @test x isa AbstractArray
+    y2 = V2 * x
+    @test size.(y.x) == size.(y2.x)
 end
