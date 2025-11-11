@@ -199,4 +199,130 @@ end
 			@test t_fixed_operator < t_single_threaded
 		end
 	end
+
+	@testset "SpreadingBatchOpCopying property delegations" begin
+		if Threads.nthreads() > 1
+			# Create non-threadsafe operators to trigger COPYING strategy
+			ops = [DiagOp(rand(5)) * FiniteDiff((6,)) for i in 1:3]
+			bop = BatchOp(ops, 4, (:_, :s, :b); threaded=true, threading_strategy=ThreadingStrategy.COPYING)
+			
+			# fun_name for Copying variant
+			io = IOBuffer(); show(io, bop); s = String(take!(io))
+			@test occursin("⟳", s)
+			
+			# Storage types for Copying
+			@test domain_storage_type(bop) == domain_storage_type(ops[1])
+			@test codomain_storage_type(bop) == codomain_storage_type(ops[1])
+			
+			# Properties for Copying
+			@test is_linear(bop) == is_linear(ops[1])
+			@test is_eye(bop) == is_eye(ops[1])
+			@test is_AAc_diagonal(bop) == is_AAc_diagonal(ops[1])
+			@test is_AcA_diagonal(bop) == is_AcA_diagonal(ops[1])
+			@test is_full_row_rank(bop) == is_full_row_rank(ops[1])
+			@test is_full_column_rank(bop) == is_full_column_rank(ops[1])
+			@test is_sliced(bop) == is_sliced(ops[1])
+			@test is_null(bop) == is_null(ops[1])
+			@test is_diagonal(bop) == is_diagonal(ops[1])
+			@test is_invertible(bop) == is_invertible(ops[1])
+			@test is_orthogonal(bop) == is_orthogonal(ops[1])
+			@test is_thread_safe(bop) == is_thread_safe(ops[1])
+			
+			# Normal op for Copying - requires optimized normal op
+			@test AbstractOperators.has_optimized_normalop(bop) == AbstractOperators.has_optimized_normalop(ops[1])
+			
+			# opnorm methods for Copying (use approximate equality for floating point)
+			@test opnorm(bop) ≈ maximum(opnorm.(ops))
+			@test estimate_opnorm(bop) ≈ maximum(estimate_opnorm.(ops)) atol=1e-4
+			
+			# diag methods for Copying - use operators with diag
+			ops2 = [DiagOp(rand(5)) for i in 1:3]
+			bop2 = BatchOp(ops2, 4, (:_, :s, :b); threaded=true, threading_strategy=ThreadingStrategy.COPYING)
+			d = diag(bop2)
+			@test size(d) == (5, 3, 4)
+			daca = diag_AcA(bop2)
+			@test size(daca) == (5, 3, 4)
+			daac = diag_AAc(bop2)
+			@test size(daac) == (5, 3, 4)
+		end
+	end
+
+	@testset "Locking get_normal_op and reused operators" begin
+		if Threads.nthreads() > 1
+			# Create scenario with reused operator to trigger haskey branch
+			op = DiagOp(rand(6)) * FiniteDiff((7,))
+			ops = [op, op, DiagOp(rand(6)) * FiniteDiff((7,))]  # First two are same instance
+			bop = BatchOp(ops, 4, (:_, :s, :b); threaded=true, threading_strategy=ThreadingStrategy.LOCKING)
+			
+			# Verify it works
+			x = rand(7, 3, 4)
+			y = bop * x
+			@test size(y) == (6, 3, 4)
+		end
+	end
+
+	@testset "FixedOperator get_normal_op and get_spreading_dims" begin
+		if Threads.nthreads() > 1
+			ops = [DiagOp(rand(6)) * FiniteDiff((7,)) for i in 1:3]
+			bop = BatchOp(ops, 4, (:_, :s, :b); threaded=true, threading_strategy=ThreadingStrategy.FIXED_OPERATOR)
+			
+			# Verify get_spreading_dims is called (indirectly via operations)
+			x = rand(7, 3, 4)
+			y = bop * x
+			@test size(y) == (6, 3, 4)
+		end
+	end
+
+	@testset "Orthogonal property for SpreadingBatchOp" begin
+		# Use Identity operators which are orthogonal
+		ops = [Eye(Float64, 5) for i in 1:3]
+		bop = BatchOp(ops, 4; threaded=false)
+		@test is_orthogonal(bop) == true
+		
+		if Threads.nthreads() > 1
+			# Test with threaded version
+			bop_threaded = BatchOp(ops, 4; threaded=true)
+			@test is_orthogonal(bop_threaded) == true
+			
+			# Test with Copying variant - need non-threadsafe orthogonal operator
+			# Use Compose with Eye operators (still orthogonal but might not be thread-safe depending on implementation)
+			ops2 = [Eye(Float64, 5) for i in 1:3]
+			bop2 = BatchOp(ops2, 4; threaded=true)
+			@test is_orthogonal(bop2) == is_orthogonal(ops2[1])
+		end
+	end
+
+	@testset "AUTO threading strategy triggering" begin
+		if Threads.nthreads() > 1
+			# Create scenario where AUTO should pick a strategy
+			# Small operators with FiniteDiff (non-threadsafe)
+			ops = [FiniteDiff((11,)) for i in 1:3]
+			bop = BatchOp(ops, 4, (:_, :s, :b); threaded=true, threading_strategy=ThreadingStrategy.AUTO)
+			
+			# Should work regardless of chosen strategy
+			x = rand(11, 3, 4)
+			y = bop * x
+			@test size(y) == (10, 3, 4)
+		end
+	end
+
+	@testset "Scalar diagonal return paths" begin
+		# Create operators where all have identical scalar diagonals
+		scale_val = 2.0
+		ops = [scale_val * Eye(Float64, 5) for i in 1:3]
+		bop = BatchOp(ops, 4; threaded=false)
+		
+		# These should return scalars when all operators have identical scalar diagonals
+		d = diag(bop)
+		@test d isa Number  # Expect scalar
+		@test d == scale_val
+		
+		daca = diag_AcA(bop)
+		@test daca isa Number  # Expect scalar
+		@test daca == scale_val^2
+		
+		daac = diag_AAc(bop)
+		@test daac isa Number  # Expect scalar
+		@test daac == scale_val^2
+	end
 end

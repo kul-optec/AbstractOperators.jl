@@ -234,4 +234,57 @@ end
     J = Jacobian(opP, xp)'
     verb && println(size(J, 1))
     y, grad = test_NLop(opP, xp, r, verb)
+
+    # Test HCAT constructor error paths
+    @testset "HCAT constructor errors" begin
+        # DimensionMismatch: operators with different codomain dimensions
+        A1 = MatrixOp(randn(4, 3))
+        A2 = MatrixOp(randn(5, 2))  # Different codomain dimension (5 vs 4)
+        @test_throws DimensionMismatch HCAT(A1, A2)
+        
+        # codomain_type mismatch: real vs complex
+        A1 = MatrixOp(randn(4, 3))
+        A2 = MatrixOp(randn(ComplexF64, 4, 2))
+        @test_throws Exception HCAT(A1, A2)
+    end
+
+    # Test HCAT with nested HCAT (flattening behavior)
+    @testset "HCAT flattening" begin
+        m, n1, n2, n3 = 4, 3, 2, 5
+        A1 = MatrixOp(randn(m, n1))
+        A2 = MatrixOp(randn(m, n2))
+        A3 = MatrixOp(randn(m, n3))
+        
+        # Create nested HCAT
+        H1 = HCAT(A1, A2)
+        H2 = HCAT(H1, A3)  # This should flatten
+        
+        # Test that it works correctly
+        x1, x2, x3 = randn(n1), randn(n2), randn(n3)
+        y = H2 * ArrayPartition(x1, x2, x3)
+        y_expected = A1 * x1 + A2 * x2 + A3 * x3
+        @test norm(y - y_expected) < 1e-12
+        
+        # Test adjoint also works
+        y_test = randn(m)
+        x_adj = H2' * y_test
+        @test length(x_adj.x) == 3  # ArrayPartition has .x field
+        
+        # More complex nesting: HCAT(HCAT(...), HCAT(...))
+        H3 = HCAT(A1, A2)
+        H4 = HCAT(A2, A3)
+        H5 = HCAT(H3, H4)  # Should flatten all
+        
+        x_full = ArrayPartition(x1, x2, x2, x3)
+        y2 = H5 * x_full
+        y2_expected = A1 * x1 + A2 * x2 + A2 * x2 + A3 * x3
+        @test norm(y2 - y2_expected) < 1e-12
+    end
+
+    # Test single operator HCAT (should return the operator itself)
+    @testset "HCAT single operator" begin
+        A = MatrixOp(randn(4, 3))
+        H_single = HCAT(A)
+        @test H_single === A  # Should return the same operator
+    end
 end

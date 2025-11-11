@@ -29,6 +29,7 @@ end
     @test is_AcA_diagonal(op) == true
     @test is_AAc_diagonal(op) == true
     @test is_orthogonal(op) == true
+    @test is_symmetric(op) == true
     @test is_invertible(op) == true
     @test is_full_row_rank(op) == true
     @test is_full_column_rank(op) == true
@@ -70,7 +71,4 @@ end
     fill!(y, 0)
     mul!(y, op, x1)
     @test all(y .== x1)
-
-    # Symmetry
-    @test is_symmetric(op) == true
 end

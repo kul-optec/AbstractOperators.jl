@@ -5,7 +5,6 @@ on:
     branches: [master]
   pull_request:
 
-
 jobs:
   test:
     name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }} - ${{ matrix.julia-arch }}
