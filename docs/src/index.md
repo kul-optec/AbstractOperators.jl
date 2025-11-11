@@ -3,9 +3,6 @@
 [![Build status](https://github.com/kul-forbes/AbstractOperators.jl/workflows/CI/badge.svg)](https://github.com/kul-forbes/AbstractOperators.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/kul-forbes/AbstractOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/kul-forbes/AbstractOperators.jl)
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/stable)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://kul-forbes.github.io/AbstractOperators.jl/latest)
-
 ## Description
 
 Abstract operators extend the syntax typically used for matrices to linear mappings of arbitrary dimensions and nonlinear functions. Unlike matrices however, abstract operators apply the mappings with specific efficient algorithms that minimize memory requirements. 
@@ -19,6 +16,17 @@ To install the package, hit `]` from the Julia command line to enter the package
 pkg> add AbstractOperators
 ```
 
+To keep package loading fast, functionalities requiring extra dependencies are separated to subpackages. These have to be added separately to access their operators:
+```julia
+pkg> add FFTWOperators
+
+pkg> add DSPOperators
+
+pkg> add NFFTOperators
+
+pkg> add WaveletOperators
+```
+
 ## Usage
 
 With `using AbstractOperators` the package imports several methods like multiplication `*`  and adjoint transposition `'` (and their in-place methods `mul!`).
@@ -26,10 +34,12 @@ With `using AbstractOperators` the package imports several methods like multipli
 For example, one can create a 2-D Discrete Fourier Transform as follows:
 
 ```julia
+julia> using AbstractOperators, FFTWOperators
+
 julia> A = DFT(3,4)
 ℱ  ℝ^(3, 4) -> ℂ^(3, 4)
 ```
-Here, it can be seen that `A` has a domain of dimensions `size(A,2) = (3,4)` and of type `domainType(A) = Float64` and a codomain of dimensions `size(A,1) = (3,4)` and type `codomainType(A) = Complex{Float64}`.
+Here, it can be seen that `A` has a domain of dimensions `size(A,2) = (3,4)` and of type `domain_type(A) = Float64` and a codomain of dimensions `size(A,1) = (3,4)` and type `codomain_type(A) = Complex{Float64}`.
 
 This linear transformation can be evaluated as follows: 
 
@@ -70,7 +80,7 @@ julia> H = [A B]
 [ℱ,I]  ℝ^(3, 4)  ℂ^(3, 4) -> ℂ^(3, 4)
 ```
 
-In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domainType(H) = (Float64, Complex{Float64})`.
+In this case `H` has a domain of dimensions `size(H,2) = ((3, 4), (3, 4))` and type `domain_type(H) = (Float64, Complex{Float64})`.
 
 When an `AbstractOperators` have multiple domains, this must be multiplied using an `ArrayPartition` (using [RecursiveArrayTools](https://github.com/JuliaDiffEq/RecursiveArrayTools.jl/) with corresponding size and domain, for example: 
 
@@ -96,11 +106,17 @@ julia> V*ones(3,3)
 
 A list of the available `AbstractOperators` and calculus rules can be found in the [documentation](https://kul-forbes.github.io/AbstractOperators.jl/latest).
 
-## Related packages
+## Similar packages
 
-* [ProximalOperators.jl](https://github.com/kul-forbes/ProximalOperators.jl)
-* [ProximalAlgorithms.jl](https://github.com/kul-forbes/ProximalAlgorithms.jl)
-* [StructuredOptimization.jl](https://github.com/kul-forbes/StructuredOptimization.jl)
+* [LinearMaps.jl](https://github.com/Jutho/LinearMaps.jl) provides a lightweight interface for matrix-free linear operators acting on vectors. These operators behave similarly to standard matrices, and can even be converted to dense matrices. 
+* [LinearMapsAA.jl](https://github.com/JeffFessler/LinearMapsAA.jl) is an overlay on top of LinearMaps.jl that allows multi-dimensional array domains and codomains. It also allows attaching a NamedTuple of parameters to the operator for use in algorithms.
+* [LinearOperators.jl](https://github.com/JuliaSmoothOptimizers/LinearOperators.jl) also provides abstractions for matrix-free linear operators and is mainly used within the [JuliaSmoothOptimizers](https://github.com/JuliaSmoothOptimizers) organization. Unlike matrices, the operators provided by this package never reduce to a vector or a number. It supports working on GPU arrays.
+* [LazyAlgebra.jl](https://github.com/emmt/LazyAlgebra.jl) generalizes the notion of matrices and vectors used in linear algebra, allowing multi-dimension inputs and outputs.
+* [LazyArrays.jl](https://github.com/JuliaArrays/LazyArrays.jl) supports lazy analogues of array operations like vcat, hcat, and multiplication.
+* [SciMLOperators.jl](https://github.com/SciML/SciMLOperators.jl) is a package for managing linear, nonlinear, time-dependent, and parameter dependent operators acting on vectors, (or column-vectors of matrices). It provides wrappers for matrix-free operators, fast tensor-product evaluations, pre-cached mutating evaluations, as well as Zygote-compatible non-mutating evaluations.
+* [JOLI.jl](https://github.com/slimgroup/JOLI.jl) is also a framework for constructing matrix-free linear operators with explicit domain/range type control and applying them in basic algebraic matrix-vector operations.
+
+`AbstractOperators.jl` is distinguished by its support for multi-dimensional array domains and codomains, efficient in-place implementations of both linear and nonlinear operators, and seamless integration with optimization algorithms in related packages: [ProximalOperators.jl](https://github.com/kul-forbes/ProximalOperators.jl), [ProximalAlgorithms.jl](https://github.com/kul-forbes/ProximalAlgorithms.jl), and [StructuredOptimization.jl](https://github.com/kul-forbes/StructuredOptimization.jl). It has built-in threading support for many operators, and partial (and extending) GPU support.
 
 ## Credits
 

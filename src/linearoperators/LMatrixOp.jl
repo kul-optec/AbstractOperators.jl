@@ -1,14 +1,12 @@
 export LMatrixOp
 
-
 """
-`LMatrixOp(domainType=Float64::Type, dim_in::Tuple, b::Union{AbstractVector,AbstractMatrix})`
-
-`LMatrixOp(b::AbstractVector, number_of_rows::Int)`
+	LMatrixOp(domain_type=Float64::Type, dim_in::Tuple, b::Union{AbstractVector,AbstractMatrix})
+	LMatrixOp(b::AbstractVector, number_of_rows::Int)
 
 Creates a `LinearOperator` which, when multiplied with a matrix `X::AbstractMatrix`, returns the product `X*b`.
 
-```julia
+```jldoctest
 julia> op = LMatrixOp(Float64,(3,4),ones(4))
 (⋅)b  ℝ^(3, 4) -> ℝ^3
 
@@ -16,52 +14,67 @@ julia> op = LMatrixOp(ones(4),3)
 (⋅)b  ℝ^(3, 4) -> ℝ^3
 
 julia> op*ones(3,4)
-3-element Array{Float64,1}:
+3-element Vector{Float64}:
  4.0
  4.0
  4.0
-
+	
 ```
-
 """
-struct LMatrixOp{T, A <: Union{AbstractVector,AbstractMatrix},
-		 B <: AbstractMatrix} <: LinearOperator
+struct LMatrixOp{T,A<:Union{AbstractVector,AbstractMatrix},B<:AbstractMatrix} <:
+	   LinearOperator
 	b::A
 	bt::B
 	n_row_in::Integer
 end
 
-##TODO decide what to do when domainType is given, with conversion one loses pointer to data...
+##TODO decide what to do when domain_type is given, with conversion one loses pointer to data...
 # Constructors
-function LMatrixOp(DomainType::Type,
-		   DomainDim::Tuple{Int,Int}, b::A) where {A <: Union{AbstractVector,AbstractMatrix}}
+function LMatrixOp(
+	domain_type::Type, DomainDim::Tuple{Int,Int}, b::A
+) where {A<:Union{AbstractVector,AbstractMatrix}}
 	bt = b'
-	LMatrixOp{DomainType, A, typeof(bt)}(b,bt,DomainDim[1])
+	return LMatrixOp{domain_type,A,typeof(bt)}(b, bt, DomainDim[1])
 end
 
-LMatrixOp(b::A, n_row_in::Int) where {T,A<:Union{AbstractVector{T},AbstractMatrix{T}}} =
-LMatrixOp(T,(n_row_in,size(b,1)),b)
+function LMatrixOp(
+	b::A, n_row_in::Int
+) where {T,A<:Union{AbstractVector{T},AbstractMatrix{T}}}
+	return LMatrixOp(T, (n_row_in, size(b, 1)), b)
+end
 
 # Mappings
-mul!(y::C, L::LMatrixOp{T,A,B}, X::AbstractMatrix{T} ) where {T,A,B,C<:Union{AbstractVector,AbstractMatrix}} =
-mul!(y,X,L.b)
-
-function mul!(y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractVector{T} ) where {T,A,B}
-	y .= L.A.bt.*Y
+function mul!(
+	y::C, L::LMatrixOp{T,A,B}, X::AbstractMatrix{T}
+) where {T,A,B,C<:Union{AbstractVector,AbstractMatrix}}
+	return mul!(y, X, L.b)
 end
 
-function mul!(y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractMatrix{T} ) where {T,A,B}
-	mul!(y,Y,L.A.b')
+function mul!(
+	y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractVector{T}
+) where {T,A,B}
+	return y .= L.A.bt .* Y
+end
+
+function mul!(
+	y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractMatrix{T}
+) where {T,A,B}
+	return mul!(y, Y, L.A.b')
 end
 
 # Properties
-domainType(L::LMatrixOp{T, A}) where {T, A} = T
-codomainType(L::LMatrixOp{T, A}) where {T, A} = T
+domain_type(::LMatrixOp{T}) where {T} = T
+codomain_type(::LMatrixOp{T}) where {T} = T
+is_thread_safe(::LMatrixOp) = true
 
 fun_name(L::LMatrixOp) = "(⋅)b"
 
-size(L::LMatrixOp{T,A,B}) where {T,A <: AbstractVector,B <: Adjoint} = (L.n_row_in,),(L.n_row_in, length(L.b))
-size(L::LMatrixOp{T,A,B}) where {T,A <: AbstractMatrix,B <: AbstractMatrix} = (L.n_row_in,size(L.b,2)),(L.n_row_in, size(L.b,1))
+function size(L::LMatrixOp{T,A,B}) where {T,A<:AbstractVector,B<:Adjoint}
+	return (L.n_row_in,), (L.n_row_in, length(L.b))
+end
+function size(L::LMatrixOp{T,A,B}) where {T,A<:AbstractMatrix,B<:AbstractMatrix}
+	return (L.n_row_in, size(L.b, 2)), (L.n_row_in, size(L.b, 1))
+end
 
 #TODO
 

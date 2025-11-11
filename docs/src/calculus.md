@@ -11,6 +11,7 @@ DCAT
 ## Composition
 
 ```@docs
+Sum
 Compose
 HadamardProd
 Ax_mul_Bx

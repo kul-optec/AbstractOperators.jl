@@ -1,27 +1,29 @@
 export AdjointOperator
 
 """
-`AdjointOperator(A::AbstractOperator)`
+	AdjointOperator(A::AbstractOperator)
 
 Shorthand constructor:
 
-`'(A::AbstractOperator)`
+	'(A::AbstractOperator)
 
 Returns the adjoint operator of `A`.
 
-```julia
-julia> AdjointOperator(DFT(10))
-ℱᵃ  ℂ^10 -> ℝ^10
+```jldoctest
+julia> AdjointOperator(ZeroPad((2,2),(0,2)))
+[I;0]ᵃ  ℝ^(2, 4) -> ℝ^(2, 2)
 
-julia> [DFT(10); DCT(10)]'
-[ℱ;ℱc]ᵃ  ℂ^10  ℝ^10 -> ℝ^10
+julia> [Eye(10); FiniteDiff((10,))]'
+[I;δx]ᵃ  ℝ^10  ℝ^9 -> ℝ^10
+	
 ```
 """
-struct AdjointOperator{T <: AbstractOperator} <: AbstractOperator
+struct AdjointOperator{T<:AbstractOperator} <: AbstractOperator
 	A::T
 	function AdjointOperator(A::T) where {T<:AbstractOperator}
-		is_linear(A) == false && error("Cannot transpose a nonlinear operator. You might use `jacobian`")
-		new{T}(A)
+		is_linear(A) == false &&
+			error("Cannot transpose a nonlinear operator. You might use `jacobian`")
+		return new{T}(A)
 	end
 end
 
@@ -31,12 +33,20 @@ AdjointOperator(L::AdjointOperator) = L.A
 
 # Properties
 
-size(L::AdjointOperator) = size(L.A,2), size(L.A,1)
+has_fast_opnorm(L::AdjointOperator) = has_fast_opnorm(L.A)
+LinearAlgebra.opnorm(L::AdjointOperator) = opnorm(L.A)
+estimate_opnorm(L::AdjointOperator) = estimate_opnorm(L.A)
 
-domainType(L::AdjointOperator) = codomainType(L.A)
-codomainType(L::AdjointOperator) = domainType(L.A)
+Base.:(==)(L1::AdjointOperator{T}, L2::AdjointOperator{T}) where {T} = L1.A == L2.A
+size(L::AdjointOperator) = size(L.A, 2), size(L.A, 1)
 
-fun_name(L::AdjointOperator)  = fun_name(L.A)*"ᵃ"
+domain_type(L::AdjointOperator) = codomain_type(L.A)
+codomain_type(L::AdjointOperator) = domain_type(L.A)
+domain_storage_type(L::AdjointOperator) = codomain_storage_type(L.A)
+codomain_storage_type(L::AdjointOperator) = domain_storage_type(L.A)
+is_thread_safe(L::AdjointOperator) = is_thread_safe(L.A)
+
+fun_name(L::AdjointOperator) = fun_name(L.A) * "ᵃ"
 
 is_linear(L::AdjointOperator) = is_linear(L.A)
 is_null(L::AdjointOperator) = is_null(L.A)
