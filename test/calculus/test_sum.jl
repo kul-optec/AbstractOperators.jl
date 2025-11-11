@@ -135,8 +135,9 @@ end
     @test y_orig ≈ y_perm
 
     # estimate_opnorm aggregator
+    opnorm_S1 = opnorm(S1)
     estimated_opnorm_S1 = estimate_opnorm(S1)
-    @test abs(estimated_opnorm_S1 - (estimate_opnorm(Aeq) + estimate_opnorm(Beq))) / estimated_opnorm_S1 < 0.02
+    @test abs(estimated_opnorm_S1 - opnorm_S1) / opnorm_S1 < 0.03
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)

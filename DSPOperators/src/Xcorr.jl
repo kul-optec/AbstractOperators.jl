@@ -5,7 +5,7 @@ export Xcorr
 	Xcorr([domain_type=Float64::Type,] dim_in::Tuple, h::AbstractVector)
 	Xcorr(x::AbstractVector, h::AbstractVector)
 
-Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the cross correlation between `x` and `h`. Uses `xcross`.
+Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the cross correlation between `x` and `h`. Uses `xcorr` from `DSP.jl`.
 
 Examples
 ```jldoctest

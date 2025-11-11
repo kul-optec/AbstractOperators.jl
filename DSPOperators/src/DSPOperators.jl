@@ -3,6 +3,7 @@ module DSPOperators
 using AbstractOperators, FFTW
 import LinearAlgebra: mul!
 import Base: size, ndims
+using DSP: xcorr, conv
 
 import AbstractOperators:
 	domain_type,
