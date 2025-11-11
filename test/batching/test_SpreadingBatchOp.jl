@@ -188,7 +188,7 @@ end
 			end
 		end
 	end
-	if Threads.nthreads() > 1
+	if Threads.nthreads() > 1 && get(ENV, "CI", "false") == "false"
 		@testset "Benchmark" begin
 			t_single_threaded = benchmark_threading_strategy(false, ThreadingStrategy.AUTO)
 			t_copying = benchmark_threading_strategy(true, ThreadingStrategy.COPYING)
