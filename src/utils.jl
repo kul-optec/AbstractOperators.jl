@@ -43,10 +43,18 @@ function check(codomain_array, op, domain_array)
 	if codomain_array isa AbstractArray === false
 		throw(ArgumentError("Output must be an AbstractArray"))
 	end
-	if eltype(domain_array) != domain_type(op)
+	if (ndoms(op, 2) > 1) != (domain_array isa ArrayPartition)
+		throw(ArgumentError("Input must be an ArrayPartition if and only if operator has multiple input domains"))
+	end
+	if domain_array isa ArrayPartition
+		dtype = eltype.(domain_array.x)
+	else
+		dtype = eltype(domain_array)
+	end
+	if dtype != domain_type(op)
 		throw(
 			ArgumentError(
-				"Input type $(eltype(domain_array)) does not match operator input type $(domain_type(op))",
+				"Input type $(dtype) does not match operator input type $(domain_type(op))",
 			),
 		)
 	end
@@ -58,10 +66,18 @@ function check(codomain_array, op, domain_array)
 			),
 		)
 	end
-	if eltype(codomain_array) != codomain_type(op)
+	if (ndoms(op, 1) > 1) != (codomain_array isa ArrayPartition)
+		throw(ArgumentError("Output must be an ArrayPartition if and only if operator has multiple output domains"))
+	end
+	if codomain_array isa ArrayPartition
+		dtype = eltype.(codomain_array.x)
+	else
+		dtype = eltype(codomain_array)
+	end
+	if dtype != codomain_type(op)
 		throw(
 			ArgumentError(
-				"Output type $(eltype(codomain_array)) does not match operator output type $(codomain_type(op))",
+				"Output type $(dtype) does not match operator output type $(codomain_type(op))",
 			),
 		)
 	end

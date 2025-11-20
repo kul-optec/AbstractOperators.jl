@@ -183,8 +183,12 @@ size(R::NoOperatorBroadCast) = (R.dim_out, R.dim_in)
 size(R::OperatorBroadCast{T,N,M,false}) where {T,N,M} = (R.dim_out, size(R.A, 2))
 size(R::OperatorBroadCast{T,N,M,true}) where {T,N,M} = (R.dim_out, size(R.A[1], 2))
 
-domain_type(::AbstractBroadCast{T}) where {T} = T
-codomain_type(::AbstractBroadCast{T}) where {T} = T
+domain_type(::NoOperatorBroadCast{T}) where {T} = T
+domain_type(R::OperatorBroadCast{T,N,M,false}) where {T,N,M} = domain_type(R.A)
+domain_type(R::OperatorBroadCast{T,N,M,true}) where {T,N,M} = domain_type(R.A[1])
+codomain_type(::NoOperatorBroadCast{T}) where {T} = T
+codomain_type(R::OperatorBroadCast{T,N,M,false}) where {T,N,M} = codomain_type(R.A)
+codomain_type(R::OperatorBroadCast{T,N,M,true}) where {T,N,M} = codomain_type(R.A[1])
 domain_storage_type(::NoOperatorBroadCast{T,N,M,Threaded,S}) where {T,N,M,Threaded,S} = S
 domain_storage_type(R::OperatorBroadCast{T,N,M,false}) where {T,N,M} = domain_storage_type(R.A)
 domain_storage_type(R::OperatorBroadCast{T,N,M,true}) where {T,N,M} = domain_storage_type(R.A[1])

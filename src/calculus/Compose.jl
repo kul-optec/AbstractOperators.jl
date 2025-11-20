@@ -261,6 +261,18 @@ function remove_slicing(L::Compose)
 		else
 			Compose(tuple(L.A[2:end]...), tuple(L.buf[2:end]...))
 		end
+	elseif is_sliced(L.A[1])
+		new_first = AbstractOperators.remove_slicing(L.A[1])
+		if is_eye(new_first)
+			return if length(L.A) == 2
+				L.A[2]
+			else
+				Compose(tuple(L.A[2:end]...), tuple(L.buf[2:end]...))
+			end
+		else
+			A = (new_first, L.A[2:end]...)
+			return Compose(A, L.buf)
+		end
 	else
 		throw(ArgumentError("First operator is not a GetIndex"))
 	end

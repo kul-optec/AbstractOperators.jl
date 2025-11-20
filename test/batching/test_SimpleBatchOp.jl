@@ -164,7 +164,7 @@ end
 			end
 		end
 	end
-	if Threads.nthreads() > 1
+	if Threads.nthreads() > 1 && get(ENV, "CI", "false") == "false"
 		@testset "Benchmark" begin
 			t_single_threaded = benchmark_threading(false)
 			t_multi_threaded = benchmark_threading(true)

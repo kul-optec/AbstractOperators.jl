@@ -134,4 +134,102 @@ end
     x = randn(size(T, 2))
     y, grad = test_NLop(T, x, r, verb)
     @test norm(y - (exp.(x) - d)) < 1e-8
+
+    # Additional coverage-focused tests for uncovered AffineAdd branches
+
+    @testset "AffineAdd equality operator" begin
+        n, m = 5, 6
+        A = randn(n, m)
+        opA = MatrixOp(A)
+        d1 = randn(n)
+        d2 = randn(n)
+        T1 = AffineAdd(opA, d1)
+        T2 = AffineAdd(opA, d1)
+        T3 = AffineAdd(opA, d2)
+        @test T1 == T2
+        @test !(T1 == T3)
+    end
+
+    @testset "AffineAdd property delegations (invertible, rank, diagonal)" begin
+        n = 5
+        # is_invertible delegation
+        E = Eye(n)
+        TE = AffineAdd(E, randn(n))
+        @test is_invertible(TE) == is_invertible(E)
+        
+        # is_AcA_diagonal and is_AAc_diagonal delegation
+        D = DiagOp(randn(n))
+        TD = AffineAdd(D, randn(n))
+        @test is_AcA_diagonal(TD) == is_AcA_diagonal(D)
+        @test is_AAc_diagonal(TD) == is_AAc_diagonal(D)
+        
+        # is_full_row_rank and is_full_column_rank delegation
+        m = 6
+        A = randn(n, m)
+        opA = MatrixOp(A)
+        TA = AffineAdd(opA, randn(n))
+        @test is_full_row_rank(TA) == is_full_row_rank(opA)
+        @test is_full_column_rank(TA) == is_full_column_rank(opA)
+        
+        # diag_AcA and diag_AAc delegation
+        dvec = randn(n)
+        D2 = DiagOp(dvec)
+        TD2 = AffineAdd(D2, zeros(n))
+        @test diag_AcA(TD2) == diag_AcA(D2)
+        @test diag_AAc(TD2) == diag_AAc(D2)
+    end
+
+    @testset "AffineAdd slicing property delegation" begin
+        n = 10
+        G = GetIndex(Float64, (n,), 2:5)
+        TG = AffineAdd(G, randn(4))
+        @test is_sliced(TG) == is_sliced(G)
+        @test AbstractOperators.get_slicing_expr(TG) == AbstractOperators.get_slicing_expr(G)
+        mask = AbstractOperators.get_slicing_mask(TG)
+        @test mask == AbstractOperators.get_slicing_mask(G)
+        Gremoved = AbstractOperators.remove_slicing(TG)
+        @test Gremoved isa Eye
+    end
+
+    @testset "AffineAdd normal operator" begin
+        n, m = 5, 6
+        G = GetIndex(Float64, (n, m), (1:3, :))
+        d = randn(3, m)
+        TG = AffineAdd(G, d)
+        @test AbstractOperators.has_optimized_normalop(TG) == AbstractOperators.has_optimized_normalop(G)
+        N = AbstractOperators.get_normal_op(TG)
+        x = randn(n, m)
+        # Normal operator should compute A'*(A*x + d) for AffineAdd
+        expected = TG.A' * (TG.A * x + TG.d)
+        @test N * x ≈ expected
+    end
+
+    @testset "AffineAdd is_thread_safe delegation" begin
+        # DiagOp is thread-safe, so AffineAdd(DiagOp, d) should be thread-safe
+        D = DiagOp(randn(5))
+        d = randn(5)
+        TD = AffineAdd(D, d)
+        @test is_thread_safe(TD) == true
+        
+        # Compose with FiniteDiff is not thread-safe (has buffers)
+        C = Compose(FiniteDiff((6,)), DiagOp(randn(6)))
+        d2 = randn(5)
+        TC = AffineAdd(C, d2)
+        @test is_thread_safe(TC) == false
+    end
+
+    @testset "AffineAdd sign function" begin
+        n, m = 5, 6
+        A = randn(n, m)
+        opA = MatrixOp(A)
+        d = randn(n)
+        
+        # Positive sign (addition)
+        Tplus = AffineAdd(opA, d, true)
+        @test sign(Tplus) == 1
+        
+        # Negative sign (subtraction)
+        Tminus = AffineAdd(opA, d, false)
+        @test sign(Tminus) == -1
+    end
 end

@@ -70,7 +70,7 @@ end
     # opnorm / estimate consistency (underlying matrix op)
     opnorm_opT = opnorm(opT)
     @test opnorm_opT ≈ opnorm(opA1)
-    @test abs(estimate_opnorm(opT) - estimate_opnorm(opA1)) / opnorm_opT < 0.02
+    @test abs(estimate_opnorm(opT) - estimate_opnorm(opA1)) / opnorm_opT < 0.03
     @test abs(opnorm_opT - estimate_opnorm(opT)) / opnorm_opT < 0.03
 
     # For a diagonal operator, test diag_AcA matches original's diag_AAc

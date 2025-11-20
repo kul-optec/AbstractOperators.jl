@@ -28,7 +28,9 @@ import OperatorCore:
     is_invertible,
     is_full_row_rank,
     is_full_column_rank,
-    is_symmetric
+    is_symmetric,
+    is_positive_definite,
+    is_positive_semidefinite
 
 export LinearOperator, NonLinearOperator, AbstractOperator
 export mul!

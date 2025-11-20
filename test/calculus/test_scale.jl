@@ -1,3 +1,8 @@
+using Test
+using LinearAlgebra
+using AbstractOperators
+using RecursiveArrayTools
+
 if !isdefined(Main, :verb)
     verb = false
 end
@@ -30,17 +35,6 @@ end
     y1 = test_op(opS, x1, diff(randn(m)), verb)
     y2 = coeff * (diff(x1))
     @test norm(y1 - y2) <= 1e-12
-
-    opS = Scale(coeff, opA1)
-    @test is_null(opS) == is_null(opA1)
-    @test is_eye(opS) == is_eye(opA1)
-    @test is_diagonal(opS) == is_diagonal(opA1)
-    @test is_AcA_diagonal(opS) == is_AcA_diagonal(opA1)
-    @test is_AAc_diagonal(opS) == is_AAc_diagonal(opA1)
-    @test is_orthogonal(opS) == is_orthogonal(opA1)
-    @test is_invertible(opS) == is_invertible(opA1)
-    @test is_full_row_rank(opS) == is_full_row_rank(opA1)
-    @test is_full_column_rank(opS) == is_full_column_rank(opA1)
 
     op = Scale(-4.0, GetIndex((10,), 1:5))
     @test is_AAc_diagonal(op) == true
@@ -182,4 +176,152 @@ end
 
     Y = -A * x
     @test norm(Y - y) < 1e-8
+
+    @testset "Scale constructors and basic mapping" begin
+        # Base operator
+        A = MatrixOp(randn(6,4))
+        α = 2.5
+        S = Scale(α, A)
+        @test size(S) == size(A)
+        x = randn(4)
+        y_ref = α * (A * x)
+        y = S * x
+        @test y ≈ y_ref
+        # Adjoint mapping
+        y2_ref = α * (A * x)
+        @test S * x ≈ y2_ref
+        z = randn(6)
+        # Adjoint operator action (uses coeff_conj though real here)
+        @test S' * z ≈ α * (A' * z)
+    end
+
+    @testset "Scale special constructor scale-of-scale" begin
+        A = FiniteDiff((10,2))
+        α = 3.0
+        β = -2.0
+        S1 = Scale(α, A)
+        S2 = Scale(β, S1)  # should multiply coefficients and unwrap
+        x = randn(10,2)
+        # FiniteDiff maps (10,2)->(9,2), ensure shape works
+        v1 = S1 * x
+        v2 = S2 * x
+        @test v1 ≈ α * (A * x)
+        @test v2 ≈ (β*α) * (A * x)
+    end
+
+    @testset "Scale coeff==1 returns original" begin
+        A = MatrixOp(randn(5,5))
+        S = Scale(1.0, A)
+        @test S === A || S == A
+        # Ensure behavior matches
+        x = randn(5)
+        @test (S * x) ≈ (A * x)
+    end
+
+    @testset "Scale properties delegation" begin
+        A = Eye(7)
+        α = 4.2
+        S = Scale(α, A)
+        @test domain_type(S) == domain_type(A)
+        @test codomain_type(S) == codomain_type(A)
+        @test domain_storage_type(S) == domain_storage_type(A)
+        @test codomain_storage_type(S) == codomain_storage_type(A)
+        @test is_thread_safe(S) == is_thread_safe(A)
+        @test is_linear(S)
+        @test !is_null(S)
+        @test is_diagonal(S) == is_diagonal(A)
+        @test is_invertible(S) == is_invertible(A)
+        @test AbstractOperators.fun_name(S) == "α" * AbstractOperators.fun_name(A)
+        # diag and diag_AcA / diag_AAc for Eye should be scalar scaling (Eye diag returns ones vector)
+        @test AbstractOperators.diag(S) == α * AbstractOperators.diag(A)
+        @test AbstractOperators.diag_AcA(S) == α^2 * AbstractOperators.diag_AcA(A)
+        @test AbstractOperators.diag_AAc(S) == α^2 * AbstractOperators.diag_AAc(A)
+    end
+
+    @testset "Scale real vs complex coefficient error path" begin
+        A = Eye(5)  # real codomain
+        αc = 1.0 + 2.0im
+        @test_throws ErrorException Scale(αc, A)  # triggers codomain real + complex coeff error
+    end
+
+    @testset "Scale get_normal_op paths" begin
+        # Linear operator case: Eye has optimized normal op
+        A = Eye(8)
+        α = 2.0
+        S = Scale(α, A)
+        N = AbstractOperators.get_normal_op(S)
+        # For linear A: should be Scale(|α|^2, |α|^2, get_normal_op(A))
+        @test N isa Scale
+        @test N.coeff ≈ α*α
+        @test N.A == AbstractOperators.get_normal_op(A)
+
+        NL = Sigmoid((5,))  # 1D nonlinear operator
+        @test !AbstractOperators.is_linear(NL)
+        S2 = Scale(α, NL)
+        # Nonlinear path attempts L' * L which is not allowed; ensure it throws
+        @test_throws ErrorException AbstractOperators.get_normal_op(S2)
+    end
+
+    @testset "Scale equality and remove_displacement" begin
+        A = AffineAdd(Eye(6), randn(6))  # has displacement
+        α = 1.5
+        S1 = Scale(α, A)
+        S2 = Scale(α, A)
+        @test S1 == S2
+        Srd = AbstractOperators.remove_displacement(S1)
+        # remove_displacement(AffineAdd) removes the displacement leaving the inner operator
+        @test Srd.A == AbstractOperators.remove_displacement(A)
+        @test Srd.coeff == α
+    end
+
+    @testset "Scale slicing and remove_slicing" begin
+        # Use Eye so that slicing puts GetIndex first in the Compose chain (required by remove_slicing)
+        A = Eye(11)
+        α = 2.0
+        As = A[1:9]              # sliced codomain, Compose(GetIndex, Eye)
+        S = Scale(α, As)
+        @test AbstractOperators.is_sliced(S)
+        expr = AbstractOperators.get_slicing_expr(S)
+        @test expr !== nothing
+        # remove_slicing should succeed and strip the GetIndex
+        Sr = AbstractOperators.remove_slicing(S)
+        @test Sr == Scale(α, AbstractOperators.remove_slicing(As))
+    end
+
+    @testset "Scale opnorm and estimate_opnorm" begin
+        A = MatrixOp(randn(7,4))
+        α = -1.2
+        S = Scale(α, A)
+        @test opnorm(S) ≈ abs(α) * opnorm(A)
+        @test isapprox(AbstractOperators.estimate_opnorm(S), abs(α)*AbstractOperators.estimate_opnorm(A); rtol=1e-3)
+    end
+
+    @testset "Scale permute utility" begin
+        # Use HCAT of two Eyes so underlying operator supports permute
+        A = HCAT(Eye(5), Eye(5))
+        α = 2.2
+        S = Scale(α, A)
+        # Permutation over domain blocks (two blocks) swaps them
+        p = [2,1]
+        Spr = AbstractOperators.permute(S, p)
+        @test Spr.A == AbstractOperators.permute(S.A, p)
+        # Build domain input as ArrayPartition matching HCAT domain ordering
+        x1 = randn(5); x2 = randn(5)
+        xp = ArrayPartition(x1, x2)
+        y_original = S * xp
+        # After permuting, operator expects swapped domain order
+        xp_swapped = ArrayPartition(x2, x1)
+        y_permuted = Spr * xp_swapped
+        @test y_original ≈ y_permuted
+    end
+
+    @testset "Scale threaded behavior" begin
+        # Force threading decision by large output length
+        A = MatrixOp(randn(20000,5))
+        α = 0.75
+        S = Scale(α, A; threaded=true)
+        x = randn(5)
+        y = S * x
+        @test y ≈ α * (A * x)
+    end
 end
