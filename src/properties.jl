@@ -414,7 +414,7 @@ These parameters can be adjusted by passing `maxit` and `tol` keyword arguments.
 julia> estimate_opnorm(A; maxit=50, tol=1e-6)
 ```
 """
-function estimate_opnorm(A::AbstractOperator; maxit=20, tol=1e-4)
+function estimate_opnorm(A::AbstractOperator; maxit=50, tol=eps(real(codomain_type(A)))*100)
 	if has_fast_opnorm(A)
 		return opnorm(A)
 	else
@@ -422,7 +422,7 @@ function estimate_opnorm(A::AbstractOperator; maxit=20, tol=1e-4)
 	end
 end
 
-function powerit(A::AbstractOperator; maxit=100, tol=1e-8)
+function powerit(A::AbstractOperator; maxit=200, tol=eps(real(codomain_type(A)))*100)
 	# Power method for estimating the operator norm
 	AHA = A' * A
     x = allocate_in_domain(A)
