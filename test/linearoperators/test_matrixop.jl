@@ -127,8 +127,8 @@ end
     @test Ymat ≈ Qmat * Xmat
 
     # opnorm vs estimate_opnorm
-    @test LinearAlgebra.opnorm(invop) ≈ estimate_opnorm(invop)
-    @test LinearAlgebra.opnorm(invop) == LinearAlgebra.opnorm(B)
+    @test opnorm(invop) ≈ estimate_opnorm(invop)
+    @test opnorm(invop) == opnorm(B)
 
     # Size variations: single vs multi-column
     Tall = randn(8,3)

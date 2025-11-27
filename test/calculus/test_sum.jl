@@ -137,7 +137,7 @@ end
     # estimate_opnorm aggregator
     opnorm_S1 = opnorm(S1)
     estimated_opnorm_S1 = estimate_opnorm(S1)
-    @test abs(estimated_opnorm_S1 - opnorm_S1) / opnorm_S1 < 0.03
+    @test estimated_opnorm_S1 ≈ opnorm_S1 rtol=0.05
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)

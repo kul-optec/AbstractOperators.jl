@@ -388,8 +388,8 @@ It is computed using the power method by default, unless the operator has a fast
 The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
 
 Parameters of power iteration:
-- Maximum number of iterations: 100
-- Tolerance for convergence: 1e-8
+- Maximum number of iterations: 1000
+- Tolerance for convergence: sqrt(eps(real(codomain_type(A))))*10
 These parameters can be adjusted in the [estimate_opnorm](@ref) function.
 """
 function LinearAlgebra.opnorm(A::AbstractOperator)
@@ -408,13 +408,13 @@ The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
 
 Parameters of power iteration:
 - Maximum number of iterations: 20
-- Tolerance for convergence: 1e-4
+- Tolerance for convergence: sqrt(eps(real(codomain_type(A))))
 These parameters can be adjusted by passing `maxit` and `tol` keyword arguments. E.g.:
 ```julia
 julia> estimate_opnorm(A; maxit=50, tol=1e-6)
 ```
 """
-function estimate_opnorm(A::AbstractOperator; maxit=50, tol=eps(real(codomain_type(A)))*100)
+function estimate_opnorm(A::AbstractOperator; maxit=20, tol=sqrt(eps(real(codomain_type(A)))))
 	if has_fast_opnorm(A)
 		return opnorm(A)
 	else
@@ -422,7 +422,7 @@ function estimate_opnorm(A::AbstractOperator; maxit=50, tol=eps(real(codomain_ty
 	end
 end
 
-function powerit(A::AbstractOperator; maxit=200, tol=eps(real(codomain_type(A)))*100)
+function powerit(A::AbstractOperator; maxit=1000, tol=eps(real(codomain_type(A))))
 	# Power method for estimating the operator norm
 	AHA = A' * A
     x = allocate_in_domain(A)
@@ -435,7 +435,7 @@ function powerit(A::AbstractOperator; maxit=200, tol=eps(real(codomain_type(A)))
     for _ in 1:maxit
         mul!(y, AHA, x)
         λ = norm(y)
-        if abs(λ - λ_old) < tol^2
+        if abs(λ - λ_old) < tol
             break
         end
         λ_old = λ

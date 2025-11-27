@@ -97,7 +97,7 @@ end
 
     # storage and type related helpers
     @test is_thread_safe(op) == true
-    @test LinearAlgebra.opnorm(op) == maximum(abs, diag(op))
+    @test opnorm(op) == maximum(abs, diag(op))
     @test estimate_opnorm(op) == maximum(abs, diag(op))
     @test AbstractOperators.has_optimized_normalop(op) == true
     @test AbstractOperators.has_optimized_normalop(op') == true

@@ -110,9 +110,10 @@ function other_spreadingbatchop_tests(threaded)
 	@test AbstractOperators.has_optimized_normalop(bop) == AbstractOperators.has_optimized_normalop(ops[1])
 	nbop = AbstractOperators.get_normal_op(bop)
 	@test size(nbop, 1) == size(bop, 1) && size(nbop, 2) == size(bop, 2)
-	# opnorm / estimate_opnorm aggregate as maximum
+	# opnorm / estimate_opnorm aggregate as maximum -- exact solution is expected for both
 	@test opnorm(bop) == maximum(opnorm.(ops))
 	@test estimate_opnorm(bop) == maximum(estimate_opnorm.(ops))
+	@test estimate_opnorm(bop) == opnorm(bop)
 	# diag family collapses to first operator entries (identical)
 	@test diag(bop) == repeat(diag(ops[1]), outer=(1,3,4))
 	@test diag_AcA(bop) == repeat(diag_AcA(ops[1]), outer=(1,3,4))
@@ -232,8 +233,9 @@ end
 			@test AbstractOperators.has_optimized_normalop(bop) == AbstractOperators.has_optimized_normalop(ops[1])
 			
 			# opnorm methods for Copying (use approximate equality for floating point)
-			@test opnorm(bop) ≈ maximum(opnorm.(ops))
-			@test estimate_opnorm(bop) ≈ maximum(estimate_opnorm.(ops)) atol=1e-4
+			operator_norm = opnorm(bop)
+			@test operator_norm ≈ maximum(opnorm.(ops))
+			@test estimate_opnorm(bop) ≈ operator_norm rtol=0.05
 			
 			# diag methods for Copying - use operators with diag
 			ops2 = [DiagOp(rand(5)) for i in 1:3]

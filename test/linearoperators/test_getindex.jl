@@ -119,7 +119,7 @@ using LinearAlgebra
     @test size(base_eye) == (size(A, 1), size(A, 1))
 
     # opnorm vs estimate_opnorm (no direct has_fast_opnorm check)
-    @test LinearAlgebra.opnorm(A) == estimate_opnorm(A)
+    @test opnorm(A) == estimate_opnorm(A)
 
     # show output should contain arrow-like symbol for GetIndex
     io = IOBuffer(); show(io, A); strA = String(take!(io)); @test occursin("↓", strA)

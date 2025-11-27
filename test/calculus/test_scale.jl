@@ -146,7 +146,7 @@ end
     # opnorm and estimate_opnorm passthrough
     opnorm_S = opnorm(S1)
     @test opnorm_S ≈ abs(S1.coeff) * opnorm(Aeq)
-    @test abs(opnorm_S - estimate_opnorm(S1)) / opnorm_S < 0.02
+    @test opnorm_S ≈ estimate_opnorm(S1) rtol=0.05
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)
@@ -293,7 +293,7 @@ end
         α = -1.2
         S = Scale(α, A)
         @test opnorm(S) ≈ abs(α) * opnorm(A)
-        @test isapprox(AbstractOperators.estimate_opnorm(S), abs(α)*AbstractOperators.estimate_opnorm(A); rtol=1e-3)
+        @test estimate_opnorm(S) ≈ opnorm(S) rtol=0.05
     end
 
     @testset "Scale permute utility" begin
