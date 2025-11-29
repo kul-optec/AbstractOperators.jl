@@ -234,7 +234,7 @@ end
 			
 			# opnorm methods for Copying (use approximate equality for floating point)
 			operator_norm = opnorm(bop)
-			@test operator_norm ≈ maximum(opnorm.(ops))
+			@test operator_norm ≈ maximum(opnorm.(ops)) rtol=5e-6
 			@test estimate_opnorm(bop) ≈ operator_norm rtol=0.05
 			
 			# diag methods for Copying - use operators with diag

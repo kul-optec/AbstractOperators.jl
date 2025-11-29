@@ -152,7 +152,7 @@ import Base: size
     # Test opnorm and estimate_opnorm
     opA3 = MatrixOp([1.0 0.0; 0.0 3.0])
     opD4 = DCAT(opA1, opA3)
-    @test opnorm(opD4) ≈ estimate_opnorm(opD4)
+    @test opnorm(opD4) ≈ estimate_opnorm(opD4) rtol=0.05
 
     # Test == for general equality
     opD5a = DCAT(opA1, opA2)

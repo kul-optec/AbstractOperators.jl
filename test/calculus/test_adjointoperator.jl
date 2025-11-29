@@ -73,7 +73,7 @@ end
 
     # opnorm / estimate consistency (underlying matrix op)
     opnorm_opT = opnorm(opT)
-    @test opnorm_opT ≈ opnorm(opA1)
+    @test opnorm_opT ≈ opnorm(opA1) rtol=5e-6
     @test estimate_opnorm(opT) ≈ estimate_opnorm(opA1) rtol=0.05
     @test opnorm_opT ≈ estimate_opnorm(opT) rtol=0.05
 

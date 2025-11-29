@@ -181,7 +181,7 @@ end
     @test y_orig ≈ y_perm
 
     # opnorm passthrough
-    @test opnorm(R1) == opnorm(Aeq)
+    @test opnorm(R1) ≈ opnorm(Aeq)
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)

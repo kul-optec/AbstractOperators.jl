@@ -18,7 +18,7 @@ end
     @test domain_type(op) == Float64
     @test codomain_type(op) == Float64
     @test is_thread_safe(op) == true
-    @test LinearAlgebra.opnorm(op) == 1
+    @test opnorm(op) == 1
 
     n = (3, 2)
     z = (5, 3)

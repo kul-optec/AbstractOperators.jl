@@ -143,4 +143,5 @@ is_positive_semidefinite(L::MatrixOp) = issymmetric(L.A) && all(eigvals(Symmetri
 has_optimized_normalop(::MatrixOp) = true
 get_normal_op(L::MatrixOp) = MatrixOp(domain_type(L), size(L, 2), L.A' * L.A)
 
+has_fast_opnorm(::MatrixOp) = true
 LinearAlgebra.opnorm(L::MatrixOp) = opnorm(L.A)

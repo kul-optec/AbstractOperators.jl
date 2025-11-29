@@ -128,7 +128,7 @@ end
 
     # opnorm vs estimate_opnorm
     @test opnorm(invop) ≈ estimate_opnorm(invop)
-    @test opnorm(invop) == opnorm(B)
+    @test opnorm(invop) ≈ opnorm(B)
 
     # Size variations: single vs multi-column
     Tall = randn(8,3)

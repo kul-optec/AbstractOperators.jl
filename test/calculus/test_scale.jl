@@ -145,7 +145,7 @@ end
 
     # opnorm and estimate_opnorm passthrough
     opnorm_S = opnorm(S1)
-    @test opnorm_S ≈ abs(S1.coeff) * opnorm(Aeq)
+    @test opnorm_S ≈ abs(S1.coeff) * opnorm(Aeq) rtol=5e-6
     @test opnorm_S ≈ estimate_opnorm(S1) rtol=0.05
 
     # remove_displacement idempotence with displacement underlying

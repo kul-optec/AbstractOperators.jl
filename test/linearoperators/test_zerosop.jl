@@ -20,7 +20,7 @@ end
     @test domain_type(op) == D
     @test codomain_type(op) == C
     @test is_thread_safe(op) == true
-    @test LinearAlgebra.opnorm(op) == 0
+    @test opnorm(op) == 0
 
     # Adjoint returns zeros of domain shape
     z = zeros(n)

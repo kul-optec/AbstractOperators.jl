@@ -284,11 +284,11 @@ end
         # opnorm for OperatorBroadCast
         A_op = MatrixOp(randn(3, 2))
         B_op = BroadCast(A_op, (3, 4); threaded=false)
-        @test opnorm(B_op) == opnorm(A_op)
+        @test opnorm(B_op) ≈ opnorm(A_op)
         
         if Threads.nthreads() > 1
             B_op_t = BroadCast(A_op, (3, 4); threaded=true)
-            @test opnorm(B_op_t) == opnorm(A_op)
+            @test opnorm(B_op_t) ≈ opnorm(A_op)
         end
     end
 
