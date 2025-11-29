@@ -9,7 +9,11 @@ end
     verb && println(" --- Testing AdjointOperator --- ")
 
     m, n = 5, 7
-    A1 = randn(m, n)
+    A1 =
+        rand(m) * rand(n)' * 3.0 +
+        rand(m) * rand(n)' * 2.0 +
+        rand(m) * rand(n)' * 1.0 +
+        0.01 * rand(m, n) # make it approximately rank 3
     opA1 = MatrixOp(A1)
     opA1t = MatrixOp(A1')
     opT = AdjointOperator(opA1)
@@ -50,7 +54,7 @@ end
 
     # Error on nonlinear operator
     struct DummyNonlinearOp <: AbstractOperator end
-    Base.size(::DummyNonlinearOp) = (2,2)
+    Base.size(::DummyNonlinearOp) = (2, 2)
     AbstractOperators.is_linear(::DummyNonlinearOp) = false
     @test_throws ErrorException AdjointOperator(DummyNonlinearOp())
 
@@ -82,5 +86,8 @@ end
     @test diag_AAc(AD) == diag_AcA(D)
 
     # fun_name pattern (indirect via show)
-    io2 = IOBuffer(); show(io2, opT); str2 = String(take!(io2)); @test occursin("ᵃ", str2)
+    io2 = IOBuffer()
+    show(io2, opT)
+    str2 = String(take!(io2))
+    @test occursin("ᵃ", str2)
 end
