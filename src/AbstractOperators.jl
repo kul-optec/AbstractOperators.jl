@@ -12,7 +12,7 @@ abstract type LinearOperator <: AbstractOperator end
 abstract type NonLinearOperator <: AbstractOperator end
 
 import LinearAlgebra: mul!
-import Base: size, ndims, AbstractLock, @lock
+import Base: size, ndims, @lock
 import Base.Threads: @spawn, @threads, nthreads
 
 import OperatorCore: 

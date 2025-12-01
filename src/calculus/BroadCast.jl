@@ -31,7 +31,7 @@ struct OperatorBroadCast{T,N,M,Threaded,Compact,Imask,L,C,D,K} <: AbstractBroadC
 		T = codomain_type(A)
 		dim_in = size(A, 1)
 		Imask = Tuple(d ≤ N && (dim_out[d] == dim_in[d]) for d in 1:M)
-		broadcast_dims = Tuple(Imask[d] ? 1 : dim_out[d] for d in 1:length(dim_out))
+		broadcast_dims = Tuple(Imask[d] ? 1 : dim_out[d] for d in eachindex(dim_out))
 		idxs = CartesianIndices(broadcast_dims)
 		compact = all(Imask[1:N])
 		bufC = allocate_in_codomain(A)
@@ -220,8 +220,8 @@ function remove_displacement(R::OperatorBroadCast{T,N,M,true,Imask}) where {T,N,
 end
 
 has_fast_opnorm(::NoOperatorBroadCast) = true
-has_fast_opnorm(::OperatorBroadCast{T,N,M,false}) where {T,N,M} = has_fast_opnorm(R.A)
-has_fast_opnorm(::OperatorBroadCast{T,N,M,true}) where {T,N,M} = has_fast_opnorm(R.A[1])
+has_fast_opnorm(R::OperatorBroadCast{T,N,M,false}) where {T,N,M} = has_fast_opnorm(R.A)
+has_fast_opnorm(R::OperatorBroadCast{T,N,M,true}) where {T,N,M} = has_fast_opnorm(R.A[1])
 function LinearAlgebra.opnorm(R::NoOperatorBroadCast{T,N,M}) where {T,N,M}
 	real(T)(sqrt(prod(R.dim_out[d] for d in 1:M if R.dim_out[d] != R.reshaped_dim_in[d])))
 end

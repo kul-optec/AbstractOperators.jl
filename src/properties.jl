@@ -377,7 +377,7 @@ Returns the diagonal of `A`. If `A` is not diagonal, an error is thrown.
 
 The diagonal is defined as the vector `d` such that `A * x = d .* x` for all `x` in the domain of `A`, where `.*` is the element-wise multiplication.
 """
-LinearAlgebra.diag(::AbstractOperator) = error("cannot get diagonal of operator of type $(typeof(L))")
+LinearAlgebra.diag(L::AbstractOperator) = error("cannot get diagonal of operator of type $(typeof(L))")
 
 """
 	LinearAlgebra.opnorm(A::AbstractOperator)

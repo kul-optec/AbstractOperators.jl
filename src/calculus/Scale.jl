@@ -129,7 +129,7 @@ diag_AcA(L::Scale) = (L.coeff)^2 * diag_AcA(L.A)
 diag_AAc(L::Scale) = (L.coeff)^2 * diag_AAc(L.A)
 remove_displacement(S::Scale) = Scale(S.coeff, S.coeff_conj, remove_displacement(S.A))
 
-has_fast_opnorm(::Scale) = has_fast_opnorm(L.A)
+has_fast_opnorm(L::Scale) = has_fast_opnorm(L.A)
 LinearAlgebra.opnorm(L::Scale) = abs(L.coeff) * LinearAlgebra.opnorm(L.A)
 estimate_opnorm(L::Scale) = abs(L.coeff) * estimate_opnorm(L.A)
 

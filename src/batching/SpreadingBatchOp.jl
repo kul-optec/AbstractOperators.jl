@@ -43,7 +43,7 @@ struct SpreadingBatchOpLocking{dT,cT,dM,cM,sD,N,M,opT} <: SpreadingBatchOp{dT,cT
 	domain_size::NTuple{N,Int}
 	codomain_size::NTuple{M,Int}
 	batch_indices::CartesianIndices
-	locks::Array{AbstractLock}
+	locks::Array{Base.AbstractLock}
 end
 
 struct SpreadingBatchOpFixedOperator{dT,cT,dM,cM,sD,N,M,opT} <:
@@ -348,7 +348,7 @@ function create_threaded_SpreadingBatchOp(
 			)
 		elseif threading_strategy == ThreadingStrategy.LOCKING
 			d = Dict{eltype(operators),Int}()
-			locks = Array{AbstractLock}(undef, size(operators))
+			locks = Array{Base.AbstractLock}(undef, size(operators))
 			for i in eachindex(operators)
 				if haskey(d, operators[i])
 					locks[i] = locks[d[operators[i]]]
