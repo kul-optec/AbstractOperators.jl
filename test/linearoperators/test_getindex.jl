@@ -119,7 +119,8 @@ using LinearAlgebra
     @test typeof(base_eye) <: Eye
     @test size(base_eye) == (size(A, 1), size(A, 1))
 
-    # opnorm vs estimate_opnorm (no direct has_fast_opnorm check)
+    # opnorm vs estimate_opnorm
+    @test AbstractOperators.has_fast_opnorm(A) == true
     @test opnorm(A) == estimate_opnorm(A)
 
     # show output should contain arrow-like symbol for GetIndex

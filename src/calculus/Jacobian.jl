@@ -111,4 +111,3 @@ domain_type(L::Jacobian) = domain_type(L.A)
 codomain_type(L::Jacobian) = codomain_type(L.A)
 domain_storage_type(L::Jacobian) = domain_storage_type(L.A)
 codomain_storage_type(L::Jacobian) = codomain_storage_type(L.A)
-is_thread_safe(::Jacobian) = false

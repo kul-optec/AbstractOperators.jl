@@ -182,6 +182,7 @@ Random.seed!(0)
     @test y_orig ≈ y_perm
 
     # opnorm passthrough
+    @test AbstractOperators.has_fast_opnorm(R1) == AbstractOperators.has_fast_opnorm(Aeq)
     @test opnorm(R1) ≈ opnorm(Aeq)
 
     # remove_displacement idempotence with displacement underlying

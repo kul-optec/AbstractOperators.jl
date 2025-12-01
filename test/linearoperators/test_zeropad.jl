@@ -19,6 +19,7 @@ Random.seed!(0)
     @test domain_type(op) == Float64
     @test codomain_type(op) == Float64
     @test is_thread_safe(op) == true
+    @test AbstractOperators.has_fast_opnorm(op) == true
     @test opnorm(op) == 1
 
     n = (3, 2)

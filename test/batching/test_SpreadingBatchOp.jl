@@ -234,6 +234,7 @@ end
 			@test AbstractOperators.has_optimized_normalop(bop) == AbstractOperators.has_optimized_normalop(ops[1])
 			
 			# opnorm methods for Copying (use approximate equality for floating point)
+			@test AbstractOperators.has_fast_opnorm(bop) == AbstractOperators.has_fast_opnorm(ops[1])
 			operator_norm = opnorm(bop)
 			@test operator_norm ≈ maximum(opnorm.(ops)) rtol=5e-6
 			@test estimate_opnorm(bop) ≈ operator_norm rtol=0.05

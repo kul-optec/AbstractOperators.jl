@@ -70,4 +70,10 @@ Random.seed!(0)
 
     @test_throws Exception Axt_mul_Bx(Eye(2, 2), Eye(2, 1))
     @test_throws Exception Axt_mul_Bx(Eye(2, 2, 2), Eye(2, 2, 2))
+
+    # test equality
+    n, m = 3, 4
+    A, B = MatrixOp(randn(n, m)), MatrixOp(randn(n, m))
+    @test Axt_mul_Bx(A, B) == Axt_mul_Bx(A, B)
+    @test Jacobian(Axt_mul_Bx(A, B), x) == Jacobian(Axt_mul_Bx(A, B), x)
 end

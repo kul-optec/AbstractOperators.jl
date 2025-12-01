@@ -98,6 +98,7 @@ Random.seed!(0)
 
     # storage and type related helpers
     @test is_thread_safe(op) == true
+    @test AbstractOperators.has_fast_opnorm(op) == true
     @test opnorm(op) == maximum(abs, diag(op))
     @test estimate_opnorm(op) == maximum(abs, diag(op))
     @test AbstractOperators.has_optimized_normalop(op) == true

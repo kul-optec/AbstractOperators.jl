@@ -241,7 +241,6 @@ domain_type(L::Compose) = domain_type(L.A[1])
 codomain_type(L::Compose) = codomain_type(L.A[end])
 domain_storage_type(L::Compose) = domain_storage_type(L.A[1])
 codomain_storage_type(L::Compose) = codomain_storage_type(L.A[end])
-is_thread_safe(::Compose) = false
 
 is_linear(L::Compose) = all(is_linear.(L.A))
 function is_diagonal(L::Compose)

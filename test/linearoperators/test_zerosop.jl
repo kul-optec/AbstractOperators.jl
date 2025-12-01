@@ -21,6 +21,7 @@ Random.seed!(0)
     @test domain_type(op) == D
     @test codomain_type(op) == C
     @test is_thread_safe(op) == true
+    @test AbstractOperators.has_fast_opnorm(op) == true
     @test opnorm(op) == 0
 
     # Adjoint returns zeros of domain shape

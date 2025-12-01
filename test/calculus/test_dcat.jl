@@ -153,6 +153,7 @@ import Base: size
     # Test opnorm and estimate_opnorm
     opA3 = MatrixOp([1.0 0.0; 0.0 3.0])
     opD4 = DCAT(opA1, opA3)
+    @test AbstractOperators.has_fast_opnorm(opD4) == (AbstractOperators.has_fast_opnorm(opA1) && AbstractOperators.has_fast_opnorm(opA3))
     @test opnorm(opD4) ≈ estimate_opnorm(opD4) rtol=0.05
 
     # Test == for general equality

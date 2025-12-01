@@ -100,4 +100,10 @@ Random.seed!(0)
     r = randn(k, l)
     y, grad = test_NLop(P2, x, r, verb)
     @test norm((C * x) * ((A * x)' * (B * x))' - y) < 1e-8
+
+    # test equality
+    n, l = 2, 3
+    A, B = MatrixOp(randn(l, n), l), MatrixOp(randn(l, n), l)
+    @test Ax_mul_Bx(A, B) == Ax_mul_Bx(A, B)
+    @test Jacobian(Ax_mul_Bx(A, B), x) == Jacobian(Ax_mul_Bx(A, B), x)
 end

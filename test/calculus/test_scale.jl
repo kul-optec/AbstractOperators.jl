@@ -237,6 +237,8 @@ Random.seed!(0)
         @test AbstractOperators.diag(S) == α * AbstractOperators.diag(A)
         @test AbstractOperators.diag_AcA(S) == α^2 * AbstractOperators.diag_AcA(A)
         @test AbstractOperators.diag_AAc(S) == α^2 * AbstractOperators.diag_AAc(A)
+        @test is_full_row_rank(S) == is_full_row_rank(A)
+        @test is_full_column_rank(S) == is_full_column_rank(A)
     end
 
     @testset "Scale real vs complex coefficient error path" begin
@@ -293,6 +295,7 @@ Random.seed!(0)
         A = MatrixOp(randn(7,4))
         α = -1.2
         S = Scale(α, A)
+        @test AbstractOperators.has_fast_opnorm(S) == AbstractOperators.has_fast_opnorm(A)
         @test opnorm(S) ≈ abs(α) * opnorm(A)
         @test estimate_opnorm(S) ≈ opnorm(S) rtol=0.05
     end

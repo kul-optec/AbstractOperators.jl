@@ -170,70 +170,6 @@ end
 	return ex
 end
 
-## same as mul! but skips `Zeros`
-@generated function mul_skipZeros!(y, H::HCAT{N,L,P}, b::DD) where {N,L,P,DD<:ArrayPartition}
-	ex = :()
-
-	if fieldtype(P, 1) <: Int
-		# flatten operator
-		# build mul!(y, H.A[1], b.x[H.idxs[1]])
-		bb = :(b.x[H.idxs[1]])
-	else
-		# stacked operator
-		# build mul!(y, H.A[1],ArrayPartition( b.x[H.idxs[1][1]], b.x[H.idxs[1][2]] ...  ))
-		bb = [:(b.x[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, 1)))]
-		bb = :(ArrayPartition($(bb...)))
-	end
-	ex = :($ex; mul!(y, H.A[1], $bb)) # write on y
-
-	for i in 2:N
-		if !(fieldtype(L, i) <: Zeros)
-			if fieldtype(P, i) <: Int
-				# flatten operator
-				# build mul!(H.buf, H.A[i], b.x[H.idxs[i]])
-				bb = :(b.x[H.idxs[$i]])
-			else
-				# stacked operator
-				# build mul!(H.buf, H.A[i],( b.x[H.idxs[i][1]], b.x[H.idxs[i][2]] ...  ))
-				bb = [
-					:(b.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))
-				]
-				bb = :(ArrayPartition($(bb...)))
-			end
-			ex = :($ex; mul!(H.buf, H.A[$i], $bb)) # write on H.buf
-			# sum H.buf with y
-			ex = :($ex; y .+= H.buf)
-		end
-	end
-	ex = :($ex; return y)
-	return ex
-end
-
-@generated function mul_skipZeros!(
-	y::DD, A::AdjointOperator{HCAT{N,L,P}}, b
-) where {N,L,P,DD<:ArrayPartition}
-	ex = :(H = A.A)
-	for i in 1:N
-		if !(fieldtype(L, i) <: Zeros)
-			if fieldtype(P, i) <: Int
-				# flatten operator
-				# build mul!(y.x[H.idxs[i]], H.A[i]', b)
-				yy = :(y.x[H.idxs[$i]])
-			else
-				# stacked operator
-				# build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i]', b)
-				yy = [
-					:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))
-				]
-				yy = :(ArrayPartition($(yy...)))
-			end
-			ex = :($ex; mul!($yy, H.A[$i]', b))
-		end
-	end
-	ex = :($ex; return y)
-	return ex
-end
-
 # Properties
 Base.:(==)(H1::HCAT{N,L1,P1}, H2::HCAT{N,L2,P2}) where {N,L1,L2,P1,P2} = H1.A == H2.A && H1.idxs == H2.idxs
 
@@ -275,7 +211,6 @@ function domain_storage_type(H::HCAT)
 	return ArrayPartition{T, Tuple{domain...}}
 end
 codomain_storage_type(L::HCAT) = codomain_storage_type.(Ref(L.A[1]))
-is_thread_safe(::HCAT) = false
 
 is_linear(L::HCAT) = all(is_linear.(L.A))
 is_AAc_diagonal(L::HCAT) = all(is_AAc_diagonal.(L.A))

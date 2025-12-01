@@ -102,6 +102,7 @@ function other_tests(threaded)
 	n_op = AbstractOperators.get_normal_op(batch_op)
 	@test typeof(n_op) <: typeof(batch_op)
 	# opnorm, estimate_opnorm -- exact solution is expected for both
+	@test AbstractOperators.has_fast_opnorm(batch_op) == AbstractOperators.has_fast_opnorm(op)
 	@test opnorm(batch_op) == opnorm(op)
 	@test estimate_opnorm(batch_op) == estimate_opnorm(op)
 	@test estimate_opnorm(batch_op) == opnorm(batch_op)

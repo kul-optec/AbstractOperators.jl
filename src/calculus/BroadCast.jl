@@ -234,7 +234,7 @@ function permute(R::OperatorBroadCast{T,N,M,false}, p::AbstractVector{Int}) wher
 	return BroadCast(permute(R.A, p), R.dim_out; threaded=false)
 end
 function permute(R::OperatorBroadCast{T,N,M,true}, p::AbstractVector{Int}) where {T,N,M}
-	return BroadCast([permute(A, p) for A in R.A], R.dim_out; threaded=true)
+	return BroadCast(permute(R.A[1], p), R.dim_out; threaded=true)
 end
 
 @generated function get_input_slice(

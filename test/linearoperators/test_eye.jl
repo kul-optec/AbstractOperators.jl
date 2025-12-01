@@ -62,6 +62,7 @@ Random.seed!(0)
 
     # Adjoint, opnorm, get_normal_op
     @test AdjointOperator(op) === op
+    @test AbstractOperators.has_fast_opnorm(op) == true
     @test opnorm(op) == 1.0
     @test opnorm(op) == estimate_opnorm(op)
     @test AbstractOperators.has_optimized_normalop(op) == true

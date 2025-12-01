@@ -95,7 +95,6 @@ domain_type(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = domain_type(L.A)
 codomain_type(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = codomain_type(L.A)
 domain_storage_type(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = domain_storage_type(L.A)
 codomain_storage_type(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = codomain_storage_type(L.B)
-is_thread_safe(L::Union{Ax_mul_Bx,Ax_mul_BxJac}) = false
 
 # utils
 function permute(

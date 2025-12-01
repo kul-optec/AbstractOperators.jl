@@ -190,7 +190,6 @@ function codomain_storage_type(H::VCAT)
 	T = promote_type(codomain_type(H)...)
 	return ArrayPartition{T, Tuple{codomain...}}
 end
-is_thread_safe(::VCAT) = false
 
 is_linear(L::VCAT) = all(is_linear.(L.A))
 is_AcA_diagonal(L::VCAT) = all(is_AcA_diagonal.(L.A))

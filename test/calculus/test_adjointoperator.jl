@@ -73,6 +73,7 @@ Random.seed!(0)
     @test size(opT) == ((n,), (m,))
 
     # opnorm / estimate consistency (underlying matrix op)
+    @test AbstractOperators.has_fast_opnorm(opT) == AbstractOperators.has_fast_opnorm(opA1)
     opnorm_opT = opnorm(opT)
     @test opnorm_opT ≈ opnorm(opA1) rtol=5e-6
     @test estimate_opnorm(opT) ≈ estimate_opnorm(opA1) rtol=0.05
@@ -91,4 +92,6 @@ Random.seed!(0)
     show(io2, opT)
     str2 = String(take!(io2))
     @test occursin("ᵃ", str2)
+
+    @test opA1' == opA1'
 end
