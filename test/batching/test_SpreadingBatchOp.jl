@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 using BenchmarkTools
 
 function test_spreading_batchop(operators, batch_op, x, y, z, threaded)

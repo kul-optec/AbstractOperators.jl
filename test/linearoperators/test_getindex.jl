@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 using LinearAlgebra
 
 @testset "GetIndex" begin

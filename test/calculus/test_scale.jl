@@ -9,6 +9,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "Scale" begin
     verb && println(" --- Testing Scale --- ")

@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 using BenchmarkTools
 
 function test_simple_batchop(op, batch_op, x, y, z, threaded)
