@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "Reshape" begin
     verb && println(" --- Testing Reshape --- ")
@@ -181,7 +182,8 @@ end
     @test y_orig ≈ y_perm
 
     # opnorm passthrough
-    @test opnorm(R1) == opnorm(Aeq)
+    @test AbstractOperators.has_fast_opnorm(R1) == AbstractOperators.has_fast_opnorm(Aeq)
+    @test opnorm(R1) ≈ opnorm(Aeq)
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)

@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "BroadCast" begin
     verb && println(" --- Testing BroadCast --- ")
@@ -19,6 +20,7 @@ end
         y2 = zeros(dim_out)
         y2 .= A1 * x1
         @test norm(y1 - y2) <= 1e-12
+        @test AbstractOperators.has_fast_opnorm(opR) == AbstractOperators.has_fast_opnorm(opA1)
 
         m, n, l, k = 8, 4, 5, 7
         dim_out = (m, n, l, k)
@@ -136,20 +138,22 @@ end
     @test remove_displacement(rd) == rd  # idempotent
 
     # permute test (domain permutation) using HCAT to create partition domain
-    A1 = HCAT(Eye(m), Eye(m))  # domain is ArrayPartition
-    B1 = BroadCast(A1, (m, 2); threaded=false)
-    xpart = ArrayPartition(randn(m), randn(m))
-    y_base = B1 * xpart
-    p = [2,1]
-    B1p = AbstractOperators.permute(B1, p)
-    xpart_p = ArrayPartition(xpart.x[p]...)
-    y_perm = B1p * xpart_p
-    @test y_perm == y_base  # same broadcasted sum after permutation inversion
+    for threaded in [false, true]
+        A1 = HCAT(Eye(m), Eye(m))  # domain is ArrayPartition
+        B1 = BroadCast(A1, (m, 2); threaded)
+        xpart = ArrayPartition(randn(m), randn(m))
+        y_base = B1 * xpart
+        p = [2,1]
+        B1p = AbstractOperators.permute(B1, p)
+        xpart_p = ArrayPartition(xpart.x[p]...)
+        y_perm = B1p * xpart_p
+        @test y_perm == y_base  # same broadcasted sum after permutation inversion
 
-    # Adjoint path exercise for OperatorBroadCast (non-threaded) to hit get_input_slice
-    r = randn(size(B1,1))
-    g = B1' * r
-    @test length(g) == length(xpart.x[1]) + length(xpart.x[2])
+        # Adjoint path exercise for OperatorBroadCast (non-threaded) to hit get_input_slice
+        r = randn(size(B1,1))
+        g = B1' * r
+        @test length(g) == length(xpart.x[1]) + length(xpart.x[2])
+    end
 
     # If multi-threading available, test threaded variant basics (skip if only 1 thread)
     if Threads.nthreads() > 1
@@ -220,11 +224,18 @@ end
     @test all(y .== 0)
 
     # Edge: BroadCast of Eye
-    opE = Eye(2)
-    opRe = BroadCast(opE, (2, 3))
-    xe = randn(2)
+    opE = Eye(200)
+    opRe = BroadCast(opE, (200, 350); threaded=false)
+    xe = randn(200)
     y = opRe * xe
     @test all(y[:,1] .== xe)
+    opRe = BroadCast(opE, (200, 350); threaded=true)
+    xe = randn(200)
+    y = opRe * xe
+    @test all(y[:,1] .== xe)
+    @test is_linear(opRe) == true
+    @test is_null(opRe) == false
+    @test AbstractOperators.has_fast_opnorm(opRe) == true
 
     # Edge: BroadCast of DiagOp
     d = randn(2)
@@ -282,14 +293,19 @@ end
         @test B1 != B3
         
         # opnorm for OperatorBroadCast
+        @test AbstractOperators.has_fast_opnorm(B1) == AbstractOperators.has_fast_opnorm(E1)
         A_op = MatrixOp(randn(3, 2))
         B_op = BroadCast(A_op, (3, 4); threaded=false)
-        @test opnorm(B_op) == opnorm(A_op)
+        @test opnorm(B_op) ≈ opnorm(A_op)
         
         if Threads.nthreads() > 1
             B_op_t = BroadCast(A_op, (3, 4); threaded=true)
-            @test opnorm(B_op_t) == opnorm(A_op)
+            @test opnorm(B_op_t) ≈ opnorm(A_op)
         end
+
+        # wrong output size
+        A = DiagOp(rand(4, 3, 2))
+        @test_throws ErrorException BroadCast(A, (4, 2))
     end
 
     @testset "Threaded NoOperatorBroadCast" begin

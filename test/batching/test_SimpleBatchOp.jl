@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 using BenchmarkTools
 
 function test_simple_batchop(op, batch_op, x, y, z, threaded)
@@ -100,9 +101,11 @@ function other_tests(threaded)
 	@test AbstractOperators.has_optimized_normalop(batch_op) == AbstractOperators.has_optimized_normalop(op)
 	n_op = AbstractOperators.get_normal_op(batch_op)
 	@test typeof(n_op) <: typeof(batch_op)
-	# opnorm, estimate_opnorm
-	@test opnorm(batch_op) ≈ opnorm(op)
+	# opnorm, estimate_opnorm -- exact solution is expected for both
+	@test AbstractOperators.has_fast_opnorm(batch_op) == AbstractOperators.has_fast_opnorm(op)
+	@test opnorm(batch_op) == opnorm(op)
 	@test estimate_opnorm(batch_op) == estimate_opnorm(op)
+	@test estimate_opnorm(batch_op) == opnorm(batch_op)
 	# diag, diag_AcA, diag_AAc
 	@test diag(batch_op) == [diag(op)'; diag(op)']'
 	@test diag_AcA(batch_op) == [diag_AcA(op)'; diag_AcA(op)']'

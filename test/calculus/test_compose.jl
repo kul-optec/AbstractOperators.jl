@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "Compose" begin
     verb && println(" --- Testing Compose --- ")
@@ -195,7 +196,7 @@ end
     D2 = FiniteDiff((3,))
     CC = Compose(D1, D2)
     opnorm_CC = opnorm(CC)
-    @test abs(opnorm_CC - estimate_opnorm(CC)) / opnorm_CC < 0.25
+    @test opnorm_CC ≈ estimate_opnorm(CC) rtol=0.05
 
     # permute utility
     A1 = MatrixOp(randn(2,2))

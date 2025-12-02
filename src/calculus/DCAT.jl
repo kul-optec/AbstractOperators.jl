@@ -226,6 +226,6 @@ diag(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 diag_AAc(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 diag_AcA(L::DCAT{N,Tuple{E,Vararg{E,M}}}) where {N,M,E<:Eye} = 1.0
 
-has_fast_opnorm(::DCAT) = all(has_fast_opnorm.(L.A))
+has_fast_opnorm(L::DCAT) = all(has_fast_opnorm.(L.A))
 LinearAlgebra.opnorm(L::DCAT) = maximum(opnorm.(L.A))
 estimate_opnorm(L::DCAT) = maximum(estimate_opnorm.(L.A))

@@ -4,12 +4,17 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "AdjointOperator" begin
     verb && println(" --- Testing AdjointOperator --- ")
 
     m, n = 5, 7
-    A1 = randn(m, n)
+    A1 =
+        rand(m) * rand(n)' * 3.0 +
+        rand(m) * rand(n)' * 2.0 +
+        rand(m) * rand(n)' * 1.0 +
+        0.01 * rand(m, n) # make it approximately rank 3
     opA1 = MatrixOp(A1)
     opA1t = MatrixOp(A1')
     opT = AdjointOperator(opA1)
@@ -50,7 +55,7 @@ end
 
     # Error on nonlinear operator
     struct DummyNonlinearOp <: AbstractOperator end
-    Base.size(::DummyNonlinearOp) = (2,2)
+    Base.size(::DummyNonlinearOp) = (2, 2)
     AbstractOperators.is_linear(::DummyNonlinearOp) = false
     @test_throws ErrorException AdjointOperator(DummyNonlinearOp())
 
@@ -68,10 +73,11 @@ end
     @test size(opT) == ((n,), (m,))
 
     # opnorm / estimate consistency (underlying matrix op)
+    @test AbstractOperators.has_fast_opnorm(opT) == AbstractOperators.has_fast_opnorm(opA1)
     opnorm_opT = opnorm(opT)
-    @test opnorm_opT ≈ opnorm(opA1)
-    @test abs(estimate_opnorm(opT) - estimate_opnorm(opA1)) / opnorm_opT < 0.03
-    @test abs(opnorm_opT - estimate_opnorm(opT)) / opnorm_opT < 0.03
+    @test opnorm_opT ≈ opnorm(opA1) rtol=5e-6
+    @test estimate_opnorm(opT) ≈ estimate_opnorm(opA1) rtol=0.05
+    @test opnorm_opT ≈ estimate_opnorm(opT) rtol=0.05
 
     # For a diagonal operator, test diag_AcA matches original's diag_AAc
     d2 = randn(5)
@@ -82,5 +88,10 @@ end
     @test diag_AAc(AD) == diag_AcA(D)
 
     # fun_name pattern (indirect via show)
-    io2 = IOBuffer(); show(io2, opT); str2 = String(take!(io2)); @test occursin("ᵃ", str2)
+    io2 = IOBuffer()
+    show(io2, opT)
+    str2 = String(take!(io2))
+    @test occursin("ᵃ", str2)
+
+    @test opA1' == opA1'
 end

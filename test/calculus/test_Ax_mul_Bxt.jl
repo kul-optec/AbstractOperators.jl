@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "Ax_mul_Bxt" begin
     verb && println(" --- Testing Ax_mul_Bxt --- ")
@@ -67,4 +68,10 @@ end
 
     @test_throws Exception Ax_mul_Bxt(Eye(2, 2), Eye(2, 1))
     @test_throws Exception Ax_mul_Bxt(Eye(2, 2, 2), Eye(2, 2, 2))
+
+    # test equality
+    n, m = 3, 4
+    A, B = MatrixOp(randn(n, m)), MatrixOp(randn(n, m))
+    @test Ax_mul_Bxt(A, B) == Ax_mul_Bxt(A, B)
+    @test Jacobian(Ax_mul_Bxt(A, B), x) == Jacobian(Ax_mul_Bxt(A, B), x)
 end

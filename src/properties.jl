@@ -377,7 +377,7 @@ Returns the diagonal of `A`. If `A` is not diagonal, an error is thrown.
 
 The diagonal is defined as the vector `d` such that `A * x = d .* x` for all `x` in the domain of `A`, where `.*` is the element-wise multiplication.
 """
-LinearAlgebra.diag(::AbstractOperator) = error("cannot get diagonal of operator of type $(typeof(L))")
+LinearAlgebra.diag(L::AbstractOperator) = error("cannot get diagonal of operator of type $(typeof(L))")
 
 """
 	LinearAlgebra.opnorm(A::AbstractOperator)
@@ -389,7 +389,7 @@ The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
 
 Parameters of power iteration:
 - Maximum number of iterations: 100
-- Tolerance for convergence: 1e-8
+- Tolerance for convergence: 1e-6
 These parameters can be adjusted in the [estimate_opnorm](@ref) function.
 """
 function LinearAlgebra.opnorm(A::AbstractOperator)
@@ -408,13 +408,13 @@ The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
 
 Parameters of power iteration:
 - Maximum number of iterations: 20
-- Tolerance for convergence: 1e-4
+- Tolerance for convergence: 0.01
 These parameters can be adjusted by passing `maxit` and `tol` keyword arguments. E.g.:
 ```julia
 julia> estimate_opnorm(A; maxit=50, tol=1e-6)
 ```
 """
-function estimate_opnorm(A::AbstractOperator; maxit=50, tol=eps(real(codomain_type(A)))*100)
+function estimate_opnorm(A::AbstractOperator; maxit=20, tol=1e-3)
 	if has_fast_opnorm(A)
 		return opnorm(A)
 	else
@@ -422,12 +422,12 @@ function estimate_opnorm(A::AbstractOperator; maxit=50, tol=eps(real(codomain_ty
 	end
 end
 
-function powerit(A::AbstractOperator; maxit=200, tol=eps(real(codomain_type(A)))*100)
+function powerit(A::AbstractOperator; maxit=100, tol=1e-6)
 	# Power method for estimating the operator norm
 	AHA = A' * A
     x = allocate_in_domain(A)
 	y = similar(x)
-	Random.rand!(x)
+	Random.randn!(x)
     normalize!(x)
     λ = zero(real(eltype(x)))
     λ_old = real(eltype(x))(Inf)
@@ -435,7 +435,7 @@ function powerit(A::AbstractOperator; maxit=200, tol=eps(real(codomain_type(A)))
     for _ in 1:maxit
         mul!(y, AHA, x)
         λ = norm(y)
-        if abs(λ - λ_old) < tol^2
+        if abs(λ - λ_old) < max(tol * λ, tol)
             break
         end
         λ_old = λ

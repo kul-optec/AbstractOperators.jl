@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "Zeros" begin
     verb && println(" --- Testing Zeros --- ")
@@ -20,7 +21,8 @@ end
     @test domain_type(op) == D
     @test codomain_type(op) == C
     @test is_thread_safe(op) == true
-    @test LinearAlgebra.opnorm(op) == 0
+    @test AbstractOperators.has_fast_opnorm(op) == true
+    @test opnorm(op) == 0
 
     # Adjoint returns zeros of domain shape
     z = zeros(n)

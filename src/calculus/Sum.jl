@@ -107,7 +107,6 @@ domain_storage_type(S::Sum{K,C,D,L}) where {K,C<:AbstractArray,D,L} = domain_sto
 domain_storage_type(S::Sum{K,C,D,L}) where {K,C<:Tuple,D,L} = domain_storage_type.(Ref(S.A[1]))
 codomain_storage_type(S::Sum{K,C,D,L}) where {K,C<:AbstractArray,D,L} = codomain_storage_type(S.A[1])
 codomain_storage_type(S::Sum{K,C,D,L}) where {K,C<:Tuple,D,L} = codomain_storage_type.(Ref(S.A[1]))
-is_thread_safe(::Sum) = false
 
 fun_domain(S::Sum) = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])

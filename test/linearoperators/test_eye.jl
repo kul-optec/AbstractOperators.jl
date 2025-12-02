@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "Eye" begin
     verb && println(" --- Testing Eye --- ")
@@ -61,8 +62,9 @@ end
 
     # Adjoint, opnorm, get_normal_op
     @test AdjointOperator(op) === op
-    @test LinearAlgebra.opnorm(op) == 1.0
-    @test LinearAlgebra.opnorm(op) == estimate_opnorm(op)
+    @test AbstractOperators.has_fast_opnorm(op) == true
+    @test opnorm(op) == 1.0
+    @test opnorm(op) == estimate_opnorm(op)
     @test AbstractOperators.has_optimized_normalop(op) == true
     @test AbstractOperators.get_normal_op(op) === op
 

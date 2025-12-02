@@ -4,6 +4,7 @@ end
 if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
+Random.seed!(0)
 
 @testset "ZeroPad" begin
     verb && println(" --- Testing ZeroPad --- ")
@@ -18,7 +19,8 @@ end
     @test domain_type(op) == Float64
     @test codomain_type(op) == Float64
     @test is_thread_safe(op) == true
-    @test LinearAlgebra.opnorm(op) == 1
+    @test AbstractOperators.has_fast_opnorm(op) == true
+    @test opnorm(op) == 1
 
     n = (3, 2)
     z = (5, 3)
