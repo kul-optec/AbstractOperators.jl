@@ -9,7 +9,32 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
     runs-on: ubuntu-latest
     steps:
-      - uses: JuliaRegistries/TagBot@v1
+      - name: Tag AbstractOperators
+        uses: JuliaRegistries/TagBot@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh: ${{ secrets.DOCUMENTER_KEY }}
+      - name: Tag DSPOperators
+        uses: JuliaRegistries/TagBot@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN_DSPOperators }}
+          ssh: ${{ secrets.DSPOPERATORS_DOCUMENTER_KEY }}
+          subdir: DSPOperators
+      - name: Tag FFTWOperators
+        uses: JuliaRegistries/TagBot@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN_FFTWOperators }}
+          ssh: ${{ secrets.FFTWOPERATORS_DOCUMENTER_KEY }}
+          subdir: FFTWOperators
+      - name: Tag NFFTOperators
+        uses: JuliaRegistries/TagBot@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN_NFFTOperators }}
+          ssh: ${{ secrets.NFFTOPERATORS_DOCUMENTER_KEY }}
+          subdir: NFFTOperators
+      - name: Tag WaveletOperators
+        uses: JuliaRegistries/TagBot@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN_WaveletOperators }}
+          ssh: ${{ secrets.WAVELETOPERATORS_DOCUMENTER_KEY }}
+          subdir: WaveletOperators

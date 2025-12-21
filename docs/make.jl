@@ -23,4 +23,4 @@ makedocs(;
 	checkdocs=:exports
 )
 
-deploydocs(; repo="github.com/kul-forbes/AbstractOperators.jl.git", target="build")
+deploydocs(; repo="github.com/kul-optec/AbstractOperators.jl", target="build")
