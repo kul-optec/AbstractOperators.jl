@@ -115,6 +115,10 @@ Random.seed!(0)
     single = MatrixOp(randn(m, n))
     @test Sum(single) === single
 
+    # Zeros are filtered out by constructor simplification
+    z = Zeros(Float64, (n,), Float64, (m,))
+    @test Sum(single, z) === single
+
     # diag aggregator for diagonal underlying
     d1 = randn(m)
     d2 = randn(m)

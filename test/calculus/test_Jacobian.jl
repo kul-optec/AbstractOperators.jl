@@ -1,7 +1,7 @@
-if !@isdefined verb
+if !isdefined(Main, :verb)
     verb = false
 end
-if !@isdefined test_op
+if !isdefined(Main, :test_op)
     include("../utils.jl")
 end
 
@@ -149,4 +149,17 @@ end
     @test domain_storage_type(J1) == domain_storage_type(op_eq)
     @test codomain_storage_type(J1) == codomain_storage_type(op_eq)
     @test !is_thread_safe(J1)
+
+    # Direct DCAT + ArrayPartition Jacobian path
+    dc = DCAT(DiagOp(randn(3)), DiagOp(randn(4)))
+    jdc = Jacobian(dc, ArrayPartition(randn(3), randn(4)))
+    @test size(jdc, 1) == size(dc, 1)
+    @test size(jdc, 2) == size(dc, 2)
+
+    # HCAT Jacobian branch with grouped indices (length(idx) > 1)
+    Hj = HCAT((HCAT(Sin(Float64, (3,)), Pow(Float64, (3,), 2.0)), Sigmoid(Float64, (3,), 2)), zeros(3))
+    xj = (randn(3), randn(3), randn(3))
+    JJ = Jacobian(Hj, xj)
+    @test JJ isa HCAT
+    @test length(JJ.A) == 2
 end

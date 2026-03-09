@@ -32,9 +32,7 @@ verb = false
         end
     end
 
-    @testset "Non-Linear operators" begin
-        include("test_nonlinear_operators.jl")
-    end
+    include("test_nonlinear_operators.jl")
 
     @testset "Linear Calculus rules" begin
         for f in (
@@ -67,6 +65,8 @@ verb = false
 
     include("test_syntax.jl")
 
+    include("test_jet.jl")
+
     @testset "Documentation" begin
         DocMeta.setdocmeta!(
             AbstractOperators,
@@ -78,9 +78,9 @@ verb = false
     end
 
     Aqua.test_all(AbstractOperators)
-end
 
-include("test_LinearMapsExt.jl")
+    include("test_LinearMapsExt.jl")
+end
 
 if VERSION >= v"1.12"
     for sub in ("FFTWOperators", "NFFTOperators", "WaveletOperators", "DSPOperators")

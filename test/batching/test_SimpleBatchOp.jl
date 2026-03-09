@@ -123,7 +123,14 @@ function other_tests(threaded)
     @test_throws ArgumentError mul!(y_bad2, batch_op, x_good)
     # error path: mismatched output size
     y_bad3 = zeros(3, 2)
-    return @test_throws ArgumentError mul!(y_bad3, batch_op, x_good)
+    @test_throws ArgumentError mul!(y_bad3, batch_op, x_good)
+
+    # scalar-diag path (Eye reports scalar diagonal)
+    eye_batch = BatchOp(Eye(Float64, (2,)), (2,); threaded)
+    @test diag(eye_batch) == 1.0
+    @test diag_AcA(eye_batch) == 1.0
+    @test diag_AAc(eye_batch) == 1.0
+    return
 end
 
 @testset "SimpleBatchOp" begin

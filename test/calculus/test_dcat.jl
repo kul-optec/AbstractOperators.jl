@@ -175,6 +175,15 @@ import Base: size
     @test diag_AcA(opEye) == 1
     @test diag_AAc(opEye) == 1
 
+    # Stacked codomain path: VCAT inside DCAT yields flattened output partition
+    opV = VCAT(MatrixOp(randn(3, 2)), MatrixOp(randn(4, 2)))
+    opB = MatrixOp(randn(4, 5))
+    dc_stacked = DCAT(opV, opB)
+    xin = ArrayPartition(randn(2), randn(5))
+    yout = dc_stacked * xin
+    @test length(yout.x) == 3
+    @test length((dc_stacked' * yout).x) == 2
+
     # Test nonlinear DCAT
     n, m = 4, 3
     x = ArrayPartition(randn(n), randn(m))

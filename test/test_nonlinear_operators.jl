@@ -1,3 +1,12 @@
+if !isdefined(Main, :verb)
+    verb = false
+end
+if !isdefined(Main, :test_NLop)
+    include(joinpath(@__DIR__, "utils.jl"))
+end
+Random.seed!(0)
+
+@testset "Non-Linear operators" begin
 verb && println("Testing non linear operators")
 
 # Sigmoid
@@ -111,3 +120,5 @@ r = abs.(randn(n))
 op = Pow(Float64, (n,), 0.5)
 
 y, grad = test_NLop(op, x, r, verb)
+
+end # @testset

@@ -545,4 +545,15 @@ using AbstractOperators: can_be_combined, combine
         @test can_be_combined(diag_base', mat_op2')
         @test can_be_combined(mat_op2', diag_base')
     end
+
+    @testset "Fallback and Null cases" begin
+        # Fallback combine path should error for unsupported nonlinear pair
+        @test_throws ErrorException combine(Sigmoid(Float64, (3,), 2), Pow(Float64, (3,), 2.0))
+
+        # Null propagation through combine
+        z = Zeros(Float64, (3,), Float64, (4,))
+        M = MatrixOp(randn(4, 3))
+        @test is_null(combine(z, M))
+        @test is_null(combine(M, z))
+    end
 end

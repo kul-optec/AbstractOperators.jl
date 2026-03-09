@@ -1,7 +1,9 @@
+using Test
+using AbstractOperators
+using LinearMaps
+using LinearAlgebra
+
 @testset "LinearMapsExt" begin
-    using AbstractOperators
-    using LinearMaps
-    using LinearAlgebra
 
     # Real Diagonal
     d = rand(10, 10)

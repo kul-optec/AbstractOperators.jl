@@ -44,6 +44,12 @@ using LinearAlgebra
     GetIndex((n, m), (1:k, :))
     GetIndex(x1, (1:k, :, :))
 
+    # SubArray constructor path
+    xv = randn(5, 5)
+    sv = @view xv[1:3, :]
+    g_sub = GetIndex(sv, 1:2)
+    @test size(g_sub, 1) == (2,)
+
     @test_throws BoundsError GetIndex(Float64, (n, m), (1:k, :, :))
     op = GetIndex(Float64, (n, m), (1:n, 1:m))
     @test typeof(op) <: Eye

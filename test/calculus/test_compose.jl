@@ -182,6 +182,21 @@ Random.seed!(0)
     opint = ComposeDummyOp()
     @test_throws DomainError Compose(DiagOp(rand(2)), opint)
 
+    # Storage type mismatch path in Compose constructor
+    struct StorageMismatchLeft <: LinearOperator end
+    struct StorageMismatchRight <: LinearOperator end
+    LinearAlgebra.size(::StorageMismatchLeft) = ((2,), (2,))
+    LinearAlgebra.size(::StorageMismatchRight) = ((2,), (2,))
+    AbstractOperators.domain_type(::StorageMismatchLeft) = Float64
+    AbstractOperators.codomain_type(::StorageMismatchLeft) = Float64
+    AbstractOperators.domain_storage_type(::StorageMismatchLeft) = Vector{Float64}
+    AbstractOperators.codomain_storage_type(::StorageMismatchLeft) = Vector{Float64}
+    AbstractOperators.domain_type(::StorageMismatchRight) = Float64
+    AbstractOperators.codomain_type(::StorageMismatchRight) = Float64
+    AbstractOperators.domain_storage_type(::StorageMismatchRight) = Vector{Float64}
+    AbstractOperators.codomain_storage_type(::StorageMismatchRight) = Matrix{Float64}
+    @test_throws DomainError Compose(StorageMismatchLeft(), StorageMismatchRight())
+
     # Show output patterns for Compose (2-term vs multi-term) instead of direct fun_name (non-exported)
     C2 = Compose(DiagOp(rand(2)), FiniteDiff((3,)))
     io_fn = IOBuffer(); show(io_fn, C2); str_fn = String(take!(io_fn))

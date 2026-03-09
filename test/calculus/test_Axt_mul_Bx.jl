@@ -71,6 +71,33 @@ Random.seed!(0)
     @test_throws Exception Axt_mul_Bx(Eye(2, 2), Eye(2, 1))
     @test_throws Exception Axt_mul_Bx(Eye(2, 2, 2), Eye(2, 2, 2))
 
+    # ndims==2 branch with mismatched first codomain dimension
+    struct AxtDummy2D <: AbstractOperator
+        dim_out::Tuple{Int, Int}
+        dim_in::Tuple{Int, Int}
+    end
+    Base.size(op::AxtDummy2D) = (op.dim_out, op.dim_in)
+    AbstractOperators.domain_type(::AxtDummy2D) = Float64
+    AbstractOperators.codomain_type(::AxtDummy2D) = Float64
+    AbstractOperators.domain_storage_type(::AxtDummy2D) = Array{Float64}
+    AbstractOperators.codomain_storage_type(::AxtDummy2D) = Array{Float64}
+
+    struct AxtDummyMixed <: AbstractOperator
+        dim_out::Tuple{Int}
+        dim_in::Tuple{Int, Int}
+    end
+    Base.size(op::AxtDummyMixed) = (op.dim_out, op.dim_in)
+    AbstractOperators.domain_type(::AxtDummyMixed) = Float64
+    AbstractOperators.codomain_type(::AxtDummyMixed) = Float64
+    AbstractOperators.domain_storage_type(::AxtDummyMixed) = Array{Float64}
+    AbstractOperators.codomain_storage_type(::AxtDummyMixed) = Array{Float64}
+
+    A2d = AxtDummy2D((2, 3), (4, 3))
+    B2d_bad = AxtDummy2D((3, 3), (4, 3))
+    @test_throws DimensionMismatch Axt_mul_Bx(A2d, B2d_bad)
+
+    # NOTE: mixed codomain dimensionality currently dispatches to MethodError in the public constructor.
+
     # test equality
     n, m = 3, 4
     A, B = MatrixOp(randn(n, m)), MatrixOp(randn(n, m))

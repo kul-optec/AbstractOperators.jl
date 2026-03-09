@@ -188,6 +188,30 @@ Random.seed!(0)
     Hs_removed = AbstractOperators.remove_slicing(Hs)
     @test is_sliced(Hs_removed) == false
 
+    # Slicing expressions for HCAT of sliced Compose operators
+    d1, d2 = randn(5), randn(5)
+    D1 = DiagOp(d1) * GetIndex((10,), 1:5)
+    D2 = DiagOp(d2) * GetIndex((10,), 6:10)
+    Hs_comp = HCAT(D1, D2)
+    @test is_sliced(Hs_comp)
+    @test AbstractOperators.get_slicing_expr(Hs_comp) == ((1:5,), (6:10,))
+    @test length(collect(AbstractOperators.get_slicing_mask(Hs_comp))) == 2
+    @test !is_sliced(AbstractOperators.remove_slicing(Hs_comp))
+
+    # Show path with reversed domain indices
+    Hrev = HCAT(opA2, opA1)
+    Hrev_perm = Hrev[[2, 1]]
+    io2 = IOBuffer(); show(io2, Hrev_perm); s2 = String(take!(io2))
+    @test occursin("[", s2)
+
+    # Stacked second operator to exercise generated mul! stacked branch
+    Hflat = MatrixOp(randn(5, 2))
+    Hstacked_part = HCAT(MatrixOp(randn(5, 3)), MatrixOp(randn(5, 4)))
+    Hmix = HCAT((Hflat, Hstacked_part), zeros(5))
+    xmix = ArrayPartition(randn(2), randn(3), randn(4))
+    @test Hmix * xmix ≈ (Hflat * xmix.x[1]) + (Hstacked_part * ArrayPartition(xmix.x[2], xmix.x[3]))
+
+
     # Permute domain ordering and ensure type stability
     p2 = collect(Iterators.reverse(1:ndoms(H1a, 2)))
     Hp = AbstractOperators.permute(H1a, p2)

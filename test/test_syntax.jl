@@ -150,6 +150,13 @@ end
     y2 = (10 * A * x1)[1:(n - 1)]
     @test norm(y1 - y2) < 1.0e-9
 
+    # Compose getindex with diagonal intermediate operators
+    dtmp = randn(n)
+    comp_diag = MatrixOp(randn(n, n)) * DiagOp(dtmp)
+    sliced_diag = comp_diag[1:3]
+    xdiag = randn(n)
+    @test sliced_diag * xdiag ≈ (comp_diag * xdiag)[1:3]
+
     #slicing HCAT
 
     n, m1, m2, m3 = 5, 6, 7, 8
@@ -204,6 +211,15 @@ end
     @test_throws ErrorException opHCH[1]
     @test_throws ErrorException opHCH[1:2]
 
+    # check() utility error paths
+    op_diag = DiagOp(rand(3))
+    ygood = zeros(3)
+    xgood = rand(3)
+    @test_throws ArgumentError AbstractOperators.check(ygood, op_diag, "bad")
+    @test_throws ArgumentError AbstractOperators.check("bad", op_diag, xgood)
+    @test_throws ArgumentError AbstractOperators.check(ygood, op_diag, ArrayPartition(rand(3), rand(3)))
+    @test_throws ArgumentError AbstractOperators.check(ArrayPartition(zeros(3), zeros(3)), op_diag, xgood)
+
     #slicing VCAT
 
     n1, n2, n3, m = 5, 6, 7, 8
@@ -223,6 +239,39 @@ end
     y1 = opV3 * x3
     y2 = C * x3
     @test norm(y1 - y2) <= 1.0e-12
+
+    # VCAT full-index permutation branch
+    opVperm = opV[[3, 1, 2]]
+    @test opVperm * x1 == ArrayPartition((opV * x1).x[[3, 1, 2]]...)
+
+    # Generic getindex error path for multi-domain operators without split support
+    opD_err = DCAT(MatrixOp(randn(2, 2)), MatrixOp(randn(3, 2)))
+    @test_throws ErrorException opD_err[[1]]
+
+    # Compose getindex branch for ndoms(A,2)==1
+    comp_single = FiniteDiff((m,)) * MatrixOp(randn(m, m))
+    x_comp = randn(m)
+    @test comp_single[1:3] * x_comp ≈ (comp_single * x_comp)[1:3]
+
+    # Compose getindex branch for diagonal tail (ndoms(A,2)>1)
+    Hbase = HCAT((MatrixOp(randn(4, 2)), MatrixOp(randn(4, 3))), zeros(4))
+    Cdiag = DiagOp(randn(4)) * Hbase
+    xin = ArrayPartition(randn(2), randn(3))
+    @test Cdiag[[2, 1]] * ArrayPartition(xin.x[2], xin.x[1]) ≈ Cdiag * xin
+
+    # Compose getindex error path for non-diagonal tail
+    Cnondiag = MatrixOp(randn(4, 4)) * Hbase
+    @test_throws ErrorException Cnondiag[[2, 1]]
+
+    # HCAT getindex split-error path with stacked indices
+    h_joint = HCAT(MatrixOp(randn(4, 2)), MatrixOp(randn(4, 3)))
+    h_stacked = HCAT((h_joint, MatrixOp(randn(4, 5))), zeros(4))
+    @test_throws ErrorException h_stacked[1]
+
+    # AffineAdd{HCAT} ndoms==1 branch via low-level single-operator HCAT
+    Hsingle = HCAT((MatrixOp(randn(4, 4)),), (1,), zeros(4))
+    AHsingle = AffineAdd(Hsingle, randn(4))
+    @test AHsingle[1:2] isa AbstractOperator
 
     ###### hcat ######
 
