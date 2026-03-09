@@ -19,7 +19,7 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= A1 * x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
         @test AbstractOperators.has_fast_opnorm(opR) == AbstractOperators.has_fast_opnorm(opA1)
 
         m, n, l, k = 8, 4, 5, 7
@@ -30,7 +30,7 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         @test_throws Exception BroadCast(opA1, (m, m))
 
@@ -42,7 +42,7 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         #colum in - matrix out
         m, l = 4, 5
@@ -53,13 +53,13 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         op = HCAT(Eye(m, l), opR)
         x1 = ArrayPartition(randn(m, l), randn(1, l))
         y1 = test_op(op, x1, randn(dim_out), verb)
         y2 = x1.x[1] .+ x1.x[2]
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         m, n, l = 2, 5, 8
         dim_out = (m, n, l)
@@ -69,7 +69,7 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         m, n, l = 1, 5, 8
         dim_out = (m, n, l)
@@ -79,7 +79,7 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         m, n, l = 1, 5, 8
         dim_out = (m, n, l)
@@ -89,7 +89,7 @@ Random.seed!(0)
         y1 = test_op(opR, x1, randn(dim_out), verb)
         y2 = zeros(dim_out)
         y2 .= 2.4 * x1
-        @test norm(y1 - y2) <= 1e-12
+        @test norm(y1 - y2) <= 1.0e-12
 
         @test is_null(opR) == is_null(opA1)
         @test is_eye(opR) == false
@@ -113,7 +113,7 @@ Random.seed!(0)
     @test SB isa AbstractOperators.NoOperatorBroadCast
     x = randn(m)
     y = SB * x
-    @test y[:,1] == x && y[:,2] == x
+    @test y[:, 1] == x && y[:, 2] == x
     # fun_name for NoOperatorBroadCast (".I") appears in show
     io = IOBuffer()
     show(io, SB)
@@ -127,14 +127,14 @@ Random.seed!(0)
 
     # remove_displacement on non-threaded OperatorBroadCast returns structurally equal broadcast
     A = MatrixOp(randn(m, m))
-    OB = BroadCast(A, (m, 2); threaded=false)
+    OB = BroadCast(A, (m, 2); threaded = false)
     @test remove_displacement(OB) == OB
     # For a displaced inner operator
     d = randn(m)
     AD = AffineAdd(A, d)
-    OBD = BroadCast(AD, (m, 2); threaded=false)
+    OBD = BroadCast(AD, (m, 2); threaded = false)
     rd = remove_displacement(OBD)
-    @test rd * x == BroadCast(remove_displacement(AD), (m, 2); threaded=false) * x
+    @test rd * x == BroadCast(remove_displacement(AD), (m, 2); threaded = false) * x
     @test remove_displacement(rd) == rd  # idempotent
 
     # permute test (domain permutation) using HCAT to create partition domain
@@ -143,30 +143,30 @@ Random.seed!(0)
         B1 = BroadCast(A1, (m, 2); threaded)
         xpart = ArrayPartition(randn(m), randn(m))
         y_base = B1 * xpart
-        p = [2,1]
+        p = [2, 1]
         B1p = AbstractOperators.permute(B1, p)
         xpart_p = ArrayPartition(xpart.x[p]...)
         y_perm = B1p * xpart_p
         @test y_perm == y_base  # same broadcasted sum after permutation inversion
 
         # Adjoint path exercise for OperatorBroadCast (non-threaded) to hit get_input_slice
-        r = randn(size(B1,1))
+        r = randn(size(B1, 1))
         g = B1' * r
         @test length(g) == length(xpart.x[1]) + length(xpart.x[2])
     end
 
     # If multi-threading available, test threaded variant basics (skip if only 1 thread)
     if Threads.nthreads() > 1
-        AT = BroadCast(A, (m, 3); threaded=true)
+        AT = BroadCast(A, (m, 3); threaded = true)
         xt = randn(m)
         yt = AT * xt
-        @test yt[:,2] == A * xt  # replicated columns
+        @test yt[:, 2] == A * xt  # replicated columns
         # remove_displacement idempotence for threaded case
         @test remove_displacement(AT) == AT
         # displaced inner operator threaded
-        ADT = BroadCast(AffineAdd(A, d), (m, 3); threaded=true)
+        ADT = BroadCast(AffineAdd(A, d), (m, 3); threaded = true)
         rdt = remove_displacement(ADT)
-        @test rdt * xt == BroadCast(A, (m, 3); threaded=true) * xt
+        @test rdt * xt == BroadCast(A, (m, 3); threaded = true) * xt
     end
 
     # test displacement
@@ -181,12 +181,12 @@ Random.seed!(0)
     y1 = opR * x1
     y2 = zeros(dim_out)
     y2 .= A1 * x1 + d1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     x1 = randn(n)
     y1 = remove_displacement(opR) * x1
     y2 = zeros(dim_out)
     y2 .= A1 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # Storage types / thread safety (non-thread-safe expected)
     _ds = domain_storage_type(opR)
@@ -206,7 +206,7 @@ Random.seed!(0)
     mul!(y, opR, x1)
     yref = zeros(dim_out)
     yref .= A1 * x1
-    @test norm(y - yref) <= 1e-12
+    @test norm(y - yref) <= 1.0e-12
 
     # Adjoint of BroadCast
     opR_adj = adjoint(opR)
@@ -225,14 +225,14 @@ Random.seed!(0)
 
     # Edge: BroadCast of Eye
     opE = Eye(200)
-    opRe = BroadCast(opE, (200, 350); threaded=false)
+    opRe = BroadCast(opE, (200, 350); threaded = false)
     xe = randn(200)
     y = opRe * xe
-    @test all(y[:,1] .== xe)
-    opRe = BroadCast(opE, (200, 350); threaded=true)
+    @test all(y[:, 1] .== xe)
+    opRe = BroadCast(opE, (200, 350); threaded = true)
     xe = randn(200)
     y = opRe * xe
-    @test all(y[:,1] .== xe)
+    @test all(y[:, 1] .== xe)
     @test is_linear(opRe) == true
     @test is_null(opRe) == false
     @test AbstractOperators.has_fast_opnorm(opRe) == true
@@ -243,10 +243,10 @@ Random.seed!(0)
     opRd = BroadCast(opD, (2, 3))
     xd = randn(2)
     y = opRd * xd
-    @test all(y[:,1] .== d .* xd)
+    @test all(y[:, 1] .== d .* xd)
 
     # Singleton and empty array broadcast
-    opS = MatrixOp(randn(1,1))
+    opS = MatrixOp(randn(1, 1))
     opRs = BroadCast(opS, (1,))
     xs = [1.0]
     ys = opRs * xs
@@ -262,7 +262,7 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = (opS * x) .* ones(n, l)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     n, l = 1, 7
     x = randn(n)
@@ -273,33 +273,33 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = (opS * x) .* ones(n, l)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     # Additional coverage tests
     @testset "BroadCast error cases and edge paths" begin
         m, n = 4, 3
         A = MatrixOp(randn(m, n))
-        
+
         # Error: dim_out that doesn't match broadcast rules
         @test_throws DimensionMismatch BroadCast(A, (2,))
-        
+
         # NoOperatorBroadCast equality
         E1 = Eye(3)
         E2 = Eye(3)
-        B1 = BroadCast(E1, (3, 2); threaded=false)
-        B2 = BroadCast(E2, (3, 2); threaded=false)
-        B3 = BroadCast(E1, (3, 3); threaded=false)
+        B1 = BroadCast(E1, (3, 2); threaded = false)
+        B2 = BroadCast(E2, (3, 2); threaded = false)
+        B3 = BroadCast(E1, (3, 3); threaded = false)
         @test B1 == B2
         @test B1 != B3
-        
+
         # opnorm for OperatorBroadCast
         @test AbstractOperators.has_fast_opnorm(B1) == AbstractOperators.has_fast_opnorm(E1)
         A_op = MatrixOp(randn(3, 2))
-        B_op = BroadCast(A_op, (3, 4); threaded=false)
+        B_op = BroadCast(A_op, (3, 4); threaded = false)
         @test opnorm(B_op) ≈ opnorm(A_op)
-        
+
         if Threads.nthreads() > 1
-            B_op_t = BroadCast(A_op, (3, 4); threaded=true)
+            B_op_t = BroadCast(A_op, (3, 4); threaded = true)
             @test opnorm(B_op_t) ≈ opnorm(A_op)
         end
 
@@ -312,19 +312,19 @@ Random.seed!(0)
         if Threads.nthreads() > 1
             m = 1000
             E = Eye(m)
-            B_threaded = BroadCast(E, (m, 100); threaded=true)
+            B_threaded = BroadCast(E, (m, 100); threaded = true)
             @test B_threaded isa AbstractOperators.NoOperatorBroadCast
-            
+
             x = randn(m)
             y = B_threaded * x
-            
+
             for i in 1:100
                 @test y[:, i] ≈ x
             end
-            
+
             y_adj = randn(m, 100)
             x_back = B_threaded' * y_adj
-            @test x_back ≈ dropdims(sum(y_adj, dims=2), dims=2)
+            @test x_back ≈ dropdims(sum(y_adj, dims = 2), dims = 2)
         end
     end
 
@@ -333,20 +333,20 @@ Random.seed!(0)
             m, n = 3, 2
             A = reshape(MatrixOp(randn(m, n)), 1, m)
             dim_out = (4, m, 5)
-            B_noncompact = BroadCast(A, dim_out; threaded=true)
-            
+            B_noncompact = BroadCast(A, dim_out; threaded = true)
+
             x = randn(n)
             y = B_noncompact * x
-            
+
             ref = A * x
             for i in 1:4, j in 1:5
                 @test y[i, :, j] ≈ vec(ref)
             end
-            
+
             y_test = randn(dim_out)
             x_back = B_noncompact' * y_test
             @test size(x_back) == (n,)
-            @test x_back ≈ A' * dropdims(sum(y_test, dims=(1,3)), dims=3)
+            @test x_back ≈ A' * dropdims(sum(y_test, dims = (1, 3)), dims = 3)
         end
     end
 end

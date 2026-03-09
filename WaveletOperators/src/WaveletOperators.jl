@@ -7,19 +7,19 @@ using Wavelets
 import LinearAlgebra: mul!, opnorm
 import Base: size
 import AbstractOperators:
-	domain_type,
-	codomain_type,
-	fun_name,
-	is_thread_safe,
-	has_fast_opnorm
+    domain_type,
+    codomain_type,
+    fun_name,
+    is_thread_safe,
+    has_fast_opnorm
 import OperatorCore:
-	is_AcA_diagonal,
-	is_AAc_diagonal,
-	diag_AcA,
-	diag_AAc,
-	is_invertible,
-	is_full_row_rank,
-	is_full_column_rank
+    is_AcA_diagonal,
+    is_AAc_diagonal,
+    diag_AcA,
+    diag_AAc,
+    is_invertible,
+    is_full_row_rank,
+    is_full_column_rank
 
 """
 	WaveletOp(wavelet::DiscreteWavelet, dim_in::Integer)
@@ -44,54 +44,54 @@ julia> W * ones(4)
 ```
 """
 struct WaveletOp{T} <: LinearOperator
-	wavelet::DiscreteWavelet
-	dim_in::Tuple
-	levels::Int
+    wavelet::DiscreteWavelet
+    dim_in::Tuple
+    levels::Int
 end
 
 # Constructors
 
-function WaveletOp(wavelet::DiscreteWavelet, dim_in, levels=nothing)
-	if isnothing(levels)
-		levels = get_max_transform_levels(dim_in)
-	end
-	return WaveletOp(Float64, wavelet, dim_in, levels)
+function WaveletOp(wavelet::DiscreteWavelet, dim_in, levels = nothing)
+    if isnothing(levels)
+        levels = get_max_transform_levels(dim_in)
+    end
+    return WaveletOp(Float64, wavelet, dim_in, levels)
 end
 
-function WaveletOp(A::AbstractArray, wavelet::DiscreteWavelet, levels::Int=get_max_transform_levels(size(A)))
-	return WaveletOp(eltype(A), wavelet, size(A), levels)
+function WaveletOp(A::AbstractArray, wavelet::DiscreteWavelet, levels::Int = get_max_transform_levels(size(A)))
+    return WaveletOp(eltype(A), wavelet, size(A), levels)
 end
 
-function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::Integer, levels::Int=get_max_transform_levels(dim_in))
-	if isodd(dim_in)
-		throw(ArgumentError("The input dimension $dim_in is not suitable for wavelet transform: only even dimensions are allowed."))
-	end
-	if levels > get_max_transform_levels(dim_in)
-		throw(ArgumentError("The number of levels $levels exceeds the maximum allowed for dimension $dim_in: $(get_max_transform_levels(dim_in))."))
-	end
-	return WaveletOp{T}(wavelet, (dim_in,), levels)
+function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::Integer, levels::Int = get_max_transform_levels(dim_in))
+    if isodd(dim_in)
+        throw(ArgumentError("The input dimension $dim_in is not suitable for wavelet transform: only even dimensions are allowed."))
+    end
+    if levels > get_max_transform_levels(dim_in)
+        throw(ArgumentError("The number of levels $levels exceeds the maximum allowed for dimension $dim_in: $(get_max_transform_levels(dim_in))."))
+    end
+    return WaveletOp{T}(wavelet, (dim_in,), levels)
 end
 
-function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::Tuple, levels::Int=get_max_transform_levels(dim_in))
-	if any(isodd.(dim_in))
-		throw(ArgumentError("The input dimension $dim_in is not suitable for wavelet transform: only even dimensions are allowed."))
-	end
-	if levels > get_max_transform_levels(dim_in)
-		throw(ArgumentError("The number of levels $levels exceeds the maximum allowed for dimensions $dim_in: $(get_max_transform_levels(dim_in))."))
-	end
-	return WaveletOp{T}(wavelet, dim_in, levels)
+function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::Tuple, levels::Int = get_max_transform_levels(dim_in))
+    if any(isodd.(dim_in))
+        throw(ArgumentError("The input dimension $dim_in is not suitable for wavelet transform: only even dimensions are allowed."))
+    end
+    if levels > get_max_transform_levels(dim_in)
+        throw(ArgumentError("The number of levels $levels exceeds the maximum allowed for dimensions $dim_in: $(get_max_transform_levels(dim_in))."))
+    end
+    return WaveletOp{T}(wavelet, dim_in, levels)
 end
 
 # Mappings
 
 function mul!(y::AbstractArray{T}, L::WaveletOp{T}, x::AbstractArray{T}) where {T}
-	return dwt!(y, x, L.wavelet, L.levels)
+    return dwt!(y, x, L.wavelet, L.levels)
 end
 
 function mul!(
-	y::AbstractArray{T}, L::AdjointOperator{WaveletOp{T}}, x::AbstractArray{T}
-) where {T}
-	return idwt!(y, x, L.A.wavelet, L.A.levels)
+        y::AbstractArray{T}, L::AdjointOperator{WaveletOp{T}}, x::AbstractArray{T}
+    ) where {T}
+    return idwt!(y, x, L.A.wavelet, L.A.levels)
 end
 
 # Properties

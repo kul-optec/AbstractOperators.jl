@@ -22,20 +22,20 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opS, x1, randn(m), verb)
     y2 = coeff * A1 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     coeff2 = 3
     opS2 = Scale(coeff2, opS)
     y1 = test_op(opS2, x1, randn(m), verb)
     y2 = coeff2 * coeff * A1 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opF = FiniteDiff((m,))
     opS = Scale(coeff, opF)
     x1 = randn(m)
     y1 = test_op(opS, x1, diff(randn(m)), verb)
     y2 = coeff * (diff(x1))
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     op = Scale(-4.0, GetIndex((10,), 1:5))
     @test is_AAc_diagonal(op) == true
@@ -48,7 +48,7 @@ Random.seed!(0)
     d = randn(10)
     op = Scale(3, DiagOp(d))
     @test typeof(op) <: DiagOp
-    @test norm(diag(op) - 3 .* d) < 1e-12
+    @test norm(diag(op) - 3 .* d) < 1.0e-12
 
     m, n = 8, 4
     coeff = im
@@ -65,19 +65,19 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = opS * x1
     y2 = coeff * (A1 * x1 + d1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     y1 = remove_displacement(opS) * x1
     y2 = coeff * (A1 * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # Edge cases
     # 1. coeff == 1 path should return the original operator (early return)
-    op = MatrixOp(randn(5,5))
+    op = MatrixOp(randn(5, 5))
     s = Scale(1, op)
     @test s === op  # identity return
 
     # 2. Real codomain, complex coefficient should throw (error branch in Scale(coeff, coeff_conj, L))
-    real_op = MatrixOp(randn(4,4))  # domain/codomain both Real
+    real_op = MatrixOp(randn(4, 4))  # domain/codomain both Real
     @test_throws ErrorException Scale(1 + 2im, real_op)
 
     # 3. Scale of a Scale promotes / multiplies coefficients
@@ -146,8 +146,8 @@ Random.seed!(0)
 
     # opnorm and estimate_opnorm passthrough
     opnorm_S = opnorm(S1)
-    @test opnorm_S ≈ abs(S1.coeff) * opnorm(Aeq) rtol=5e-6
-    @test opnorm_S ≈ estimate_opnorm(S1) rtol=0.05
+    @test opnorm_S ≈ abs(S1.coeff) * opnorm(Aeq) rtol = 5.0e-6
+    @test opnorm_S ≈ estimate_opnorm(S1) rtol = 0.05
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)
@@ -165,7 +165,7 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = 30 * (A * x)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     m = 3
     x = randn(m)
@@ -176,11 +176,11 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = -A * x
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     @testset "Scale constructors and basic mapping" begin
         # Base operator
-        A = MatrixOp(randn(6,4))
+        A = MatrixOp(randn(6, 4))
         α = 2.5
         S = Scale(α, A)
         @test size(S) == size(A)
@@ -197,21 +197,21 @@ Random.seed!(0)
     end
 
     @testset "Scale special constructor scale-of-scale" begin
-        A = FiniteDiff((10,2))
+        A = FiniteDiff((10, 2))
         α = 3.0
         β = -2.0
         S1 = Scale(α, A)
         S2 = Scale(β, S1)  # should multiply coefficients and unwrap
-        x = randn(10,2)
+        x = randn(10, 2)
         # FiniteDiff maps (10,2)->(9,2), ensure shape works
         v1 = S1 * x
         v2 = S2 * x
         @test v1 ≈ α * (A * x)
-        @test v2 ≈ (β*α) * (A * x)
+        @test v2 ≈ (β * α) * (A * x)
     end
 
     @testset "Scale coeff==1 returns original" begin
-        A = MatrixOp(randn(5,5))
+        A = MatrixOp(randn(5, 5))
         S = Scale(1.0, A)
         @test S === A || S == A
         # Ensure behavior matches
@@ -255,7 +255,7 @@ Random.seed!(0)
         N = AbstractOperators.get_normal_op(S)
         # For linear A: should be Scale(|α|^2, |α|^2, get_normal_op(A))
         @test N isa Scale
-        @test N.coeff ≈ α*α
+        @test N.coeff ≈ α * α
         @test N.A == AbstractOperators.get_normal_op(A)
 
         NL = Sigmoid((5,))  # 1D nonlinear operator
@@ -292,12 +292,12 @@ Random.seed!(0)
     end
 
     @testset "Scale opnorm and estimate_opnorm" begin
-        A = MatrixOp(randn(7,4))
+        A = MatrixOp(randn(7, 4))
         α = -1.2
         S = Scale(α, A)
         @test AbstractOperators.has_fast_opnorm(S) == AbstractOperators.has_fast_opnorm(A)
         @test opnorm(S) ≈ abs(α) * opnorm(A)
-        @test estimate_opnorm(S) ≈ opnorm(S) rtol=0.05
+        @test estimate_opnorm(S) ≈ opnorm(S) rtol = 0.05
     end
 
     @testset "Scale permute utility" begin
@@ -306,7 +306,7 @@ Random.seed!(0)
         α = 2.2
         S = Scale(α, A)
         # Permutation over domain blocks (two blocks) swaps them
-        p = [2,1]
+        p = [2, 1]
         Spr = AbstractOperators.permute(S, p)
         @test Spr.A == AbstractOperators.permute(S.A, p)
         # Build domain input as ArrayPartition matching HCAT domain ordering
@@ -321,9 +321,9 @@ Random.seed!(0)
 
     @testset "Scale threaded behavior" begin
         # Force threading decision by large output length
-        A = MatrixOp(randn(20000,5))
+        A = MatrixOp(randn(20000, 5))
         α = 0.75
-        S = Scale(α, A; threaded=true)
+        S = Scale(α, A; threaded = true)
         x = randn(5)
         y = S * x
         @test y ≈ α * (A * x)

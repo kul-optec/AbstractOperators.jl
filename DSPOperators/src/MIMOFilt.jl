@@ -52,130 +52,132 @@ true
 	
 ```
 """
-struct MIMOFilt{T,A<:AbstractVector{T}} <: LinearOperator
-	dim_out::Tuple{Int,Int}
-	dim_in::Tuple{Int,Int}
-	B::Vector{A}
-	A::Vector{A}
-	SI::Vector{A}
+struct MIMOFilt{T, A <: AbstractVector{T}} <: LinearOperator
+    dim_out::Tuple{Int, Int}
+    dim_in::Tuple{Int, Int}
+    B::Vector{A}
+    A::Vector{A}
+    SI::Vector{A}
 end
 
 # Constructors
 
 #default constructor
-function MIMOFilt(domain_type::Type, dim_in::NTuple{N,Int}, b::Vector, a::Vector) where {N}
-	N != 2 && error("length(dim_in) must be equal to 2")
-	eltype(b) != eltype(a) && error("eltype(b) must be equal to eltype(a)")
-	typeof(b[1][1]) != domain_type && error("filter coefficient of b must be $domain_type")
-	typeof(a[1][1]) != domain_type && error("filter coefficient of a must be $domain_type")
+function MIMOFilt(domain_type::Type, dim_in::NTuple{N, Int}, b::Vector, a::Vector) where {N}
+    N != 2 && error("length(dim_in) must be equal to 2")
+    eltype(b) != eltype(a) && error("eltype(b) must be equal to eltype(a)")
+    typeof(b[1][1]) != domain_type && error("filter coefficient of b must be $domain_type")
+    typeof(a[1][1]) != domain_type && error("filter coefficient of a must be $domain_type")
 
-	length(b) != length(a) && error("filter vectors b must be as many as a")
+    length(b) != length(a) && error("filter vectors b must be as many as a")
 
-	mod(length(b), dim_in[2]) != 0 && error("wrong number of filters")
-	dim_out = (dim_in[1], div(length(b), dim_in[2]))
+    mod(length(b), dim_in[2]) != 0 && error("wrong number of filters")
+    dim_out = (dim_in[1], div(length(b), dim_in[2]))
 
-	B, A, SI = similar(b), similar(b), similar(b)
+    B, A, SI = similar(b), similar(b), similar(b)
 
-	for i in 1:length(b)
-		a[i][1] == 0 && error("filter vector a[$i][1] must be nonzero")
+    for i in 1:length(b)
+        a[i][1] == 0 && error("filter vector a[$i][1] must be nonzero")
 
-		B[i] = b[i]
-		A[i] = a[i]
+        B[i] = b[i]
+        A[i] = a[i]
 
-		as = length(A[i])
-		bs = length(B[i])
-		sz = max(as, bs)
-		silen = sz - 1
+        as = length(A[i])
+        bs = length(B[i])
+        sz = max(as, bs)
+        silen = sz - 1
 
-		# Filter coefficient normalization
-		if A[i][1] != 1
-			norml = A[i][1]
-			A[i] ./= norml
-			B[i] ./= norml
-		end
+        # Filter coefficient normalization
+        if A[i][1] != 1
+            norml = A[i][1]
+            A[i] ./= norml
+            B[i] ./= norml
+        end
 
-		# Pad the coefficients with zeros if needed
-		bs < sz && (B[i] = copyto!(zeros(domain_type, sz), B[i]))
-		1 < as < sz && (A[i] = copyto!(zeros(domain_type, sz), A[i]))
+        # Pad the coefficients with zeros if needed
+        bs < sz && (B[i] = copyto!(zeros(domain_type, sz), B[i]))
+        1 < as < sz && (A[i] = copyto!(zeros(domain_type, sz), A[i]))
 
-		SI[i] = zeros(domain_type, max(length(a[i]), length(b[i])) - 1)
-	end
-	return MIMOFilt{domain_type,typeof(B[1])}(dim_out, dim_in, B, A, SI)
+        SI[i] = zeros(domain_type, max(length(a[i]), length(b[i])) - 1)
+    end
+    return MIMOFilt{domain_type, typeof(B[1])}(dim_out, dim_in, B, A, SI)
 end
 
-function MIMOFilt(dim_in::Tuple, b::Vector{D1}, a::Vector{D1}) where {D1<:AbstractVector}
-	return MIMOFilt(eltype(b[1]), dim_in, b, a)
+function MIMOFilt(dim_in::Tuple, b::Vector{D1}, a::Vector{D1}) where {D1 <: AbstractVector}
+    return MIMOFilt(eltype(b[1]), dim_in, b, a)
 end
 
-function MIMOFilt(dim_in::Tuple, b::Vector{D1}) where {D1<:AbstractVector}
-	return MIMOFilt(eltype(b[1]), dim_in, b, [[1.0] for i in eachindex(b)])
+function MIMOFilt(dim_in::Tuple, b::Vector{D1}) where {D1 <: AbstractVector}
+    return MIMOFilt(eltype(b[1]), dim_in, b, [[1.0] for i in eachindex(b)])
 end
 
 function MIMOFilt(
-	x::AbstractMatrix, b::Vector{D1}, a::Vector{D1}
-) where {D1<:AbstractVector}
-	return MIMOFilt(eltype(x), size(x), b, a)
+        x::AbstractMatrix, b::Vector{D1}, a::Vector{D1}
+    ) where {D1 <: AbstractVector}
+    return MIMOFilt(eltype(x), size(x), b, a)
 end
 
-function MIMOFilt(x::AbstractMatrix, b::Vector{D1}) where {D1<:AbstractVector}
-	return MIMOFilt(eltype(x), size(x), b, [[1.0] for i in eachindex(b)])
+function MIMOFilt(x::AbstractMatrix, b::Vector{D1}) where {D1 <: AbstractVector}
+    return MIMOFilt(eltype(x), size(x), b, [[1.0] for i in eachindex(b)])
 end
 
 # Mappings
 
-function mul!(y::AbstractArray{T}, L::MIMOFilt{T,A}, x::AbstractArray{T}) where {T,A}
-	cnt = 0
-	cx = 0
-	y .= 0.0 #TODO avoid this?
-	for cy in 1:L.dim_out[2]
-		cnt += 1
-		cx += 1
-		if length(L.A[cnt]) != 1
-			add_iir!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cy, cx)
-		else
-			add_fir!(y, L.B[cnt], x, L.SI[cnt], cy, cx)
-		end
+function mul!(y::AbstractArray{T}, L::MIMOFilt{T, A}, x::AbstractArray{T}) where {T, A}
+    cnt = 0
+    cx = 0
+    y .= 0.0 #TODO avoid this?
+    for cy in 1:L.dim_out[2]
+        cnt += 1
+        cx += 1
+        if length(L.A[cnt]) != 1
+            add_iir!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cy, cx)
+        else
+            add_fir!(y, L.B[cnt], x, L.SI[cnt], cy, cx)
+        end
 
-		for c2 in 2:L.dim_in[2]
-			cnt += 1
-			cx += 1
-			if length(L.A[cnt]) != 1
-				add_iir!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cy, cx)
-			else
-				add_fir!(y, L.B[cnt], x, L.SI[cnt], cy, cx)
-			end
-		end
-		cx = 0
-	end
+        for c2 in 2:L.dim_in[2]
+            cnt += 1
+            cx += 1
+            if length(L.A[cnt]) != 1
+                add_iir!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cy, cx)
+            else
+                add_fir!(y, L.B[cnt], x, L.SI[cnt], cy, cx)
+            end
+        end
+        cx = 0
+    end
+    return
 end
 
 function mul!(
-	y::AbstractArray{T}, M::AdjointOperator{MIMOFilt{T,A}}, x::AbstractArray{T}
-) where {T,A}
-	L = M.A
-	cnt = 0
-	cx = 0
-	y .= 0.0 #TODO avoid this?
-	for cy in 1:L.dim_out[2]
-		cnt += 1
-		cx += 1
-		if length(L.A[cnt]) != 1
-			add_iir_rev!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cx, cy)
-		else
-			add_fir_rev!(y, L.B[cnt], x, L.SI[cnt], cx, cy)
-		end
+        y::AbstractArray{T}, M::AdjointOperator{MIMOFilt{T, A}}, x::AbstractArray{T}
+    ) where {T, A}
+    L = M.A
+    cnt = 0
+    cx = 0
+    y .= 0.0 #TODO avoid this?
+    for cy in 1:L.dim_out[2]
+        cnt += 1
+        cx += 1
+        if length(L.A[cnt]) != 1
+            add_iir_rev!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cx, cy)
+        else
+            add_fir_rev!(y, L.B[cnt], x, L.SI[cnt], cx, cy)
+        end
 
-		for c2 in 2:L.dim_in[2]
-			cnt += 1
-			cx += 1
-			if length(L.A[cnt]) != 1
-				add_iir_rev!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cx, cy)
-			else
-				add_fir_rev!(y, L.B[cnt], x, L.SI[cnt], cx, cy)
-			end
-		end
-		cx = 0
-	end
+        for c2 in 2:L.dim_in[2]
+            cnt += 1
+            cx += 1
+            if length(L.A[cnt]) != 1
+                add_iir_rev!(y, L.B[cnt], L.A[cnt], x, L.SI[cnt], cx, cy)
+            else
+                add_fir_rev!(y, L.B[cnt], x, L.SI[cnt], cx, cy)
+            end
+        end
+        cx = 0
+    end
+    return
 end
 
 # Properties
@@ -196,57 +198,57 @@ fun_name(L::MIMOFilt) = "※"
 # Utilities
 
 function add_iir!(y, b, a, x, si, coly, colx)
-	silen = length(si)
-	@inbounds for i in 1:size(x, 1)
-		xi = x[i, colx]
-		val = si[1] + b[1] * xi
-		for j in 1:(silen - 1)
-			si[j] = si[j + 1] + b[j + 1] * xi - a[j + 1] * val
-		end
-		si[silen] = b[silen + 1] * xi - a[silen + 1] * val
-		y[i, coly] += val
-	end
-	return si .= 0.0 #reset state
+    silen = length(si)
+    @inbounds for i in 1:size(x, 1)
+        xi = x[i, colx]
+        val = si[1] + b[1] * xi
+        for j in 1:(silen - 1)
+            si[j] = si[j + 1] + b[j + 1] * xi - a[j + 1] * val
+        end
+        si[silen] = b[silen + 1] * xi - a[silen + 1] * val
+        y[i, coly] += val
+    end
+    return si .= 0.0 #reset state
 end
 
 function add_iir_rev!(y, b, a, x, si, coly, colx)
-	silen = length(si)
-	@inbounds for i in size(x, 1):-1:1
-		xi = x[i, colx]
-		val = si[1] + b[1] * xi
-		for j in 1:(silen - 1)
-			si[j] = si[j + 1] + b[j + 1] * xi - a[j + 1] * val
-		end
-		si[silen] = b[silen + 1] * xi - a[silen + 1] * val
-		y[i, coly] += val
-	end
-	return si .= 0.0
+    silen = length(si)
+    @inbounds for i in size(x, 1):-1:1
+        xi = x[i, colx]
+        val = si[1] + b[1] * xi
+        for j in 1:(silen - 1)
+            si[j] = si[j + 1] + b[j + 1] * xi - a[j + 1] * val
+        end
+        si[silen] = b[silen + 1] * xi - a[silen + 1] * val
+        y[i, coly] += val
+    end
+    return si .= 0.0
 end
 
 function add_fir!(y, b, x, si, coly, colx)
-	silen = length(si)
-	@inbounds for i in 1:size(x, 1)
-		xi = x[i, colx]
-		val = si[1] + b[1] * xi
-		for j in 1:(silen - 1)
-			si[j] = si[j + 1] + b[j + 1] * xi
-		end
-		si[silen] = b[silen + 1] * xi
-		y[i, coly] += val
-	end
-	return si .= 0.0
+    silen = length(si)
+    @inbounds for i in 1:size(x, 1)
+        xi = x[i, colx]
+        val = si[1] + b[1] * xi
+        for j in 1:(silen - 1)
+            si[j] = si[j + 1] + b[j + 1] * xi
+        end
+        si[silen] = b[silen + 1] * xi
+        y[i, coly] += val
+    end
+    return si .= 0.0
 end
 
 function add_fir_rev!(y, b, x, si, coly, colx)
-	silen = length(si)
-	@inbounds for i in size(x, 1):-1:1
-		xi = x[i, colx]
-		val = si[1] + b[1] * xi
-		for j in 1:(silen - 1)
-			si[j] = si[j + 1] + b[j + 1] * xi
-		end
-		si[silen] = b[silen + 1] * xi
-		y[i, coly] += val
-	end
-	return si .= 0.0
+    silen = length(si)
+    @inbounds for i in size(x, 1):-1:1
+        xi = x[i, colx]
+        val = si[1] + b[1] * xi
+        for j in 1:(silen - 1)
+            si[j] = si[j + 1] + b[j + 1] * xi
+        end
+        si[silen] = b[silen + 1] * xi
+        y[i, coly] += val
+    end
+    return si .= 0.0
 end

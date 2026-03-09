@@ -31,9 +31,9 @@ julia> A2 = FFTShift((2,2), (1,2)); A2 * reshape(1.0:4.0, 2, 2)
  3.0  1.0
 ```
 """
-struct FFTShift{T,N,M} <: ShiftOp
-    dim_in::NTuple{N,Int}
-    dirs::NTuple{M,Int}
+struct FFTShift{T, N, M} <: ShiftOp
+    dim_in::NTuple{N, Int}
+    dirs::NTuple{M, Int}
 end
 
 """
@@ -55,9 +55,9 @@ julia> B2 = IFFTShift((2,2), (1,2)); B2 * [4.0 3.0; 2.0 1.0] == [1.0 2.0; 3.0 4.
 true
 ```
 """
-struct IFFTShift{T,N,M} <: ShiftOp
-    dim_in::NTuple{N,Int}
-    dirs::NTuple{M,Int}
+struct IFFTShift{T, N, M} <: ShiftOp
+    dim_in::NTuple{N, Int}
+    dirs::NTuple{M, Int}
 end
 
 """
@@ -92,49 +92,49 @@ julia> S2 = SignAlternation((2,2), (1,2)); S2 * ones(2,2)
  -1.0   1.0
 ```
 """
-struct SignAlternation{S,N,M,Th} <: LinearOperator
-    dim_in::NTuple{N,Int}
-    dirs::NTuple{M,Int}
+struct SignAlternation{S, N, M, Th} <: LinearOperator
+    dim_in::NTuple{N, Int}
+    dirs::NTuple{M, Int}
 end
 
-function _normalize_dirs(::NTuple{N,Int}, dirs) where {N}
+function _normalize_dirs(::NTuple{N, Int}, dirs) where {N}
     d = Tuple(dirs)
     isempty(d) && throw(ArgumentError("dirs must contain at least one dimension"))
     all(1 <= x <= N for x in d) || throw(ArgumentError("dirs must be in 1:$N"))
-    d
+    return d
 end
 
-function FFTShift(::Type{T}, dim_in::NTuple{N,Int}, dirs) where {T<:Number,N}
+function FFTShift(::Type{T}, dim_in::NTuple{N, Int}, dirs) where {T <: Number, N}
     d = _normalize_dirs(dim_in, dirs)
-    return FFTShift{T,N,length(d)}(dim_in, d)
+    return FFTShift{T, N, length(d)}(dim_in, d)
 end
-function FFTShift(::Type{T}, dim_in::NTuple{N,Int}) where {T<:Number,N}
-    FFTShift(T, dim_in, Tuple(1:N))
+function FFTShift(::Type{T}, dim_in::NTuple{N, Int}) where {T <: Number, N}
+    return FFTShift(T, dim_in, Tuple(1:N))
 end
-FFTShift(dim_in::NTuple{N,Int}, dirs) where {N} = FFTShift(Float64, dim_in, dirs)
-FFTShift(dim_in::NTuple{N,Int}) where {N} = FFTShift(Float64, dim_in, Tuple(1:N))
+FFTShift(dim_in::NTuple{N, Int}, dirs) where {N} = FFTShift(Float64, dim_in, dirs)
+FFTShift(dim_in::NTuple{N, Int}) where {N} = FFTShift(Float64, dim_in, Tuple(1:N))
 FFTShift(dim_in::Vararg{Int}) = FFTShift(dim_in)
 
-function IFFTShift(::Type{T}, dim_in::NTuple{N,Int}, dirs) where {T<:Number,N}
+function IFFTShift(::Type{T}, dim_in::NTuple{N, Int}, dirs) where {T <: Number, N}
     d = _normalize_dirs(dim_in, dirs)
-    return IFFTShift{T,N,length(d)}(dim_in, d)
+    return IFFTShift{T, N, length(d)}(dim_in, d)
 end
-function IFFTShift(::Type{T}, dim_in::NTuple{N,Int}) where {T<:Number,N}
-    IFFTShift(T, dim_in, Tuple(1:N))
+function IFFTShift(::Type{T}, dim_in::NTuple{N, Int}) where {T <: Number, N}
+    return IFFTShift(T, dim_in, Tuple(1:N))
 end
-IFFTShift(dim_in::NTuple{N,Int}, dirs) where {N} = IFFTShift(Float64, dim_in, dirs)
-IFFTShift(dim_in::NTuple{N,Int}) where {N} = IFFTShift(Float64, dim_in, Tuple(1:N))
+IFFTShift(dim_in::NTuple{N, Int}, dirs) where {N} = IFFTShift(Float64, dim_in, dirs)
+IFFTShift(dim_in::NTuple{N, Int}) where {N} = IFFTShift(Float64, dim_in, Tuple(1:N))
 IFFTShift(dim_in::Vararg{Int}) = IFFTShift(dim_in)
 
 function SignAlternation(
-    ::Type{S}, dim_in::NTuple{N,Int}, dirs; threaded::Bool=true
-) where {S<:Number,N}
+        ::Type{S}, dim_in::NTuple{N, Int}, dirs; threaded::Bool = true
+    ) where {S <: Number, N}
     d = _normalize_dirs(dim_in, dirs)
     threaded = threaded && Threads.nthreads() > 1
-    SignAlternation{S,N,length(d),threaded}(dim_in, d)
+    return SignAlternation{S, N, length(d), threaded}(dim_in, d)
 end
-function SignAlternation(dim_in::NTuple{N,Int}, dirs; threaded::Bool=true) where {N}
-    SignAlternation(Float64, dim_in, dirs; threaded)
+function SignAlternation(dim_in::NTuple{N, Int}, dirs; threaded::Bool = true) where {N}
+    return SignAlternation(Float64, dim_in, dirs; threaded)
 end
 
 domain_type(::FFTShift{T}) where {T} = T
@@ -186,9 +186,9 @@ is_invertible(::SignAlternation) = true
 is_full_row_rank(::SignAlternation) = true
 is_full_column_rank(::SignAlternation) = true
 
-has_fast_opnorm(::Union{FFTShift,IFFTShift,SignAlternation}) = true
-function LinearAlgebra.opnorm(L::Union{FFTShift,IFFTShift,SignAlternation})
-    one(real(domain_type(L)))
+has_fast_opnorm(::Union{FFTShift, IFFTShift, SignAlternation}) = true
+function LinearAlgebra.opnorm(L::Union{FFTShift, IFFTShift, SignAlternation})
+    return one(real(domain_type(L)))
 end
 
 function mul!(y::AbstractArray, L::FFTShift, b::AbstractArray)
@@ -239,20 +239,20 @@ julia> M = ones(2,2); alternate_sign!(M, (1, 2))
  -1.0   1.0
 ```
 """
-function alternate_sign!(x::AbstractArray, dirs::Int...; threaded::Bool=true)
+function alternate_sign!(x::AbstractArray, dirs::Int...; threaded::Bool = true)
     return alternate_sign!(x, tuple(dirs...); threaded)
 end
 
 function alternate_sign!(
-    x::AbstractArray, dirs::NTuple{M,Int}; threaded::Bool=true
-) where {M}
+        x::AbstractArray, dirs::NTuple{M, Int}; threaded::Bool = true
+    ) where {M}
     _check_shift_dirs(size(x), dirs)
     return _alternate_sign!(x, dirs; threaded)
 end
 
 function _alternate_sign!(
-    x::AbstractArray, dirs::NTuple{M,Int}; threaded::Bool=true
-) where {M}
+        x::AbstractArray, dirs::NTuple{M, Int}; threaded::Bool = true
+    ) where {M}
     if isempty(dirs)
         return x
     end
@@ -299,20 +299,20 @@ julia> alternate_sign!(y, x, (1, 2))
 ```
 """
 function alternate_sign!(
-    y::AbstractArray, x::AbstractArray, dirs::Int...; threaded::Bool=true
-)
+        y::AbstractArray, x::AbstractArray, dirs::Int...; threaded::Bool = true
+    )
     return alternate_sign!(y, x, tuple(dirs...); threaded)
 end
 function alternate_sign!(
-    y::AbstractArray, x::AbstractArray, dirs::NTuple{M,Int}; threaded::Bool=true
-) where {M}
+        y::AbstractArray, x::AbstractArray, dirs::NTuple{M, Int}; threaded::Bool = true
+    ) where {M}
     _check_shift_dirs(size(x), dirs)
     return _alternate_sign!(y, x, dirs; threaded)
 end
 
 function _alternate_sign!(
-    y::AbstractArray, x::AbstractArray, dirs::NTuple{M,Int}; threaded::Bool=true
-) where {M}
+        y::AbstractArray, x::AbstractArray, dirs::NTuple{M, Int}; threaded::Bool = true
+    ) where {M}
     size(y) == size(x) || throw(ArgumentError("y and x must have the same size"))
     if isempty(dirs)
         y .= x
@@ -349,27 +349,27 @@ julia> alternate_sign(collect(1.0:4.0), 1)
  -4.0
 ```
 """
-function alternate_sign(x::AbstractArray, dirs::Int...; threaded::Bool=true)
-    alternate_sign!(copy(x), dirs...; threaded)
+function alternate_sign(x::AbstractArray, dirs::Int...; threaded::Bool = true)
+    return alternate_sign!(copy(x), dirs...; threaded)
 end
 
 function mul!(
-    y::AbstractArray, L::SignAlternation{S,N,M,Th}, b::AbstractArray
-) where {S,N,M,Th}
+        y::AbstractArray, L::SignAlternation{S, N, M, Th}, b::AbstractArray
+    ) where {S, N, M, Th}
     check(y, L, b)
-    return _alternate_sign!(y, b, L.dirs; threaded=Th)
+    return _alternate_sign!(y, b, L.dirs; threaded = Th)
 end
 
-has_optimized_normalop(::Union{FFTShift,IFFTShift,SignAlternation}) = true
-function get_normal_op(L::Union{FFTShift,IFFTShift,SignAlternation})
-    Eye(domain_type(L), size(L, 1))
+has_optimized_normalop(::Union{FFTShift, IFFTShift, SignAlternation}) = true
+function get_normal_op(L::Union{FFTShift, IFFTShift, SignAlternation})
+    return Eye(domain_type(L), size(L, 1))
 end
 
 LinearAlgebra.adjoint(L::SignAlternation) = L
 
 # Utility
 
-function _check_shift_dirs(::NTuple{N,Int}, dirs::NTuple{M,Int}) where {N,M}
+function _check_shift_dirs(::NTuple{N, Int}, dirs::NTuple{M, Int}) where {N, M}
     if M == 0
         throw(ArgumentError("dirs must contain at least one dimension"))
     end
@@ -384,6 +384,7 @@ function _check_shift_dirs(::NTuple{N,Int}, dirs::NTuple{M,Int}) where {N,M}
             throw(ArgumentError("dirs must be sorted in ascending order"))
         end
     end
+    return
 end
 
 function _is_dft_op(op, side)
@@ -405,8 +406,8 @@ function _is_dft_op(op, side)
 end
 
 function _shift_op(
-    shift_op_type, op::AbstractOperator, domain_shifts::Tuple=(), codomain_shifts::Tuple=()
-)
+        shift_op_type, op::AbstractOperator, domain_shifts::Tuple = (), codomain_shifts::Tuple = ()
+    )
     if !isempty(domain_shifts)
         _check_shift_dirs(size(op, 2), domain_shifts)
         shifted_domain_dims_shape = size(op, 2)[collect(domain_shifts)]
@@ -470,8 +471,8 @@ julia> F = fftshift_op(DFT(16); codomain_shifts=(1,)) # note that 16 is even, so
 ```
 """
 function fftshift_op(
-    op::AbstractOperator; domain_shifts::Tuple=(), codomain_shifts::Tuple=()
-)
+        op::AbstractOperator; domain_shifts::Tuple = (), codomain_shifts::Tuple = ()
+    )
     return _shift_op(FFTShift, op, domain_shifts, codomain_shifts)
 end
 
@@ -512,7 +513,7 @@ julia> F = ifftshift_op(IDFT(16); codomain_shifts=(1,)) # note that 16 is even, 
 ```
 """
 function ifftshift_op(
-    op::AbstractOperator; domain_shifts::Tuple=(), codomain_shifts::Tuple=()
-)
+        op::AbstractOperator; domain_shifts::Tuple = (), codomain_shifts::Tuple = ()
+    )
     return _shift_op(IFFTShift, op, domain_shifts, codomain_shifts)
 end

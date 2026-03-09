@@ -14,7 +14,7 @@ Random.seed!(0)
     op = ZeroPad(Float64, n, z)
     x1 = randn(n)
     y1 = test_op(op, x1, randn(n .+ z), verb)
-    @test all(norm.(y1 .- [x1; zeros(5)]) .<= 1e-12)
+    @test all(norm.(y1 .- [x1; zeros(5)]) .<= 1.0e-12)
     @test size(op) == (n .+ z, n)
     @test domain_type(op) == Float64
     @test codomain_type(op) == Float64
@@ -29,7 +29,7 @@ Random.seed!(0)
     y1 = test_op(op, x1, randn(n .+ z), verb)
     y2 = zeros(n .+ z)
     y2[1:n[1], 1:n[2]] = x1
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
     @test size(op) == (n .+ z, n)
 
     n = (3, 2, 2)
@@ -39,7 +39,7 @@ Random.seed!(0)
     y1 = test_op(op, x1, randn(n .+ z), verb)
     y2 = zeros(n .+ z)
     y2[1:n[1], 1:n[2], 1:n[3]] = x1
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
     @test size(op) == (n .+ z, n)
 
     # Normal operator should be identity on input space

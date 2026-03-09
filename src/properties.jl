@@ -1,33 +1,32 @@
-
 import Base: size, ndims, similar, copy
 import LinearAlgebra: diag, opnorm
 
 export ndoms,
-	domain_type,
-	codomain_type,
-	domain_storage_type,
-	codomain_storage_type,
-	is_linear,
-	is_eye,
-	is_null,
-	is_diagonal,
-	is_AcA_diagonal,
-	is_AAc_diagonal,
-	diag_AcA,
-	diag_AAc,
-	is_orthogonal,
-	is_invertible,
-	is_full_row_rank,
-	is_full_column_rank,
-	is_positive_definite,
-	is_positive_semidefinite,
-	is_symmetric,
-	is_sliced,
-	remove_slicing,
-	displacement,
-	remove_displacement,
-	is_thread_safe,
-	estimate_opnorm
+    domain_type,
+    codomain_type,
+    domain_storage_type,
+    codomain_storage_type,
+    is_linear,
+    is_eye,
+    is_null,
+    is_diagonal,
+    is_AcA_diagonal,
+    is_AAc_diagonal,
+    diag_AcA,
+    diag_AAc,
+    is_orthogonal,
+    is_invertible,
+    is_full_row_rank,
+    is_full_column_rank,
+    is_positive_definite,
+    is_positive_semidefinite,
+    is_symmetric,
+    is_sliced,
+    remove_slicing,
+    displacement,
+    remove_displacement,
+    is_thread_safe,
+    estimate_opnorm
 
 """
 	domain_type(A::AbstractOperator)
@@ -73,13 +72,13 @@ RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{Co
 ```
 """
 function domain_storage_type(L::AbstractOperator)
-	dt = domain_type(L)
-	return if dt isa Tuple
-		arrayTypes = Tuple{[Array{t} for t in dt]...}
-		ArrayPartition{promote_type(dt...),arrayTypes}
-	else
-		Array{dt}
-	end
+    dt = domain_type(L)
+    return if dt isa Tuple
+        arrayTypes = Tuple{[Array{t} for t in dt]...}
+        ArrayPartition{promote_type(dt...), arrayTypes}
+    else
+        Array{dt}
+    end
 end
 
 """
@@ -96,38 +95,38 @@ RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{Co
 ```
 """
 function codomain_storage_type(L::AbstractOperator)
-	dt = codomain_type(L)
-	return if dt isa Tuple
-		arrayTypes = Tuple{[Array{t} for t in dt]...}
-		ArrayPartition{promote_type(dt...),arrayTypes}
-	else
-		Array{dt}
-	end
+    dt = codomain_type(L)
+    return if dt isa Tuple
+        arrayTypes = Tuple{[Array{t} for t in dt]...}
+        ArrayPartition{promote_type(dt...), arrayTypes}
+    else
+        Array{dt}
+    end
 end
 
-function allocate_in_domain(L::AbstractOperator, dims...=size(L, 2)...)
-	dS = domain_storage_type(L)
-	if dS <: ArrayPartition
-		S = dS.parameters[2]
-		return ArrayPartition([similar(s, d...) for (s, d) in zip(S.parameters, dims)]...)
-	else
-		return similar(dS, dims...)
-	end
+function allocate_in_domain(L::AbstractOperator, dims... = size(L, 2)...)
+    dS = domain_storage_type(L)
+    if dS <: ArrayPartition
+        S = dS.parameters[2]
+        return ArrayPartition([similar(s, d...) for (s, d) in zip(S.parameters, dims)]...)
+    else
+        return similar(dS, dims...)
+    end
 end
 
-function allocate_in_codomain(L::AbstractOperator, dims...=size(L, 1)...)
-	cS = codomain_storage_type(L)
-	if cS <: ArrayPartition
-		S = cS.parameters[2]
-		return ArrayPartition([similar(s, d...) for (s, d) in zip(S.parameters, dims)]...)
-	else
-		return similar(cS, dims...)
-	end
+function allocate_in_codomain(L::AbstractOperator, dims... = size(L, 1)...)
+    cS = codomain_storage_type(L)
+    if cS <: ArrayPartition
+        S = cS.parameters[2]
+        return ArrayPartition([similar(s, d...) for (s, d) in zip(S.parameters, dims)]...)
+    else
+        return similar(cS, dims...)
+    end
 end
 
-storage_type_display_string(::Type{T}) where {T<:AbstractArray} = ""
+storage_type_display_string(::Type{T}) where {T <: AbstractArray} = ""
 function storage_display_string(L::AbstractOperator)
-	return storage_type_display_string(codomain_storage_type(L))
+    return storage_type_display_string(codomain_storage_type(L))
 end
 
 """
@@ -181,7 +180,7 @@ ndims(L::AbstractOperator) = count_dims(size(L, 1)), count_dims(size(L, 2))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
 count_dims(::Tuple{}) = 0
-count_dims(::NTuple{N,Int}) where {N} = N
+count_dims(::NTuple{N, Int}) where {N} = N
 count_dims(dims::Tuple) = count_dims.(dims)
 
 """
@@ -270,14 +269,14 @@ julia> displacement(A)
 ```
 """
 function displacement(S::AbstractOperator)
-	x = allocate_in_domain(S)
-	fill!(x, 0)
-	d = S * x
-	if all(y -> y == d[1], d)
-		return d[1]
-	else
-		return d
-	end
+    x = allocate_in_domain(S)
+    fill!(x, 0)
+    d = S * x
+    if all(y -> y == d[1], d)
+        return d[1]
+    else
+        return d
+    end
 end
 
 """
@@ -289,14 +288,14 @@ Removes the displacement of the operator.
 remove_displacement(A::AbstractOperator) = A
 
 import Base: convert
-function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T<:AbstractOperator}
-	domain_type(L) != dom && error(
-		"cannot convert operator with domain $(domain_type(L)) to operator with domain $dom ",
-	)
-	size(L, 1) != dim_in && error(
-		"cannot convert operator with size $(size(L,1)) to operator with domain $dim_in ",
-	)
-	return L
+function convert(::Type{T}, dom::Type, dim_in::Tuple, L::T) where {T <: AbstractOperator}
+    domain_type(L) != dom && error(
+        "cannot convert operator with domain $(domain_type(L)) to operator with domain $dom ",
+    )
+    size(L, 1) != dim_in && error(
+        "cannot convert operator with size $(size(L, 1)) to operator with domain $dim_in ",
+    )
+    return L
 end
 
 """
@@ -328,29 +327,29 @@ julia> AbstractOperators.combine(Eye(10), DiagOp(rand(10)))
 ```
 """
 function combine(L, R)
-	if is_eye(L)
-		return R
-	elseif is_eye(R)
-		return L
-	elseif is_null(L)
-		if size(R, 1) == size(R, 2) && domain_type(R) == codomain_type(R)
-			return L
-		else
-			return Zeros(domain_type(R), size(R, 2), codomain_type(L), size(L, 1))
-		end
-	elseif is_null(R) && is_linear(L) && all(displacement(L) .== 0)
-		if size(L, 1) == size(L, 2) && domain_type(L) == codomain_type(L)
-			return R
-		else
-			return Zeros(domain_type(R), size(R, 2), codomain_type(L), size(L, 1))
-		end
-	else
-		error("cannot combine operators")
-	end
+    if is_eye(L)
+        return R
+    elseif is_eye(R)
+        return L
+    elseif is_null(L)
+        if size(R, 1) == size(R, 2) && domain_type(R) == codomain_type(R)
+            return L
+        else
+            return Zeros(domain_type(R), size(R, 2), codomain_type(L), size(L, 1))
+        end
+    elseif is_null(R) && is_linear(L) && all(displacement(L) .== 0)
+        if size(L, 1) == size(L, 2) && domain_type(L) == codomain_type(L)
+            return R
+        else
+            return Zeros(domain_type(R), size(R, 2), codomain_type(L), size(L, 1))
+        end
+    else
+        error("cannot combine operators")
+    end
 end
 
 function combine(L, M, R)
-	error("cannot combine operators")
+    error("cannot combine operators")
 end
 
 """
@@ -367,7 +366,7 @@ has_optimized_normalop(L::AbstractOperator) = false
 Returns the normal operator of the operator `L`. The normal operator is defined as `L' * L` where `L'` is the adjoint of `L`.
 """
 function get_normal_op(L::AbstractOperator)
-	return L' * L
+    return L' * L
 end
 
 """
@@ -393,7 +392,7 @@ Parameters of power iteration:
 These parameters can be adjusted in the [estimate_opnorm](@ref) function.
 """
 function LinearAlgebra.opnorm(A::AbstractOperator)
-	return powerit(A)
+    return powerit(A)
 end
 
 has_fast_opnorm(::AbstractOperator) = false
@@ -414,20 +413,20 @@ These parameters can be adjusted by passing `maxit` and `tol` keyword arguments.
 julia> estimate_opnorm(A; maxit=50, tol=1e-6)
 ```
 """
-function estimate_opnorm(A::AbstractOperator; maxit=20, tol=1e-3)
-	if has_fast_opnorm(A)
-		return opnorm(A)
-	else
-		return powerit(A; maxit, tol)
-	end
+function estimate_opnorm(A::AbstractOperator; maxit = 20, tol = 1.0e-3)
+    if has_fast_opnorm(A)
+        return opnorm(A)
+    else
+        return powerit(A; maxit, tol)
+    end
 end
 
-function powerit(A::AbstractOperator; maxit=100, tol=1e-6)
-	# Power method for estimating the operator norm
-	AHA = A' * A
+function powerit(A::AbstractOperator; maxit = 100, tol = 1.0e-6)
+    # Power method for estimating the operator norm
+    AHA = A' * A
     x = allocate_in_domain(A)
-	y = similar(x)
-	Random.randn!(x)
+    y = similar(x)
+    Random.randn!(x)
     normalize!(x)
     λ = zero(real(eltype(x)))
     λ_old = real(eltype(x))(Inf)
@@ -439,7 +438,7 @@ function powerit(A::AbstractOperator; maxit=100, tol=1e-6)
             break
         end
         λ_old = λ
-        @.. thread=true x = y / λ
+        @.. thread = true x = y / λ
     end
 
     return sqrt(λ)
@@ -447,28 +446,28 @@ end
 
 #printing
 function Base.show(io::IO, L::AbstractOperator)
-	return print(io, fun_name(L) * storage_display_string(L) * " " * fun_space(L))
+    return print(io, fun_name(L) * storage_display_string(L) * " " * fun_space(L))
 end
 
 function fun_space(L::AbstractOperator)
-	dom = fun_dom(L, 2)
-	codom = fun_dom(L, 1)
-	return dom * "->" * codom
+    dom = fun_dom(L, 2)
+    codom = fun_dom(L, 1)
+    return dom * "->" * codom
 end
 
 function fun_dom(L::AbstractOperator, n::Int)
-	dm = n == 2 ? domain_type(L) : codomain_type(L)
-	sz = size(L, n)
-	return string_dom(dm, sz)
+    dm = n == 2 ? domain_type(L) : codomain_type(L)
+    sz = size(L, n)
+    return string_dom(dm, sz)
 end
 
 function string_dom(dm::Type, sz::Tuple)
-	dm_st = dm <: Complex ? " ℂ" : " ℝ"
-	sz_st = length(sz) == 1 ? "$(sz[1]) " : "$sz "
-	return dm_st * "^" * sz_st
+    dm_st = dm <: Complex ? " ℂ" : " ℝ"
+    sz_st = length(sz) == 1 ? "$(sz[1]) " : "$sz "
+    return dm_st * "^" * sz_st
 end
 
 function string_dom(dm::Tuple, sz::Tuple)
-	s = string_dom.(dm, sz)
-	return length(s) > 3 ? s[1] * "..." * s[end] : *(s...)
+    s = string_dom.(dm, sz)
+    return length(s) > 3 ? s[1] * "..." * s[end] : *(s...)
 end

@@ -18,7 +18,7 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opR, x1, randn(dim_out), verb)
     y2 = reshape(A1 * x1, dim_out)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     @test_throws Exception Reshape(opA1, (2, 2, 1))
 
@@ -42,10 +42,10 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = opR * x1
     y2 = reshape(A1 * x1 + d1, dim_out)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     y1 = remove_displacement(opR) * x1
     y2 = reshape(A1 * x1, dim_out)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # fun_name / storage / thread safety / idempotent remove
     io = IOBuffer(); show(io, opR); s = String(take!(io))
@@ -70,20 +70,20 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opS, x1, randn(m), verb)
     y2 = coeff * A1 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     coeff2 = 3
     opS2 = Scale(coeff2, opS)
     y1 = test_op(opS2, x1, randn(m), verb)
     y2 = coeff2 * coeff * A1 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opF = FiniteDiff((m,))
     opS = Scale(coeff, opF)
     x1 = randn(m)
     y1 = test_op(opS, x1, diff(randn(m)), verb)
     y2 = coeff * (diff(x1))
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opS = Scale(coeff, opA1)
     @test is_null(opS) == is_null(opA1)
@@ -108,7 +108,7 @@ Random.seed!(0)
     d = randn(10)
     op = Scale(3, DiagOp(d))
     @test typeof(op) <: DiagOp
-    @test norm(diag(op) - 3 .* d) < 1e-12
+    @test norm(diag(op) - 3 .* d) < 1.0e-12
 
     # Scale with imaginary coeff gives error
     m, n = 8, 4
@@ -127,10 +127,10 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = opS * x1
     y2 = coeff * (A1 * x1 + d1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     y1 = remove_displacement(opS) * x1
     y2 = coeff * (A1 * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # Equality / inequality
     m, n = 8, 4
@@ -201,5 +201,5 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = reshape(opS * x, 2, 2)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 end

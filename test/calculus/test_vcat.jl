@@ -18,7 +18,7 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opV, x1, ArrayPartition(randn(m1), randn(m2)), verb)
     y2 = ArrayPartition(A1 * x1, A2 * x1)
-    @test norm(y1 - y2) .<= 1e-12
+    @test norm(y1 - y2) .<= 1.0e-12
 
     m1, n = 4, 5
     A1 = randn(m1, n) + im * randn(m1, n)
@@ -28,7 +28,7 @@ Random.seed!(0)
     x1 = randn(n) + im * randn(n)
     y1 = test_op(opV, x1, ArrayPartition(randn(m1) + im * randn(m1), randn(n)), verb)
     y2 = ArrayPartition(A1 * x1, opA2 * x1)
-    @test norm(y1 - y2) .<= 1e-12
+    @test norm(y1 - y2) .<= 1.0e-12
 
     #test VCAT longer
     m1, m2, m3, n = 4, 7, 3, 5
@@ -42,20 +42,20 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opV, x1, ArrayPartition(randn(m1), randn(m2), randn(m3)), verb)
     y2 = ArrayPartition(A1 * x1, A2 * x1, A3 * x1)
-    @test norm(y1 - y2) .<= 1e-12
+    @test norm(y1 - y2) .<= 1.0e-12
 
     #test VCAT of VCAT
     opVV = VCAT(opV, opA3)
     y1 = test_op(opVV, x1, ArrayPartition(randn(m1), randn(m2), randn(m3), randn(m3)), verb)
     y2 = ArrayPartition(A1 * x1, A2 * x1, A3 * x1, A3 * x1)
-    @test norm(y1 .- y2) <= 1e-12
+    @test norm(y1 .- y2) <= 1.0e-12
 
     opVV = VCAT(opA1, opV, opA3)
     y1 = test_op(
         opVV, x1, ArrayPartition(randn(m1), randn(m1), randn(m2), randn(m3), randn(m3)), verb
     )
     y2 = ArrayPartition(A1 * x1, A1 * x1, A2 * x1, A3 * x1, A3 * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opA3 = MatrixOp(randn(m1, m1))
     @test_throws Exception VCAT(opA1, opA2, opA3)
@@ -99,10 +99,10 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = opV * x1
     y2 = ArrayPartition(A1 * x1 + d1, A2 * x1 + d2)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     y1 = remove_displacement(opV) * x1
     y2 = ArrayPartition(A1 * x1, A2 * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     m1, m2, n = 4, 7, 5
     A1 = MatrixOp(randn(m1, n))
@@ -168,7 +168,7 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = ArrayPartition(A * x, B * x)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     # Extended coverage tests
 

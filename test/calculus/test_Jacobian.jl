@@ -117,7 +117,7 @@ end
     R = Reshape(op_rs, 2, 3)
     x_rs = randn(n_rs)
     JR = Jacobian(R, x_rs)
-    @test size(JR) == ((2,  3), (n_rs,))
+    @test size(JR) == ((2, 3), (n_rs,))
 
     # 11. BroadCast path (Val{false}) already in other test file; here just basic structure
     n_bc, l_bc = 3, 4

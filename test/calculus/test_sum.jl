@@ -18,7 +18,7 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opS, x1, randn(m), verb)
     y2 = A1 * x1 + A2 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     #test Sum longer
     m, n = 5, 7
@@ -32,7 +32,7 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(opS, x1, randn(m), verb)
     y2 = A1 * x1 + A2 * x1 + A3 * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opA3 = MatrixOp(randn(m, m))
     @test_throws Exception Sum(opA1, opA3)
@@ -52,7 +52,7 @@ Random.seed!(0)
     d = randn(10)
     op = Sum(Scale(-3.1, Eye(10)), DiagOp(d))
     @test is_diagonal(op) == true
-    @test norm(diag(op) - (d .- 3.1)) < 1e-12
+    @test norm(diag(op) - (d .- 3.1)) < 1.0e-12
 
     #test displacement of sum
     m, n = 5, 7
@@ -68,10 +68,10 @@ Random.seed!(0)
     opS = Sum(opA1, opA2, opA3)
     x1 = randn(n)
     y2 = A1 * x1 + A2 * x1 + A3 * x1 + d1 .+ d2 + d3
-    @test norm(opS * x1 - y2) <= 1e-12
-    @test norm(displacement(opS) - (d1 .+ d2 + d3)) <= 1e-12
+    @test norm(opS * x1 - y2) <= 1.0e-12
+    @test norm(displacement(opS) - (d1 .+ d2 + d3)) <= 1.0e-12
     y2 = A1 * x1 + A2 * x1 + A3 * x1
-    @test norm(remove_displacement(opS) * x1 - y2) <= 1e-12
+    @test norm(remove_displacement(opS) * x1 - y2) <= 1.0e-12
 
     # fun_name formatting (2-term vs multi-term) and thread safety / storage types
     op2 = Sum(MatrixOp(randn(m, n)), MatrixOp(randn(m, n)))
@@ -138,7 +138,7 @@ Random.seed!(0)
     # estimate_opnorm aggregator
     opnorm_S1 = opnorm(S1)
     estimated_opnorm_S1 = estimate_opnorm(S1)
-    @test estimated_opnorm_S1 ≈ opnorm_S1 rtol=0.05
+    @test estimated_opnorm_S1 ≈ opnorm_S1 rtol = 0.05
 
     # remove_displacement idempotence with displacement underlying
     dA = randn(m)
@@ -158,5 +158,5 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = A * x + opB * x
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 end

@@ -5,7 +5,7 @@
     y1 = test_op(op, x1, randn(n), verb)
     y2 = dct(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     # other constructors
     op = DCT((n,))
@@ -28,7 +28,7 @@
     op = DCT(n, m)
     x1 = randn(n, m)
 
-    @test norm(op' * (op * x1) - x1) <= 1e-12
+    @test norm(op' * (op * x1) - x1) <= 1.0e-12
     @test diag_AAc(op) == 1.0
     @test diag_AcA(op) == 1.0
 end
@@ -40,7 +40,7 @@ end
     y1 = test_op(op, x1, randn(n), verb)
     y2 = idct(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     # other constructors
     op = IDCT((n,))
@@ -63,7 +63,7 @@ end
     op = IDCT(n, m)
     x1 = randn(n, m)
 
-    @test norm(op' * (op * x1) - x1) <= 1e-12
+    @test norm(op' * (op * x1) - x1) <= 1.0e-12
     @test diag_AAc(op) == 1.0
     @test diag_AcA(op) == 1.0
 end
@@ -76,70 +76,70 @@ end
     y1 = test_op(op, x1, fft(randn(n)), verb)
     y2 = fft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Complex{Float64}, (n,))
     x1 = randn(n) + im * randn(n)
     y1 = test_op(op, x1, fft(randn(n)), verb)
     y2 = fft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Float64, (n,))
     x1 = randn(n)
     y1 = test_op(op, x1, fft(randn(n)), verb)
     y2 = fft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Complex{Float64}, (n,))
     x1 = randn(n) + im * randn(n)
     y1 = test_op(op, x1, fft(randn(n)), verb)
     y2 = fft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Float64, (n,), 1)
     x1 = randn(n)
     y1 = test_op(op, x1, fft(randn(n)), verb)
     y2 = fft(x1, 1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Complex{Float64}, (n,), 1)
     x1 = randn(n) + im * randn(n)
     y1 = test_op(op, x1, fft(randn(n)), verb)
     y2 = fft(x1, 1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Float64, (n, m))
     x1 = randn(n, m)
     y1 = test_op(op, x1, fft(randn(n, m)), verb)
     y2 = fft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Complex{Float64}, (n, m))
     x1 = randn(n, m) + im * randn(n, m)
     y1 = test_op(op, x1, fft(randn(n, m)), verb)
     y2 = fft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Float64, (m, n), 1)
     x1 = randn(m, n)
     y1 = test_op(op, x1, fft(randn(m, n)), verb)
     y2 = fft(x1, 1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     op = DFT(Complex{Float64}, (n, m), 2)
     x1 = randn(n, m) + im * randn(n, m)
     y1 = test_op(op, x1, fft(randn(n, m)), verb)
     y2 = fft(x1, 2)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     # other constructors
     op = DFT((n,))
@@ -161,8 +161,8 @@ end
     op = DFT(n, m)
     x1 = randn(n, m)
     y1 = op * x1
-    @test norm(op' * (op * x1) - diag_AcA(op) * x1) <= 1e-12
-    @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1e-12
+    @test norm(op' * (op * x1) - diag_AcA(op) * x1) <= 1.0e-12
+    @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1.0e-12
 end
 
 @testset "IDFT" begin
@@ -227,8 +227,8 @@ end
     op = IDFT(n, m)
     x1 = randn(ComplexF64, n, m)
     y1 = op * x1
-    @test norm(op' * (op * x1) - diag_AcA(op) * x1) <= 1e-12
-    @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1e-12
+    @test norm(op' * (op * x1) - diag_AcA(op) * x1) <= 1.0e-12
+    @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1.0e-12
 end
 
 @testset "RDFT" begin
@@ -238,7 +238,7 @@ end
     y1 = test_op(op, x1, rfft(x1), verb)
     y2 = rfft(x1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n, m, l = 4, 8, 5
     op = RDFT(Float64, (n, m, l), 2)
@@ -246,7 +246,7 @@ end
     y1 = test_op(op, x1, rfft(x1, 2), verb)
     y2 = rfft(x1, 2)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     # other constructors
     op = RDFT((n,))
@@ -272,7 +272,7 @@ end
     y1 = test_op(op, x1, irfft(randn(div(n, 2) + 1), n), verb)
     y2 = irfft(x1, n)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n = 11
     op = IRDFT(Complex{Float64}, (div(n, 2) + 1,), n)
@@ -280,7 +280,7 @@ end
     y1 = test_op(op, x1, irfft(randn(div(n, 2) + 1), n), verb)
     y2 = irfft(x1, n)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n, m, l = 4, 19, 5
     op = IRDFT(Complex{Float64}, (n, div(m, 2) + 1, l), m, 2)
@@ -288,7 +288,7 @@ end
     y1 = test_op(op, x1, irfft(x1, m, 2), verb)
     y2 = irfft(x1, m, 2)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n, m, l = 4, 18, 5
     op = IRDFT(Complex{Float64}, (n, div(m, 2) + 1, l), m, 2)
@@ -296,7 +296,7 @@ end
     y1 = test_op(op, x1, irfft(x1, m, 2), verb)
     y2 = irfft(x1, m, 2)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n, m, l = 5, 18, 5
     op = IRDFT(Complex{Float64}, (div(n, 2) + 1, m, l), n, 1)
@@ -304,7 +304,7 @@ end
     y1 = test_op(op, x1, irfft(x1, n, 1), verb)
     y2 = irfft(x1, n, 1)
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     ## other constructors
     op = IRDFT((10,), 19)

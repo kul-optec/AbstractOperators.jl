@@ -15,15 +15,15 @@ import LinearAlgebra: mul!
 import Base: size, ndims, @lock
 import Base.Threads: @spawn, @threads, nthreads
 
-import OperatorCore: 
+import OperatorCore:
     is_linear,
     is_eye,
     is_null,
     is_diagonal,
     is_AcA_diagonal,
     is_AAc_diagonal,
-	diag_AcA,
-	diag_AAc,
+    diag_AcA,
+    diag_AAc,
     is_orthogonal,
     is_invertible,
     is_full_row_rank,

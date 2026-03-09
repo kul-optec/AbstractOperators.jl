@@ -24,9 +24,9 @@ using SparseArrays
         @test is_thread_safe(op) == true
 
         # Forward difference on simple ramp in first dimension, constant in second
-        y1 = op * repeat(collect(range(0; stop=1, length=n)), 1, m)
-        @test all(norm.(y1[:, 1] .- 1 / (n - 1)) .<= 1e-12)
-        @test all(norm.(y1[:, 2]) .<= 1e-12)
+        y1 = op * repeat(collect(range(0; stop = 1, length = n)), 1, m)
+        @test all(norm.(y1[:, 1] .- 1 / (n - 1)) .<= 1.0e-12)
+        @test all(norm.(y1[:, 2]) .<= 1.0e-12)
         # Constant input gives zero
         const_in = fill(3.14, n, m)
         @test op * const_in ≈ zeros(n * m, 2)
@@ -41,7 +41,7 @@ using SparseArrays
         TV = [Dxx; Dyy]
 
         x1 = randn(n, m)
-        @test norm(op * x1 - reshape(TV * (x1[:]), n * m, 2)) < 1e-12
+        @test norm(op * x1 - reshape(TV * (x1[:]), n * m, 2)) < 1.0e-12
 
         n, m, l = 100, 50, 30
         verb && println("  - threaded = $threaded")
@@ -49,10 +49,10 @@ using SparseArrays
         x1 = randn(n, m, l)
         y1 = test_op(op, x1, randn(m * n * l, 3), verb)
         @test size(op) == ((n * m * l, 3), (n, m, l))
-        y1 = op * reshape(repeat(collect(range(0; stop=1, length=n)), 1, m * l), n, m, l)
-        @test all(norm.(y1[:, 1] .- 1 / (n - 1)) .<= 1e-12)
-        @test all(norm.(y1[:, 2]) .<= 1e-12)
-        @test all(norm.(y1[:, 3]) .<= 1e-12)
+        y1 = op * reshape(repeat(collect(range(0; stop = 1, length = n)), 1, m * l), n, m, l)
+        @test all(norm.(y1[:, 1] .- 1 / (n - 1)) .<= 1.0e-12)
+        @test all(norm.(y1[:, 2]) .<= 1.0e-12)
+        @test all(norm.(y1[:, 3]) .<= 1.0e-12)
         # Constant 3D input zero output
         const3 = fill(-2.0, n, m, l)
         @test op * const3 ≈ zeros(n * m * l, 3)
@@ -77,7 +77,7 @@ using SparseArrays
         z = zeros(n, m)
         mul!(z, V', Y)
         rhs = dot(vec(x_test), vec(z))
-        @test abs(lhs - rhs) <= 1e-10 * (1 + abs(lhs))
+        @test abs(lhs - rhs) <= 1.0e-10 * (1 + abs(lhs))
 
         # In-place mul! forward and adjoint
         Yf = zeros(n * m, 2)

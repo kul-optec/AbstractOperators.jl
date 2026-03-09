@@ -19,13 +19,13 @@ Random.seed!(0)
     x2 = randn(n2)
     y1 = test_op(opH, ArrayPartition(x1, x2), randn(m), verb)
     y2 = A1 * x1 + A2 * x2
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
-    # permutation 
+    # permutation
     p = [2; 1]
     opHp = opH[p]
     y1 = test_op(opHp, ArrayPartition(x2, x1), randn(m), verb)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # test HCAT longer
 
@@ -42,19 +42,19 @@ Random.seed!(0)
     x3 = randn(n3)
     y1 = test_op(opH, ArrayPartition(x1, x2, x3), randn(m), verb)
     y2 = A1 * x1 + A2 * x2 + A3 * x3
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # test HCAT of HCAT
     opHH = HCAT(opH, opA2, opA3)
     y1 = test_op(opHH, ArrayPartition(x1, x2, x3, x2, x3), randn(m), verb)
     y2 = A1 * x1 + A2 * x2 + A3 * x3 + A2 * x2 + A3 * x3
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opHH = HCAT(opH, opH, opA3)
     x = ArrayPartition(x1, x2, x3, x1, x2, x3, x3)
     y1 = test_op(opHH, x, randn(m), verb)
     y2 = A1 * x1 + A2 * x2 + A3 * x3 + A1 * x1 + A2 * x2 + A3 * x3 + A3 * x3
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opA3 = MatrixOp(randn(n1, n1))
     @test_throws Exception HCAT(opA1, opA2, opA3)
@@ -112,7 +112,7 @@ Random.seed!(0)
     @test diag_AAc(op) == d1 .* conj(d1) .+ d2 .* conj(d2)
 
     y1 = randn(n1) .+ im .* randn(n1)
-    @test norm(op * (op' * y1) .- diag_AAc(op) .* y1) < 1e-12
+    @test norm(op * (op' * y1) .- diag_AAc(op) .* y1) < 1.0e-12
 
     #test displacement
 
@@ -128,10 +128,10 @@ Random.seed!(0)
     x2 = randn(n2)
     y1 = opH * ArrayPartition(x1, x2)
     y2 = A1 * x1 + d1 + A2 * x2 + d2
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     y1 = remove_displacement(opH) * ArrayPartition(x1, x2)
     y2 = A1 * x1 + A2 * x2
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     m, n1, n2 = 4, 7, 5
     A1 = MatrixOp(randn(m, n1))
@@ -194,7 +194,7 @@ Random.seed!(0)
     @test typeof(Hp) <: HCAT
     xA = randn(size(Aeq, 2)); xB = randn(size(Beq, 2))
     y_orig = H1a * ArrayPartition(xA, xB)
-    xin = p2 == [2,1] ? ArrayPartition(xB, xA) : ArrayPartition(xA, xB)
+    xin = p2 == [2, 1] ? ArrayPartition(xB, xA) : ArrayPartition(xA, xB)
     y_perm = Hp * xin
     @test y_orig ≈ y_perm
 
@@ -214,7 +214,7 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = A * x.x[1] + B * x.x[2]
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     m, n = 3, 5
     x = ArrayPartition(randn(m), randn(n))
@@ -227,7 +227,7 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = A * x.x[1] + M * x.x[2]
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     p = [2, 1]
     opP = AbstractOperators.permute(op, p)
@@ -242,7 +242,7 @@ Random.seed!(0)
         A1 = MatrixOp(randn(4, 3))
         A2 = MatrixOp(randn(5, 2))  # Different codomain dimension (5 vs 4)
         @test_throws DimensionMismatch HCAT(A1, A2)
-        
+
         # codomain_type mismatch: real vs complex
         A1 = MatrixOp(randn(4, 3))
         A2 = MatrixOp(randn(ComplexF64, 4, 2))
@@ -255,31 +255,31 @@ Random.seed!(0)
         A1 = MatrixOp(randn(m, n1))
         A2 = MatrixOp(randn(m, n2))
         A3 = MatrixOp(randn(m, n3))
-        
+
         # Create nested HCAT
         H1 = HCAT(A1, A2)
         H2 = HCAT(H1, A3)  # This should flatten
-        
+
         # Test that it works correctly
         x1, x2, x3 = randn(n1), randn(n2), randn(n3)
         y = H2 * ArrayPartition(x1, x2, x3)
         y_expected = A1 * x1 + A2 * x2 + A3 * x3
-        @test norm(y - y_expected) < 1e-12
-        
+        @test norm(y - y_expected) < 1.0e-12
+
         # Test adjoint also works
         y_test = randn(m)
         x_adj = H2' * y_test
         @test length(x_adj.x) == 3  # ArrayPartition has .x field
-        
+
         # More complex nesting: HCAT(HCAT(...), HCAT(...))
         H3 = HCAT(A1, A2)
         H4 = HCAT(A2, A3)
         H5 = HCAT(H3, H4)  # Should flatten all
-        
+
         x_full = ArrayPartition(x1, x2, x2, x3)
         y2 = H5 * x_full
         y2_expected = A1 * x1 + A2 * x2 + A2 * x2 + A3 * x3
-        @test norm(y2 - y2_expected) < 1e-12
+        @test norm(y2 - y2_expected) < 1.0e-12
     end
 
     # Test single operator HCAT (should return the operator itself)

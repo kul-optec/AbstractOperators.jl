@@ -15,30 +15,30 @@ julia> Xcorr(Float64, (10,), [1.0, 0.5, 0.2])
 ◎  ℝ^10 -> ℝ^19
 ```
 """
-struct Xcorr{T,H<:AbstractVector{T}} <: LinearOperator
-	dim_in::Tuple{Int}
-	h::H
+struct Xcorr{T, H <: AbstractVector{T}} <: LinearOperator
+    dim_in::Tuple{Int}
+    h::H
 end
 
 # Constructors
-function Xcorr(domain_type::Type, DomainDim::NTuple{N,Int}, h::H) where {H<:AbstractVector,N}
-	eltype(h) != domain_type && error("eltype(h) is $(eltype(h)), should be $(domain_type)")
-	N != 1 && error("Xcorr treats only SISO, check Filt and MIMOFilt for MIMO")
-	return Xcorr{domain_type,H}(DomainDim, h)
+function Xcorr(domain_type::Type, DomainDim::NTuple{N, Int}, h::H) where {H <: AbstractVector, N}
+    eltype(h) != domain_type && error("eltype(h) is $(eltype(h)), should be $(domain_type)")
+    N != 1 && error("Xcorr treats only SISO, check Filt and MIMOFilt for MIMO")
+    return Xcorr{domain_type, H}(DomainDim, h)
 end
 Xcorr(x::H, h::H) where {H} = Xcorr(eltype(x), size(x), h)
 
 # Mappings
 
-function mul!(y::H, A::Xcorr{T,H}, b::H) where {T,H}
-	return y .= xcorr(b, A.h; padmode=:longest)
+function mul!(y::H, A::Xcorr{T, H}, b::H) where {T, H}
+    return y .= xcorr(b, A.h; padmode = :longest)
 end
 
-function mul!(y::H, L::AdjointOperator{Xcorr{T,H}}, b::H) where {T,H}
-	A = L.A
-	l = floor(Int64, size(A, 1)[1] / 2)
-	idx = (l + 1):(l + length(y))
-	return y .= conv(b, A.h)[idx]
+function mul!(y::H, L::AdjointOperator{Xcorr{T, H}}, b::H) where {T, H}
+    A = L.A
+    l = floor(Int64, size(A, 1)[1] / 2)
+    idx = (l + 1):(l + length(y))
+    return y .= conv(b, A.h)[idx]
 end
 
 # Properties

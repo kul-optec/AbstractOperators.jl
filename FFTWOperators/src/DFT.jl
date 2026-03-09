@@ -48,8 +48,8 @@ julia> op*ones(3) ≈ FFTW.fft(ones(3))
 true
 ```
 """
-struct DFT{N,C,D,Dir,S,T1<:AbstractFFTs.Plan,T2<:AbstractFFTs.Plan,R} <: LinearOperator
-    dim_in::NTuple{N,Int}
+struct DFT{N, C, D, Dir, S, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, R} <: LinearOperator
+    dim_in::NTuple{N, Int}
     A::T1
     At::T2
     normalization::Normalization
@@ -103,24 +103,24 @@ function IDFT end
 # Constructors
 #standard constructor
 function DFT(
-    dim_in::NTuple{N,Int},
-    dims=1:N;
-    normalization::Normalization=UNNORMALIZED,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N}
-    DFT(zeros(dim_in), dims; normalization, flags, timelimit, num_threads)
+        dim_in::NTuple{N, Int},
+        dims = 1:N;
+        normalization::Normalization = UNNORMALIZED,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N}
+    return DFT(zeros(dim_in), dims; normalization, flags, timelimit, num_threads)
 end
 
 function DFT(
-    x::AbstractArray{D,N},
-    dims=1:ndims(x);
-    normalization::Normalization=UNNORMALIZED,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N,D<:Real}
+        x::AbstractArray{D, N},
+        dims = 1:ndims(x);
+        normalization::Normalization = UNNORMALIZED,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N, D <: Real}
     x = similar(x, Complex{D})
     prev_fftw_threads = FFTW.get_num_threads()
     FFTW.set_num_threads(num_threads)
@@ -130,19 +130,19 @@ function DFT(
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
     scaling = get_scaling(size(x), dims, normalization)
-    return DFT{N,Complex{D},D,dims,S,typeof(A),typeof(At),D}(
+    return DFT{N, Complex{D}, D, dims, S, typeof(A), typeof(At), D}(
         size(x), A, At, normalization, scaling
     )
 end
 
 function DFT(
-    x::AbstractArray{D,N},
-    dims=1:ndims(x);
-    normalization::Normalization=UNNORMALIZED,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N,D<:Complex}
+        x::AbstractArray{D, N},
+        dims = 1:ndims(x);
+        normalization::Normalization = UNNORMALIZED,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N, D <: Complex}
     if x != FFTW.ESTIMATE
         x = similar(x) # FFTW.MEASURE and FFTW.PATIENT may cause the input array to be modified
     end
@@ -154,89 +154,89 @@ function DFT(
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
     scaling = get_scaling(size(x), dims, normalization)
-    return DFT{N,D,D,dims,S,typeof(A),typeof(At),real(D)}(size(x), A, At, normalization, scaling)
+    return DFT{N, D, D, dims, S, typeof(A), typeof(At), real(D)}(size(x), A, At, normalization, scaling)
 end
 
 function DFT(
-    T::Type,
-    dim_in::NTuple{N,Int},
-    dims=1:N;
-    normalization::Normalization=UNNORMALIZED,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N}
-    DFT(zeros(T, dim_in), dims; normalization, flags, timelimit, num_threads)
+        T::Type,
+        dim_in::NTuple{N, Int},
+        dims = 1:N;
+        normalization::Normalization = UNNORMALIZED,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N}
+    return DFT(zeros(T, dim_in), dims; normalization, flags, timelimit, num_threads)
 end
 function DFT(
-    dim_in::Vararg{Int};
-    normalization::Normalization=UNNORMALIZED,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-)
-    DFT(dim_in; normalization, flags, timelimit, num_threads)
+        dim_in::Vararg{Int};
+        normalization::Normalization = UNNORMALIZED,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    )
+    return DFT(dim_in; normalization, flags, timelimit, num_threads)
 end
 function DFT(
-    T::Type,
-    dim_in::Vararg{Int};
-    normalization::Normalization=UNNORMALIZED,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-)
-    DFT(T, dim_in; normalization, flags, timelimit, num_threads)
+        T::Type,
+        dim_in::Vararg{Int};
+        normalization::Normalization = UNNORMALIZED,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    )
+    return DFT(T, dim_in; normalization, flags, timelimit, num_threads)
 end
 
 #standard constructor
 function IDFT(
-    T::Type,
-    dim_in::NTuple{N,Int},
-    dims=1:N;
-    normalization::Normalization=BACKWARD,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N}
+        T::Type,
+        dim_in::NTuple{N, Int},
+        dims = 1:N;
+        normalization::Normalization = BACKWARD,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N}
     @assert T <: Complex "Input type for IDFT must be a complex type"
     return DFT(T, dim_in, dims; normalization, flags, timelimit, num_threads)'
 end
 
 function IDFT(
-    x::AbstractArray{D,N},
-    dims=1:ndims(x);
-    normalization::Normalization=BACKWARD,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N,D}
+        x::AbstractArray{D, N},
+        dims = 1:ndims(x);
+        normalization::Normalization = BACKWARD,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N, D}
     @assert D <: Complex "Input array for IDFT must have complex element type"
     return DFT(x, dims; normalization, flags, timelimit, num_threads)'
 end
 
 function IDFT(
-    dim_in::NTuple{N,Int},
-    dims=1:N;
-    normalization::Normalization=BACKWARD,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-) where {N}
+        dim_in::NTuple{N, Int},
+        dims = 1:N;
+        normalization::Normalization = BACKWARD,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    ) where {N}
     return DFT(ComplexF64, dim_in, dims; normalization, flags, timelimit, num_threads)'
 end
 function IDFT(
-    dim_in::Vararg{Int}; normalization::Normalization=BACKWARD, flags=FFTW.ESTIMATE, timelimit=Inf, num_threads=Threads.nthreads()
-)
+        dim_in::Vararg{Int}; normalization::Normalization = BACKWARD, flags = FFTW.ESTIMATE, timelimit = Inf, num_threads = Threads.nthreads()
+    )
     return DFT(ComplexF64, dim_in; normalization, flags, timelimit, num_threads)'
 end
 function IDFT(
-    T::Type,
-    dim_in::Vararg{Int};
-    normalization::Normalization=BACKWARD,
-    flags=FFTW.ESTIMATE,
-    timelimit=Inf,
-    num_threads=Threads.nthreads(),
-)
+        T::Type,
+        dim_in::Vararg{Int};
+        normalization::Normalization = BACKWARD,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = Threads.nthreads(),
+    )
     @assert T <: Complex "Input type for IDFT must be a complex type"
     return DFT(T, dim_in; normalization, flags, timelimit, num_threads)'
 end
@@ -244,32 +244,32 @@ end
 # Mappings
 
 function mul!(
-    y::AbstractArray, L::DFT{N,C,D}, b::AbstractArray
-) where {N,C,D<:Complex}
+        y::AbstractArray, L::DFT{N, C, D}, b::AbstractArray
+    ) where {N, C, D <: Complex}
     check(y, L, b)
     mul!(y, L.A, b)
     return scale_output!(y, L)
 end
 
 function mul!(
-    y::AbstractArray, L::DFT{N,C,D}, b::AbstractArray
-) where {N,C,D<:Real}
+        y::AbstractArray, L::DFT{N, C, D}, b::AbstractArray
+    ) where {N, C, D <: Real}
     check(y, L, b)
     mul!(y, L.A, complex(b))
     return scale_output!(y, L)
 end
 
 function mul!(
-    y::AbstractArray, L::AdjointOperator{<:DFT{N,C,D}}, b::AbstractArray
-) where {N,C,D<:Complex}
+        y::AbstractArray, L::AdjointOperator{<:DFT{N, C, D}}, b::AbstractArray
+    ) where {N, C, D <: Complex}
     check(y, L, b)
     mul!(y, L.A.At, b)
     return scale_output!(y, L)
 end
 
 function mul!(
-    y::AbstractArray, L::AdjointOperator{<:DFT{N,C,D}}, b::AbstractArray
-) where {N,C,D<:Real}
+        y::AbstractArray, L::AdjointOperator{<:DFT{N, C, D}}, b::AbstractArray
+    ) where {N, C, D <: Real}
     check(y, L, b)
     y2 = complex(y)
     mul!(y2, L.A.At, b)
@@ -281,21 +281,21 @@ end
 
 size(L::DFT) = (L.dim_in, L.dim_in)
 function domain_storage_type(
-    ::DFT{N,C,D,Dir,S}
-) where {N,C,D,Dir,S}
-    S{D}
+        ::DFT{N, C, D, Dir, S}
+    ) where {N, C, D, Dir, S}
+    return S{D}
 end
 function codomain_storage_type(
-    ::DFT{N,C,D,Dir,S}
-) where {N,C,D,Dir,S}
-    S{C}
+        ::DFT{N, C, D, Dir, S}
+    ) where {N, C, D, Dir, S}
+    return S{C}
 end
 
 fun_name(A::DFT) = "ℱ"
 fun_name(A::AdjointOperator{<:DFT}) = A.A.normalization == UNNORMALIZED ? "ℱᵃ" : "ℱ⁻¹"
 
-domain_type(::DFT{N,C,D}) where {N,C,D} = D
-codomain_type(::DFT{N,C,D}) where {N,C,D} = C
+domain_type(::DFT{N, C, D}) where {N, C, D} = D
+codomain_type(::DFT{N, C, D}) where {N, C, D} = C
 is_thread_safe(::DFT) = true
 
 is_AcA_diagonal(L::DFT) = true
@@ -304,15 +304,15 @@ is_invertible(L::DFT) = true
 is_full_row_rank(L::DFT) = true
 is_full_column_rank(L::DFT) = true
 
-function diag_AcA(L::DFT{N,C,D,Dir,S}) where {N,C,D,Dir,S}
-    if L.normalization == UNNORMALIZED
+function diag_AcA(L::DFT{N, C, D, Dir, S}) where {N, C, D, Dir, S}
+    return if L.normalization == UNNORMALIZED
         get_scaling(size(L, 1), Dir, FORWARD)
     else
         one(real(C))
     end
 end
-function diag_AAc(L::DFT{N,C,D,Dir,S}) where {N,C,D,Dir,S}
-    if L.normalization == UNNORMALIZED
+function diag_AAc(L::DFT{N, C, D, Dir, S}) where {N, C, D, Dir, S}
+    return if L.normalization == UNNORMALIZED
         get_scaling(size(L, 2), Dir, FORWARD)
     else
         one(real(C))

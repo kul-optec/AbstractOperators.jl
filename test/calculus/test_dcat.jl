@@ -20,7 +20,7 @@ import Base: size
     x2 = randn(n2)
     y1 = test_op(opD, ArrayPartition(x1, x2), ArrayPartition(randn(m1), randn(m2)), verb)
     y2 = ArrayPartition(A1 * x1, A2 * x2)
-    @test norm(y1 .- y2) .<= 1e-12
+    @test norm(y1 .- y2) .<= 1.0e-12
 
     # test DCAT longer
 
@@ -39,7 +39,7 @@ import Base: size
         opD, ArrayPartition(x1, x2, x3), ArrayPartition(randn(m1), randn(m2), randn(m3)), verb
     )
     y2 = ArrayPartition(A1 * x1, A2 * x2, A3 * x3)
-    @test norm(y1 .- y2) .<= 1e-12
+    @test norm(y1 .- y2) .<= 1.0e-12
 
     #properties
     @test is_linear(opD) == true
@@ -96,11 +96,11 @@ import Base: size
     x3 = randn(n3)
     y1 = opD * ArrayPartition(x1, x2, x3)
     y2 = ArrayPartition(A1 * x1 + d1, A2 * x2 + d2, A3 * x3 + d3)
-    @test norm(y1 .- y2) .<= 1e-12
-    @test norm(displacement(opD) .- ArrayPartition(d1, d2, d3)) .<= 1e-12
+    @test norm(y1 .- y2) .<= 1.0e-12
+    @test norm(displacement(opD) .- ArrayPartition(d1, d2, d3)) .<= 1.0e-12
     y1 = remove_displacement(opD) * ArrayPartition(x1, x2, x3)
     y2 = ArrayPartition(A1 * x1, A2 * x2, A3 * x3)
-    @test norm(y1 .- y2) .<= 1e-12
+    @test norm(y1 .- y2) .<= 1.0e-12
 
     m1, n1, m2, n2 = 4, 7, 5, 2
     A1 = MatrixOp(randn(m1, n1))
@@ -154,7 +154,7 @@ import Base: size
     opA3 = MatrixOp([1.0 0.0; 0.0 3.0])
     opD4 = DCAT(opA1, opA3)
     @test AbstractOperators.has_fast_opnorm(opD4) == (AbstractOperators.has_fast_opnorm(opA1) && AbstractOperators.has_fast_opnorm(opA3))
-    @test opnorm(opD4) ≈ estimate_opnorm(opD4) rtol=0.05
+    @test opnorm(opD4) ≈ estimate_opnorm(opD4) rtol = 0.05
 
     # Test == for general equality
     opD5a = DCAT(opA1, opA2)
@@ -186,5 +186,5 @@ import Base: size
     y, grad = test_NLop(op, x, r, verb)
 
     Y = ArrayPartition(A * x.x[1], B * x.x[2])
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 end

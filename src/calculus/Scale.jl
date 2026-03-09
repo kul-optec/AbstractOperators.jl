@@ -21,85 +21,87 @@ julia> 10*A         #shorthand
 	
 ```
 """
-struct Scale{T<:Number,L<:AbstractOperator,Th} <: AbstractOperator
-	coeff::T
-	coeff_conj::T
-	A::L
-	function Scale(coeff, coeff_conj, L; threaded=default_should_thread(L))
-		cT = codomain_type(L)
-		isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
-		if isCodomainReal && typeof(coeff) <: Complex
-			error(
-				"Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
-			)
-		end
-		Th = threaded ? FastBroadcast.True() : FastBroadcast.False()
-		return new{typeof(coeff),typeof(L),Th}(coeff, coeff_conj, L)
-	end
+struct Scale{T <: Number, L <: AbstractOperator, Th} <: AbstractOperator
+    coeff::T
+    coeff_conj::T
+    A::L
+    function Scale(coeff, coeff_conj, L; threaded = default_should_thread(L))
+        cT = codomain_type(L)
+        isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
+        if isCodomainReal && typeof(coeff) <: Complex
+            error(
+                "Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
+            )
+        end
+        Th = threaded ? FastBroadcast.True() : FastBroadcast.False()
+        return new{typeof(coeff), typeof(L), Th}(coeff, coeff_conj, L)
+    end
 end
 
 # Constructors
-function Scale(coeff, L; threaded=default_should_thread(L))
-	if coeff == 1
-		return L
-	end
-	coeff_conj = conj(coeff)
-	coeff, coeff_conj = promote(coeff, coeff_conj)
-	return Scale(coeff, coeff_conj, L; threaded)
+function Scale(coeff, L; threaded = default_should_thread(L))
+    if coeff == 1
+        return L
+    end
+    coeff_conj = conj(coeff)
+    coeff, coeff_conj = promote(coeff, coeff_conj)
+    return Scale(coeff, coeff_conj, L; threaded)
 end
 
 get_output_length(L) = ndoms(L, 1) == 1 ? prod(size(L, 1)) : sum(prod.(size(L, 1)))
-default_should_thread(L) = Threads.nthreads() > 1 && get_output_length(L) > 1e4
+default_should_thread(L) = Threads.nthreads() > 1 && get_output_length(L) > 1.0e4
 
 # Special Constructors
 # scale of scale
-function Scale(coeff::Number, L::Scale; threaded=default_should_thread(L))
-	return Scale(*(promote(coeff, L.coeff)...), L.A; threaded)
+function Scale(coeff::Number, L::Scale; threaded = default_should_thread(L))
+    return Scale(*(promote(coeff, L.coeff)...), L.A; threaded)
 end
 
 # Mappings
 
-function mul!(y::AbstractArray, L::Scale{T,A,Th}, x::D) where {T,A,Th,D}
-	mul!(y, L.A, x)
-	return @.. thread=Th y *= L.coeff
+function mul!(y::AbstractArray, L::Scale{T, A, Th}, x::D) where {T, A, Th, D}
+    mul!(y, L.A, x)
+    return @.. thread = Th y *= L.coeff
 end
 
-function mul!(y::Tuple, L::Scale{T,A,Th}, x::D) where {T,D,A,Th}
-	mul!(y, L.A, x)
-	for k in eachindex(y)
-		@.. thread=Th y[k] *= L.coeff
-	end
+function mul!(y::Tuple, L::Scale{T, A, Th}, x::D) where {T, D, A, Th}
+    mul!(y, L.A, x)
+    for k in eachindex(y)
+        @.. thread = Th y[k] *= L.coeff
+    end
+    return
 end
 
 function mul!(
-	y::AbstractArray, S::AdjointOperator{Scale{T,A,Th}}, x::D
-) where {T,D<:AbstractArray,A,Th}
-	L = S.A
-	mul!(y, L.A', x)
-	return @.. thread=Th y .*= L.coeff_conj
+        y::AbstractArray, S::AdjointOperator{Scale{T, A, Th}}, x::D
+    ) where {T, D <: AbstractArray, A, Th}
+    L = S.A
+    mul!(y, L.A', x)
+    return @.. thread = Th y .*= L.coeff_conj
 end
 
-function mul!(y::Tuple, S::AdjointOperator{Scale{T,A,Th}}, x::C) where {T,C,A,Th}
-	L = S.A
-	mul!(y, L.A', x)
-	for k in eachindex(y)
-		@.. thread=Th y[k] .*= L.coeff_conj
-	end
+function mul!(y::Tuple, S::AdjointOperator{Scale{T, A, Th}}, x::C) where {T, C, A, Th}
+    L = S.A
+    mul!(y, L.A', x)
+    for k in eachindex(y)
+        @.. thread = Th y[k] .*= L.coeff_conj
+    end
+    return
 end
 
 has_optimized_normalop(L::Scale) = is_linear(L.A) && has_optimized_normalop(L.A)
 function get_normal_op(L::Scale)
-	if is_linear(L.A)
-		return Scale(L.coeff*L.coeff_conj, L.coeff*L.coeff_conj, get_normal_op(L.A))
-	else
-		return L' * L
-	end
+    if is_linear(L.A)
+        return Scale(L.coeff * L.coeff_conj, L.coeff * L.coeff_conj, get_normal_op(L.A))
+    else
+        return L' * L
+    end
 end
 
 # Properties
 
-function Base.:(==)(L1::Scale{T,A}, L2::Scale{T,A}) where {T,A}
-	L1.coeff == L2.coeff && L1.A == L2.A
+function Base.:(==)(L1::Scale{T, A}, L2::Scale{T, A}) where {T, A}
+    return L1.coeff == L2.coeff && L1.A == L2.A
 end
 size(L::Scale) = size(L.A)
 
@@ -136,6 +138,6 @@ estimate_opnorm(L::Scale) = abs(L.coeff) * estimate_opnorm(L.A)
 # utils
 
 function permute(S::Scale, p::AbstractVector{Int})
-	A = permute(S.A, p)
-	return Scale(S.coeff, S.coeff_conj, A)
+    A = permute(S.A, p)
+    return Scale(S.coeff, S.coeff_conj, A)
 end

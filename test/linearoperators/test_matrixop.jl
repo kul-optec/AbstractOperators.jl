@@ -43,7 +43,7 @@ Random.seed!(0)
     y1 = test_op(op, x1, randn(n) + im * randn(n), verb)
     y2 = A * x1
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     # complex matrix, real matrix input
     c = 3
@@ -78,12 +78,12 @@ Random.seed!(0)
     @test is_full_column_rank(MatrixOp(randn(Random.seed!(0), 3, 4))) == false
 
     # Square invertible matrix
-    B = randn(4,4)
+    B = randn(4, 4)
     invop = MatrixOp(Float64, (4,), B)
     @test is_invertible(invop) == (det(B) != 0)
 
     # Orthogonal case (approx)
-    Q,_ = qr(randn(5,5))
+    Q, _ = qr(randn(5, 5))
     Qmat = Matrix(Q)
     Qop = MatrixOp(Float64, (5,), Qmat)
     @test is_orthogonal(Qop) == true
@@ -108,7 +108,7 @@ Random.seed!(0)
     @test Nop * xN ≈ invop' * (invop * xN)
 
     # Adjoint mapping with complex matrix and real input (special method)
-    Cmat = randn(3,3) + im*randn(3,3)
+    Cmat = randn(3, 3) + im * randn(3, 3)
     Cop = MatrixOp(Float64, (3,), Cmat)
     xr = randn(3)
     yr = Cop' * xr
@@ -122,8 +122,8 @@ Random.seed!(0)
     @test yvec ≈ Qmat * xvec
 
     # Batched (matrix input) in-place multiplication
-    Xmat = randn(5,3)
-    Ymat = zeros(5,3)
+    Xmat = randn(5, 3)
+    Ymat = zeros(5, 3)
     mul!(Ymat, Qop, Xmat)
     @test Ymat ≈ Qmat * Xmat
 
@@ -132,11 +132,11 @@ Random.seed!(0)
     @test opnorm(invop) ≈ opnorm(B)
 
     # Size variations: single vs multi-column
-    Tall = randn(8,3)
+    Tall = randn(8, 3)
     TallOp = MatrixOp(Float64, (3,), Tall)
-    TallOpMulti = MatrixOp(Float64, (3,2), Tall)
+    TallOpMulti = MatrixOp(Float64, (3, 2), Tall)
     @test size(TallOp) == ((8,), (3,))
-    @test size(TallOpMulti) == ((8,2), (3,2))
+    @test size(TallOpMulti) == ((8, 2), (3, 2))
 
     # Show output symbol
     io = IOBuffer(); show(io, TallOp); str = String(take!(io)); @test occursin("▒", str)

@@ -16,14 +16,14 @@ Random.seed!(0)
 
     opC = Compose(opF, opA1)
     x = randn(m1)
-    y1 = test_op(opC, x, randn(m2-1), verb)
+    y1 = test_op(opC, x, randn(m2 - 1), verb)
     y2 = diff(A1 * x)
     @test y1 == y2
 
     # test Compose longer
     m1, m2, m3 = 4, 7, 3
     A1 = randn(m2, m1)
-    A2 = randn(m3, m2-1)
+    A2 = randn(m3, m2 - 1)
     opA1 = MatrixOp(A1)
     opF = FiniteDiff((m2,))
     opA2 = MatrixOp(A2)
@@ -34,8 +34,8 @@ Random.seed!(0)
     y1 = test_op(opC1, x, randn(m3), verb)
     y2 = test_op(opC2, x, randn(m3), verb)
     y3 = A2 * diff(A1 * x)
-    @test all(norm.(y1 .- y2) .<= 1e-12)
-    @test all(norm.(y3 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
+    @test all(norm.(y3 .- y2) .<= 1.0e-12)
 
     #test Compose special cases
     @test typeof(opA1 * Eye(m1)) == typeof(opA1)
@@ -61,11 +61,11 @@ Random.seed!(0)
     chain_adj = chain'
     x_in = randn(m3)
     y_chain = chain_adj * x_in
-    y_ref = opA1' * (1//2 .* (opA2' * x_in))
+    y_ref = opA1' * (1 // 2 .* (opA2' * x_in))
     @test y_chain ≈ y_ref
 
     # Dimension mismatch error
-    @test_throws Exception Compose(MatrixOp(randn(5,4)), MatrixOp(randn(3,2)))
+    @test_throws Exception Compose(MatrixOp(randn(5, 4)), MatrixOp(randn(3, 2)))
 
     # Identity elimination & fusion checks
     E = Eye(m2)
@@ -162,15 +162,15 @@ Random.seed!(0)
 
     x = randn(m1)
 
-    @test norm(opC * x - (A4 * (A3 * (A2 * (A1 * x + d1) .+ d2) .+ d3) - d4)) < 1e-9
-    @test norm(displacement(opC) - (A4 * (A3 * (A2 * d1 .+ d2) .+ d3) - d4)) < 1e-9
+    @test norm(opC * x - (A4 * (A3 * (A2 * (A1 * x + d1) .+ d2) .+ d3) - d4)) < 1.0e-9
+    @test norm(displacement(opC) - (A4 * (A3 * (A2 * d1 .+ d2) .+ d3) - d4)) < 1.0e-9
 
     opA4 = MatrixOp(A4)
     opC = AffineAdd(Compose(Compose(Compose(opA4, opA3), opA2), opA1), d4)
-    @test norm(opC * x - (A4 * (A3 * (A2 * (A1 * x + d1) .+ d2) .+ d3) + d4)) < 1e-9
-    @test norm(displacement(opC) - (A4 * (A3 * (A2 * d1 .+ d2) .+ d3) + d4)) < 1e-9
+    @test norm(opC * x - (A4 * (A3 * (A2 * (A1 * x + d1) .+ d2) .+ d3) + d4)) < 1.0e-9
+    @test norm(displacement(opC) - (A4 * (A3 * (A2 * d1 .+ d2) .+ d3) + d4)) < 1.0e-9
 
-    @test norm(remove_displacement(opC) * x - (A4 * (A3 * (A2 * (A1 * x))))) < 1e-9
+    @test norm(remove_displacement(opC) * x - (A4 * (A3 * (A2 * (A1 * x))))) < 1.0e-9
 
     # Error paths: domain/codomain type/storage mismatch
     struct ComposeDummyOp <: LinearOperator end
@@ -196,14 +196,14 @@ Random.seed!(0)
     D2 = FiniteDiff((3,))
     CC = Compose(D1, D2)
     opnorm_CC = opnorm(CC)
-    @test opnorm_CC ≈ estimate_opnorm(CC) rtol=0.05
+    @test opnorm_CC ≈ estimate_opnorm(CC) rtol = 0.05
 
     # permute utility
-    A1 = MatrixOp(randn(2,2))
-    A2 = MatrixOp(randn(2,2))
-    A3 = MatrixOp(randn(2,2))
+    A1 = MatrixOp(randn(2, 2))
+    A2 = MatrixOp(randn(2, 2))
+    A3 = MatrixOp(randn(2, 2))
     Cperm = Compose(A3, HCAT(A1, A2))
-    p = [2,1]
+    p = [2, 1]
     Cperm2 = AbstractOperators.permute(Cperm, p)
     @test size(Cperm2) == size(Cperm)
     x = ArrayPartition(randn(2), randn(2))
@@ -234,7 +234,7 @@ Random.seed!(0)
     y, grad = test_NLop(op, x, r, verb)
 
     Y = A * (opB * (opC * x))
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     ## NN
     m, n, l = 4, 7, 5
@@ -282,7 +282,7 @@ Random.seed!(0)
         # First operator is GetIndex, removing slicing should keep equivalent mapping on reduced domain
         G = GetIndex((5,), 2:4)      # 5 -> 3
         A2 = FiniteDiff((3,))   # 3 -> 2
-        A3 = MatrixOp(randn(2,2))  # 2 -> 2
+        A3 = MatrixOp(randn(2, 2))  # 2 -> 2
         L = Compose(A3, Compose(A2, G))  # overall 5 -> 2, internal A = (G, A2, A3)
         L2 = AbstractOperators.remove_slicing(L)
         @test !is_sliced(L2)
@@ -312,7 +312,7 @@ Random.seed!(0)
         @test y1 ≈ y2
 
         # Compose of three operators with Scale(GetIndex) first
-        A3 = MatrixOp(randn(2,2))  # 2 -> 2
+        A3 = MatrixOp(randn(2, 2))  # 2 -> 2
         L = Compose(A3, L)          # overall 5 -> 2, internal A = (S, A2, A3)
         L2 = AbstractOperators.remove_slicing(L)
         @test !is_sliced(L2)
@@ -385,9 +385,9 @@ Random.seed!(0)
     @testset "Buffer reuse in 4-operator chain (FiniteDiff)" begin
         # Chain 4 FiniteDiff operators to exercise buffer reuse adjacency detection
         F1 = FiniteDiff((10,))  # domain 10, codomain 9
-        F2 = MatrixOp(rand(10,9))  # domain 9, codomain 10
+        F2 = MatrixOp(rand(10, 9))  # domain 9, codomain 10
         F3 = FiniteDiff((10,))  # domain 10, codomain 9
-        F4 = MatrixOp(rand(10,10))  # domain 10, codomain 10
+        F4 = MatrixOp(rand(10, 10))  # domain 10, codomain 10
         L = F1 * F2 * F3 * F4   # chains right-to-left: F4->F3->F2->F1, domain 10, codomain 9
         @test L isa Compose
         x = randn(10)
@@ -405,25 +405,25 @@ Random.seed!(0)
         old_debug = AbstractOperators.DEBUG_COMPOSE[]
         try
             AbstractOperators.DEBUG_COMPOSE[] = true
-            
+
             # Capture stdout to check logging output
             original_stdout = stdout
             (read_pipe, write_pipe) = redirect_stdout()
-            
+
             # Trigger adjacent adjoint optimization with logging
             G = GetIndex((5,), 2:4)
             L1 = AbstractOperators.Compose((G, G'), (randn(3),))
-            
+
             # Trigger 2-arg combination with logging
             D1 = DiagOp(randn(3))
             D2 = DiagOp(randn(3))
             L2 = AbstractOperators.Compose((D1, D2), (randn(3),))
-            
+
             # Restore stdout and read captured output
             redirect_stdout(original_stdout)
             close(write_pipe)
             log_str = read(read_pipe, String)
-            
+
             # Verify logging occurred
             @test occursin("Replacing", log_str) || occursin("Combining", log_str)
         finally
@@ -454,7 +454,7 @@ Random.seed!(0)
         old_debug = AbstractOperators.DEBUG_COMPOSE[]
         try
             AbstractOperators.DEBUG_COMPOSE[] = true
-            
+
             # Capture stdout to check logging output
             original_stdout = stdout
             (read_pipe, write_pipe) = redirect_stdout()
@@ -520,12 +520,12 @@ Random.seed!(0)
             x = randn(6)
             y = L * x
             @test y ≈ ((diag(D1) .^ 2) .* (F2 * x))
-            
+
             # Restore stdout and read captured output
             redirect_stdout(original_stdout)
             close(write_pipe)
             log_str = read(read_pipe, String)
-            
+
             # Verify logging occurred
             @test occursin("Replacing", log_str) || occursin("Combining", log_str)
         finally
@@ -533,4 +533,3 @@ Random.seed!(0)
         end
     end
 end
-

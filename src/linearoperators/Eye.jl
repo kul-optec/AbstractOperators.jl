@@ -1,6 +1,6 @@
 export Eye
 
-abstract type AbstractEye{T,N,S<:AbstractArray} <: LinearOperator end
+abstract type AbstractEye{T, N, S <: AbstractArray} <: LinearOperator end
 
 """
 	Eye([domain_type=Float64::Type,] dim_in::Tuple)
@@ -20,37 +20,37 @@ true
 	
 ```
 """
-struct Eye{T,N,S<:AbstractArray{T}} <: AbstractEye{T,N,S}
-	dim::NTuple{N,Integer}
+struct Eye{T, N, S <: AbstractArray{T}} <: AbstractEye{T, N, S}
+    dim::NTuple{N, Integer}
 end
 
 # Constructors
 ###standard constructor Operator{N}(domain_type::Type, DomainDim::NTuple{N,Int})
 function Eye(
-	domain_type::Type{T}, domainDim::NTuple{N,Int}, storageType::Type{S}=Array{T}
-) where {N,T,S<:AbstractArray{T}}
-	return Eye{domain_type,N,storageType}(domainDim)
+        domain_type::Type{T}, domainDim::NTuple{N, Int}, storageType::Type{S} = Array{T}
+    ) where {N, T, S <: AbstractArray{T}}
+    return Eye{domain_type, N, storageType}(domainDim)
 end
 ###
 
 Eye(t::Type, dims::Vararg{Integer}) = Eye(t, dims)
-Eye(dims::NTuple{N,Integer}) where {N} = Eye(Float64, dims)
+Eye(dims::NTuple{N, Integer}) where {N} = Eye(Float64, dims)
 Eye(dims::Vararg{Integer}) = Eye(Float64, dims)
-Eye(x::A) where {A<:AbstractArray} = Eye(eltype(x), size(x), Array{eltype(x)})
+Eye(x::A) where {A <: AbstractArray} = Eye(eltype(x), size(x), Array{eltype(x)})
 
 # Mappings
 
-mul!(y::AbstractArray{T,N}, ::AbstractEye{T,N}, b::AbstractArray{T,N}) where {T,N} = y .= b
+mul!(y::AbstractArray{T, N}, ::AbstractEye{T, N}, b::AbstractArray{T, N}) where {T, N} = y .= b
 
 # Properties
 diag(::AbstractEye) = 1.0
 diag_AcA(::AbstractEye) = 1.0
 diag_AAc(::AbstractEye) = 1.0
 
-domain_type(::AbstractEye{T,N}) where {T,N} = T
-codomain_type(::AbstractEye{T,N}) where {T,N} = T
-domain_storage_type(::AbstractEye{T,N,S}) where {T,N,S} = S
-codomain_storage_type(::AbstractEye{T,N,S}) where {T,N,S} = S
+domain_type(::AbstractEye{T, N}) where {T, N} = T
+codomain_type(::AbstractEye{T, N}) where {T, N} = T
+domain_storage_type(::AbstractEye{T, N, S}) where {T, N, S} = S
+codomain_storage_type(::AbstractEye{T, N, S}) where {T, N, S} = S
 is_thread_safe(::Eye) = true
 
 size(L::AbstractEye) = (L.dim, L.dim)

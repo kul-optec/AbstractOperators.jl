@@ -21,45 +21,45 @@ julia> op*ones(3,4)
 	
 ```
 """
-struct LMatrixOp{T,A<:Union{AbstractVector,AbstractMatrix},B<:AbstractMatrix} <:
-	   LinearOperator
-	b::A
-	bt::B
-	n_row_in::Integer
+struct LMatrixOp{T, A <: Union{AbstractVector, AbstractMatrix}, B <: AbstractMatrix} <:
+    LinearOperator
+    b::A
+    bt::B
+    n_row_in::Integer
 end
 
 ##TODO decide what to do when domain_type is given, with conversion one loses pointer to data...
 # Constructors
 function LMatrixOp(
-	domain_type::Type, DomainDim::Tuple{Int,Int}, b::A
-) where {A<:Union{AbstractVector,AbstractMatrix}}
-	bt = b'
-	return LMatrixOp{domain_type,A,typeof(bt)}(b, bt, DomainDim[1])
+        domain_type::Type, DomainDim::Tuple{Int, Int}, b::A
+    ) where {A <: Union{AbstractVector, AbstractMatrix}}
+    bt = b'
+    return LMatrixOp{domain_type, A, typeof(bt)}(b, bt, DomainDim[1])
 end
 
 function LMatrixOp(
-	b::A, n_row_in::Int
-) where {T,A<:Union{AbstractVector{T},AbstractMatrix{T}}}
-	return LMatrixOp(T, (n_row_in, size(b, 1)), b)
+        b::A, n_row_in::Int
+    ) where {T, A <: Union{AbstractVector{T}, AbstractMatrix{T}}}
+    return LMatrixOp(T, (n_row_in, size(b, 1)), b)
 end
 
 # Mappings
 function mul!(
-	y::C, L::LMatrixOp{T,A,B}, X::AbstractMatrix{T}
-) where {T,A,B,C<:Union{AbstractVector,AbstractMatrix}}
-	return mul!(y, X, L.b)
+        y::C, L::LMatrixOp{T, A, B}, X::AbstractMatrix{T}
+    ) where {T, A, B, C <: Union{AbstractVector, AbstractMatrix}}
+    return mul!(y, X, L.b)
 end
 
 function mul!(
-	y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractVector{T}
-) where {T,A,B}
-	return y .= L.A.bt .* Y
+        y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T, A, B}}, Y::AbstractVector{T}
+    ) where {T, A, B}
+    return y .= L.A.bt .* Y
 end
 
 function mul!(
-	y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T,A,B}}, Y::AbstractMatrix{T}
-) where {T,A,B}
-	return mul!(y, Y, L.A.b')
+        y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T, A, B}}, Y::AbstractMatrix{T}
+    ) where {T, A, B}
+    return mul!(y, Y, L.A.b')
 end
 
 # Properties
@@ -69,11 +69,11 @@ is_thread_safe(::LMatrixOp) = true
 
 fun_name(L::LMatrixOp) = "(⋅)b"
 
-function size(L::LMatrixOp{T,A,B}) where {T,A<:AbstractVector,B<:Adjoint}
-	return (L.n_row_in,), (L.n_row_in, length(L.b))
+function size(L::LMatrixOp{T, A, B}) where {T, A <: AbstractVector, B <: Adjoint}
+    return (L.n_row_in,), (L.n_row_in, length(L.b))
 end
-function size(L::LMatrixOp{T,A,B}) where {T,A<:AbstractMatrix,B<:AbstractMatrix}
-	return (L.n_row_in, size(L.b, 2)), (L.n_row_in, size(L.b, 1))
+function size(L::LMatrixOp{T, A, B}) where {T, A <: AbstractMatrix, B <: AbstractMatrix}
+    return (L.n_row_in, size(L.b, 2)), (L.n_row_in, size(L.b, 1))
 end
 
 #TODO

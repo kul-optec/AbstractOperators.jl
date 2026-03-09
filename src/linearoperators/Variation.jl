@@ -23,32 +23,32 @@ julia> Variation(ones(2,2))*[1. 2.; 1. 2.]
 
 ```
 """
-struct Variation{T,N,Th} <: LinearOperator
-    dim_in::NTuple{N,Int}
+struct Variation{T, N, Th} <: LinearOperator
+    dim_in::NTuple{N, Int}
 end
 
 # Constructors
 #default constructor
-function Variation(domain_type::Type, dim_in::NTuple{N,Int}; threaded=true) where {N}
+function Variation(domain_type::Type, dim_in::NTuple{N, Int}; threaded = true) where {N}
     N == 1 && error("use FiniteDiff instead!")
     threaded = threaded && Threads.nthreads() > 1 && prod(dim_in) * sizeof(domain_type) > 2^16
-    return Variation{domain_type,N,threaded}(dim_in)
+    return Variation{domain_type, N, threaded}(dim_in)
 end
 
-function Variation(domain_type::Type, dim_in::Vararg{Int}; threaded=true)
-    Variation(domain_type, dim_in; threaded)
+function Variation(domain_type::Type, dim_in::Vararg{Int}; threaded = true)
+    return Variation(domain_type, dim_in; threaded)
 end
-function Variation(dim_in::NTuple{N,Int}; threaded=true) where {N}
-    Variation(Float64, dim_in; threaded)
+function Variation(dim_in::NTuple{N, Int}; threaded = true) where {N}
+    return Variation(Float64, dim_in; threaded)
 end
-Variation(dim_in::Vararg{Int}; threaded=true) = Variation(dim_in; threaded)
-Variation(x::AbstractArray; threaded=true) = Variation(eltype(x), size(x); threaded)
+Variation(dim_in::Vararg{Int}; threaded = true) = Variation(dim_in; threaded)
+Variation(x::AbstractArray; threaded = true) = Variation(eltype(x), size(x); threaded)
 
 # Mappings
 # Non-threaded forward
 @inbounds function LinearAlgebra.mul!(
-    y::AbstractArray, A::Variation{T,N,false}, b::AbstractArray
-) where {T,N}
+        y::AbstractArray, A::Variation{T, N, false}, b::AbstractArray
+    ) where {T, N}
     check(y, A, b)
     @assert firstindex(b) == 1 "Only support 1-based arrays"
     @assert firstindex(y) == 1 "Only support 1-based arrays"
@@ -84,16 +84,16 @@ Variation(x::AbstractArray; threaded=true) = Variation(eltype(x), size(x); threa
 end
 
 @inbounds function LinearAlgebra.mul!(
-    y::AbstractArray, A::Variation{T,N,true}, b::AbstractArray
-) where {T,N}
+        y::AbstractArray, A::Variation{T, N, true}, b::AbstractArray
+    ) where {T, N}
     check(y, A, b)
     @assert firstindex(b) == 1 "Only support 1-based arrays"
     @assert firstindex(y) == 1 "Only support 1-based arrays"
 
     # First dimension -- special case
     batch_length = size(b, 1)
-    @.. thread=true y[2:end, 1] = b[2:end] - b[1:(end - 1)] # finite difference along the first dimension, but incorrect for boundaries
-    @.. thread=true y[1:batch_length:end, 1] = b[2:batch_length:end] - b[1:batch_length:end] # correct boundaries with mirrored boundary conditions
+    @.. thread = true y[2:end, 1] = b[2:end] - b[1:(end - 1)] # finite difference along the first dimension, but incorrect for boundaries
+    @.. thread = true y[1:batch_length:end, 1] = b[2:batch_length:end] - b[1:batch_length:end] # correct boundaries with mirrored boundary conditions
 
     # Other dimensions
     batch_count = length(b) ÷ batch_length
@@ -122,8 +122,8 @@ end
 
 # Non-threaded adjoint
 @inbounds function LinearAlgebra.mul!(
-    y::AbstractArray, A::AdjointOperator{Variation{T,N,false}}, b::AbstractArray
-) where {T,N}
+        y::AbstractArray, A::AdjointOperator{Variation{T, N, false}}, b::AbstractArray
+    ) where {T, N}
     check(y, A, b)
     for cnt in LinearIndices(size(y))
         i_1 = (cnt - 1) % size(y, 1) + 1
@@ -156,8 +156,8 @@ end
 
 # Threaded adjoint
 @inbounds function LinearAlgebra.mul!(
-    y::AbstractArray, A::AdjointOperator{Variation{T,N,true}}, b::AbstractArray
-) where {T,N}
+        y::AbstractArray, A::AdjointOperator{Variation{T, N, true}}, b::AbstractArray
+    ) where {T, N}
     check(y, A, b)
     @batch for cnt in LinearIndices(size(y))
         i_1 = (cnt - 1) % size(y, 1) + 1
@@ -194,6 +194,6 @@ domain_type(::Variation{T}) where {T} = T
 codomain_type(::Variation{T}) where {T} = T
 is_thread_safe(::Variation) = true
 
-size(L::Variation{T,N}) where {T,N} = ((prod(L.dim_in), N), L.dim_in)
+size(L::Variation{T, N}) where {T, N} = ((prod(L.dim_in), N), L.dim_in)
 
 fun_name(L::Variation) = "Ʋ"

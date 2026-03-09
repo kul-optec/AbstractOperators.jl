@@ -18,11 +18,11 @@ Random.seed!(0)
     verb && println(T)
     x1 = randn(m)
     y1 = T * x1
-    @test norm(y1 - (A * x1 + d)) < 1e-9
+    @test norm(y1 - (A * x1 + d)) < 1.0e-9
     r = randn(n)
-    @test norm(T' * r - (A' * r)) < 1e-9
+    @test norm(T' * r - (A' * r)) < 1.0e-9
     @test displacement(T) == d
-    @test norm(remove_displacement(T) * x1 - A * x1) < 1e-9
+    @test norm(remove_displacement(T) * x1 - A * x1) < 1.0e-9
 
     # with sign
     T = AffineAdd(opA, d, false)
@@ -31,11 +31,11 @@ Random.seed!(0)
     verb && println(T)
     x1 = randn(m)
     y1 = T * x1
-    @test norm(y1 - (A * x1 - d)) < 1e-9
+    @test norm(y1 - (A * x1 - d)) < 1.0e-9
     r = randn(n)
-    @test norm(T' * r - (A' * r)) < 1e-9
+    @test norm(T' * r - (A' * r)) < 1.0e-9
     @test displacement(T) == -d
-    @test norm(remove_displacement(T) * x1 - A * x1) < 1e-9
+    @test norm(remove_displacement(T) * x1 - A * x1) < 1.0e-9
 
     # with scalar
     T = AffineAdd(opA, pi)
@@ -44,11 +44,11 @@ Random.seed!(0)
     verb && println(T)
     x1 = randn(m)
     y1 = T * x1
-    @test norm(y1 - (A * x1 .+ pi)) < 1e-9
+    @test norm(y1 - (A * x1 .+ pi)) < 1.0e-9
     r = randn(n)
-    @test norm(T' * r - (A' * r)) < 1e-9
-    @test displacement(T) .- pi < 1e-9
-    @test norm(remove_displacement(T) * x1 - A * x1) < 1e-9
+    @test norm(T' * r - (A' * r)) < 1.0e-9
+    @test displacement(T) .- pi < 1.0e-9
+    @test norm(remove_displacement(T) * x1 - A * x1) < 1.0e-9
 
     @test_throws DimensionMismatch AffineAdd(MatrixOp(randn(2, 5)), randn(5))
     opD = DiagOp(Float64, (4,), randn(ComplexF64, 4))
@@ -56,22 +56,22 @@ Random.seed!(0)
     AffineAdd(opD, pi)
     @test_throws ErrorException AffineAdd(Eye(4), im * pi)
 
-    # with scalar and vector 
+    # with scalar and vector
     d = randn(n)
     T = AffineAdd(AffineAdd(opA, pi), d, false)
 
     verb && println(T)
     x1 = randn(m)
     y1 = T * x1
-    @test norm(y1 - (A * x1 .+ pi .- d)) < 1e-9
+    @test norm(y1 - (A * x1 .+ pi .- d)) < 1.0e-9
     r = randn(n)
-    @test norm(T' * r - (A' * r)) < 1e-9
-    @test norm(displacement(T) .- (pi .- d)) < 1e-9
+    @test norm(T' * r - (A' * r)) < 1.0e-9
+    @test norm(displacement(T) .- (pi .- d)) < 1.0e-9
 
     T2 = remove_displacement(T)
-    @test norm(T2 * x1 - (A * x1)) < 1e-9
+    @test norm(T2 * x1 - (A * x1)) < 1.0e-9
 
-    # permute AddAffine 
+    # permute AddAffine
     n, m = 5, 6
     A = randn(n, m)
     d = randn(n)
@@ -79,12 +79,12 @@ Random.seed!(0)
     x = ArrayPartition(randn(n), randn(m))
     opHT = AffineAdd(opH, d)
 
-    @test norm(opHT * x - (x.x[1] + A * x.x[2] .+ d)) < 1e-12
+    @test norm(opHT * x - (x.x[1] + A * x.x[2] .+ d)) < 1.0e-12
     p = [2; 1]
     @test norm(
         AbstractOperators.permute(opHT, p) * ArrayPartition(x.x[p]...) -
-        (x.x[1] + A * x.x[2] .+ d),
-    ) < 1e-12
+            (x.x[1] + A * x.x[2] .+ d),
+    ) < 1.0e-12
 
     n, m = 5, 6
     A = randn(n, m)
@@ -134,7 +134,7 @@ Random.seed!(0)
     r = randn(n)
     x = randn(size(T, 2))
     y, grad = test_NLop(T, x, r, verb)
-    @test norm(y - (exp.(x) - d)) < 1e-8
+    @test norm(y - (exp.(x) - d)) < 1.0e-8
 
     # Additional coverage-focused tests for uncovered AffineAdd branches
 
@@ -157,13 +157,13 @@ Random.seed!(0)
         E = Eye(n)
         TE = AffineAdd(E, randn(n))
         @test is_invertible(TE) == is_invertible(E)
-        
+
         # is_AcA_diagonal and is_AAc_diagonal delegation
         D = DiagOp(randn(n))
         TD = AffineAdd(D, randn(n))
         @test is_AcA_diagonal(TD) == is_AcA_diagonal(D)
         @test is_AAc_diagonal(TD) == is_AAc_diagonal(D)
-        
+
         # is_full_row_rank and is_full_column_rank delegation
         m = 6
         A = randn(n, m)
@@ -171,7 +171,7 @@ Random.seed!(0)
         TA = AffineAdd(opA, randn(n))
         @test is_full_row_rank(TA) == is_full_row_rank(opA)
         @test is_full_column_rank(TA) == is_full_column_rank(opA)
-        
+
         # diag_AcA and diag_AAc delegation
         dvec = randn(n)
         D2 = DiagOp(dvec)
@@ -211,7 +211,7 @@ Random.seed!(0)
         d = randn(5)
         TD = AffineAdd(D, d)
         @test is_thread_safe(TD) == true
-        
+
         # Compose with FiniteDiff is not thread-safe (has buffers)
         C = Compose(FiniteDiff((6,)), DiagOp(randn(6)))
         d2 = randn(5)
@@ -224,11 +224,11 @@ Random.seed!(0)
         A = randn(n, m)
         opA = MatrixOp(A)
         d = randn(n)
-        
+
         # Positive sign (addition)
         Tplus = AffineAdd(opA, d, true)
         @test sign(Tplus) == 1
-        
+
         # Negative sign (subtraction)
         Tminus = AffineAdd(opA, d, false)
         @test sign(Tminus) == -1

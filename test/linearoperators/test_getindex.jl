@@ -16,7 +16,7 @@ using LinearAlgebra
     x1 = randn(n)
     y1 = test_op(op, x1, randn(k), verb)
 
-    @test all(norm.(y1 .- x1[1:k]) .<= 1e-12)
+    @test all(norm.(y1 .- x1[1:k]) .<= 1.0e-12)
 
     n, m = 5, 4
     k = 3
@@ -24,21 +24,21 @@ using LinearAlgebra
     x1 = randn(n, m)
     y1 = test_op(op, x1, randn(k, m), verb)
 
-    @test all(norm.(y1 .- x1[1:k, :]) .<= 1e-12)
+    @test all(norm.(y1 .- x1[1:k, :]) .<= 1.0e-12)
 
     n, m = 5, 4
     op = GetIndex(Float64, (n, m), (:, 2))
     x1 = randn(n, m)
     y1 = test_op(op, x1, randn(n), verb)
 
-    @test all(norm.(y1 .- x1[:, 2]) .<= 1e-12)
+    @test all(norm.(y1 .- x1[:, 2]) .<= 1.0e-12)
 
     n, m, l = 5, 4, 3
     op = GetIndex(Float64, (n, m, l), (1:3, 2, :))
     x1 = randn(n, m, l)
     y1 = test_op(op, x1, randn(3, 3), verb)
 
-    @test all(norm.(y1 .- x1[1:3, 2, :]) .<= 1e-12)
+    @test all(norm.(y1 .- x1[1:3, 2, :]) .<= 1.0e-12)
 
     # other constructors
     GetIndex((n, m), (1:k, :))
@@ -155,7 +155,7 @@ using LinearAlgebra
 
     @testset "GetIndex AbstractArray of Int indices (multi-dim)" begin
         n = 10
-        arr_idx = reshape([1,2,3,4], 2, 2)  # proper reshape with dimensions
+        arr_idx = reshape([1, 2, 3, 4], 2, 2)  # proper reshape with dimensions
         op = GetIndex(Float64, (n,), (arr_idx,))  # index array inside tuple triggers AbstractArray branch
         x = randn(n)
         y = op * x
@@ -182,7 +182,7 @@ using LinearAlgebra
 
     @testset "NormalGetIndex vector idx conversion" begin
         n = 9
-        idx_vec = [2,4,5]
+        idx_vec = [2, 4, 5]
         N2 = AbstractOperators.NormalGetIndex(Float64, Array{Float64}, (n,), idx_vec)
         @test size(N2) == ((n,), (n,))
         d = AbstractOperators.diag(N2)
@@ -220,7 +220,7 @@ using LinearAlgebra
             m2 = AbstractOperators.get_slicing_mask(op_bmask)
             @test m2 === bmask
         else
-            @test size(op_bmask) == ((n*m,), (n, m))  # reshaped Eye path
+            @test size(op_bmask) == ((n * m,), (n, m))  # reshaped Eye path
         end
     end
 
@@ -250,4 +250,3 @@ using LinearAlgebra
     end
 
 end
-

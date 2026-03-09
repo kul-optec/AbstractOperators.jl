@@ -1,8 +1,8 @@
-struct NFFTOp{T,D} <: AbstractOperators.LinearOperator
-	plan::NFFT.AbstractNFFTPlan{T,D}
-	ksp_buffer::AbstractMatrix{Complex{T}}
-	dcf::AbstractMatrix{T}
-	threaded::Bool
+struct NFFTOp{T, D} <: AbstractOperators.LinearOperator
+    plan::NFFT.AbstractNFFTPlan{T, D}
+    ksp_buffer::AbstractMatrix{Complex{T}}
+    dcf::AbstractMatrix{T}
+    threaded::Bool
 end
 
 """
@@ -58,80 +58,80 @@ julia> image_reconstructed = op' * ksp;
 ```
 """
 function NFFTOp(
-	image_size::NTuple{D,Int},
-	trajectory::AbstractArray{T},
-	dcf::AbstractArray;
-	threaded::Bool=true,
-	kwargs...,
-) where {T,D}
-	check_traj_and_dcf(trajectory, dcf, D)
-	plan = create_plan(trajectory, image_size, threaded; kwargs...)
-	ksp_buffer = similar(
-		trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
-	)
-	return NFFTOp{T,D}(plan, ksp_buffer, dcf, threaded)
+        image_size::NTuple{D, Int},
+        trajectory::AbstractArray{T},
+        dcf::AbstractArray;
+        threaded::Bool = true,
+        kwargs...,
+    ) where {T, D}
+    check_traj_and_dcf(trajectory, dcf, D)
+    plan = create_plan(trajectory, image_size, threaded; kwargs...)
+    ksp_buffer = similar(
+        trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
+    )
+    return NFFTOp{T, D}(plan, ksp_buffer, dcf, threaded)
 end
 
 function NFFTOp(
-	image_size::NTuple{D,Int},
-	trajectory::AbstractArray{T};
-	threaded::Bool=true,
-	dcf_estimation_iterations::Int=20,
-	dcf_correction_function::Function=identity,
-	kwargs...,
-) where {T,D}
-	check_traj(trajectory, D)
-	plan = create_plan(trajectory, image_size, threaded; kwargs...)
-	ksp_buffer = similar(
-		trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
-	)
-	raw_dcf = NFFTTools.sdc(plan; iters=dcf_estimation_iterations)
-	dcf = dcf_correction_function(reshape(raw_dcf, size(ksp_buffer)))
-	return NFFTOp{T,D}(plan, ksp_buffer, dcf, threaded)
+        image_size::NTuple{D, Int},
+        trajectory::AbstractArray{T};
+        threaded::Bool = true,
+        dcf_estimation_iterations::Int = 20,
+        dcf_correction_function::Function = identity,
+        kwargs...,
+    ) where {T, D}
+    check_traj(trajectory, D)
+    plan = create_plan(trajectory, image_size, threaded; kwargs...)
+    ksp_buffer = similar(
+        trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
+    )
+    raw_dcf = NFFTTools.sdc(plan; iters = dcf_estimation_iterations)
+    dcf = dcf_correction_function(reshape(raw_dcf, size(ksp_buffer)))
+    return NFFTOp{T, D}(plan, ksp_buffer, dcf, threaded)
 end
 
 function set_nfft_threading_expr(threading_state_expr, thread_count_expr, body_expr)
-	quote
-		local prev_nfft_threading_state = NFFT._use_threads[]
-		NFFT._use_threads[] = $threading_state_expr
-		local res = $(set_thread_counts_expr(thread_count_expr, body_expr))
-		NFFT._use_threads[] = prev_nfft_threading_state
-		res
-	end
+    return quote
+        local prev_nfft_threading_state = NFFT._use_threads[]
+        NFFT._use_threads[] = $threading_state_expr
+        local res = $(set_thread_counts_expr(thread_count_expr, body_expr))
+        NFFT._use_threads[] = prev_nfft_threading_state
+        res
+    end
 end
 
 macro enable_nfft_threading(expr)
-	return set_nfft_threading_expr(true, nthreads(), expr)
+    return set_nfft_threading_expr(true, nthreads(), expr)
 end
 
 macro disable_nfft_threading(expr)
-	return set_nfft_threading_expr(false, 1, expr)
+    return set_nfft_threading_expr(false, 1, expr)
 end
 
 function mul!(ksp::AbstractArray, op::NFFTOp, img::AbstractArray)
-	AbstractOperators.check(ksp, op, img)
-	if op.threaded
-		@enable_nfft_threading mul!(vec(ksp), op.plan, img)
-	else
-		@disable_nfft_threading mul!(vec(ksp), op.plan, img)
-	end
-	return ksp
+    AbstractOperators.check(ksp, op, img)
+    if op.threaded
+        @enable_nfft_threading mul!(vec(ksp), op.plan, img)
+    else
+        @disable_nfft_threading mul!(vec(ksp), op.plan, img)
+    end
+    return ksp
 end
 
 function mul!(
-	img::AbstractArray,
-	op::AbstractOperators.AdjointOperator{<:NFFTOp},
-	ksp::AbstractArray,
-)
-	op = op.A
-	AbstractOperators.check(ksp, op, img)
-	if op.threaded
-		@.. thread = true op.ksp_buffer = ksp * op.dcf
-		@enable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
-	else
-		@.. op.ksp_buffer = ksp * op.dcf
-		@disable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
-	end
+        img::AbstractArray,
+        op::AbstractOperators.AdjointOperator{<:NFFTOp},
+        ksp::AbstractArray,
+    )
+    op = op.A
+    AbstractOperators.check(ksp, op, img)
+    return if op.threaded
+        @.. thread = true op.ksp_buffer = ksp * op.dcf
+        @enable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
+    else
+        @.. op.ksp_buffer = ksp * op.dcf
+        @disable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
+    end
 end
 
 # Properties
@@ -144,87 +144,87 @@ codomain_type(::NFFTOp{T}) where {T} = complex(T)
 # Utility
 
 function check_traj(traj, D)
-	@assert size(traj, 1) == D "The first dimension of the trajectory must match the number of image dimensions"
-	@assert ndims(traj) > 1 "The trajectory must have at least two dimensions"
+    @assert size(traj, 1) == D "The first dimension of the trajectory must match the number of image dimensions"
+    return @assert ndims(traj) > 1 "The trajectory must have at least two dimensions"
 end
 
 function check_traj_and_dcf(traj, dcf, D)
-	check_traj(traj, D)
-	@assert tuple(size(traj)[2:end]...) == size(dcf) "Shape of the trajectory from the second dimension must match the shape of the dcf array"
-	@assert eltype(traj) == eltype(dcf) "The element type of the trajectory must match the element type of the dcf array"
+    check_traj(traj, D)
+    @assert tuple(size(traj)[2:end]...) == size(dcf) "Shape of the trajectory from the second dimension must match the shape of the dcf array"
+    return @assert eltype(traj) == eltype(dcf) "The element type of the trajectory must match the element type of the dcf array"
 end
 
 function create_plan(trajectory, image_size, threaded; kwargs...)
-	traj = reshape(trajectory, size(trajectory, 1), :)
-	return if threaded
-		return @enable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
-	else
-		return @disable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
-	end
+    traj = reshape(trajectory, size(trajectory, 1), :)
+    return if threaded
+        return @enable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
+    else
+        return @disable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
+    end
 end
 
 function NFFTPlan(
-	k::Matrix{T},
-	N::NTuple{D,Int};
-	dims::Union{Integer,UnitRange{Int64}}=1:D,
-	fftflags=nothing,
-	kwargs...,
-) where {T,D}
-	NFFT.checkNodes(k)
+        k::Matrix{T},
+        N::NTuple{D, Int};
+        dims::Union{Integer, UnitRange{Int64}} = 1:D,
+        fftflags = nothing,
+        kwargs...,
+    ) where {T, D}
+    NFFT.checkNodes(k)
 
-	params, N, NOut, J, Ñ, dims_ = NFFT.initParams(k, N, dims; kwargs...)
+    params, N, NOut, J, Ñ, dims_ = NFFT.initParams(k, N, dims; kwargs...)
 
-	if length(NOut) > 1
-		params.precompute = NFFT.LINEAR
-	end
+    if length(NOut) > 1
+        params.precompute = NFFT.LINEAR
+    end
 
-	tmpVec = Array{Complex{T},D}(undef, Ñ)
+    tmpVec = Array{Complex{T}, D}(undef, Ñ)
 
-	fftflags_ = (fftflags !== nothing) ? (flags=fftflags,) : NamedTuple()
-	FP = FFTW.plan_fft!(tmpVec, dims_; num_threads=FFTW.get_num_threads(), fftflags_...)
-	BP = FFTW.plan_bfft!(tmpVec, dims_; num_threads=FFTW.get_num_threads(), fftflags_...)
+    fftflags_ = (fftflags !== nothing) ? (flags = fftflags,) : NamedTuple()
+    FP = FFTW.plan_fft!(tmpVec, dims_; num_threads = FFTW.get_num_threads(), fftflags_...)
+    BP = FFTW.plan_bfft!(tmpVec, dims_; num_threads = FFTW.get_num_threads(), fftflags_...)
 
-	calcBlocks =
-		(
-			params.precompute == NFFT.LINEAR ||
-			params.precompute == NFFT.TENSOR ||
-			params.precompute == NFFT.POLYNOMIAL
-		) &&
-		params.blocking &&
-		length(dims_) == D
+    calcBlocks =
+        (
+        params.precompute == NFFT.LINEAR ||
+            params.precompute == NFFT.TENSOR ||
+            params.precompute == NFFT.POLYNOMIAL
+    ) &&
+        params.blocking &&
+        length(dims_) == D
 
-	blocks, nodesInBlocks, blockOffsets, idxInBlock, windowTensor = NFFT.precomputeBlocks(
-		k, Ñ, params, calcBlocks
-	)
+    blocks, nodesInBlocks, blockOffsets, idxInBlock, windowTensor = NFFT.precomputeBlocks(
+        k, Ñ, params, calcBlocks
+    )
 
-	windowLinInterp, windowPolyInterp, windowHatInvLUT, deconvolveIdx, B = NFFT.precomputation(
-		k, N[dims_], Ñ[dims_], params
-	)
+    windowLinInterp, windowPolyInterp, windowHatInvLUT, deconvolveIdx, B = NFFT.precomputation(
+        k, N[dims_], Ñ[dims_], params
+    )
 
-	U = params.storeDeconvolutionIdx ? N : ntuple(d -> 0, D)
-	tmpVecHat = Array{Complex{T},D}(undef, U)
+    U = params.storeDeconvolutionIdx ? N : ntuple(d -> 0, D)
+    tmpVecHat = Array{Complex{T}, D}(undef, U)
 
-	return NFFT.NFFTPlan(
-		N,
-		NOut,
-		J,
-		k,
-		Ñ,
-		dims_,
-		params,
-		FP,
-		BP,
-		tmpVec,
-		tmpVecHat,
-		deconvolveIdx,
-		windowHatInvLUT,
-		windowLinInterp,
-		windowPolyInterp,
-		blocks,
-		nodesInBlocks,
-		blockOffsets,
-		idxInBlock,
-		windowTensor,
-		B,
-	)
+    return NFFT.NFFTPlan(
+        N,
+        NOut,
+        J,
+        k,
+        Ñ,
+        dims_,
+        params,
+        FP,
+        BP,
+        tmpVec,
+        tmpVecHat,
+        deconvolveIdx,
+        windowHatInvLUT,
+        windowLinInterp,
+        windowPolyInterp,
+        blocks,
+        nodesInBlocks,
+        blockOffsets,
+        idxInBlock,
+        windowTensor,
+        B,
+    )
 end

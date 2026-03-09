@@ -21,16 +21,16 @@ import OperatorCore:
     is_positive_definite,
     is_positive_semidefinite
 
-struct LinearMapWrapper{T,AT<:AbstractOperator} <: LinearMap{T}
+struct LinearMapWrapper{T, AT <: AbstractOperator} <: LinearMap{T}
     A::AT
-    function LinearMapWrapper(A::AT) where {AT<:AbstractOperator}
+    function LinearMapWrapper(A::AT) where {AT <: AbstractOperator}
         if domain_type(A) != codomain_type(A)
             error(
                 "LinearMapsExt.LinearMap only supports operators with matching domain and codomain types",
             )
         end
         T = domain_type(A)
-        return new{T,AT}(A)
+        return new{T, AT}(A)
     end
 end
 
@@ -42,10 +42,10 @@ function LinearMaps._unsafe_mul!(y::AbstractVector, L::LinearMapWrapper, x::Abst
 end
 
 function LinearMaps._unsafe_mul!(
-    y::AbstractVector,
-    L::Union{LinearMaps.TransposeMap{<:Any,<:LinearMapWrapper},LinearMaps.AdjointMap{<:Any,<:LinearMapWrapper}},
-    x::AbstractVector,
-)
+        y::AbstractVector,
+        L::Union{LinearMaps.TransposeMap{<:Any, <:LinearMapWrapper}, LinearMaps.AdjointMap{<:Any, <:LinearMapWrapper}},
+        x::AbstractVector,
+    )
     At = L.lmap.A'
     mul!(reshape(y, size(At, 1)), At, reshape(x, size(At, 2)))
     return y

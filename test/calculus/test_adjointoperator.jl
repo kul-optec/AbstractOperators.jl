@@ -21,7 +21,7 @@ Random.seed!(0)
     x1 = randn(m)
     y1 = test_op(opT, x1, randn(n), verb)
     y2 = A1' * x1
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     @test is_null(opT) == is_null(opA1t)
     @test is_eye(opT) == is_eye(opA1t)
@@ -75,9 +75,9 @@ Random.seed!(0)
     # opnorm / estimate consistency (underlying matrix op)
     @test AbstractOperators.has_fast_opnorm(opT) == AbstractOperators.has_fast_opnorm(opA1)
     opnorm_opT = opnorm(opT)
-    @test opnorm_opT ≈ opnorm(opA1) rtol=5e-6
-    @test estimate_opnorm(opT) ≈ estimate_opnorm(opA1) rtol=0.05
-    @test opnorm_opT ≈ estimate_opnorm(opT) rtol=0.05
+    @test opnorm_opT ≈ opnorm(opA1) rtol = 5.0e-6
+    @test estimate_opnorm(opT) ≈ estimate_opnorm(opA1) rtol = 0.05
+    @test opnorm_opT ≈ estimate_opnorm(opT) rtol = 0.05
 
     # For a diagonal operator, test diag_AcA matches original's diag_AAc
     d2 = randn(5)

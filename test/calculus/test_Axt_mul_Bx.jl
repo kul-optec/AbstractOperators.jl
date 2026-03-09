@@ -15,7 +15,7 @@ Random.seed!(0)
     x = randn(n)
     r = randn(1)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm([(A * x)' * (B * x)] - y) < 1e-8
+    @test norm([(A * x)' * (B * x)] - y) < 1.0e-8
 
     n, m = 3, 4
     A, B = MatrixOp(randn(n, m)), MatrixOp(randn(n, m))
@@ -24,7 +24,7 @@ Random.seed!(0)
     x = randn(m)
     r = randn(1)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm([(A * x)' * (B * x)] - y) < 1e-8
+    @test norm([(A * x)' * (B * x)] - y) < 1.0e-8
 
     n, m, l = 3, 7, 5
     A, B = MatrixOp(randn(n, m), l), MatrixOp(randn(n, m), l)
@@ -32,7 +32,7 @@ Random.seed!(0)
     x = randn(m, l)
     r = randn(l, l)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm((A * x)' * (B * x) - y) < 1e-8
+    @test norm((A * x)' * (B * x) - y) < 1.0e-8
 
     n, m = 3, 7
     A, B = Sin(n, m), Cos(n, m)
@@ -40,7 +40,7 @@ Random.seed!(0)
     x = randn(n, m)
     r = randn(m, m)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm((A * x)' * (B * x) - y) < 1e-8
+    @test norm((A * x)' * (B * x) - y) < 1.0e-8
 
     # testing with HCAT
     m, n = 3, 5
@@ -55,18 +55,18 @@ Random.seed!(0)
     op2 = HCAT(C, D)
     P = Axt_mul_Bx(op1, op2)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm([(op1 * x)' * (op2 * x)] - y) < 1e-8
+    @test norm([(op1 * x)' * (op2 * x)] - y) < 1.0e-8
 
     #test remove_displacement
     y2, grad = test_NLop(remove_displacement(P), x, r, verb)
-    @test norm([(op1 * x - b)' * (op2 * x)] - y2) < 1e-8
+    @test norm([(op1 * x - b)' * (op2 * x)] - y2) < 1.0e-8
 
     # test permute
     p = [2, 1]
     Pp = AbstractOperators.permute(P, p)
     xp = ArrayPartition(x.x[p])
     y2, grad = test_NLop(Pp, xp, r, verb)
-    @test norm(y2 - y) < 1e-8
+    @test norm(y2 - y) < 1.0e-8
 
     @test_throws Exception Axt_mul_Bx(Eye(2, 2), Eye(2, 1))
     @test_throws Exception Axt_mul_Bx(Eye(2, 2, 2), Eye(2, 2, 2))

@@ -9,31 +9,31 @@ Creates the softplus non-linear operator with input dimensions `dim_in`.
 ```
 
 """
-struct SoftPlus{T,N} <: NonLinearOperator
-	dim::NTuple{N,Int}
+struct SoftPlus{T, N} <: NonLinearOperator
+    dim::NTuple{N, Int}
 end
 
-function SoftPlus(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
-	return SoftPlus{domain_type,N}(DomainDim)
+function SoftPlus(domain_type::Type, DomainDim::NTuple{N, Int}) where {N}
+    return SoftPlus{domain_type, N}(DomainDim)
 end
 
-SoftPlus(DomainDim::NTuple{N,Int}) where {N} = SoftPlus{Float64,N}(DomainDim)
+SoftPlus(DomainDim::NTuple{N, Int}) where {N} = SoftPlus{Float64, N}(DomainDim)
 
-function mul!(y::AbstractArray{T,N}, L::SoftPlus{T,N}, x::AbstractArray{T,N}) where {T,N}
-	return y .= log.(1 .+ exp.(x))
+function mul!(y::AbstractArray{T, N}, L::SoftPlus{T, N}, x::AbstractArray{T, N}) where {T, N}
+    return y .= log.(1 .+ exp.(x))
 end
 
 function mul!(
-	y::AbstractArray, J::AdjointOperator{Jacobian{A,TT}}, b::AbstractArray
-) where {T,N,A<:SoftPlus{T,N},TT<:AbstractArray{T,N}}
-	L = J.A
-	return y .= 1 ./ (1 .+ exp.(-L.x)) .* b
+        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
+    ) where {T, N, A <: SoftPlus{T, N}, TT <: AbstractArray{T, N}}
+    L = J.A
+    return y .= 1 ./ (1 .+ exp.(-L.x)) .* b
 end
 
 fun_name(L::SoftPlus) = "σ"
 
 size(L::SoftPlus) = (L.dim, L.dim)
 
-domain_type(::SoftPlus{T,N}) where {T,N} = T
-codomain_type(::SoftPlus{T,N}) where {T,N} = T
+domain_type(::SoftPlus{T, N}) where {T, N} = T
+codomain_type(::SoftPlus{T, N}) where {T, N} = T
 is_thread_safe(::SoftPlus) = true

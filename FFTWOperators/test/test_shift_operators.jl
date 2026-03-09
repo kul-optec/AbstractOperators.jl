@@ -21,7 +21,7 @@
 
     # 2D, both dims
     n, m = 2, 3
-    X = reshape(1.0:(n*m), n, m)
+    X = reshape(1.0:(n * m), n, m)
     A = FFTShift((n, m), (1, 2))
     B = IFFTShift((n, m), (1, 2))
     Y = A * X
@@ -95,24 +95,24 @@ end
     x = randn(n)
 
     # Codomain shift: should equal shifting output of A*x
-    T = fftshift_op(A; codomain_shifts=(1,))
+    T = fftshift_op(A; codomain_shifts = (1,))
     y1 = T * x
     y2 = FFTW.fftshift(A * x, (1,))
     @test y1 ≈ y2
 
     # Domain shift: should equal A applied to shifted input
-    T2 = fftshift_op(A; domain_shifts=(1,))
+    T2 = fftshift_op(A; domain_shifts = (1,))
     y1 = T2 * x
     y2 = A * FFTW.fftshift(x, (1,))
     @test y1 ≈ y2
 
     # ifftshift variants
-    T3 = ifftshift_op(A; codomain_shifts=(1,))
+    T3 = ifftshift_op(A; codomain_shifts = (1,))
     y1 = T3 * x
     y2 = FFTW.ifftshift(A * x, (1,))
     @test y1 ≈ y2
 
-    T4 = ifftshift_op(A; domain_shifts=(1,))
+    T4 = ifftshift_op(A; domain_shifts = (1,))
     y1 = T4 * x
     y2 = A * FFTW.ifftshift(x, (1,))
     @test y1 ≈ y2
@@ -122,10 +122,10 @@ end
     A = DFT(n)
     x = randn(n)
 
-    T5 = fftshift_op(A; codomain_shifts=(1,))
+    T5 = fftshift_op(A; codomain_shifts = (1,))
     @test (T5 * x) ≈ FFTW.fftshift(A * x, (1,))
 
-    T6 = ifftshift_op(A; domain_shifts=(1,))
+    T6 = ifftshift_op(A; domain_shifts = (1,))
     @test (T6 * x) ≈ (A * FFTW.ifftshift(x, (1,)))
 end
 

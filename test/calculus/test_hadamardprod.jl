@@ -15,7 +15,7 @@ end
     x = randn(n, n)
     r = randn(n, n)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm(x .* x - y) < 1e-9
+    @test norm(x .* x - y) < 1.0e-9
 
     # Sin .* Cos multi-column
     n, l = 3, 2
@@ -24,7 +24,7 @@ end
     x = randn(n, l)
     r = randn(n, l)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm((A * x) .* (B * x) - y) < 1e-9
+    @test norm((A * x) .* (B * x) - y) < 1.0e-9
 
     # HCAT factors to exercise ArrayPartition domain/codomain handling
     m, n = 3, 5
@@ -39,11 +39,11 @@ end
     op2 = HCAT(C1, D1)
     P = HadamardProd(op1, op2)
     y, grad = test_NLop(P, x, r, verb)
-    @test norm((op1 * x) .* (op2 * x) - y) < 1e-9
+    @test norm((op1 * x) .* (op2 * x) - y) < 1.0e-9
 
     # remove_displacement and its idempotence
     y2, grad2 = test_NLop(remove_displacement(P), x, r, verb)
-    @test norm((op1 * x - b) .* (op2 * x) - y2) < 1e-8
+    @test norm((op1 * x - b) .* (op2 * x) - y2) < 1.0e-8
     @test remove_displacement(remove_displacement(P)) == remove_displacement(P)
 
     # permute
@@ -51,7 +51,7 @@ end
     Pp = AbstractOperators.permute(P, p)
     xp = ArrayPartition(x.x[p])
     yperm, gradperm = test_NLop(Pp, xp, r, verb)
-    @test norm(yperm - y) < 1e-8
+    @test norm(yperm - y) < 1.0e-8
 
     # Dimension mismatch error path
     @test_throws Exception HadamardProd(Eye(2, 2, 2), Eye(1, 2, 2))

@@ -1,6 +1,10 @@
 # Split from test_linear_operators_calculus.jl: Mixed combination tests
-if !isdefined(Main, :verb); verb = false; end
-if !isdefined(Main, :test_op); include("../utils.jl"); end
+if !isdefined(Main, :verb)
+    verb = false
+end
+if !isdefined(Main, :test_op)
+    include("../utils.jl")
+end
 
 @testset "Combinations" begin
     verb && println(" --- Testing Combinations --- ")
@@ -20,12 +24,12 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
 
     y2 = A3 * (A1 * x1 + A2 * x2)
 
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opCp = AbstractOperators.permute(opC, [2, 1])
     y1 = test_op(opCp, ArrayPartition(x2, x1), randn(m4), verb)
 
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ## test HCAT of Compose of HCAT
     m5 = 10
@@ -35,7 +39,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     x = ArrayPartition(x1, x2, x3)
     y1 = test_op(opHC, x, randn(m4), verb)
 
-    @test norm(y1 - (y2 + A4 * x3)) < 1e-9
+    @test norm(y1 - (y2 + A4 * x3)) < 1.0e-9
 
     p = randperm(ndoms(opHC, 2))
     opHP = AbstractOperators.permute(opHC, p)
@@ -68,7 +72,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     x1, x2 = randn(m1), randn(m2)
     y1 = test_op(opV, ArrayPartition(x1, x2), ArrayPartition(randn(n1), randn(n2)), verb)
     y2 = ArrayPartition(A1 * x1 + A2 * x2, A3 * x1 + A4 * x2)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # test VCAT of HCAT's with complex num
     m1, m2, n1 = 4, 7, 5
@@ -94,26 +98,26 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
         verb,
     )
     y2 = ArrayPartition(A1 * x1 + x2 .* d1, A3 * x1 + x2 .* d2)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # test HCAT of VCAT's
 
     n1, n2, m1, m2 = 3, 5, 4, 7
-    A = randn(m1, n1);
-    opA = MatrixOp(A);
-    B = randn(m1, n2);
-    opB = MatrixOp(B);
-    C = randn(m2, n1);
-    opC = MatrixOp(C);
-    D = randn(m2, n2);
-    opD = MatrixOp(D);
+    A = randn(m1, n1)
+    opA = MatrixOp(A)
+    B = randn(m1, n2)
+    opB = MatrixOp(B)
+    C = randn(m2, n1)
+    opC = MatrixOp(C)
+    D = randn(m2, n2)
+    opD = MatrixOp(D)
     opV = HCAT(VCAT(opA, opC), VCAT(opB, opD))
     x1 = randn(n1)
     x2 = randn(n2)
     y1 = test_op(opV, ArrayPartition(x1, x2), ArrayPartition(randn(m1), randn(m2)), verb)
     y2 = ArrayPartition(A * x1 + B * x2, C * x1 + D * x2)
 
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # test Sum of HCAT's
 
@@ -139,7 +143,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y1 = test_op(opS, ArrayPartition(x1, x2, x3), randn(m), verb)
     y2 = A1 * x1 + B1 * x1 + A2 * x2 + B2 * x2 + A3 * x3 + B3 * x3
 
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     p = [3; 2; 1]
     opSp = AbstractOperators.permute(opS, p)
@@ -168,7 +172,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y1 = test_op(opS, x, ArrayPartition(randn(m1), randn(m2)), verb)
     y2 = ArrayPartition(A1 * x + B1 * x + C1 * x, A2 * x + B2 * x + C2 * x)
 
-    @test norm(y1 - y2) .<= 1e-12
+    @test norm(y1 - y2) .<= 1.0e-12
 
     # test Scale of DCAT
 
@@ -186,7 +190,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y = test_op(opS, ArrayPartition(x1, x2), ArrayPartition(randn(m1), randn(m2)), verb)
     z = ArrayPartition(coeff * A1 * x1, coeff * A2 * x2)
 
-    @test norm(y - z) <= 1e-12
+    @test norm(y - z) <= 1.0e-12
 
     # test Scale of VCAT
 
@@ -202,7 +206,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y = test_op(opS, x, ArrayPartition(randn(m1), randn(m2)), verb)
     z = ArrayPartition(coeff * A1 * x, coeff * A2 * x)
 
-    @test norm(y - z) <= 1e-12
+    @test norm(y - z) <= 1.0e-12
 
     # test Scale of HCAT
 
@@ -219,7 +223,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y = test_op(opS, ArrayPartition(x1, x2), randn(m), verb)
     z = coeff * (A1 * x1 + A2 * x2)
 
-    @test norm(y - z) <= 1e-12
+    @test norm(y - z) <= 1.0e-12
 
     # test DCAT of HCATs
 
@@ -250,7 +254,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     p = randperm(ndoms(op, 2))
     y2 = op[p] * ArrayPartition(x.x[p]...)
 
-    @test norm(y - y2) <= 1e-8
+    @test norm(y - y2) <= 1.0e-8
 
     # test Scale of Sum
 
@@ -265,7 +269,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     x1 = randn(n)
     y1 = test_op(opSS, x1, randn(m), verb)
     y2 = coeff * (A1 * x1 + A2 * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # test Scale of Compose
 
@@ -281,7 +285,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     x = randn(m1)
     y1 = test_op(opS, x, randn(m3), verb)
     y2 = coeff * (A2 * A1 * x)
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
 
     # Testing nonlinear HCAT of VCAT
@@ -305,7 +309,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y, grad = test_NLop(op, x, r, verb)
 
     Y = ArrayPartition(A1 * x1 + A2 * x2 + A3 * x3, B1 * x1 + B2 * x2 + B3 * x3)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     # Testing nonlinear VCAT of HCAT
     m1, m2, m3, n1, n2 = 3, 4, 5, 6, 7
@@ -328,7 +332,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     y, grad = test_NLop(op, x, r, verb)
 
     Y = ArrayPartition(A1 * x1 + B1 * x2 + C1 * x3, A2 * x1 + B2 * x2 + C2 * x3)
-    @test norm(Y - y) < 1e-8
+    @test norm(Y - y) < 1.0e-8
 
     # Testing nonlinear AffineAdd and Compose
     n = 10
@@ -339,7 +343,7 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     r = randn(n)
     x = randn(size(T, 2))
     y, grad = test_NLop(T, x, r, verb)
-    @test norm(y - (sin.(x + d1) + d2)) < 1e-8
+    @test norm(y - (sin.(x + d1) + d2)) < 1.0e-8
 
     n = 10
     d1 = randn(n)
@@ -352,5 +356,5 @@ if !isdefined(Main, :test_op); include("../utils.jl"); end
     r = randn(n)
     x = randn(size(T, 2))
     y, grad = test_NLop(T, x, r, verb)
-    @test norm(y - (sin.(exp.(x + d1) - d2) .+ d3)) < 1e-8
+    @test norm(y - (sin.(exp.(x + d1) - d2) .+ d3)) < 1.0e-8
 end

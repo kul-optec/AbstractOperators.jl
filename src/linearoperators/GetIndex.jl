@@ -29,18 +29,18 @@ julia> GetIndex(randn(10,20,30),(1:2,1:4,1))
 
 ```
 """
-struct GetIndex{I,N,M,T,S} <: LinearOperator
-    dim_out::NTuple{N,Int}
-    dim_in::NTuple{M,Int}
+struct GetIndex{I, N, M, T, S} <: LinearOperator
+    dim_out::NTuple{N, Int}
+    dim_in::NTuple{M, Int}
     idx::I
     function GetIndex(
-        T::Type, S::Type, dim_out::NTuple{N,Int}, dim_in::NTuple{M,Int}, idx
-    ) where {N,M}
+            T::Type, S::Type, dim_out::NTuple{N, Int}, dim_in::NTuple{M, Int}, idx
+        ) where {N, M}
         if !(idx isa Tuple)
             idx = (idx,)
         end
         checkbounds(CartesianIndices(dim_in), idx...)
-        return new{typeof(idx),N,M,T,S}(dim_out, dim_in, idx)
+        return new{typeof(idx), N, M, T, S}(dim_out, dim_in, idx)
     end
 end
 
@@ -56,10 +56,10 @@ function GetIndex(domain_type::Type, dim_in::Dims, idx::Tuple)
 end
 
 function GetIndex(
-    domain_type::Type,
-    dim_in::Dims,
-    idx::Union{AbstractVector{Int},AbstractVector{<:CartesianIndex}},
-)
+        domain_type::Type,
+        dim_in::Dims,
+        idx::Union{AbstractVector{Int}, AbstractVector{<:CartesianIndex}},
+    )
     dim_out = (length(idx),)
     return GetIndex(domain_type, Array{domain_type}, dim_out, dim_in, idx)
 end
@@ -88,9 +88,9 @@ function GetIndex(x::AbstractArray, idx::Tuple)
     end
 end
 function GetIndex(
-    x::AbstractArray,
-    idx::Union{AbstractVector{Int},AbstractVector{<:CartesianIndex},AbstractArray{Bool}},
-)
+        x::AbstractArray,
+        idx::Union{AbstractVector{Int}, AbstractVector{<:CartesianIndex}, AbstractArray{Bool}},
+    )
     dim_in = size(x)
     dim_out = get_dim_out(dim_in, idx)
     if dim_out == dim_in
@@ -104,9 +104,9 @@ end
 # Mappings
 
 @generated function mul!(
-    y::AbstractArray, L::GetIndex{I}, b::AbstractArray
-) where {K,I<:Tuple{Vararg{Any,K}}}
-    if K == 1
+        y::AbstractArray, L::GetIndex{I}, b::AbstractArray
+    ) where {K, I <: Tuple{Vararg{Any, K}}}
+    return if K == 1
         if I.parameters[1] <: AbstractArray{Bool}
             indices = :(to_indices(b, L.idx)[1])
         else
@@ -146,15 +146,15 @@ NormalGetIndex([domain_type=Float64::Type,] dim_in::Tuple, idx...)
 Optimized implementation of Grammian operator for `GetIndex`, i.e., A' * A, where A is a `GetIndex` operator.
 This operator is used internally by `GetIndex` to provide an optimized normal operator.
 """
-struct NormalGetIndex{I,N,T,S} <: LinearOperator
-    dim_in::NTuple{N,Int}
+struct NormalGetIndex{I, N, T, S} <: LinearOperator
+    dim_in::NTuple{N, Int}
     idx::I
-    function NormalGetIndex(T, S, dim_in::NTuple{N,Int}, idx) where {N}
+    function NormalGetIndex(T, S, dim_in::NTuple{N, Int}, idx) where {N}
         if !(idx isa Tuple)
             idx = (idx,)
         end
         checkbounds(CartesianIndices(dim_in), idx...)
-        return new{typeof(idx),N,T,S}(dim_in, idx)
+        return new{typeof(idx), N, T, S}(dim_in, idx)
     end
 end
 
@@ -168,14 +168,14 @@ AdjointOperator(L::NormalGetIndex) = L
 end
 
 # Properties
-domain_type(::GetIndex{I,N,M,T}) where {I,N,M,T} = T
-domain_type(::NormalGetIndex{I,N,T}) where {I,N,T} = T
-domain_storage_type(::GetIndex{I,N,M,T,S}) where {I,N,M,T,S} = S
-domain_storage_type(::NormalGetIndex{I,N,T,S}) where {I,N,T,S} = S
-codomain_type(::GetIndex{I,N,M,T}) where {I,N,M,T} = T
-codomain_type(::NormalGetIndex{I,N,T}) where {I,N,T} = T
-codomain_storage_type(::GetIndex{I,N,M,T,S}) where {I,N,M,T,S} = S
-codomain_storage_type(::NormalGetIndex{I,N,T,S}) where {I,N,T,S} = S
+domain_type(::GetIndex{I, N, M, T}) where {I, N, M, T} = T
+domain_type(::NormalGetIndex{I, N, T}) where {I, N, T} = T
+domain_storage_type(::GetIndex{I, N, M, T, S}) where {I, N, M, T, S} = S
+domain_storage_type(::NormalGetIndex{I, N, T, S}) where {I, N, T, S} = S
+codomain_type(::GetIndex{I, N, M, T}) where {I, N, M, T} = T
+codomain_type(::NormalGetIndex{I, N, T}) where {I, N, T} = T
+codomain_storage_type(::GetIndex{I, N, M, T, S}) where {I, N, M, T, S} = S
+codomain_storage_type(::NormalGetIndex{I, N, T, S}) where {I, N, T, S} = S
 is_thread_safe(L::GetIndex) = true
 is_thread_safe(L::NormalGetIndex) = true
 
@@ -210,11 +210,11 @@ function get_slicing_mask(L::GetIndex{<:Tuple})
     mask[L.idx...] .= true
     return mask
 end
-remove_slicing(L::GetIndex{I,N,M,T,S}) where {I,N,M,T,S} = Eye{T,M,S}(L.dim_out)
+remove_slicing(L::GetIndex{I, N, M, T, S}) where {I, N, M, T, S} = Eye{T, M, S}(L.dim_out)
 
 has_optimized_normalop(L::GetIndex) = true
-function get_normal_op(L::GetIndex{I,N,M,T,S}) where {I,N,M,T,S}
-    NormalGetIndex(T, S, L.dim_in, L.idx)
+function get_normal_op(L::GetIndex{I, N, M, T, S}) where {I, N, M, T, S}
+    return NormalGetIndex(T, S, L.dim_in, L.idx)
 end
 has_optimized_normalop(L::AdjointOperator{<:GetIndex}) = true
 get_normal_op(L::AdjointOperator{<:GetIndex}) = Eye(domain_type(L), size(L, 2))
@@ -243,7 +243,7 @@ function get_dim_out(in_dim::Dims, idxs...)
             i += ndims(idx) - 1
         elseif idx isa AbstractVector{Int} || idx isa OrdinalRange{Int}
             dim2 = (dim2..., length(idx))
-        elseif idx isa AbstractArray{<:Union{Integer,CartesianIndex}}
+        elseif idx isa AbstractArray{<:Union{Integer, CartesianIndex}}
             dim2 = (dim2..., size(idx)...)
             i += ndims(idx) - 1
         elseif idx isa Int

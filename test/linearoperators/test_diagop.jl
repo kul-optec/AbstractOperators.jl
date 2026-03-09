@@ -16,7 +16,7 @@ Random.seed!(0)
     y1 = test_op(op, x1, randn(n), verb)
     y2 = d .* x1
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n = 4
     d = randn(n) + im * randn(n)
@@ -25,7 +25,7 @@ Random.seed!(0)
     y1 = test_op(op, x1, randn(n) .+ im * randn(n), verb)
     y2 = d .* x1
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n = 4
     d = pi
@@ -34,7 +34,7 @@ Random.seed!(0)
     y1 = test_op(op, x1, randn(n), verb)
     y2 = d .* x1
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     n = 4
     d = im
@@ -45,7 +45,7 @@ Random.seed!(0)
     @test codomain_type(op) == Complex{Float64}
     y2 = d .* x1
 
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     # other constructors
     d = randn(4)
@@ -74,8 +74,8 @@ Random.seed!(0)
     @test is_full_column_rank(DiagOp([ones(5); 0])) == false
 
     @test diag(op) == d
-    @test norm(op' * (op * x1) .- diag_AcA(op) .* x1) <= 1e-12
-    @test norm(op * (op' * x1) .- diag_AAc(op) .* x1) <= 1e-12
+    @test norm(op' * (op * x1) .- diag_AcA(op) .* x1) <= 1.0e-12
+    @test norm(op * (op' * x1) .- diag_AAc(op) .* x1) <= 1.0e-12
 
     n = 4
     d = pi
@@ -83,8 +83,8 @@ Random.seed!(0)
     x1 = randn(n)
 
     @test diag(op) == d
-    @test norm(op' * (op * x1) .- diag_AcA(op) .* x1) <= 1e-12
-    @test norm(op * (op' * x1) .- diag_AAc(op) .* x1) <= 1e-12
+    @test norm(op' * (op * x1) .- diag_AcA(op) .* x1) <= 1.0e-12
+    @test norm(op * (op' * x1) .- diag_AAc(op) .* x1) <= 1.0e-12
 
     # Scale: create scaled operator and verify diagonal scaling and properties
     op_scaled = Scale(3.0, op)

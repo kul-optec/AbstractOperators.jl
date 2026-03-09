@@ -14,7 +14,7 @@ Random.seed!(0)
     x1 = randn(n)
     y1 = test_op(op, x1, randn(n), verb)
 
-    @test all(norm.(y1 .- x1) .<= 1e-12)
+    @test all(norm.(y1 .- x1) .<= 1.0e-12)
 
     # other constructors
     op = Eye(Float64, (n,))
@@ -48,10 +48,10 @@ Random.seed!(0)
     @test all(opI * xI .== xI)
 
     # Multi-dimensional
-    op3 = Eye(Float64, (2,3,4))
-    x3 = randn(2,3,4)
+    op3 = Eye(Float64, (2, 3, 4))
+    x3 = randn(2, 3, 4)
     @test all(op3 * x3 .== x3)
-    @test size(op3) == ((2,3,4), (2,3,4))
+    @test size(op3) == ((2, 3, 4), (2, 3, 4))
 
     # Storage type helpers
     @test domain_type(op) == Float64

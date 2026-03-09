@@ -9,44 +9,44 @@ Creates the softmax non-linear operator with input dimensions `dim_in`.
 ```
 
 """
-struct SoftMax{T,N} <: NonLinearOperator
-	dim::NTuple{N,Int}
-	buf::AbstractArray{T,N}
+struct SoftMax{T, N} <: NonLinearOperator
+    dim::NTuple{N, Int}
+    buf::AbstractArray{T, N}
 end
 
-function SoftMax(x::AbstractArray{T,N}) where {T,N}
-	return SoftMax{N,T}(size(x), similar(x))
+function SoftMax(x::AbstractArray{T, N}) where {T, N}
+    return SoftMax{N, T}(size(x), similar(x))
 end
 
-function SoftMax(domain_type::Type, DomainDim::NTuple{N,Int}) where {N}
-	return SoftMax{domain_type,N}(DomainDim, zeros(domain_type, DomainDim))
+function SoftMax(domain_type::Type, DomainDim::NTuple{N, Int}) where {N}
+    return SoftMax{domain_type, N}(DomainDim, zeros(domain_type, DomainDim))
 end
 
-SoftMax(DomainDim::NTuple{N,Int}) where {N} = SoftMax(Float64, DomainDim)
+SoftMax(DomainDim::NTuple{N, Int}) where {N} = SoftMax(Float64, DomainDim)
 
-function mul!(y::AbstractArray{T,N}, L::SoftMax{T,N}, x::AbstractArray{T,N}) where {T,N}
-	y .= exp.(x .- maximum(x))
-	return y ./= sum(y)
+function mul!(y::AbstractArray{T, N}, L::SoftMax{T, N}, x::AbstractArray{T, N}) where {T, N}
+    y .= exp.(x .- maximum(x))
+    return y ./= sum(y)
 end
 
 function mul!(
-	y::AbstractArray, J::AdjointOperator{Jacobian{A,TT}}, b::AbstractArray
-) where {T,N,A<:SoftMax{T,N},TT<:AbstractArray{T,N}}
-	L = J.A
-	fill!(y, zero(T))
-	L.A.buf .= exp.(L.x .- maximum(L.x))
-	L.A.buf ./= sum(L.A.buf)
-	for i in eachindex(y)
-		y[i] = -L.A.buf[i] * dot(L.A.buf, b)
-		y[i] += L.A.buf[i] * b[i]
-	end
-	return y
+        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
+    ) where {T, N, A <: SoftMax{T, N}, TT <: AbstractArray{T, N}}
+    L = J.A
+    fill!(y, zero(T))
+    L.A.buf .= exp.(L.x .- maximum(L.x))
+    L.A.buf ./= sum(L.A.buf)
+    for i in eachindex(y)
+        y[i] = -L.A.buf[i] * dot(L.A.buf, b)
+        y[i] += L.A.buf[i] * b[i]
+    end
+    return y
 end
 
 fun_name(L::SoftMax) = "σ"
 
 size(L::SoftMax) = (L.dim, L.dim)
 
-domain_type(::SoftMax{T,N}) where {T,N} = T
-codomain_type(::SoftMax{T,N}) where {T,N} = T
+domain_type(::SoftMax{T, N}) where {T, N} = T
+codomain_type(::SoftMax{T, N}) where {T, N} = T
 is_thread_safe(::SoftMax) = true

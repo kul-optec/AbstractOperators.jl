@@ -21,46 +21,46 @@ end
     opt = opA'
     y1 = opt * x2
     y2 = A' * x2
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ######+,-######
     opp = +opA
     y1 = opp * x1
     y2 = A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opm = -opA
     y1 = opm * x1
     y2 = -A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = opA + opB
     y1 = ops * x1
     y2 = A * x1 + B * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = opA - opB
     y1 = ops * x1
     y2 = A * x1 - B * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = opA + opB
     opss = ops + opC
     y1 = opss * x1
     y2 = A * x1 + B * x1 + C * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = opB + opC
     opss = opA - ops
     y1 = opss * x1
     y2 = A * x1 - B * x1 - C * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = opB + opC
     opss = ops - opA
     y1 = opss * x1
     y2 = -A * x1 + B * x1 + C * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ###### * ######
 
@@ -77,47 +77,47 @@ end
     ops = alpha * opA
     y1 = ops * x1
     y2 = alpha * A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = alpha * opA
     opss = beta * ops
     y1 = opss * x1
     y2 = beta * alpha * A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops1 = alpha * opA
     ops2 = beta * opB
     opss = ops2 * ops1
     y1 = opss * x1
     y2 = beta * B * alpha * A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opc = opB * opA
     y1 = opc * x1
     y2 = B * A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opc = Id * opA
     y1 = opc * x1
     y2 = A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opc = opA * Id
     y1 = opc * x1
     y2 = A * x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opc = Id * Id
     y1 = opc * x1
     y2 = x1
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ###### getindex ######
 
     ops = opA[1:(n - 1)]
     y1 = ops * x1
     y2 = (A * x1)[1:(n - 1)]
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     d = randn(n, m, l)
     opF = DiagOp(d)
@@ -125,30 +125,30 @@ end
     ops = opF[1:(n - 1), :, 2:l]
     y1 = ops * x3
     y2 = (d .* x3)[1:(n - 1), :, 2:l]
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opF = DiagOp(d)
     x3 = randn(n, m, l)
     ops = opF[1:(n - 1), 2:m, 1]
     y1 = ops * x3
     y2 = (d .* x3)[1:(n - 1), 2:m, 1]
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     opV = Variation(n, m, l)
     ops = opV[1:4]
     y1 = ops * x3
     y2 = (opV * x3)[1:4]
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = (opB * opA)[1:(l - 1)]
     y1 = ops * x1
     y2 = (B * A * x1)[1:(l - 1)]
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     ops = (10.0 * opA)[1:(n - 1)]
     y1 = ops * x1
     y2 = (10 * A * x1)[1:(n - 1)]
-    @test norm(y1 - y2) < 1e-9
+    @test norm(y1 - y2) < 1.0e-9
 
     #slicing HCAT
 
@@ -166,28 +166,28 @@ end
     opH2 = opH[1:2]
     y1 = opH2 * ArrayPartition(x1, x2)
     y2 = A * x1 + B * x2
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
     opH3 = opH[3]
     y1 = opH3 * x3
     y2 = C * x3
-    @test all(norm.(y1 .- y2) .<= 1e-12)
+    @test all(norm.(y1 .- y2) .<= 1.0e-12)
 
     opHperm = opH[[3, 1, 2]]
-    @test norm(opH * ArrayPartition(x1, x2, x3) - opHperm * ArrayPartition(x3, x1, x2)) < 1e-12
+    @test norm(opH * ArrayPartition(x1, x2, x3) - opHperm * ArrayPartition(x3, x1, x2)) < 1.0e-12
 
     @test opHperm[1] == opC
     @test opHperm[2] == opA
     @test opHperm[3] == opB
 
     opHperm = opH[[3, 1]]
-    @test norm(opC * x3 + opA * x1 - opHperm * ArrayPartition(x3, x1)) < 1e-12
+    @test norm(opC * x3 + opA * x1 - opHperm * ArrayPartition(x3, x1)) < 1.0e-12
 
     # slicing Affine add of HCAT
     d = randn(n)
     opHA = AffineAdd(opH, d)
-    @test norm(opHA[1] * x1 - (A * x1 + d)) < 1e-9
-    @test norm(opHA[2] * x2 - (B * x2 + d)) < 1e-9
-    @test norm(opHA[3] * x3 - (C * x3 + d)) < 1e-9
+    @test norm(opHA[1] * x1 - (A * x1 + d)) < 1.0e-9
+    @test norm(opHA[2] * x2 - (B * x2 + d)) < 1.0e-9
+    @test norm(opHA[3] * x3 - (C * x3 + d)) < 1.0e-9
 
     m4 = 9
     x4 = randn(m4)
@@ -218,11 +218,11 @@ end
     opV2 = opV[1:2]
     y1 = opV2 * x1
     y2 = ArrayPartition(A * x1, B * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
     opV3 = opV[3]
     y1 = opV3 * x3
     y2 = C * x3
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     ###### hcat ######
 
@@ -236,12 +236,12 @@ end
     x2 = randn(m2)
     y1 = opH * ArrayPartition(x1, x2)
     y2 = [A B] * [x1; x2]
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opHH = [opH opB]
     y1 = opHH * ArrayPartition(x1, x2, x2)
     y2 = [A B B] * [x1; x2; x2]
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     ###### vcat ######
 
@@ -254,12 +254,12 @@ end
     x1 = randn(n)
     y1 = opH * x1
     y2 = ArrayPartition(A * x1, B * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     opVV = [opA; opH]
     y1 = opVV * x1
     y2 = ArrayPartition(A * x1, A * x1, B * x1)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     ###### reshape ######
     n, m = 10, 5
@@ -270,7 +270,7 @@ end
     opR = reshape(opA, (2, 5))
     y1 = opR * x1
     y2 = reshape(A * x1, 2, 5)
-    @test norm(y1 - y2) <= 1e-12
+    @test norm(y1 - y2) <= 1.0e-12
 
     # testing ndims & ndoms
     L = Variation((3, 4, 5))

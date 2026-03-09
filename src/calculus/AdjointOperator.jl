@@ -18,13 +18,13 @@ julia> [Eye(10); FiniteDiff((10,))]'
 	
 ```
 """
-struct AdjointOperator{T<:AbstractOperator} <: AbstractOperator
-	A::T
-	function AdjointOperator(A::T) where {T<:AbstractOperator}
-		is_linear(A) == false &&
-			error("Cannot transpose a nonlinear operator. You might use `jacobian`")
-		return new{T}(A)
-	end
+struct AdjointOperator{T <: AbstractOperator} <: AbstractOperator
+    A::T
+    function AdjointOperator(A::T) where {T <: AbstractOperator}
+        is_linear(A) == false &&
+            error("Cannot transpose a nonlinear operator. You might use `jacobian`")
+        return new{T}(A)
+    end
 end
 
 # Constructors
