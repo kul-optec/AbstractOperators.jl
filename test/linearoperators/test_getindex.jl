@@ -1,13 +1,6 @@
-if !isdefined(Main, :verb)
-    const verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-using LinearAlgebra
-
-@testset "GetIndex" begin
+@testitem "GetIndex" tags = [:linearoperator, :GetIndex] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing GetIndex --- ")
 
     n, m = 5, 4
@@ -134,7 +127,7 @@ using LinearAlgebra
 
     # Dimension mismatch errors in mul!
     bad_y = zeros(size(A, 1)..., 2)  # deliberately wrong extra dim
-    @test_throws ArgumentError mul!(bad_y, A, xA)
+    @test_throws DimensionMismatch mul!(bad_y, A, xA)
 
     # Additional coverage-focused tests for uncovered GetIndex / NormalGetIndex branches
 

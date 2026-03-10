@@ -23,30 +23,8 @@ struct Sum{K, C <: AbstractArray, D <: AbstractArray, L <: NTuple{K, AbstractOpe
     A::L
     bufC::C
     bufD::D
-    function Sum(A::L, bufC::C, bufD::D) where {C, D, K, L <: NTuple{K, AbstractOperator}}
-        if any([size(a) != size(A[1]) for a in A])
-            throw(DimensionMismatch("cannot sum operator of different sizes"))
-        end
-        if any([codomain_type(A[1]) != codomain_type(a) for a in A]) || any([domain_type(A[1]) != domain_type(a) for a in A])
-            throw(DomainError(A, "cannot sum operator with different codomains"))
-        end
-        if any(a isa Sum for a in A)
-            new_A = ()
-            for a in A
-                if a isa Sum
-                    new_A = (new_A..., a.A...)
-                else
-                    new_A = (new_A..., a)
-                end
-            end
-            A = new_A
-        end
-        A = filter(a -> !(a isa Zeros), A)
-        if length(A) == 1
-            return A[1]
-        end
-        return new{length(A), C, D, typeof(A)}(A, bufC, bufD)
-    end
+    # Bare inner constructor — validation and flattening handled by the @generated outer constructor
+    Sum{K, C, D, L}(A::L, bufC::C, bufD::D) where {K, C, D, L} = new{K, C, D, L}(A, bufC, bufD)
 end
 
 Sum(A::AbstractOperator) = A
@@ -62,9 +40,80 @@ function Sum(L1::AbstractOperator, L2::Sum{K, C, D}) where {K, C, D}
     return Sum((L1, L2.A...), L2.bufC, L2.bufD)
 end
 
+# @generated outer constructor: validates, flattens nested Sums, and filters Zeros — all
+# with output type fully determined at compile time (zero runtime dispatch).
+@generated function Sum(A::L, bufC::C, bufD::D) where {C, D, K, L <: NTuple{K, AbstractOperator}}
+    # Compute the flattened operator types and access expressions at compile time.
+    flat_types = Type[]
+    extraction_exprs = Expr[]
+
+    for i in 1:K
+        Ti = fieldtype(L, i)
+        if Ti <: Sum
+            # Flatten this nested Sum one level: pull its inner operators directly.
+            L_inner = fieldtype(Ti, :A)     # the NTuple type stored in field A of nested Sum
+            for j in 1:fieldcount(L_inner)
+                Tij = fieldtype(L_inner, j)
+                if !(Tij <: Zeros)
+                    push!(flat_types, Tij)
+                    push!(extraction_exprs, :(A[$i].A[$j]))
+                end
+            end
+        elseif !(Ti <: Zeros)
+            push!(flat_types, Ti)
+            push!(extraction_exprs, :(A[$i]))
+        end
+    end
+
+    # Unroll validation at compile time — @generated functions cannot contain closures
+    # or generator expressions, so we build the checks as explicit comparisons.
+    size_checks = [:(size(A[$i]) != size(A[1]) && throw(DimensionMismatch("cannot sum operator of different sizes"))) for i in 2:K]
+    ctype_checks = [:(codomain_type(A[$i]) != codomain_type(A[1]) && throw(DomainError(A, "cannot sum operator with different codomains"))) for i in 2:K]
+    dtype_checks = [:(domain_type(A[$i]) != domain_type(A[1]) && throw(DomainError(A, "cannot sum operator with different codomains"))) for i in 2:K]
+    validation = Expr(:block, size_checks..., ctype_checks..., dtype_checks...)
+
+    n_flat = length(flat_types)
+
+    if n_flat == 0
+        # Degenerate: all elements are Zeros — return the first operator unchanged.
+        return quote
+            $validation
+            return A[1]
+        end
+    end
+
+    # Fast path: no Sum or Zeros in the original tuple — use types as-is.
+    if n_flat == K && !any(fieldtype(L, i) <: Union{Sum, Zeros} for i in 1:K)
+        return quote
+            $validation
+            return Sum{$K, $C, $D, $L}(A, bufC, bufD)
+        end
+    end
+
+    # After flattening/filtering a single operator remains — return it directly.
+    if n_flat == 1
+        ex = extraction_exprs[1]
+        return quote
+            $validation
+            return $ex
+        end
+    end
+
+    # Multiple operators after flattening: build the new flat tuple with fully concrete types.
+    L_new = Tuple{flat_types...}
+    K_new = n_flat
+    ops_expr = Expr(:tuple, extraction_exprs...)
+
+    return quote
+        $validation
+        ops = $ops_expr
+        return Sum{$K_new, $C, $D, $L_new}(ops, bufC, bufD)
+    end
+end
+
 # Mappings
 
-@generated function mul!(y::C, S::Sum{K, C, D}, b::D) where {K, C, D}
+@generated function mul!(y::AbstractArray, S::Sum{K}, b::AbstractArray) where {K}
     ex = :(mul!(y, S.A[1], b))
     for i in 2:K
         ex = quote
@@ -74,12 +123,13 @@ end
         ex = :($ex; y .+= S.bufC)
     end
     return ex = quote
+        check(y, S, b)
         $ex
         return y
     end
 end
 
-@generated function mul!(y::D, A::AdjointOperator{Sum{K, C, D, L}}, b::C) where {K, C, D, L}
+@generated function mul!(y::AbstractArray, A::AdjointOperator{<:Sum{K}}, b::AbstractArray) where {K}
     ex = :(S = A.A; mul!(y, S.A[1]', b))
     for i in 2:K
         ex = quote
@@ -89,6 +139,7 @@ end
         ex = :($ex; y .+= S.bufD)
     end
     return ex = quote
+        check(y, A, b)
         $ex
         return y
     end

@@ -17,7 +17,7 @@ julia> Z*ones(2,2)
 	
 ```
 """
-struct ZeroPad{T, N} <: LinearOperator
+struct ZeroPad{N, T} <: LinearOperator
     dim_in::NTuple{N, Int}
     zp::NTuple{N, Int}
 end
@@ -27,7 +27,7 @@ end
 function ZeroPad(domain_type::Type, dim_in::NTuple{N, Int}, zp::NTuple{M, Int}) where {N, M}
     M != N && error("dim_in and zp must have the same length")
     any([zp...] .< 0) && error("zero padding cannot be negative")
-    return ZeroPad{domain_type, N}(dim_in, zp)
+    return ZeroPad{N, domain_type}(dim_in, zp)
 end
 
 ZeroPad(dim_in::Tuple, zp::NTuple{N, Int}) where {N} = ZeroPad(Float64, dim_in, zp)
@@ -40,8 +40,8 @@ ZeroPad(x::AbstractArray, zp::Vararg{Int, N}) where {N} = ZeroPad(eltype(x), siz
 
 # Mappings
 @generated function mul!(
-        y::AbstractArray{T, N}, L::ZeroPad{T, N}, b::AbstractArray{T, N}
-    ) where {T, N}
+        y::AbstractArray, L::ZeroPad{N}, b::AbstractArray
+    ) where {N}
 
     # builds
     #for i1 =1:size(y,1), i2 =1:size(y,2)
@@ -77,12 +77,17 @@ ZeroPad(x::AbstractArray, zp::Vararg{Int, N}) where {N} = ZeroPad(eltype(x), siz
     ex = ex[1:(end - 1)] #remove ,
     ex *= "] : 0. end"
 
-    return ex = Meta.parse(ex)
+    loop_expr = Meta.parse(ex)
+    return quote
+        check(y, L, b)
+        $loop_expr
+        return y
+    end
 end
 
 @generated function mul!(
-        y::AbstractArray{T, N}, L::AdjointOperator{ZeroPad{T, N}}, b::AbstractArray{T, N}
-    ) where {T, N}
+        y::AbstractArray, L::AdjointOperator{<:ZeroPad{N}}, b::AbstractArray
+    ) where {N}
 
     #builds
     #for l = 1:size(y,1), m = 1:size(y,2)
@@ -108,17 +113,22 @@ end
     ex *= idx
     ex *= "] end"
 
-    return ex = Meta.parse(ex)
+    loop_expr = Meta.parse(ex)
+    return quote
+        check(y, L, b)
+        $loop_expr
+        return y
+    end
 end
 
-function get_normal_op(L::ZeroPad{T, N}) where {T, N}
+function get_normal_op(L::ZeroPad{N, T}) where {N, T}
     return Eye(domain_type(L), size(L, 2), domain_storage_type(L))
 end
 
 # Properties
 
-domain_type(::ZeroPad{T}) where {T} = T
-codomain_type(::ZeroPad{T}) where {T} = T
+domain_type(::ZeroPad{<:Any, T}) where {T} = T
+codomain_type(::ZeroPad{<:Any, T}) where {T} = T
 is_thread_safe(::ZeroPad) = true
 
 size(L::ZeroPad) = L.dim_in .+ L.zp, L.dim_in

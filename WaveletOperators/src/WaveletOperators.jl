@@ -43,9 +43,9 @@ julia> W * ones(4)
 
 ```
 """
-struct WaveletOp{T} <: LinearOperator
-    wavelet::DiscreteWavelet
-    dim_in::Tuple
+struct WaveletOp{T, N, W <: DiscreteWavelet} <: LinearOperator
+    wavelet::W
+    dim_in::NTuple{N, Int}
     levels::Int
 end
 
@@ -69,17 +69,17 @@ function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::Integer, levels::I
     if levels > get_max_transform_levels(dim_in)
         throw(ArgumentError("The number of levels $levels exceeds the maximum allowed for dimension $dim_in: $(get_max_transform_levels(dim_in))."))
     end
-    return WaveletOp{T}(wavelet, (dim_in,), levels)
+    return WaveletOp{T, 1, typeof(wavelet)}(wavelet, (dim_in,), levels)
 end
 
-function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::Tuple, levels::Int = get_max_transform_levels(dim_in))
+function WaveletOp(T::Type, wavelet::DiscreteWavelet, dim_in::NTuple{N, Int}, levels::Int = get_max_transform_levels(dim_in)) where {N}
     if any(isodd.(dim_in))
         throw(ArgumentError("The input dimension $dim_in is not suitable for wavelet transform: only even dimensions are allowed."))
     end
     if levels > get_max_transform_levels(dim_in)
         throw(ArgumentError("The number of levels $levels exceeds the maximum allowed for dimensions $dim_in: $(get_max_transform_levels(dim_in))."))
     end
-    return WaveletOp{T}(wavelet, dim_in, levels)
+    return WaveletOp{T, N, typeof(wavelet)}(wavelet, dim_in, levels)
 end
 
 # Mappings
@@ -89,7 +89,7 @@ function mul!(y::AbstractArray{T}, L::WaveletOp{T}, x::AbstractArray{T}) where {
 end
 
 function mul!(
-        y::AbstractArray{T}, L::AdjointOperator{WaveletOp{T}}, x::AbstractArray{T}
+        y::AbstractArray{T}, L::AdjointOperator{<:WaveletOp{T}}, x::AbstractArray{T}
     ) where {T}
     return idwt!(y, x, L.A.wavelet, L.A.levels)
 end

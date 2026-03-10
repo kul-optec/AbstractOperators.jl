@@ -65,15 +65,17 @@ function Jacobian(P::HadamardProd{L1, L2, C, D}, x::AbstractArray) where {L1, L2
 end
 
 # Mappings
-function mul!(y, P::HadamardProd{L1, L2, C, D}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, P::HadamardProd, b::AbstractArray)
+    check(y, P, b)
     mul!(P.bufA, P.A, b)
     mul!(P.bufB, P.B, b)
     y .= P.bufA .* P.bufB
     return y
 end
 
-function mul!(y, J::AdjointOperator{HadamardProdJac{L1, L2, C, D}}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, J::AdjointOperator{<:HadamardProdJac}, b::AbstractArray)
     #y .= J.A.B' * ( J.A.bufA .*b ) + J.A.A' * ( J.A.bufB .* b )
+    check(y, J, b)
     J.A.bufA .*= b
     mul!(y, J.A.B', J.A.bufA)
     J.A.bufB .*= b

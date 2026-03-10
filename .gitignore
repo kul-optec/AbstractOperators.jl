@@ -17,3 +17,4 @@ docs/site/
 docs/Manifest.toml
 Manifest.toml
 Manifest-v*.toml
+.temp/

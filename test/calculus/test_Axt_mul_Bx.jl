@@ -1,12 +1,6 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "Axt_mul_Bx" begin
+@testitem "Axt_mul_Bx" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing Axt_mul_Bx --- ")
     n = 10
     A, B = Eye(n), Sin(n)

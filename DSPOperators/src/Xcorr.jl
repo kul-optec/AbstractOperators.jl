@@ -30,11 +30,13 @@ Xcorr(x::H, h::H) where {H} = Xcorr(eltype(x), size(x), h)
 
 # Mappings
 
-function mul!(y::H, A::Xcorr{T, H}, b::H) where {T, H}
+function mul!(y::AbstractArray, A::Xcorr, b::AbstractArray)
+    check(y, A, b)
     return y .= xcorr(b, A.h; padmode = :longest)
 end
 
-function mul!(y::H, L::AdjointOperator{Xcorr{T, H}}, b::H) where {T, H}
+function mul!(y::AbstractArray, L::AdjointOperator{<:Xcorr}, b::AbstractArray)
+    check(y, L, b)
     A = L.A
     l = floor(Int64, size(A, 1)[1] / 2)
     idx = (l + 1):(l + length(y))

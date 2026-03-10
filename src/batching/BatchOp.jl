@@ -66,7 +66,7 @@ function prepare_batch_op(
 end
 
 function symbol_mask_to_bool(mask::NTuple{N, Symbol}) where {N}
-    return tuple([m == :b || m == :s for m in mask]...)
+    return ntuple(i -> mask[i] == :b || mask[i] == :s, Val(N))
 end
 function symbol_mask_to_bool(mask::Pair{NTuple{N1, Symbol}, NTuple{N2, Symbol}}) where {N1, N2}
     return Pair(symbol_mask_to_bool(mask.first), symbol_mask_to_bool(mask.second))

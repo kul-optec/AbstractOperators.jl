@@ -80,14 +80,16 @@ end
 
 # Mappings
 # N == 1 input is a vector
-function mul!(y, P::Axt_mul_Bx{1, L1, L2, C, D}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, P::Axt_mul_Bx{1}, b::AbstractArray)
+    check(y, P, b)
     mul!(P.bufA, P.A, b)
     mul!(P.bufB, P.B, b)
     return y[1] = dot(P.bufA, P.bufB)
 end
 
-function mul!(y, J::AdjointOperator{Axt_mul_BxJac{1, L1, L2, C, D}}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Axt_mul_BxJac{1}}, b::AbstractArray)
     #y .= conj(J.A.A'*J.A.bufB+J.A.B'*J.A.bufA).*b[1]
+    check(y, J, b)
     mul!(y, J.A.A', J.A.bufB)
     mul!(J.A.bufD, J.A.B', J.A.bufA)
     y .= conj.(y .+ J.A.bufD) .* b[1]
@@ -95,15 +97,17 @@ function mul!(y, J::AdjointOperator{Axt_mul_BxJac{1, L1, L2, C, D}}, b) where {L
 end
 
 # N == 2 input is a matrix
-function mul!(y, P::Axt_mul_Bx{2, L1, L2, C, D}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, P::Axt_mul_Bx{2}, b::AbstractArray)
+    check(y, P, b)
     mul!(P.bufA, P.A, b)
     mul!(P.bufB, P.B, b)
     mul!(y, P.bufA', P.bufB)
     return y
 end
 
-function mul!(y, J::AdjointOperator{Axt_mul_BxJac{2, L1, L2, C, D}}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Axt_mul_BxJac{2}}, b::AbstractArray)
     # y .= J.A.A'*((J.A.bufB)*b') + J.A.B'*((J.A.bufA)*b)
+    check(y, J, b)
     mul!(J.A.bufC, J.A.bufB, b')
     mul!(y, J.A.A', J.A.bufC)
     mul!(J.A.bufB, J.A.bufA, b)

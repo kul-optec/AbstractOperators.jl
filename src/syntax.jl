@@ -33,6 +33,13 @@ end
 *(L::AbstractOperator, coeff::T) where {T <: Number} = Scale(coeff, L)
 *(L1::AbstractOperator, L2::AbstractOperator) = Compose(L1, L2)
 
+# Mappings
+
+function mul!(y, L::AbstractOperator, x)
+    check(y, L, x)
+    throw(MethodError(mul!, (typeof(y), typeof(L), typeof(x))))
+end
+
 # getindex
 function Base.getindex(A::AbstractOperator, idx...)
     if ndoms(A, 2) == 1
@@ -117,7 +124,7 @@ function Base.getindex(H::A, idx...) where {L <: HCAT, D, S, A <: AffineAdd{L, D
 end
 
 # get index of scale
-function Base.getindex(A::S, idx...) where {T, L, S <: Scale{T, L}}
+function Base.getindex(A::S, idx...) where {T, L, S <: Scale{<:Any, T, L}}
     if ndoms(A, 2) == 1
         Gout = GetIndex(codomain_type(A), size(A, 1), idx)
         return Gout * A

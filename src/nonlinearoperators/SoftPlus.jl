@@ -19,13 +19,13 @@ end
 
 SoftPlus(DomainDim::NTuple{N, Int}) where {N} = SoftPlus{Float64, N}(DomainDim)
 
-function mul!(y::AbstractArray{T, N}, L::SoftPlus{T, N}, x::AbstractArray{T, N}) where {T, N}
+function mul!(y::AbstractArray, L::SoftPlus, x::AbstractArray)
+    check(y, L, x)
     return y .= log.(1 .+ exp.(x))
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, A <: SoftPlus{T, N}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:SoftPlus}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     return y .= 1 ./ (1 .+ exp.(-L.x)) .* b
 end

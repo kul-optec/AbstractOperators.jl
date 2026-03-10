@@ -85,86 +85,152 @@ function HCAT(A::Vararg{AbstractOperator})
     return HCAT(AA, buf)
 end
 
-function HCAT(AA::NTuple{N, AbstractOperator}, buf::C) where {N, C}
-    if N == 1
-        return AA[1]
-    else
-        # build H.idxs
-        K = 0
-        idxs = []
-        for i in eachindex(ndoms.(AA, 2))
-            if ndoms(AA[i], 2) == 1 # flatten operator
-                K += 1
-                push!(idxs, K)
-            else                   # stacked operator
-                idxs = push!(idxs, (collect((K + 1):(K + ndoms(AA[i], 2)))...,))
-                K += ndoms(AA[i], 2)
-            end
+# compile-time domain ndoms for HCAT's sub-operators
+_ndoms_from_type(::Type{<:HCAT{N}}, dim::Int) where {N} = dim == 2 ? N : 1
+
+@generated function HCAT(AA::NTuple{N, AbstractOperator}, buf::C) where {N, C}
+    N == 1 && return :(AA[1])
+    # Build idxs at compile time using operator element types
+    K = 0
+    idx_exprs = []
+    for i in 1:N
+        nd = _ndoms_from_type(fieldtype(AA, i), 2)
+        if nd == 1
+            K += 1
+            push!(idx_exprs, K)
+        else
+            K0 = K
+            push!(idx_exprs, ntuple(j -> K0 + j, nd))
+            K += nd
         end
-        return HCAT(AA, (idxs...,), buf)
     end
+    idxs_literal = Expr(:tuple, idx_exprs...)
+    return :(HCAT(AA, $idxs_literal, buf))
 end
 
 HCAT(A::AbstractOperator) = A
 
 # Mappings
-function mul!(y, H::HCAT, b::DD) where {DD <: ArrayPartition}
+function mul!(y::AbstractArray, H::HCAT, b::ArrayPartition)
+    check(y, H, b)
     return mul!(y, H, b.x)
 end
 
-@generated function mul!(y, H::HCAT{N, L, P}, b::DD) where {N, L, P, DD <: Tuple}
-    ex = :()
-
-    if fieldtype(P, 1) <: Int
-        # flatten operator
-        # build mul!(y, H.A[1], b[H.idxs[1]])
-        bb = :(b[H.idxs[1]])
-    else
-        # stacked operator
-        # build mul!(y, H.A[1],ArrayPartition( b[H.idxs[1][1]], b[H.idxs[1][2]] ...  ))
-        bb = [:(b[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, 1)))]
-        bb = :(ArrayPartition($(bb...)))
+function mul!(y::AbstractArray, H::HCAT, b::Tuple)
+    if _hcat_has_natural_idxs(H)
+        return _mul_hcat_natural!(y, H, b)
     end
-    ex = :($ex; mul!(y, H.A[1], $bb)) # write on y
+    return _mul_hcat_indexed!(y, H, b)
+end
 
-    for i in 2:N
-        if fieldtype(P, i) <: Int
-            # flatten operator
-            # build mul!(H.buf, H.A[i], b[H.idxs[i]])
-            bb = :(b[H.idxs[$i]])
+function mul!(y::ArrayPartition, A::AdjointOperator{<:HCAT}, b::AbstractArray)
+    check(y, A, b)
+    mul!(y.x, A, b)
+    return y
+end
+
+@generated function mul!(y::Tuple, A::AdjointOperator{<:HCAT{N, L, P}}, b::AbstractArray) where {N, L, P}
+    K = 0
+    function output_natural_expr(i)
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            K += 1
+            return :(y[$K])
         else
-            # stacked operator
-            # build mul!(H.buf, H.A[i],( b[H.idxs[i][1]], b[H.idxs[i][2]] ...  ))
-            bb = [:(b[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-            bb = :(ArrayPartition($(bb...)))
+            n = fieldcount(Pi)
+            parts = [:(y[$(K + j)]) for j in 1:n]
+            K += n
+            return :(ArrayPartition($(parts...)))
         end
-        ex = :($ex; mul!(H.buf, H.A[$i], $bb)) # write on H.buf
-        # sum H.buf with y
+    end
+
+    ex = :(H = A.A)
+    function output_expr(i)
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            return :(y[H.idxs[$i]])
+        else
+            n = fieldcount(Pi)
+            parts = [:(y[H.idxs[$i][$j]]) for j in 1:n]
+            return :(ArrayPartition($(parts...)))
+        end
+    end
+
+    ex_natural = ex
+    for i in 1:N
+        ex_natural = :($ex_natural; mul!($(output_natural_expr(i)), H.A[$i]', b))
+    end
+    ex_natural = :($ex_natural; return y)
+
+    ex_indexed = ex
+    for i in 1:N
+        ex_indexed = :($ex_indexed; mul!($(output_expr(i)), H.A[$i]', b))
+    end
+    ex_indexed = :($ex_indexed; return y)
+
+    return :(_hcat_has_natural_idxs(A.A) ? ($ex_natural) : ($ex_indexed))
+end
+
+_hcat_has_natural_idxs(H::HCAT{N, L, P}) where {N, L, P} = H.idxs == _hcat_natural_idxs(P)
+
+@generated function _hcat_natural_idxs(::Type{P}) where {P <: Tuple}
+    K = 0
+    idx_exprs = []
+    for i in 1:fieldcount(P)
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            K += 1
+            push!(idx_exprs, K)
+        else
+            n = fieldcount(Pi)
+            push!(idx_exprs, Expr(:tuple, (K + j for j in 1:n)...))
+            K += n
+        end
+    end
+    return Expr(:tuple, idx_exprs...)
+end
+
+@generated function _mul_hcat_natural!(y, H::HCAT{N, L, P}, b::Tuple) where {N, L, P}
+    K = 0
+    function input_expr(i)
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            K += 1
+            return :(b[$K])
+        else
+            n = fieldcount(Pi)
+            parts = [:(b[$(K + j)]) for j in 1:n]
+            K += n
+            return :(ArrayPartition($(parts...)))
+        end
+    end
+
+    ex = :(mul!(y, H.A[1], $(input_expr(1))))
+    for i in 2:N
+        ex = :($ex; mul!(H.buf, H.A[$i], $(input_expr(i))))
         ex = :($ex; y .+= H.buf)
     end
     ex = :($ex; return y)
     return ex
 end
 
-function mul!(y::DD, A::AdjointOperator{<:HCAT}, b) where {DD <: ArrayPartition}
-    mul!(y.x, A, b)
-    return y
-end
-
-@generated function mul!(y::DD, A::AdjointOperator{<:HCAT{N, L, P}}, b) where {N, L, P, DD <: Tuple}
-    ex = :(H = A.A)
-    for i in 1:N
-        if fieldtype(P, i) <: Int
-            # flatten operator
-            # build mul!(y[H.idxs[i]], H.A[i]', b)
-            yy = :(y[H.idxs[$i]])
+@generated function _mul_hcat_indexed!(y, H::HCAT{N, L, P}, b::Tuple) where {N, L, P}
+    function input_expr(i)
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            return :(b[H.idxs[$i]])
         else
-            # stacked operator
-            # build mul!(ArrayPartition( y[.xH.idxs[i][1]], y[H.idxs[i][2]] ...  ), H.A[i]', b)
-            yy = [:(y[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-            yy = :(ArrayPartition($(yy...)))
+            n = fieldcount(Pi)
+            parts = [:(b[H.idxs[$i][$j]]) for j in 1:n]
+            return :(ArrayPartition($(parts...)))
         end
-        ex = :($ex; mul!($yy, H.A[$i]', b))
+    end
+
+    ex = :(mul!(y, H.A[1], $(input_expr(1))))
+
+    for i in 2:N
+        ex = :($ex; mul!(H.buf, H.A[$i], $(input_expr(i))))
+        ex = :($ex; y .+= H.buf)
     end
     ex = :($ex; return y)
     return ex
@@ -173,15 +239,27 @@ end
 # Properties
 Base.:(==)(H1::HCAT{N, L1, P1}, H2::HCAT{N, L2, P2}) where {N, L1, L2, P1, P2} = H1.A == H2.A && H1.idxs == H2.idxs
 
-function size(H::HCAT)
-    size_in = []
-    for s in size.(H.A, 2)
-        eltype(s) <: Int ? push!(size_in, s) : push!(size_in, s...)
+@generated function size(H::HCAT{N, L, P}) where {N, L, P}
+    exprs = []
+    for i in 1:N
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            push!(exprs, :(size(H.A[$i], 2)))
+        else
+            for ii in eachindex(fieldnames(Pi))
+                push!(exprs, :(size(H.A[$i], 2)[$ii]))
+            end
+        end
     end
-    p = vcat([[idx...] for idx in H.idxs]...)
-    invpermute!(size_in, p)
+    natural_expr = Expr(:tuple, exprs...)
+    return :(size(H.A[1], 1), _hcat_apply_invperm($natural_expr, H.idxs))
+end
 
-    return size(H.A[1], 1), (size_in...,)
+# Apply inverse permutation (from HCAT idxs) to a natural-order domain size/type tuple.
+function _hcat_apply_invperm(natural::Tuple, idxs)
+    p = vcat([[idx...] for idx in idxs]...)
+    ip = invperm(p)
+    return ntuple(j -> natural[ip[j]], Val(length(natural)))
 end
 
 function fun_name(L::HCAT)
@@ -196,11 +274,20 @@ function fun_name(L::HCAT)
     end
 end
 
-function domain_type(H::HCAT)
-    domain = vcat([typeof(d) <: Tuple ? [d...] : d for d in domain_type.(H.A)]...)
-    p = vcat([[idx...] for idx in H.idxs]...)
-    invpermute!(domain, p)
-    return (domain...,)
+@generated function domain_type(H::HCAT{N, L, P}) where {N, L, P}
+    exprs = []
+    for i in 1:N
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            push!(exprs, :(domain_type(H.A[$i])))
+        else
+            for ii in eachindex(fieldnames(Pi))
+                push!(exprs, :(domain_type(H.A[$i])[$ii]))
+            end
+        end
+    end
+    natural_expr = Expr(:tuple, exprs...)
+    return :(_hcat_apply_invperm($natural_expr, H.idxs))
 end
 codomain_type(L::HCAT) = codomain_type.(Ref(L.A[1]))
 function domain_storage_type(H::HCAT)

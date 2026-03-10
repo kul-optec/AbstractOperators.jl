@@ -25,7 +25,7 @@ struct LMatrixOp{T, A <: Union{AbstractVector, AbstractMatrix}, B <: AbstractMat
     LinearOperator
     b::A
     bt::B
-    n_row_in::Integer
+    n_row_in::Int
 end
 
 ##TODO decide what to do when domain_type is given, with conversion one loses pointer to data...
@@ -44,21 +44,18 @@ function LMatrixOp(
 end
 
 # Mappings
-function mul!(
-        y::C, L::LMatrixOp{T, A, B}, X::AbstractMatrix{T}
-    ) where {T, A, B, C <: Union{AbstractVector, AbstractMatrix}}
+function mul!(y::AbstractArray, L::LMatrixOp, X::AbstractArray)
+    check(y, L, X)
     return mul!(y, X, L.b)
 end
 
-function mul!(
-        y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T, A, B}}, Y::AbstractVector{T}
-    ) where {T, A, B}
+function mul!(y::AbstractArray, L::AdjointOperator{<:LMatrixOp}, Y::AbstractVector)
+    check(y, L, Y)
     return y .= L.A.bt .* Y
 end
 
-function mul!(
-        y::AbstractMatrix{T}, L::AdjointOperator{LMatrixOp{T, A, B}}, Y::AbstractMatrix{T}
-    ) where {T, A, B}
+function mul!(y::AbstractArray, L::AdjointOperator{<:LMatrixOp}, Y::AbstractMatrix)
+    check(y, L, Y)
     return mul!(y, Y, L.A.b')
 end
 

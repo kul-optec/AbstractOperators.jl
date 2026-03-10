@@ -20,13 +20,13 @@ end
 Tanh(DomainDim::NTuple{N, Int}) where {N} = Tanh{Float64, N}(DomainDim)
 Tanh(DomainDim::Vararg{Int}) = Tanh{Float64, length(DomainDim)}(DomainDim)
 
-function mul!(y::AbstractArray{T, N}, L::Tanh{T, N}, x::AbstractArray{T, N}) where {T, N}
+function mul!(y::AbstractArray, L::Tanh, x::AbstractArray)
+    check(y, L, x)
     return y .= tanh.(x)
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, A <: Tanh{T, N}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Tanh}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     return y .= conj.(sech.(L.x) .^ 2) .* b
 end

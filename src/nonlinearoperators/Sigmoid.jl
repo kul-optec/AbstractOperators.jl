@@ -22,13 +22,13 @@ function Sigmoid(DomainDim::NTuple{N, Int}, gamma::G = 1.0) where {N, G}
     return Sigmoid{Float64, N, G}(DomainDim, gamma)
 end
 
-function mul!(y::AbstractArray{T, N}, L::Sigmoid{T, N, G}, x::AbstractArray{T, N}) where {T, N, G}
+function mul!(y::AbstractArray, L::Sigmoid, x::AbstractArray)
+    check(y, L, x)
     return y .= (1 .+ exp.(-L.gamma .* x)) .^ (-1)
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, G, A <: Sigmoid{T, N, G}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sigmoid}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     y .= exp.(-L.A.gamma .* L.x)
     y ./= (1 .+ y) .^ 2

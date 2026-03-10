@@ -75,26 +75,27 @@ function VCAT(A::Vararg{AbstractOperator})
     return VCAT(AA, buf)
 end
 
-function VCAT(AA::NTuple{N, AbstractOperator}, buf::C) where {N, C}
-    if N == 1
-        return AA[1]
-    else
-        # build H.idxs
-        K = 0
-        idxs = []
-        for i in eachindex(ndoms.(AA, 1))
-            if ndoms(AA[i], 1) == 1 # flatten operator
-                K += 1
-                push!(idxs, K)
-            else                   # stacked operator
-                idxs = push!(idxs, (collect((K + 1):(K + ndoms(AA[i], 1)))...,))
-                for ii in 1:ndoms(AA[i], 1)
-                    K += 1
-                end
-            end
+# compile-time codomain ndoms for VCAT's sub-operators
+_ndoms_from_type(::Type{<:VCAT{N}}, dim::Int) where {N} = dim == 1 ? N : 1
+
+@generated function VCAT(AA::NTuple{N, AbstractOperator}, buf) where {N}
+    N == 1 && return :(AA[1])
+    # Build idxs at compile time using operator element types
+    K = 0
+    idx_exprs = []
+    for i in 1:N
+        nd = _ndoms_from_type(fieldtype(AA, i), 1)
+        if nd == 1
+            K += 1
+            push!(idx_exprs, K)
+        else
+            K0 = K
+            push!(idx_exprs, ntuple(j -> K0 + j, nd))
+            K += nd
         end
-        return VCAT(AA, (idxs...,), buf)
     end
+    idxs_literal = Expr(:tuple, idx_exprs...)
+    return :(VCAT(AA, $idxs_literal, buf))
 end
 
 VCAT(A::AbstractOperator) = A
@@ -160,15 +161,27 @@ end
 
 Base.:(==)(H1::VCAT{N, L1, P1, C}, H2::VCAT{N, L2, P2, C}) where {N, L1, L2, P1, P2, C} = H1.A == H2.A && H1.idxs == H2.idxs
 
-function size(H::VCAT)
-    size_out = []
-    for s in size.(H.A, 1)
-        eltype(s) <: Int ? push!(size_out, s) : push!(size_out, s...)
+@generated function size(H::VCAT{N, L, P}) where {N, L, P}
+    exprs = []
+    for i in 1:N
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            push!(exprs, :(size(H.A[$i], 1)))
+        else
+            for ii in eachindex(fieldnames(Pi))
+                push!(exprs, :(size(H.A[$i], 1)[$ii]))
+            end
+        end
     end
-    p = vcat([[idx...] for idx in H.idxs]...)
-    invpermute!(size_out, p)
+    natural_expr = Expr(:tuple, exprs...)
+    return :((_vcat_apply_invperm($natural_expr, H.idxs), size(H.A[1], 2)))
+end
 
-    return (size_out...,), size(H.A[1], 2)
+# Apply inverse permutation (from VCAT idxs) to a natural-order codomain size/type tuple.
+function _vcat_apply_invperm(natural::Tuple, idxs)
+    p = vcat([[idx...] for idx in idxs]...)
+    ip = invperm(p)
+    return ntuple(j -> natural[ip[j]], Val(length(natural)))
 end
 
 function fun_name(L::VCAT)
@@ -176,11 +189,20 @@ function fun_name(L::VCAT)
 end
 
 domain_type(L::VCAT) = domain_type.(Ref(L.A[1]))
-function codomain_type(H::VCAT)
-    codomain = vcat([typeof(d) <: Tuple ? [d...] : d for d in codomain_type.(H.A)]...)
-    p = vcat([[idx...] for idx in H.idxs]...)
-    invpermute!(codomain, p)
-    return (codomain...,)
+@generated function codomain_type(H::VCAT{N, L, P}) where {N, L, P}
+    exprs = []
+    for i in 1:N
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            push!(exprs, :(codomain_type(H.A[$i])))
+        else
+            for ii in eachindex(fieldnames(Pi))
+                push!(exprs, :(codomain_type(H.A[$i])[$ii]))
+            end
+        end
+    end
+    natural_expr = Expr(:tuple, exprs...)
+    return :(_vcat_apply_invperm($natural_expr, H.idxs))
 end
 domain_storage_type(L::VCAT) = domain_storage_type.(Ref(L.A[1]))
 function codomain_storage_type(H::VCAT)

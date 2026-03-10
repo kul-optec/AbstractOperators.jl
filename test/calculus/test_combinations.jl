@@ -1,12 +1,5 @@
-# Split from test_linear_operators_calculus.jl: Mixed combination tests
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-
-@testset "Combinations" begin
+@testitem "Combinations" tags = [:calculus, :Combinations] setup = [TestUtils] begin
+    using Random, AbstractOperators
     verb && println(" --- Testing Combinations --- ")
 
     ## test Compose of HCAT

@@ -1,13 +1,6 @@
-if !isdefined(Main, :verb)
-    const verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-using SparseArrays
-
-@testset "FiniteDiff" begin
+@testitem "FiniteDiff" tags = [:linearoperator, :FiniteDiff] setup = [TestUtils] begin
+    using Random, SparseArrays, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing FiniteDiff --- ")
 
     n = 10

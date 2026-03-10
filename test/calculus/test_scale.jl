@@ -1,17 +1,6 @@
-using Test
-using LinearAlgebra
-using AbstractOperators
-using RecursiveArrayTools
-
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "Scale" begin
+@testitem "Scale" tags = [:calculus, :Scale] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing Scale --- ")
 
     m, n = 8, 4

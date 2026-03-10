@@ -1,91 +1,13 @@
-using AbstractOperators
-using Test
-using Documenter
-using Aqua
-using Pkg
-using LinearMaps
+using TestItemRunner
 
-if VERSION < v"1.12" # pre-1.12 Julia does not have workspace-aware environments, so we need to manually dev the parent package
-    Pkg.activate(@__DIR__)
-    Pkg.develop(PackageSpec(path = joinpath(@__DIR__, "..")))
-    Pkg.instantiate()
-end
+# Run all tests. Tags enable selective filtering for interactive development:
+#
+#   julia --project=test -e '
+#       using TestItemRunner
+#       TestItemRunner.run_tests(pwd(); filter = ti -> :calculus in ti.tags)
+#   '
+#
+# Available tags: :calculus, :linearoperator, :nonlinearoperator,
+#                 :batching, :misc, :quality, :jet
 
-verb = false
-
-@testset "AbstractOperators" begin
-    @testset "Linear operators" begin
-        for f in (
-                "linearoperators/test_diagop.jl",
-                "linearoperators/test_eye.jl",
-                "linearoperators/test_finitediff.jl",
-                "linearoperators/test_getindex.jl",
-                "linearoperators/test_lbfgs.jl",
-                "linearoperators/test_lmatrixop.jl",
-                "linearoperators/test_matrixop.jl",
-                "linearoperators/test_mylinop.jl",
-                "linearoperators/test_variation.jl",
-                "linearoperators/test_zeropad.jl",
-                "linearoperators/test_zerosop.jl",
-            )
-            include(f)
-        end
-    end
-
-    include("test_nonlinear_operators.jl")
-
-    @testset "Linear Calculus rules" begin
-        for f in (
-                "calculus/test_adjointoperator.jl",
-                "calculus/test_affineadd.jl",
-                "calculus/test_Ax_mul_Bx.jl",
-                "calculus/test_Ax_mul_Bxt.jl",
-                "calculus/test_Axt_mul_Bx.jl",
-                "calculus/test_broadcast.jl",
-                "calculus/test_combinations.jl",
-                "calculus/test_compose.jl",
-                "calculus/test_dcat.jl",
-                "calculus/test_hadamardprod.jl",
-                "calculus/test_hcat.jl",
-                "calculus/test_Jacobian.jl",
-                "calculus/test_reshape.jl",
-                "calculus/test_scale.jl",
-                "calculus/test_sum.jl",
-                "calculus/test_vcat.jl",
-            )
-            include(f)
-        end
-        include("test_combination_rules.jl")
-    end
-
-    @testset "Batch operators" begin
-        include("batching/test_SimpleBatchOp.jl")
-        include("batching/test_SpreadingBatchOp.jl")
-    end
-
-    include("test_syntax.jl")
-
-    include("test_jet.jl")
-
-    @testset "Documentation" begin
-        DocMeta.setdocmeta!(
-            AbstractOperators,
-            :DocTestSetup,
-            :(using AbstractOperators);
-            recursive = true,
-        )
-        doctest(AbstractOperators; fix = false)
-    end
-
-    Aqua.test_all(AbstractOperators)
-
-    include("test_LinearMapsExt.jl")
-end
-
-if VERSION >= v"1.12"
-    for sub in ("FFTWOperators", "NFFTOperators", "WaveletOperators", "DSPOperators")
-        pkgdir = normpath(@__DIR__, "..", sub)
-        Pkg.activate(pkgdir)
-        Pkg.test()
-    end
-end
+@run_package_tests

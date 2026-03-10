@@ -20,13 +20,13 @@ end
 Sech(DomainDim::NTuple{N, Int}) where {N} = Sech{Float64, N}(DomainDim)
 Sech(DomainDim::Vararg{Int}) = Sech{Float64, length(DomainDim)}(DomainDim)
 
-function mul!(y::AbstractArray{T, N}, L::Sech{T, N}, x::AbstractArray{T, N}) where {T, N}
+function mul!(y::AbstractArray, L::Sech, x::AbstractArray)
+    check(y, L, x)
     return y .= sech.(x)
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, A <: Sech{T, N}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sech}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     return y .= -conj.(tanh.(L.x) .* sech.(L.x)) .* b
 end

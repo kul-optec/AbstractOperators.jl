@@ -1,12 +1,6 @@
-if !isdefined(Main, :verb)
-    const verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "LMatrixOp" begin
+@testitem "LMatrixOp" tags = [:linearoperator, :LMatrixOp] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing LMatrixOp --- ")
 
     n, m = 5, 6

@@ -59,17 +59,20 @@ end
 
 # Mappings
 # array
-function mul!(y::DD, T::AffineAdd{L, D, true}, x) where {L <: AbstractOperator, DD, D}
+function mul!(y::AbstractArray, T::AffineAdd{<:AbstractOperator, <:Any, true}, x::AbstractArray)
+    check(y, T, x)
     mul!(y, T.A, x)
     return @.. y += T.d
 end
 
-function mul!(y::DD, T::AffineAdd{L, D, false}, x) where {L <: AbstractOperator, DD, D}
+function mul!(y::AbstractArray, T::AffineAdd{<:AbstractOperator, <:Any, false}, x::AbstractArray)
+    check(y, T, x)
     mul!(y, T.A, x)
     return @.. y -= T.d
 end
 
-function mul!(y, T::AdjointOperator{AffineAdd{L, D, S}}, x) where {L <: AbstractOperator, D, S}
+function mul!(y::AbstractArray, T::AdjointOperator{<:AffineAdd}, x::AbstractArray)
+    check(y, T, x)
     return mul!(y, T.A.A', x)
 end
 

@@ -76,7 +76,7 @@ function combine(L::Compose, R::Compose)
     end
     return Compose(ops, bufs)
 end
-function combine(L::Scale{T, O, Th}, R::Compose) where {T, O, Th}
+function combine(L::Scale{Th}, R::Compose) where {Th}
     threaded = Th == FastBroadcast.True()
     if can_be_combined(L.A, R.A[end])
         return Scale(L.coeff, L.coeff_conj, combine(L.A, R); threaded) # forward optimization task to combine function
@@ -84,7 +84,7 @@ function combine(L::Scale{T, O, Th}, R::Compose) where {T, O, Th}
         return Scale(L.coeff, L.A * R; threaded) # forward optimization task to the specialized constructor of Scale(coeff, L::Compose)
     end
 end
-function combine(L::AdjointOperator{Scale{T, O, Th}}, R::Compose) where {T, O, Th}
+function combine(L::AdjointOperator{<:Scale{Th}}, R::Compose) where {Th}
     threaded = Th == FastBroadcast.True()
     if can_be_combined(L.A.A', R.A[end])
         return Scale(L.A.coeff_conj, L.A.coeff, combine(L.A.A', R); threaded) # forward optimization task to combine function
@@ -92,7 +92,7 @@ function combine(L::AdjointOperator{Scale{T, O, Th}}, R::Compose) where {T, O, T
         return Scale(L.A.coeff_conj, L.A.A' * R; threaded) # forward optimization task to the specialized constructor of Scale(coeff, L::Compose)
     end
 end
-function combine(L::Compose, R::Scale{T, O, Th}) where {T <: Number, O <: AbstractOperator, Th}
+function combine(L::Compose, R::Scale{Th}) where {Th}
     threaded = Th == FastBroadcast.True()
     if can_be_combined(L.A[1], R.A)
         S = Scale(R.coeff, R.coeff_conj, combine(L.A[1], R); threaded) # forward optimization task to combine function
@@ -102,8 +102,8 @@ function combine(L::Compose, R::Scale{T, O, Th}) where {T <: Number, O <: Abstra
     end
 end
 function combine(
-        L::Compose, R::AdjointOperator{Scale{T, O, Th}}
-    ) where {T <: Number, O <: AbstractOperator, Th}
+        L::Compose, R::AdjointOperator{<:Scale{Th}}
+    ) where {Th}
     threaded = Th == FastBroadcast.True()
     if can_be_combined(L.A[1], R.A.A')
         S = Scale(R.A.coeff_conj, R.A.coeff, combine(L.A[1], R.A.A'); threaded) # forward optimization task to combine function

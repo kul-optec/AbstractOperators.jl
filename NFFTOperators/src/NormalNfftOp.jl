@@ -35,7 +35,7 @@ struct NfftNormalOp{N, T, A <: AbstractArray, F, I} <: AbstractOperators.LinearO
     threaded::Bool
 end
 
-function mul!(y, op::NfftNormalOp, x)
+function mul!(y::AbstractArray, op::NfftNormalOp, x::AbstractArray)
     return if op.threaded
         @enable_nfft_threading _mul!(y, op, x)
     else
@@ -92,8 +92,8 @@ end
 
 Base.size(op::NfftNormalOp) = op.shape, op.shape
 AbstractOperators.fun_name(::NfftNormalOp) = "(𝒩ᵃ𝒩)"
-domain_type(::NfftNormalOp{N, T}) where {N, T} = T
-codomain_type(::NfftNormalOp{N, T}) where {N, T} = T
+domain_type(::NfftNormalOp{N, T}) where {N, T} = eltype(T)
+codomain_type(::NfftNormalOp{N, T}) where {N, T} = eltype(T)
 domain_storage_type(op::NfftNormalOp{N, T}) where {N, T} = op.storage_type
 codomain_storage_type(op::NfftNormalOp{N, T}) where {N, T} = op.storage_type
 is_symmetric(::NfftNormalOp) = true

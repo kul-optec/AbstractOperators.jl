@@ -88,11 +88,11 @@ end
 
 # LBFGS operators are symmetric
 
-mul!(x::T, L::AdjointOperator{LBFGS{R, T, M, I}}, y::T) where {R, T, M, I} = mul!(x, L.A, y)
+mul!(x::AbstractArray, L::AdjointOperator{<:LBFGS}, y::AbstractArray) = mul!(x, L.A, y)
 
 # Two-loop recursion
 
-function mul!(d::T, L::LBFGS{R, T, M, I}, gradx::T) where {R, T, M, I}
+function mul!(d::AbstractArray, L::LBFGS, gradx::AbstractArray)
     d .= gradx
     idx = loop1!(d, L)
     d .*= L.H
@@ -100,7 +100,7 @@ function mul!(d::T, L::LBFGS{R, T, M, I}, gradx::T) where {R, T, M, I}
     return d
 end
 
-function loop1!(d::T, L::LBFGS{R, T, M, I}) where {R, T, M, I}
+function loop1!(d, L::LBFGS{R, T, M}) where {R, T, M}
     idx = L.curridx
     for i in 1:(L.currmem)
         L.alphas[idx] = real(dot(L.s_M[idx], d)) / L.ys_M[idx]
@@ -113,7 +113,7 @@ function loop1!(d::T, L::LBFGS{R, T, M, I}) where {R, T, M, I}
     return idx
 end
 
-function loop2!(d::T, idx, L::LBFGS{R, T, M, I}) where {R, T, M, I}
+function loop2!(d, idx, L::LBFGS{R, T, M}) where {R, T, M}
     for i in 1:(L.currmem)
         idx += 1
         if idx > M

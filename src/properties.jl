@@ -180,7 +180,7 @@ ndims(L::AbstractOperator) = count_dims(size(L, 1)), count_dims(size(L, 2))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
 count_dims(::Tuple{}) = 0
-count_dims(::NTuple{N, Int}) where {N} = N
+count_dims(::NTuple{N, <:Integer}) where {N} = N
 count_dims(dims::Tuple) = count_dims.(dims)
 
 """

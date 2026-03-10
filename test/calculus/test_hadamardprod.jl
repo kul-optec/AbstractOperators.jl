@@ -1,11 +1,5 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_NLop)
-    include("../utils.jl")
-end
-
-@testset "HadamardProd" begin
+@testitem "HadamardProd" tags = [:calculus, :HadamardProd] setup = [TestUtils] begin
+    using AbstractOperators
     verb && println(" --- Testing HadamardProd --- ")
 
     # Basic square identity factors (Eye.*Eye)

@@ -1,4 +1,7 @@
-@testset "Conv" begin
+@testitem "Conv" tags = [:dsp, :Conv] setup = [TestUtils] begin
+    using DSPOperators, DSP, LinearAlgebra, Random
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n, m = 5, 6
     h = randn(m)
     op = Conv(Float64, (n,), h)
@@ -28,7 +31,10 @@
     @test is_full_column_rank(op) == true
 end
 
-@testset "Filt" begin
+@testitem "Filt" tags = [:dsp, :Filt] setup = [TestUtils] begin
+    using DSPOperators, DSP, LinearAlgebra, Random
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n, m = 15, 2
     b, a = [1.0; 0.0; 1.0; 0.0; 0.0], [1.0; 1.0; 1.0]
     op = Filt(Float64, (n,), b, a)
@@ -67,7 +73,10 @@ end
     @test is_full_column_rank(op) == true
 end
 
-@testset "MIMOFilt" begin
+@testitem "MIMOFilt" tags = [:dsp, :MIMOFilt] setup = [TestUtils] begin
+    using DSPOperators, DSP, LinearAlgebra, Random
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     m, n = 10, 2
     b = [[1.0; 0.0; 1.0; 0.0; 0.0], [1.0; 0.0; 1.0; 0.0; 0.0]]
     a = [[1.0; 1.0; 1.0], [2.0; 2.0; 2.0]]

@@ -20,70 +20,52 @@ true
 	
 ```
 """
-struct FiniteDiff{T, N, D} <: LinearOperator
+struct FiniteDiff{N, D, T} <: LinearOperator
     dim_in::NTuple{N, Int}
-    function FiniteDiff{T, N, D}(dim_in) where {T, N, D}
+    function FiniteDiff{N, D, T}(dim_in) where {N, D, T}
         D > N && error("direction is bigger the number of dimension $N")
-        return new{T, N, D}(dim_in)
+        return new{N, D, T}(dim_in)
     end
 end
 
 # Constructors
-#default constructor
-function FiniteDiff(domain_type::Type, dim_in::NTuple{N, Int}, dir::Int64 = 1) where {N}
-    return FiniteDiff{domain_type, N, dir}(dim_in)
+# Val-dispatch constructor — fully type-stable (D is known at compile time)
+function FiniteDiff(::Type{T}, dim_in::NTuple{N, Int}, ::Val{D}) where {T, N, D}
+    return FiniteDiff{N, D, T}(dim_in)
 end
 
-FiniteDiff(dim_in::NTuple{N, Int}, dir::Int64 = 1) where {N} = FiniteDiff(Float64, dim_in, dir)
+# Specialized no-direction constructor: D=1 is a compile-time literal — fully type-stable
+FiniteDiff(dim_in::NTuple{N, Int}) where {N} = FiniteDiff{N, 1, Float64}(dim_in)
 
-function FiniteDiff(x::AbstractArray{T, N}, dir::Int64 = 1) where {T, N}
-    return FiniteDiff(eltype(x), size(x), dir)
+#default constructor (direction as runtime Int — delegates to Val)
+function FiniteDiff(domain_type::Type, dim_in::NTuple{N, Int}, dir::Int = 1) where {N}
+    return FiniteDiff(domain_type, dim_in, Val(dir))
+end
+
+FiniteDiff(dim_in::NTuple{N, Int}, dir::Int) where {N} = FiniteDiff(Float64, dim_in, Val(dir))
+
+function FiniteDiff(x::AbstractArray{T, N}, dir::Int = 1) where {T, N}
+    return FiniteDiff(T, size(x), Val(dir))
 end
 
 # Mappings
 
-function mul!(
-        y::AbstractArray{T, N}, L::FiniteDiff{T, N, D}, b::AbstractArray{T, N}
-    ) where {T, N, D}
-    idx_1 = CartesianIndices(
-        (
-            [i == D ? (2:d) : (1:d) for (i, d) in enumerate(L.dim_in)]...,
-        )
-    )
-    idx_2 = CartesianIndices(
-        (
-            [i == D ? (1:(d - 1)) : (1:d) for (i, d) in enumerate(L.dim_in)]...,
-        )
-    )
+function mul!(y::AbstractArray, L::FiniteDiff{N, D}, b::AbstractArray) where {N, D}
+    check(y, L, b)
+    idx_1 = CartesianIndices(ntuple(i -> i == D ? (2:L.dim_in[i]) : (1:L.dim_in[i]), Val(N)))
+    idx_2 = CartesianIndices(ntuple(i -> i == D ? (1:(L.dim_in[i] - 1)) : (1:L.dim_in[i]), Val(N)))
     y .= b[idx_1] .- b[idx_2]
     return y
 end
 
-function mul!(
-        y::AbstractArray{T, N}, L::AdjointOperator{FiniteDiff{T, N, D}}, b::AbstractArray{T, N}
-    ) where {T, N, D}
+function mul!(y::AbstractArray, L::AdjointOperator{<:FiniteDiff{N, D}}, b::AbstractArray) where {N, D}
+    check(y, L, b)
     dim_in = L.A.dim_in
-    idx_start = CartesianIndices(([i == D ? 1 : (1:d) for (i, d) in enumerate(dim_in)]...,))
-    idx_between_1 = CartesianIndices(
-        (
-            [i == D ? (1:(d - 2)) : (1:d) for (i, d) in enumerate(dim_in)]...,
-        )
-    )
-    idx_between_2 = CartesianIndices(
-        (
-            [i == D ? (2:(d - 1)) : (1:d) for (i, d) in enumerate(dim_in)]...,
-        )
-    )
-    idx_end_1 = CartesianIndices(
-        (
-            [i == D ? ((d - 1):(d - 1)) : (1:d) for (i, d) in enumerate(dim_in)]...,
-        )
-    )
-    idx_end_2 = CartesianIndices(
-        (
-            [i == D ? (d:d) : (1:d) for (i, d) in enumerate(dim_in)]...,
-        )
-    )
+    idx_start = CartesianIndices(ntuple(i -> i == D ? (1:1) : (1:dim_in[i]), Val(N)))
+    idx_between_1 = CartesianIndices(ntuple(i -> i == D ? (1:(dim_in[i] - 2)) : (1:dim_in[i]), Val(N)))
+    idx_between_2 = CartesianIndices(ntuple(i -> i == D ? (2:(dim_in[i] - 1)) : (1:dim_in[i]), Val(N)))
+    idx_end_1 = CartesianIndices(ntuple(i -> i == D ? ((dim_in[i] - 1):(dim_in[i] - 1)) : (1:dim_in[i]), Val(N)))
+    idx_end_2 = CartesianIndices(ntuple(i -> i == D ? (dim_in[i]:dim_in[i]) : (1:dim_in[i]), Val(N)))
     y[idx_start] .= -b[idx_start]
     y[idx_between_2] .= b[idx_between_1] .- b[idx_between_2]
     y[idx_end_2] .= b[idx_end_1]
@@ -92,19 +74,18 @@ end
 
 # Properties
 
-domain_type(::FiniteDiff{T}) where {T} = T
-codomain_type(::FiniteDiff{T}) where {T} = T
+domain_type(::FiniteDiff{<:Any, <:Any, T}) where {T} = T
+codomain_type(::FiniteDiff{<:Any, <:Any, T}) where {T} = T
 is_thread_safe(::FiniteDiff) = true
 
-function size(L::FiniteDiff{T, N, D}) where {T, N, D}
-    dim_out = [L.dim_in...]
-    dim_out[D] = dim_out[D] - 1
-    return ((dim_out...,), L.dim_in)
+function size(L::FiniteDiff{N, D}) where {N, D}
+    dim_out = ntuple(i -> i == D ? L.dim_in[i] - 1 : L.dim_in[i], Val(N))
+    return dim_out, L.dim_in
 end
 
-fun_name(::FiniteDiff{T, N, 1}) where {T, N} = "δx"
-fun_name(::FiniteDiff{T, N, 2}) where {T, N} = "δy"
-fun_name(::FiniteDiff{T, N, 3}) where {T, N} = "δz"
-fun_name(::FiniteDiff{T, N, D}) where {T, N, D} = "δx$D"
+fun_name(::FiniteDiff{<:Any, 1}) = "δx"
+fun_name(::FiniteDiff{<:Any, 2}) = "δy"
+fun_name(::FiniteDiff{<:Any, 3}) = "δz"
+fun_name(::FiniteDiff{<:Any, D}) where {D} = "δx$D"
 
 is_full_row_rank(::FiniteDiff) = true

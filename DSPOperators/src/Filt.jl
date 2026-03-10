@@ -14,11 +14,11 @@ IIR  ℝ^10 -> ℝ^10
 	
 ```
 """
-struct Filt{T, N} <: LinearOperator
+struct Filt{T, N, B <: AbstractVector{T}} <: LinearOperator
     dim_in::NTuple{N, Int}
-    b::AbstractVector{T}
-    a::AbstractVector{T}
-    si::AbstractVector{T}
+    b::B
+    a::B
+    si::B
 end
 
 # Constructors
@@ -41,8 +41,8 @@ function Filt{T, N}(dim_in, b, a) where {T, N}
     bs < sz && (b = copyto!(zeros(eltype(b), sz), b))
     1 < as < sz && (a = copyto!(zeros(eltype(a), sz), a))
 
-    si = zeros(promote_type(eltype(b), eltype(a)), max(length(a), length(b)) - 1)
-    return Filt{T, N}(dim_in, b, a, si)
+    si = zeros(T, max(length(a), length(b)) - 1)
+    return Filt{T, N, Vector{T}}(dim_in, Vector{T}(b), Vector{T}(a), si)
 end
 
 #default constructor
@@ -75,7 +75,8 @@ Filt(x::AbstractArray, b::AbstractVector) = Filt(size(x), b)
 
 # Mappings
 
-function mul!(y::AbstractArray{T}, L::Filt{T, N}, x::AbstractArray{T}) where {T, N}
+function mul!(y::AbstractArray, L::Filt, x::AbstractArray)
+    check(y, L, x)
     for col in 1:size(x, 2)
         if length(L.a) != 1
             iir!(y, L.b, L.a, x, L.si, col, col)
@@ -86,9 +87,8 @@ function mul!(y::AbstractArray{T}, L::Filt{T, N}, x::AbstractArray{T}) where {T,
     return
 end
 
-function mul!(
-        y::AbstractArray{T}, L::AdjointOperator{Filt{T, N}}, x::AbstractArray{T}
-    ) where {T, N}
+function mul!(y::AbstractArray, L::AdjointOperator{<:Filt}, x::AbstractArray)
+    check(y, L, x)
     A = L.A
     for col in 1:size(x, 2)
         if length(A.a) != 1
@@ -111,7 +111,8 @@ function iir!(y, b, a, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi - a[silen + 1] * val
         y[i, coly] = val
     end
-    return si .= 0.0 #reset state
+    si .= 0.0 #reset state
+    return
 end
 
 # Utilities
@@ -127,7 +128,8 @@ function iir_rev!(y, b, a, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi - a[silen + 1] * val
         y[i, coly] = val
     end
-    return si .= 0.0
+    si .= 0.0
+    return
 end
 
 function fir!(y, b, x, si, coly, colx)
@@ -141,7 +143,8 @@ function fir!(y, b, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi
         y[i, coly] = val
     end
-    return si .= 0.0
+    si .= 0.0
+    return
 end
 
 function fir_rev!(y, b, x, si, coly, colx)
@@ -155,7 +158,8 @@ function fir_rev!(y, b, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi
         y[i, coly] = val
     end
-    return si .= 0.0
+    si .= 0.0
+    return
 end
 
 # Properties

@@ -9,31 +9,33 @@ Creates the softmax non-linear operator with input dimensions `dim_in`.
 ```
 
 """
-struct SoftMax{T, N} <: NonLinearOperator
+struct SoftMax{T, N, B <: AbstractArray{T, N}} <: NonLinearOperator
     dim::NTuple{N, Int}
-    buf::AbstractArray{T, N}
+    buf::B
 end
 
 function SoftMax(x::AbstractArray{T, N}) where {T, N}
-    return SoftMax{N, T}(size(x), similar(x))
+    buf = similar(x)
+    return SoftMax{T, N, typeof(buf)}(size(x), buf)
 end
 
 function SoftMax(domain_type::Type, DomainDim::NTuple{N, Int}) where {N}
-    return SoftMax{domain_type, N}(DomainDim, zeros(domain_type, DomainDim))
+    buf = zeros(domain_type, DomainDim)
+    return SoftMax{domain_type, N, typeof(buf)}(DomainDim, buf)
 end
 
 SoftMax(DomainDim::NTuple{N, Int}) where {N} = SoftMax(Float64, DomainDim)
 
-function mul!(y::AbstractArray{T, N}, L::SoftMax{T, N}, x::AbstractArray{T, N}) where {T, N}
+function mul!(y::AbstractArray, L::SoftMax, x::AbstractArray)
+    check(y, L, x)
     y .= exp.(x .- maximum(x))
     return y ./= sum(y)
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, A <: SoftMax{T, N}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:SoftMax}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
-    fill!(y, zero(T))
+    fill!(y, zero(eltype(y)))
     L.A.buf .= exp.(L.x .- maximum(L.x))
     L.A.buf ./= sum(L.A.buf)
     for i in eachindex(y)
@@ -47,6 +49,6 @@ fun_name(L::SoftMax) = "σ"
 
 size(L::SoftMax) = (L.dim, L.dim)
 
-domain_type(::SoftMax{T, N}) where {T, N} = T
-codomain_type(::SoftMax{T, N}) where {T, N} = T
+domain_type(::SoftMax{T}) where {T} = T
+codomain_type(::SoftMax{T}) where {T} = T
 is_thread_safe(::SoftMax) = true

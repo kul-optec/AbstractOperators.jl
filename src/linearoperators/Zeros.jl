@@ -55,15 +55,14 @@ Zeros(A::AbstractOperator) = Zeros(domain_type(A), size(A, 2), codomain_type(A),
 
 # Mappings
 
-function mul!(
-        y::AbstractArray{C, N}, A::Zeros{C, N, D, M}, b::AbstractArray{D, M}
-    ) where {C, N, D, M}
-    return fill!(y, zero(C))
+function mul!(y::AbstractArray, A::Zeros, b::AbstractArray)
+    check(y, A, b)
+    return fill!(y, zero(codomain_type(A)))
 end
-function mul!(
-        y::AbstractArray{D, M}, A::AdjointOperator{Zeros{C, N, D, M}}, b::AbstractArray{C, N}
-    ) where {C, N, D, M}
-    return fill!(y, zero(D))
+
+function mul!(y::AbstractArray, A::AdjointOperator{<:Zeros}, b::AbstractArray)
+    check(y, A, b)
+    return fill!(y, zero(domain_type(A.A)))
 end
 
 # Properties

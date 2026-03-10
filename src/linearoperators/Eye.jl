@@ -21,15 +21,15 @@ true
 ```
 """
 struct Eye{T, N, S <: AbstractArray{T}} <: AbstractEye{T, N, S}
-    dim::NTuple{N, Integer}
+    dim::NTuple{N, Int}
 end
 
 # Constructors
 ###standard constructor Operator{N}(domain_type::Type, DomainDim::NTuple{N,Int})
 function Eye(
-        domain_type::Type{T}, domainDim::NTuple{N, Int}, storageType::Type{S} = Array{T}
+        domain_type::Type{T}, domainDim::NTuple{N, <:Integer}, storageType::Type{S} = Array{T}
     ) where {N, T, S <: AbstractArray{T}}
-    return Eye{domain_type, N, storageType}(domainDim)
+    return Eye{domain_type, N, storageType}(map(Int, domainDim))
 end
 ###
 
@@ -40,7 +40,11 @@ Eye(x::A) where {A <: AbstractArray} = Eye(eltype(x), size(x), Array{eltype(x)})
 
 # Mappings
 
-mul!(y::AbstractArray{T, N}, ::AbstractEye{T, N}, b::AbstractArray{T, N}) where {T, N} = y .= b
+function mul!(y::AbstractArray, L::AbstractEye, b::AbstractArray)
+    check(y, L, b)
+    y .= b
+    return y
+end
 
 # Properties
 diag(::AbstractEye) = 1.0

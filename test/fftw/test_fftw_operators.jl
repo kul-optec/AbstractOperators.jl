@@ -1,4 +1,7 @@
-@testset "DCT" begin
+@testitem "DCT" tags = [:fftw, :DCT] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n = 4
     op = DCT(Float64, (n,))
     x1 = randn(n)
@@ -33,7 +36,10 @@
     @test diag_AcA(op) == 1.0
 end
 
-@testset "IDCT" begin
+@testitem "IDCT" tags = [:fftw, :IDCT] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n = 4
     op = IDCT(Float64, (n,))
     x1 = randn(n)
@@ -68,7 +74,10 @@ end
     @test diag_AcA(op) == 1.0
 end
 
-@testset "DFT" begin
+@testitem "DFT" tags = [:fftw, :DFT] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n, m = 4, 7
 
     op = DFT(Float64, (n,))
@@ -165,7 +174,10 @@ end
     @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1.0e-12
 end
 
-@testset "IDFT" begin
+@testitem "IDFT" tags = [:fftw, :IDFT] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n, m = 5, 6
 
     @test_throws AssertionError IDFT(Float64, (n,))
@@ -231,7 +243,10 @@ end
     @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1.0e-12
 end
 
-@testset "RDFT" begin
+@testitem "RDFT" tags = [:fftw, :RDFT] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n = 4
     op = RDFT(Float64, (n,))
     x1 = randn(n)
@@ -265,7 +280,10 @@ end
     @test is_full_column_rank(op) == false
 end
 
-@testset "IRDFT" begin
+@testitem "IRDFT" tags = [:fftw, :IRDFT] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using AbstractOperators: is_linear, is_null, is_eye, is_diagonal, is_AcA_diagonal, is_AAc_diagonal, is_orthogonal, is_invertible, is_full_row_rank, is_full_column_rank
+
     n = 12
     op = IRDFT(Complex{Float64}, (div(n, 2) + 1,), n)
     x1 = rfft(randn(n))

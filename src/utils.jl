@@ -1,3 +1,7 @@
+# Compile-time ndoms from operator type, for use in @generated constructors.
+# Specializations for HCAT/VCAT/DCAT are added in their respective files.
+_ndoms_from_type(::Type{<:AbstractOperator}, dim::Int) = 1
+
 const thread_count_functions = Ref{Vector{Pair{Function, Function}}}(
     Pair{Function, Function}[
         BLAS.get_num_threads => BLAS.set_num_threads,
@@ -53,7 +57,8 @@ function check(codomain_array, op, domain_array)
     else
         dtype = eltype(domain_array)
     end
-    if dtype != domain_type(op)
+    # Use isequal instead of != to avoid Union{Missing,Bool} from tuple comparisons
+    if !isequal(dtype, domain_type(op))
         throw(
             ArgumentError(
                 "Input type $(dtype) does not match operator input type $(domain_type(op))",
@@ -61,9 +66,9 @@ function check(codomain_array, op, domain_array)
         )
     end
     dim_in = domain_array isa ArrayPartition ? size.(domain_array.x) : size(domain_array)
-    if dim_in != size(op, 2)
+    if !isequal(dim_in, size(op, 2))
         throw(
-            ArgumentError(
+            DimensionMismatch(
                 "Input size $(dim_in) does not match operator input size $(size(op, 2))",
             ),
         )
@@ -76,7 +81,7 @@ function check(codomain_array, op, domain_array)
     else
         dtype = eltype(codomain_array)
     end
-    if dtype != codomain_type(op)
+    if !isequal(dtype, codomain_type(op))
         throw(
             ArgumentError(
                 "Output type $(dtype) does not match operator output type $(codomain_type(op))",
@@ -84,9 +89,9 @@ function check(codomain_array, op, domain_array)
         )
     end
     dim_out = codomain_array isa ArrayPartition ? size.(codomain_array.x) : size(codomain_array)
-    return if dim_out != size(op, 1)
+    return if !isequal(dim_out, size(op, 1))
         throw(
-            ArgumentError(
+            DimensionMismatch(
                 "Output size $(dim_out) does not match operator output size $(size(op, 1))",
             ),
         )

@@ -30,23 +30,32 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
         N = ndims(A, 1)
         T = codomain_type(A)
         dim_in = size(A, 1)
-        Imask = Tuple(d ≤ N && (dim_out[d] == dim_in[d]) for d in 1:M)
-        broadcast_dims = Tuple(Imask[d] ? 1 : dim_out[d] for d in eachindex(dim_out))
-        idxs = CartesianIndices(broadcast_dims)
-        compact = all(Imask[1:N])
+        Imask, broadcast_dims, idxs, compact = _setup_broadcast_indices(dim_out, dim_in, N)
         bufC = allocate_in_codomain(A)
-        if threaded
-            bufD = [allocate_in_domain(A) for _ in 1:Threads.nthreads()]
-            A = [i == 1 ? A : copy_op(A) for i in 1:Threads.nthreads()]
-        else
-            bufD = allocate_in_domain(A)
-        end
+        A, bufD = _setup_broadcast_buffers(A, threaded)
         L = typeof(A)
         C = typeof(bufC)
         D = typeof(bufD)
         K = length(broadcast_dims)
         return new{T, N, M, threaded, compact, Imask, L, C, D, K}(A, dim_out, idxs, bufC, bufD)
     end
+end
+
+function _setup_broadcast_indices(dim_out::NTuple{M, Int}, dim_in::NTuple{N, Int}, nd::Int) where {M, N}
+    imask = Tuple(d <= nd && (dim_out[d] == dim_in[d]) for d in 1:M)
+    broadcast_dims = Tuple(imask[d] ? 1 : dim_out[d] for d in eachindex(dim_out))
+    idxs = CartesianIndices(broadcast_dims)
+    compact = all(imask[1:nd])
+    return imask, broadcast_dims, idxs, compact
+end
+
+function _setup_broadcast_buffers(A::AbstractOperator, threaded::Bool)
+    if threaded
+        ops = [i == 1 ? A : copy_op(A) for i in 1:Threads.nthreads()]
+        bufs = [allocate_in_domain(A) for _ in 1:Threads.nthreads()]
+        return ops, bufs
+    end
+    return A, allocate_in_domain(A)
 end
 
 # Constructors
@@ -100,18 +109,18 @@ function tbroadcast!(y, x)
 end
 
 # NoOperatorBroadCast
-function mul!(y, A::NoOperatorBroadCast{T, N, M, false}, b) where {T, N, M}
+function mul!(y::AbstractArray, A::NoOperatorBroadCast{T, N, M, false}, b::AbstractArray) where {T, N, M}
     check(y, A, b)
-    b = reshape(b, A.reshaped_dim_in)
-    return y .= b # non-threaded broadcasting
+    b_reshaped = reshape(b, A.reshaped_dim_in)
+    return y .= b_reshaped
 end
 
-function mul!(y, A::NoOperatorBroadCast{T, N, M, true}, b) where {T, N, M}
+function mul!(y::AbstractArray, A::NoOperatorBroadCast{T, N, M, true}, b::AbstractArray) where {T, N, M}
     check(y, A, b)
     return tbroadcast!(y, b) # threaded broadcasting, handles reshaping (threading is only enabled when compact)
 end
 
-function mul!(y, A::AdjointOperator{<:NoOperatorBroadCast}, b) # there is no threaded option here
+function mul!(y::AbstractArray, A::AdjointOperator{<:NoOperatorBroadCast}, b::AbstractArray) # there is no threaded option here
     check(y, A, b)
     y = reshape(y, A.A.reshaped_dim_in)
     return sum!(y, b)
@@ -119,23 +128,23 @@ end
 
 # OperatorBroadCast
 
-function mul!(y, R::OperatorBroadCast, b) # Non-threaded
+function mul!(y::AbstractArray, R::OperatorBroadCast, b::AbstractArray) # Non-threaded
     check(y, R, b)
     mul!(R.bufC, R.A, b)
-    return y .= R.bufC # non-threaded broadcasting
+    return y .= R.bufC
 end
 
-function mul!(y, R::OperatorBroadCast{T, N, M, true, Compact}, b) where {T, N, M, Compact} # Threaded
+function mul!(y::AbstractArray, R::OperatorBroadCast{T, N, M, true, Compact}, b::AbstractArray) where {T, N, M, Compact} # Threaded
     check(y, R, b)
     mul!(R.bufC, R.A[1], b)
     if Compact
         return tbroadcast!(y, R.bufC) # threaded broadcasting
     else
-        return y .= R.bufC # non-threaded broadcasting
+        return y .= R.bufC
     end
 end
 
-function mul!(y, A::AdjointOperator{<:OperatorBroadCast{T, N, M, false}}, b) where {T, N, M} # Non-threaded
+function mul!(y::AbstractArray, A::AdjointOperator{<:OperatorBroadCast{T, N, M, false}}, b::AbstractArray) where {T, N, M} # Non-threaded
     check(y, A, b)
     R = A.A
     for idx in R.idxs
@@ -150,22 +159,28 @@ function mul!(y, A::AdjointOperator{<:OperatorBroadCast{T, N, M, false}}, b) whe
     return y
 end
 
-function mul!(y, A::AdjointOperator{<:OperatorBroadCast{T, N, M, true}}, b) where {T, N, M} # Threaded
+function mul!(y::AbstractArray, A::AdjointOperator{<:OperatorBroadCast{T, N, M, true}}, b::AbstractArray) where {T, N, M} # Threaded
     check(y, A, b)
-    R = A.A
+    _threaded_broadcast_adjoint!(y, A.A, b)
+    return y
+end
+
+function _threaded_broadcast_adjoint!(y, R::OperatorBroadCast, b)
     fill!(y, 0)
     lock = ReentrantLock()
     thread_count = min(Threads.nthreads(), length(R.idxs))
-    batch_size = length(R.idxs) / thread_count
+    chunk = cld(length(R.idxs), thread_count)
+
     @threads for t in 1:thread_count
-        idx_start = max(1, floor(Int, (t - 1) * batch_size + 1))
-        idx_end = min(length(R.idxs), floor(Int, t * batch_size))
+        idx_start = (t - 1) * chunk + 1
+        idx_end = min(t * chunk, length(R.idxs))
         for i in idx_start:idx_end
             b_slice = get_input_slice(R, R.idxs[i], b)
             mul!(R.bufD[t], R.A[t]', b_slice)
             @lock lock y .+= R.bufD[t]
         end
     end
+
     return y
 end
 

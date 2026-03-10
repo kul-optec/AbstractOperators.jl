@@ -1,14 +1,6 @@
-using SparseArrays
-
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "MatrixOp" begin
+@testitem "MatrixOp" tags = [:linearoperator, :MatrixOp] setup = [TestUtils] begin
+    using Random, SparseArrays, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing MatrixOp --- ")
 
     # real matrix, real input
@@ -51,7 +43,7 @@ Random.seed!(0)
     @test_throws ErrorException MatrixOp(Float64, (m, c, 3), A)
     @test_throws MethodError MatrixOp(Float64, (m, c), randn(n, m, 2))
     x1 = randn(m, c)
-    y1 = test_op(op, x1, randn(n, c) .+ randn(n, c), verb)
+    y1 = test_op(op, x1, randn(n, c) .+ im .* randn(n, c), verb)  # codomain is ComplexF64
     y2 = A * x1
 
     # other constructors

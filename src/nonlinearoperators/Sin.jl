@@ -20,13 +20,13 @@ end
 Sin(DomainDim::NTuple{N, Int}) where {N} = Sin{Float64, N}(DomainDim)
 Sin(DomainDim::Vararg{Int}) = Sin{Float64, length(DomainDim)}(DomainDim)
 
-function mul!(y::AbstractArray{T, N}, L::Sin{T, N}, x::AbstractArray{T, N}) where {T, N}
+function mul!(y::AbstractArray, L::Sin, x::AbstractArray)
+    check(y, L, x)
     return y .= sin.(x)
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, A <: Sin{T, N}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sin}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     return y .= conj.(cos.(L.x)) .* b
 end

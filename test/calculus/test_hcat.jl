@@ -1,12 +1,6 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "HCAT" begin
+@testitem "HCAT" tags = [:calculus, :HCAT] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing HCAT --- ")
 
     m, n1, n2 = 4, 7, 5

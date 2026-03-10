@@ -16,14 +16,14 @@ julia> Conv((10,),randn(5))
 	
 ```
 """
-struct Conv{T, N, H <: AbstractArray{T}, Hc} <: AbstractConv{T, N, H}
+struct Conv{T, N, H <: AbstractArray{T}, Hc, P1 <: AbstractFFTs.Plan, P2 <: AbstractFFTs.Plan} <: AbstractConv{T, N, H}
     dim_in::NTuple{N, Int}
     h::H
     buf::H
     buf_c1::Hc
     buf_c2::Hc
-    R::AbstractFFTs.Plan
-    I::AbstractFFTs.Plan
+    R::P1
+    I::P2
 end
 
 # Constructors
@@ -48,7 +48,7 @@ function Conv(domain_type::Type, dim_in::NTuple{N, Int}, h::H) where {N, H <: Ab
         I = FFTW.plan_inv(R)
     end
     buf_c2 = similar(buf_c1)
-    return Conv{domain_type, N, H, typeof(buf_c1)}(dim_in, h, buf, buf_c1, buf_c2, R, I)
+    return Conv{domain_type, N, H, typeof(buf_c1), typeof(R), typeof(I)}(dim_in, h, buf, buf_c1, buf_c2, R, I)
 end
 
 Conv(dim_in::NTuple{N, Int}, h::H) where {H <: AbstractVector, N} = Conv(eltype(h), dim_in, h)

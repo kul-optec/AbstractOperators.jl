@@ -40,12 +40,14 @@ Reshape(A::L, dim_out::Vararg{Int, N}) where {N, L <: AbstractOperator} = Reshap
 
 # Mappings
 
-function mul!(y::C, R::Reshape{N, L}, b::D) where {N, L, C, D}
+function mul!(y::AbstractArray, R::Reshape, b::AbstractArray)
+    check(y, R, b)
     y_res = reshape(y, size(R.A, 1))
     return mul!(y_res, R.A, b)
 end
 
-function mul!(y::D, A::AdjointOperator{Reshape{N, L}}, b::C) where {N, L, C, D}
+function mul!(y::AbstractArray, A::AdjointOperator{<:Reshape}, b::AbstractArray)
+    check(y, A, b)
     R = A.A
     b_res = reshape(b, size(R.A, 1))
     return mul!(y, R.A', b_res)

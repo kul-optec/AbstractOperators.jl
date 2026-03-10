@@ -129,8 +129,8 @@ function DFT(
     FFTW.set_num_threads(prev_fftw_threads)
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
-    scaling = get_scaling(size(x), dims, normalization)
-    return DFT{N, Complex{D}, D, dims, S, typeof(A), typeof(At), D}(
+    scaling = _dft_scaling(size(x), dims, normalization)
+    return DFT{N, Complex{D}, D, dims, S, typeof(A), typeof(At), Float64}(
         size(x), A, At, normalization, scaling
     )
 end
@@ -153,8 +153,8 @@ function DFT(
     FFTW.set_num_threads(prev_fftw_threads)
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
-    scaling = get_scaling(size(x), dims, normalization)
-    return DFT{N, D, D, dims, S, typeof(A), typeof(At), real(D)}(size(x), A, At, normalization, scaling)
+    scaling = _dft_scaling(size(x), dims, normalization)
+    return DFT{N, D, D, dims, S, typeof(A), typeof(At), Float64}(size(x), A, At, normalization, scaling)
 end
 
 function DFT(
@@ -306,14 +306,14 @@ is_full_column_rank(L::DFT) = true
 
 function diag_AcA(L::DFT{N, C, D, Dir, S}) where {N, C, D, Dir, S}
     return if L.normalization == UNNORMALIZED
-        get_scaling(size(L, 1), Dir, FORWARD)
+        _dft_scaling(size(L, 1), Dir, FORWARD)
     else
         one(real(C))
     end
 end
 function diag_AAc(L::DFT{N, C, D, Dir, S}) where {N, C, D, Dir, S}
     return if L.normalization == UNNORMALIZED
-        get_scaling(size(L, 2), Dir, FORWARD)
+        _dft_scaling(size(L, 2), Dir, FORWARD)
     else
         one(real(C))
     end
@@ -331,13 +331,13 @@ LinearAlgebra.opnorm(L::AdjointOperator{<:DFT}) = sqrt(diag_AAc(L))
 
 # Utils
 
-function get_scaling(dim_in, dirs, normalization)
+function _dft_scaling(dim_in, dirs, normalization::Normalization)::Float64
     if normalization == UNNORMALIZED
-        return one(Float64)
+        return 1.0
     elseif normalization == ORTHO
-        return sqrt(prod(dim_in[collect(dirs)]))
+        return float(sqrt(prod(dim_in[collect(dirs)])))
     elseif normalization == FORWARD || normalization == BACKWARD
-        return prod(dim_in[collect(dirs)])
+        return float(prod(dim_in[collect(dirs)]))
     else
         throw(ArgumentError("Invalid normalization type"))
     end

@@ -1,4 +1,5 @@
-@testset "FFTShift/IFFTShift Operators" begin
+@testitem "FFTShift/IFFTShift Operators" tags = [:fftw, :FFTShift] setup = [TestUtils] begin
+    using LinearAlgebra, Random, FFTWOperators
     # 1D even length
     n = 4
     x = collect(1.0:n)
@@ -37,7 +38,8 @@
     @test diag_AcA(A) == 1.0
 end
 
-@testset "SignAlternation Operator" begin
+@testitem "SignAlternation Operator" tags = [:fftw, :SignAlternation] setup = [TestUtils] begin
+    using LinearAlgebra, Random, FFTWOperators
     # 1D
     n = 6
     x = ones(n)
@@ -63,7 +65,8 @@ end
     @test y2 == S2 * X
 end
 
-@testset "alternate_sign helpers" begin
+@testitem "alternate_sign helpers" tags = [:fftw, :SignAlternation] setup = [TestUtils] begin
+    using LinearAlgebra, Random, FFTWOperators
     # in-place
     v = collect(1.0:4.0)
     alternate_sign!(v, 1)
@@ -87,8 +90,8 @@ end
     @test_throws ArgumentError alternate_sign!(y, z)
 end
 
-@testset "fftshift/ifftshift wrappers around operators" begin
-    using FFTW
+@testitem "fftshift/ifftshift wrappers" tags = [:fftw, :FFTShift] setup = [TestUtils] begin
+    using FFTW, LinearAlgebra, Random, FFTWOperators
     # Even length
     n = 4
     A = DFT(n)
@@ -129,7 +132,8 @@ end
     @test (T6 * x) ≈ (A * FFTW.ifftshift(x, (1,)))
 end
 
-@testset "Combination rules: FFTShift/IFFTShift with DFT/IDFT" begin
+@testitem "Combination rules: FFTShift/IFFTShift with DFT/IDFT" tags = [:fftw, :CombinationRules] setup = [TestUtils] begin
+    using LinearAlgebra, Random, FFTWOperators
     using AbstractOperators: can_be_combined, combine
 
     # Even length → can be combined; replacement with SignAlternation

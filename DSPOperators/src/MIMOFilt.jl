@@ -123,7 +123,8 @@ end
 
 # Mappings
 
-function mul!(y::AbstractArray{T}, L::MIMOFilt{T, A}, x::AbstractArray{T}) where {T, A}
+function mul!(y::AbstractArray, L::MIMOFilt, x::AbstractArray)
+    check(y, L, x)
     cnt = 0
     cx = 0
     y .= 0.0 #TODO avoid this?
@@ -150,9 +151,8 @@ function mul!(y::AbstractArray{T}, L::MIMOFilt{T, A}, x::AbstractArray{T}) where
     return
 end
 
-function mul!(
-        y::AbstractArray{T}, M::AdjointOperator{MIMOFilt{T, A}}, x::AbstractArray{T}
-    ) where {T, A}
+function mul!(y::AbstractArray, M::AdjointOperator{<:MIMOFilt}, x::AbstractArray)
+    check(y, M, x)
     L = M.A
     cnt = 0
     cx = 0
@@ -208,7 +208,8 @@ function add_iir!(y, b, a, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi - a[silen + 1] * val
         y[i, coly] += val
     end
-    return si .= 0.0 #reset state
+    si .= 0.0 #reset state
+    return
 end
 
 function add_iir_rev!(y, b, a, x, si, coly, colx)
@@ -222,7 +223,8 @@ function add_iir_rev!(y, b, a, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi - a[silen + 1] * val
         y[i, coly] += val
     end
-    return si .= 0.0
+    si .= 0.0
+    return
 end
 
 function add_fir!(y, b, x, si, coly, colx)
@@ -236,7 +238,8 @@ function add_fir!(y, b, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi
         y[i, coly] += val
     end
-    return si .= 0.0
+    si .= 0.0
+    return
 end
 
 function add_fir_rev!(y, b, x, si, coly, colx)
@@ -250,5 +253,6 @@ function add_fir_rev!(y, b, x, si, coly, colx)
         si[silen] = b[silen + 1] * xi
         y[i, coly] += val
     end
-    return si .= 0.0
+    si .= 0.0
+    return
 end

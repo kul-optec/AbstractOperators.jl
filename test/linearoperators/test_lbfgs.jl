@@ -1,12 +1,6 @@
-if !isdefined(Main, :verb)
-    const verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-using AbstractOperators: LBFGS, update!, mul!, reset!
-
-@testset "L-BFGS" begin
+@testitem "L-BFGS" tags = [:linearoperator, :LBFGS] setup = [TestUtils] begin
+    using AbstractOperators
+    using AbstractOperators: LBFGS, update!, mul!, reset!
     verb && println(" --- Testing L-BFGS --- ")
 
     Q = [
@@ -69,57 +63,56 @@ using AbstractOperators: LBFGS, update!, mul!, reset!
     dirdir = ArrayPartition(zeros(10), zeros(10))
     verb && println(HH)
 
-    x_old = []
-    grad_old = []
+    let x_old = [], grad_old = []
+        for i in 1:5
+            x = xs[:, i]
+            grad = Q * x + q
 
-    for i in 1:5
-        x = xs[:, i]
-        grad = Q * x + q
-
-        if i > 1
-            xx = ArrayPartition(x, copy(x))
-            xx_old = ArrayPartition(x_old, copy(x_old))
-            gradgrad = ArrayPartition(grad, copy(grad))
-            gradgrad_old = ArrayPartition(grad_old, copy(grad_old))
-            if verb
-                @time update!(H, x, x_old, grad, grad_old)
-                @time update!(HH, xx, xx_old, gradgrad, gradgrad_old)
-            else
-                update!(H, x, x_old, grad, grad_old)
-                update!(HH, xx, xx_old, gradgrad, gradgrad_old)
+            if i > 1
+                xx = ArrayPartition(x, copy(x))
+                xx_old = ArrayPartition(x_old, copy(x_old))
+                gradgrad = ArrayPartition(grad, copy(grad))
+                gradgrad_old = ArrayPartition(grad_old, copy(grad_old))
+                if verb
+                    @time update!(H, x, x_old, grad, grad_old)
+                    @time update!(HH, xx, xx_old, gradgrad, gradgrad_old)
+                else
+                    update!(H, x, x_old, grad, grad_old)
+                    update!(HH, xx, xx_old, gradgrad, gradgrad_old)
+                end
             end
+
+            dir_ref = dirs_ref[:, i]
+
+            gradm = -grad
+            if verb
+                @time mul!(dir, H, gradm)
+            else
+                mul!(dir, H, gradm)
+            end
+            @test norm(dir - dir_ref, Inf) / (1 + norm(dir_ref, Inf)) <= 1.0e-15
+
+            gradm2 = ArrayPartition(-grad, copy(-grad))
+            if verb
+                @time mul!(dirdir, HH, gradm2)
+            else
+                mul!(dirdir, HH, gradm2)
+            end
+            @test norm(dirdir.x[1] - dir_ref, Inf) / (1 + norm(dir_ref, Inf)) <= 1.0e-15
+            @test norm(dirdir.x[2] - dir_ref, Inf) / (1 + norm(dir_ref, Inf)) <= 1.0e-15
+            # Symmetry check: (H * g)' * h == g' * (H * h)
+            g = randn(10)
+            h = randn(10)
+            Hg = similar(g)
+            Hh = similar(h)
+            mul!(Hg, H, g)
+            mul!(Hh, H, h)
+            @test abs(dot(Hg, h) - dot(g, Hh)) <= 1.0e-12 * (1 + norm(g) * norm(h))
+
+            x_old = x
+            grad_old = grad
         end
-
-        dir_ref = dirs_ref[:, i]
-
-        gradm = -grad
-        if verb
-            @time mul!(dir, H, gradm)
-        else
-            mul!(dir, H, gradm)
-        end
-        @test norm(dir - dir_ref, Inf) / (1 + norm(dir_ref, Inf)) <= 1.0e-15
-
-        gradm2 = ArrayPartition(-grad, copy(-grad))
-        if verb
-            @time mul!(dirdir, HH, gradm2)
-        else
-            mul!(dirdir, HH, gradm2)
-        end
-        @test norm(dirdir.x[1] - dir_ref, Inf) / (1 + norm(dir_ref, Inf)) <= 1.0e-15
-        @test norm(dirdir.x[2] - dir_ref, Inf) / (1 + norm(dir_ref, Inf)) <= 1.0e-15
-        # Symmetry check: (H * g)' * h == g' * (H * h)
-        g = randn(10)
-        h = randn(10)
-        Hg = similar(g)
-        Hh = similar(h)
-        mul!(Hg, H, g)
-        mul!(Hh, H, h)
-        @test abs(dot(Hg, h) - dot(g, Hh)) <= 1.0e-12 * (1 + norm(g) * norm(h))
-
-        x_old = x
-        grad_old = grad
-    end
+    end  # let x_old, grad_old
 
     # Memory limit: ensure no more than mem updates stored
     @test H.currmem <= mem

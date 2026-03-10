@@ -30,7 +30,7 @@ function Jacobian(S::Scale, x::AbstractArray)
     return Scale(S.coeff, Jacobian(S.A, x))
 end
 ##Jacobian of DCAT
-function Jacobian(H::DCAT, b)
+function Jacobian(H::DCAT, b::AbstractArray)
     x = b.x
     A = ()
     c = 0
@@ -61,7 +61,7 @@ function Jacobian(H::HCAT, x::Tuple)
     return HCAT(A, H.idxs, H.buf)
 end
 #Jacobian of VCAT
-function Jacobian(V::VCAT, x)
+function Jacobian(V::VCAT, x::AbstractArray)
     JJ = ([Jacobian(a, x) for a in V.A]...,)
     return VCAT(JJ, V.idxs, V.buf)
 end
@@ -74,7 +74,7 @@ function Jacobian(L::Compose, x::AbstractArray)
     return Compose(Jacobian.(L.A, tuple(x_vec...)), L.buf)
 end
 
-function Jacobian(L::Compose, x::X) where {N, X <: NTuple{N, AbstractArray}}
+function Jacobian(L::Compose, x::NTuple{N, AbstractArray}) where {N}
     x_vec = AbstractArray[x]
     for A in L.A[1:(end - 1)]
         push!(x_vec, A * x_vec[end])

@@ -21,7 +21,7 @@ julia> 10*A         #shorthand
 	
 ```
 """
-struct Scale{T <: Number, L <: AbstractOperator, Th} <: AbstractOperator
+struct Scale{Th, T <: Number, L <: AbstractOperator} <: AbstractOperator
     coeff::T
     coeff_conj::T
     A::L
@@ -34,9 +34,11 @@ struct Scale{T <: Number, L <: AbstractOperator, Th} <: AbstractOperator
             )
         end
         Th = threaded ? FastBroadcast.True() : FastBroadcast.False()
-        return new{typeof(coeff), typeof(L), Th}(coeff, coeff_conj, L)
+        return new{Th, typeof(coeff), typeof(L)}(coeff, coeff_conj, L)
     end
 end
+
+_ndoms_from_type(::Type{<:Scale{<:Any, <:Any, L}}, dim::Int) where {L} = _ndoms_from_type(L, dim)
 
 # Constructors
 function Scale(coeff, L; threaded = default_should_thread(L))
@@ -59,12 +61,14 @@ end
 
 # Mappings
 
-function mul!(y::AbstractArray, L::Scale{T, A, Th}, x::D) where {T, A, Th, D}
+function mul!(y::AbstractArray, L::Scale{Th}, x::AbstractArray) where {Th}
+    check(y, L, x)
     mul!(y, L.A, x)
     return @.. thread = Th y *= L.coeff
 end
 
-function mul!(y::Tuple, L::Scale{T, A, Th}, x::D) where {T, D, A, Th}
+function mul!(y::Tuple, L::Scale{Th}, x::AbstractArray) where {Th}
+    check(y, L, x)
     mul!(y, L.A, x)
     for k in eachindex(y)
         @.. thread = Th y[k] *= L.coeff
@@ -73,14 +77,16 @@ function mul!(y::Tuple, L::Scale{T, A, Th}, x::D) where {T, D, A, Th}
 end
 
 function mul!(
-        y::AbstractArray, S::AdjointOperator{Scale{T, A, Th}}, x::D
-    ) where {T, D <: AbstractArray, A, Th}
+        y::AbstractArray, S::AdjointOperator{<:Scale{Th}}, x::AbstractArray
+    ) where {Th}
+    check(y, S, x)
     L = S.A
     mul!(y, L.A', x)
     return @.. thread = Th y .*= L.coeff_conj
 end
 
-function mul!(y::Tuple, S::AdjointOperator{Scale{T, A, Th}}, x::C) where {T, C, A, Th}
+function mul!(y::Tuple, S::AdjointOperator{<:Scale{Th}}, x::AbstractArray) where {Th}
+    check(y, S, x)
     L = S.A
     mul!(y, L.A', x)
     for k in eachindex(y)
@@ -100,7 +106,7 @@ end
 
 # Properties
 
-function Base.:(==)(L1::Scale{T, A}, L2::Scale{T, A}) where {T, A}
+function Base.:(==)(L1::Scale{<:Any, T, A}, L2::Scale{<:Any, T, A}) where {T, A}
     return L1.coeff == L2.coeff && L1.A == L2.A
 end
 size(L::Scale) = size(L.A)

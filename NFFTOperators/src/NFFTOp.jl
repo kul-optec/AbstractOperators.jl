@@ -1,7 +1,13 @@
-struct NFFTOp{T, D} <: AbstractOperators.LinearOperator
-    plan::NFFT.AbstractNFFTPlan{T, D}
-    ksp_buffer::AbstractMatrix{Complex{T}}
-    dcf::AbstractMatrix{T}
+struct NFFTOp{
+        T,
+        D,
+        P <: NFFT.AbstractNFFTPlan{T, D},
+        K <: AbstractMatrix{Complex{T}},
+        DC <: AbstractMatrix{T},
+    } <: AbstractOperators.LinearOperator
+    plan::P
+    ksp_buffer::K
+    dcf::DC
     threaded::Bool
 end
 
@@ -69,7 +75,7 @@ function NFFTOp(
     ksp_buffer = similar(
         trajectory, complex(eltype(trajectory)), size(trajectory)[2:end]...
     )
-    return NFFTOp{T, D}(plan, ksp_buffer, dcf, threaded)
+    return NFFTOp{T, D, typeof(plan), typeof(ksp_buffer), typeof(dcf)}(plan, ksp_buffer, dcf, threaded)
 end
 
 function NFFTOp(
@@ -87,7 +93,7 @@ function NFFTOp(
     )
     raw_dcf = NFFTTools.sdc(plan; iters = dcf_estimation_iterations)
     dcf = dcf_correction_function(reshape(raw_dcf, size(ksp_buffer)))
-    return NFFTOp{T, D}(plan, ksp_buffer, dcf, threaded)
+    return NFFTOp{T, D, typeof(plan), typeof(ksp_buffer), typeof(dcf)}(plan, ksp_buffer, dcf, threaded)
 end
 
 function set_nfft_threading_expr(threading_state_expr, thread_count_expr, body_expr)

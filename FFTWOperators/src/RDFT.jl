@@ -27,7 +27,7 @@ struct RDFT{
     At::T2
     b2::T3
     y2::T3
-    Zp::ZeroPad{Complex{T}, N}
+    Zp::ZeroPad{N, Complex{T}}
 end
 
 # Constructors
@@ -43,7 +43,7 @@ function RDFT(x::AbstractArray{T, N}, dims::Int = 1) where {T <: Real, N}
     for i in 1:N
         dim_out = i == dims ? (dim_out..., div(dim_in[i], 2) + 1) : (dim_out..., dim_in[i])
     end
-    Z = ZeroPad(Complex{T}, dim_out, size(b2))
+    Z = ZeroPad(Complex{T}, dim_out, size(b2) .- dim_out)
     return RDFT{T, N, typeof(A), typeof(At), typeof(b2)}(dim_in, dim_out, A, At, b2, y2, Z)
 end
 

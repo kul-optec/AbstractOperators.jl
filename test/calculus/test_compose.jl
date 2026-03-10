@@ -1,12 +1,6 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "Compose" begin
+@testitem "Compose" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing Compose --- ")
 
     m1, m2 = 4, 7
@@ -76,7 +70,7 @@ Random.seed!(0)
     Z = Zeros(Float64, (m2,), Float64, (m2,))
     ZC = Compose(opA2, Z)
     @test is_null(ZC)
-    @test ZC * x == zeros(m3)
+    @test ZC * zeros(m2) == zeros(m3)
 
     # Composition with diagonal preserves diagonality when both diagonal
     struct MyDiagOp <: LinearOperator end

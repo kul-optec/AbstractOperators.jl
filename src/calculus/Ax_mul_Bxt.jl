@@ -76,14 +76,16 @@ function Jacobian(P::Ax_mul_Bxt{L1, L2, C, D}, x::AbstractArray) where {L1, L2, 
 end
 
 # Mappings
-function mul!(y, P::Ax_mul_Bxt{L1, L2, C, D}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, P::Ax_mul_Bxt, b::AbstractArray)
+    check(y, P, b)
     mul!(P.bufA, P.A, b)
     mul!(P.bufB, P.B, b)
     return mul!(y, P.bufA, P.bufB')
 end
 
-function mul!(y, J::AdjointOperator{Ax_mul_BxtJac{L1, L2, C, D}}, b) where {L1, L2, C, D}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Ax_mul_BxtJac}, b::AbstractArray)
     #y .= J.A.A'*(b*(J.A.bufB)) + J.A.B'*(b'*(J.A.bufA))
+    check(y, J, b)
     mul!(J.A.bufC, b, J.A.bufB)
     mul!(y, J.A.A', J.A.bufC)
     mul!(J.A.bufB, b', J.A.bufA)

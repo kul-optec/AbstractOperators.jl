@@ -1,14 +1,6 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-using SparseArrays
-
-@testset "Variation" begin
+@testitem "Variation" tags = [:linearoperator, :Variation] setup = [TestUtils] begin
+    using Random, SparseArrays, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing Variation --- ")
 
     for threaded in (false, true)
@@ -66,7 +58,7 @@ using SparseArrays
         ##errors
         @test_throws ErrorException Variation(Float64, (n,))
         badX = randn(n, m + 1)
-        @test_throws ArgumentError op * badX
+        @test_throws DimensionMismatch op * badX
 
         # Adjoint consistency: <Vx, Y> == <x, V'Y>
         x_test = randn(n, m)

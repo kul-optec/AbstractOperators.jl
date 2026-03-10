@@ -27,6 +27,8 @@ struct AdjointOperator{T <: AbstractOperator} <: AbstractOperator
     end
 end
 
+_ndoms_from_type(::Type{<:AdjointOperator{T}}, dim::Int) where {T} = _ndoms_from_type(T, dim == 1 ? 2 : 1)
+
 # Constructors
 
 AdjointOperator(L::AdjointOperator) = L.A

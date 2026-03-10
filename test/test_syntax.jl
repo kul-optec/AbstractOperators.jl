@@ -1,11 +1,4 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("./utils.jl")
-end
-
-@testset "Syntax" begin
+@testitem "Syntax" tags = [:misc, :Syntax] setup = [TestUtils] begin
     verb && println(" --- Testing Syntax --- ")
     ###### ' ######
     n, m = 5, 3

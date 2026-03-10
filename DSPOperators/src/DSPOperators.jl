@@ -8,6 +8,7 @@ using DSP: xcorr, conv
 import AbstractOperators:
     domain_type,
     codomain_type,
+    check,
     fun_name,
     get_normal_op,
     allocate_in_domain,

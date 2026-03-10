@@ -1,11 +1,5 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-
-@testset "Jacobian" begin
+@testitem "Jacobian" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
+    using AbstractOperators
     verb && println(" --- Testing Jacobian --- ")
 
     m, n = 3, 5

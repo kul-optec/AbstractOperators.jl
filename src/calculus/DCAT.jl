@@ -36,28 +36,45 @@ end
 # Constructors
 DCAT(A::AbstractOperator) = A
 
+# compile-time ndoms for DCAT (both domain and codomain have N components)
+_ndoms_from_type(::Type{<:DCAT{N}}, dim::Int) where {N} = N
+
 function DCAT(A::Vararg{AbstractOperator})
+    return _dcat_impl(A)
+end
 
-    # build H.idxs
-    idxD, idxC = (), ()
-    for d in (1, 2)
-        idxs = []
-        K = 0
-        for i in eachindex(ndoms.(A, d))
-            if ndoms(A[i], d) == 1 # flatten operator
-                K += 1
-                push!(idxs, K)
-            else                   # stacked operator
-                idxs = push!(idxs, (collect((K + 1):(K + ndoms(A[i], d)))...,))
-                for ii in 1:ndoms(A[i], d)
-                    K += 1
-                end
-            end
+@generated function _dcat_impl(A::NTuple{N, AbstractOperator}) where {N}
+    N == 1 && return :(A[1])
+    # Build idxC (codomain, dim=1) and idxD (domain, dim=2) at compile time
+    idx_exprs_C = []
+    Kc = 0
+    for i in 1:N
+        ndc = _ndoms_from_type(fieldtype(A, i), 1)
+        if ndc == 1
+            Kc += 1
+            push!(idx_exprs_C, Kc)
+        else
+            K0 = Kc
+            push!(idx_exprs_C, ntuple(j -> K0 + j, ndc))
+            Kc += ndc
         end
-        d == 1 ? (idxC = (idxs...,)) : (idxD = (idxs...,))
     end
-
-    return DCAT(A, idxD, idxC)
+    idx_exprs_D = []
+    Kd = 0
+    for i in 1:N
+        ndd = _ndoms_from_type(fieldtype(A, i), 2)
+        if ndd == 1
+            Kd += 1
+            push!(idx_exprs_D, Kd)
+        else
+            K0 = Kd
+            push!(idx_exprs_D, ntuple(j -> K0 + j, ndd))
+            Kd += ndd
+        end
+    end
+    idxC_literal = Expr(:tuple, idx_exprs_C...)
+    idxD_literal = Expr(:tuple, idx_exprs_D...)
+    return :(DCAT(A, $idxD_literal, $idxC_literal))
 end
 
 # Mappings

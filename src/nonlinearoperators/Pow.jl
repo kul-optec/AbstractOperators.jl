@@ -17,13 +17,13 @@ end
 
 Pow(DomainDim::NTuple{N, Int}, p::I) where {N, I <: Real} = Pow{Float64, N, I}(DomainDim, p)
 
-function mul!(y::AbstractArray{T, N}, L::Pow{T, N, I}, x::AbstractArray{T, N}) where {T, N, I}
+function mul!(y::AbstractArray, L::Pow, x::AbstractArray)
+    check(y, L, x)
     return y .= x .^ L.p
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{Pow{T, N, I}, TT}}, b::AbstractArray
-    ) where {T, N, I, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Pow}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     return y .= conj.(L.A.p .* (L.x) .^ (L.A.p - 1)) .* b
 end

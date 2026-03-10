@@ -183,9 +183,12 @@ function Scale(coeff, L::Compose; threaded = default_should_thread(L))
     end
 end
 
+_ndoms_from_type(::Type{<:Compose{N, M, L, T}}, dim::Int) where {N, M, L <: Tuple, T <: Tuple} =
+    dim == 2 ? _ndoms_from_type(fieldtype(L, 1), 2) : _ndoms_from_type(fieldtype(L, N), 1)
+
 # Mappings
 
-@generated function mul!(y::C, L::Compose{N, M, T1, T2}, b::D) where {N, M, T1, T2, C, D}
+@generated function mul!(y::AbstractArray, L::Compose{N, M, T1, T2}, b::AbstractArray) where {N, M, T1, T2}
     ex = :(mul!(L.buf[1], L.A[1], b))
     for i in 2:M
         ex = quote
@@ -201,8 +204,8 @@ end
 end
 
 @generated function mul!(
-        y::D, L::AdjointOperator{Compose{N, M, T1, T2}}, b::C
-    ) where {N, M, T1, T2, C, D}
+        y::AbstractArray, L::AdjointOperator{Compose{N, M, T1, T2}}, b::AbstractArray
+    ) where {N, M, T1, T2}
     ex = :(mul!(L.A.buf[M], L.A.A[N]', b))
     for i in M:-1:2
         ex = quote

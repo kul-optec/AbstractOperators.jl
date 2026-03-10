@@ -1,9 +1,5 @@
-using Test
-using AbstractOperators
-using LinearMaps
-using LinearAlgebra
-
-@testset "LinearMapsExt" begin
+@testitem "LinearMapsExt" tags = [:misc, :LinearMapsExt] begin
+    using LinearMaps, LinearAlgebra
 
     # Real Diagonal
     d = rand(10, 10)

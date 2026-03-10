@@ -1,12 +1,6 @@
-if !isdefined(Main, :verb)
-    verb = false
-end
-if !isdefined(Main, :test_op)
-    include("../utils.jl")
-end
-Random.seed!(0)
-
-@testset "Reshape" begin
+@testitem "Reshape" tags = [:calculus, :Reshape] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
     verb && println(" --- Testing Reshape --- ")
 
     m, n = 8, 4
@@ -194,7 +188,7 @@ Random.seed!(0)
     # Testing nonlinear Reshape
     n = 4
     x = randn(n)
-    r = randn(n)
+    r = randn(2, 2)
     opS = Sigmoid(Float64, (n,), 2)
     op = Reshape(opS, 2, 2)
 

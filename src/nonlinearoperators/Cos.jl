@@ -20,13 +20,13 @@ end
 Cos(DomainDim::NTuple{N, Int}) where {N} = Cos{Float64, N}(DomainDim)
 Cos(DomainDim::Vararg{Int}) = Cos{Float64, length(DomainDim)}(DomainDim)
 
-function mul!(y::AbstractArray{T, N}, ::Cos{T, N}, x::AbstractArray{T, N}) where {T, N}
+function mul!(y::AbstractArray, L::Cos, x::AbstractArray)
+    check(y, L, x)
     return y .= cos.(x)
 end
 
-function mul!(
-        y::AbstractArray, J::AdjointOperator{Jacobian{A, TT}}, b::AbstractArray
-    ) where {T, N, A <: Cos{T, N}, TT <: AbstractArray{T, N}}
+function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Cos}}, b::AbstractArray)
+    check(y, J, b)
     L = J.A
     return y .= -conj.(sin.(L.x)) .* b
 end
