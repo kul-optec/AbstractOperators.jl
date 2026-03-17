@@ -3,7 +3,7 @@ uuid = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
 version = "0.4.0"
 
 [workspace]
-projects = ["test", "docs", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"]
+projects = ["test", "docs", "benchmark", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"]
 
 [deps]
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"

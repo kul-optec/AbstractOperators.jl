@@ -1,0 +1,10 @@
+[deps]
+AbstractOperators = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+DSPOperators = "d5a72628-6e2f-430e-82f5-561df0bb8116"
+FFTWOperators = "c59a084b-ba08-4f3f-af9e-f4298d6caa94"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NFFTOperators = "35a93202-2abf-4a13-bc94-0aee2f861ee0"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
+WaveletOperators = "f3582904-6f60-4bbd-985d-55eab799bc9d"
