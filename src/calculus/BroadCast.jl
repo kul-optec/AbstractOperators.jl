@@ -149,6 +149,9 @@ function mul!(y::AbstractArray, A::AdjointOperator{<:OperatorBroadCast{T, N, M, 
     R = A.A
     for idx in R.idxs
         b_slice = get_input_slice(R, idx, b)
+        if size(b_slice) != size(R.A, 1)
+            b_slice = reshape(b_slice, size(R.A, 1))
+        end
         mul!(R.bufD, R.A', b_slice)
         if idx == first(R.idxs)
             y .= R.bufD
@@ -176,6 +179,9 @@ function _threaded_broadcast_adjoint!(y, R::OperatorBroadCast, b)
         idx_end = min(t * chunk, length(R.idxs))
         for i in idx_start:idx_end
             b_slice = get_input_slice(R, R.idxs[i], b)
+            if size(b_slice) != size(R.A[t], 1)
+                b_slice = reshape(b_slice, size(R.A[t], 1))
+            end
             mul!(R.bufD[t], R.A[t]', b_slice)
             @lock lock y .+= R.bufD[t]
         end
