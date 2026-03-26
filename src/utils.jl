@@ -8,12 +8,29 @@ const thread_count_functions = Ref{Vector{Pair{Function, Function}}}(
     ]
 )
 
+# Non-inlined helpers so that the abstract Function dispatch is contained in
+# AbstractOperators and not inlined into the calling module (which would cause
+# JET @test_opt findings when target_modules excludes AbstractOperators).
+@noinline function _save_thread_counts()
+    return [pair.first() for pair in thread_count_functions[]]
+end
+
+@noinline function _apply_thread_counts(n::Int)
+    for pair in thread_count_functions[]
+        pair.second(n)
+    end
+end
+
+@noinline function _restore_thread_counts(prev::Vector)
+    for (i, pair) in enumerate(thread_count_functions[])
+        pair.second(prev[i])
+    end
+end
+
 function set_thread_counts_expr(thread_count_expr, body_expr)
     return quote
-        local prev_thread_counts = [pair.first() for pair in AbstractOperators.thread_count_functions[]]
-        for pair in AbstractOperators.thread_count_functions[]
-            pair.second($thread_count_expr)
-        end
+        local prev_thread_counts = AbstractOperators._save_thread_counts()
+        AbstractOperators._apply_thread_counts($thread_count_expr)
         local res
         try
             if $thread_count_expr == 1
@@ -26,9 +43,7 @@ function set_thread_counts_expr(thread_count_expr, body_expr)
             end
         finally
             # Restore previous thread counts
-            for (i, pair) in enumerate(AbstractOperators.thread_count_functions[])
-                pair.second(prev_thread_counts[i])
-            end
+            AbstractOperators._restore_thread_counts(prev_thread_counts)
         end
         res
     end
