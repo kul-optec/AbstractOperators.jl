@@ -162,6 +162,12 @@ codomain_storage_type(S::Sum{K, C, D, L}) where {K, C <: Tuple, D, L} = codomain
 fun_domain(S::Sum) = fun_domain(S.A[1])
 fun_codomain(S::Sum) = fun_codomain(S.A[1])
 
+# A Sum of multi-domain operators (e.g. Sum of HCATs) has the same domain arity
+# as its first constituent.  This extends the HCAT machinery so that HCAT can
+# correctly assign indices when a Sum appears as one of its sub-operators.
+_ndoms_from_type(::Type{<:Sum{K, C, D, L}}, dim::Int) where {K, C, D, L} =
+    _ndoms_from_type(fieldtype(L, 1), dim)
+
 fun_name(S::Sum) = length(S.A) == 2 ? fun_name(S.A[1]) * "+" * fun_name(S.A[2]) : "Σ"
 
 is_linear(L::Sum) = all(is_linear.(L.A))

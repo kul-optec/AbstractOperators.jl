@@ -85,8 +85,23 @@ function HCAT(A::Vararg{AbstractOperator})
     return HCAT(AA, buf)
 end
 
-# compile-time domain ndoms for HCAT's sub-operators
-_ndoms_from_type(::Type{<:HCAT{N}}, dim::Int) where {N} = dim == 2 ? N : 1
+# Count actual domain slots from an HCAT's P (idxs) type.
+# Each entry in P is either an Int (1 slot) or a NTuple{n,Int} (n slots).
+_count_hcat_ndoms(::Type{<:Tuple{}}) = 0
+@generated function _count_hcat_ndoms(::Type{P}) where {P <: Tuple}
+    K = 0
+    for i in 1:fieldcount(P)
+        Pi = fieldtype(P, i)
+        K += Pi <: Integer ? 1 : fieldcount(Pi)
+    end
+    return :($K)
+end
+
+# compile-time domain ndoms for HCAT's sub-operators:
+# use the index-tuple type P (not N which only counts sub-operators) so that
+# sub-operators with multi-component domains are accounted for correctly.
+_ndoms_from_type(::Type{<:HCAT{N, L, P}}, dim::Int) where {N, L, P} =
+    dim == 2 ? _count_hcat_ndoms(P) : 1
 
 @generated function HCAT(AA::NTuple{N, AbstractOperator}, buf::C) where {N, C}
     N == 1 && return :(AA[1])
