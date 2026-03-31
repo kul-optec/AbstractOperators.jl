@@ -75,7 +75,7 @@ function HCAT(A::Vararg{AbstractOperator})
             end
         end
         # use buffer from HCAT in A
-        buf = A[findfirst((<:).(typeof.(A), HCAT))].buf
+        buf = A[findfirst((<:).(typeof.(A), HCAT))::Int].buf
     else
         AA = A
         # generate buffer

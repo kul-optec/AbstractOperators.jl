@@ -65,7 +65,7 @@ function VCAT(A::Vararg{AbstractOperator})
             end
         end
         # use buffer from VCAT in A
-        buf = A[findfirst((<:).(typeof.(A), VCAT))].buf
+        buf = A[findfirst((<:).(typeof.(A), VCAT))::Int].buf
     else
         AA = A
         # generate buffer

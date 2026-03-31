@@ -31,6 +31,7 @@ struct Compose{N, M, L <: Tuple, T <: Tuple} <: AbstractOperator
         end
         # check for adjacent operators that can be combined
         i = 1
+        local new_op::AbstractOperator = A[1]  # placeholder; set below when should_be_combined is true
         while i < length(A)
             should_be_combined = false
             triple_combination = false
@@ -292,6 +293,7 @@ end
 # utils
 function permute(C::Compose, p::AbstractVector{Int})
     i = findfirst(x -> ndoms(x, 2) > 1, C.A)
+    i === nothing && throw(ArgumentError("No operator with multiple domain dimensions found in Compose"))
     P = permute(C.A[i], p)
     AA = (C.A[1:(i - 1)]..., P, C.A[(i + 1):end]...)
     return Compose(AA, C.buf)

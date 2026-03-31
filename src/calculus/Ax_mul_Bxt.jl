@@ -33,7 +33,7 @@ struct Ax_mul_Bxt{
     bufB::C
     bufC::C
     bufD::D
-    function Ax_mul_Bxt(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1, L2, C, D}
+    function Ax_mul_Bxt(A::L1, B::L2, bufA::C, bufB::C, bufC::C, bufD::D) where {L1 <: AbstractOperator, L2 <: AbstractOperator, C <: AbstractArray, D <: AbstractArray}
         if ndims(A, 1) == 1
             if size(A) != size(B)
                 throw(DimensionMismatch("Cannot compose operators"))

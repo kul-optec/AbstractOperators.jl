@@ -169,6 +169,19 @@ function create_plan(trajectory, image_size, threaded; kwargs...)
     end
 end
 
+# Helper to create matched forward/backward FFT plans so that JET can track
+# that both plans have the same element type T and dimension D.
+struct _MatchedFFTPlans{T, D}
+    forward::FFTW.cFFTWPlan{Complex{T}, -1, true, D, UnitRange{Int64}}
+    backward::FFTW.cFFTWPlan{Complex{T}, 1, true, D, UnitRange{Int64}}
+end
+
+function _make_matched_fft_plans(tmpVec::Array{Complex{T}, D}, dims_; kwargs...) where {T, D}
+    FP = FFTW.plan_fft!(tmpVec, dims_; kwargs...)::FFTW.cFFTWPlan{Complex{T}, -1, true, D, UnitRange{Int64}}
+    BP = FFTW.plan_bfft!(tmpVec, dims_; kwargs...)::FFTW.cFFTWPlan{Complex{T}, 1, true, D, UnitRange{Int64}}
+    return _MatchedFFTPlans{T, D}(FP, BP)
+end
+
 function NFFTPlan(
         k::Matrix{T},
         N::NTuple{D, Int};
@@ -187,8 +200,9 @@ function NFFTPlan(
     tmpVec = Array{Complex{T}, D}(undef, Ñ)
 
     fftflags_ = (fftflags !== nothing) ? (flags = fftflags,) : NamedTuple()
-    FP = FFTW.plan_fft!(tmpVec, dims_; num_threads = FFTW.get_num_threads(), fftflags_...)
-    BP = FFTW.plan_bfft!(tmpVec, dims_; num_threads = FFTW.get_num_threads(), fftflags_...)
+    plans = _make_matched_fft_plans(tmpVec, dims_; num_threads = FFTW.get_num_threads(), fftflags_...)
+    FP = plans.forward
+    BP = plans.backward
 
     calcBlocks =
         (

@@ -82,4 +82,4 @@ is_invertible(L::IRDFT) = true
 is_full_row_rank(L::IRDFT) = true
 
 has_fast_opnorm(::IRDFT) = true
-LinearAlgebra.opnorm(L::IRDFT{T}) where {T} = sqrt(prod(L.dim_out) / 2)
+LinearAlgebra.opnorm(L::IRDFT{T}) where {T} = sqrt(prod(L.dim_out)::Int / 2)
