@@ -139,7 +139,7 @@ end
 # FFTShift/IFFTShift with FFTShift/IFFTShift
 have_shifted_dims_even_length(T::ShiftOp) = all(iseven, size(T, 2)[collect(T.dirs)])
 are_shifted_dims_disjoint(T1::ShiftOp, T2::ShiftOp) =
-    all(d -> !(d in T1.dirs && d in T2.dirs), 1:ndims(T1))
+    all(d -> !(d in T1.dirs && d in T2.dirs), 1:ndims(T1, 2))
 does_fully_cover(T1::ShiftOp, T2::ShiftOp) = all(d -> (d in T1.dirs && d in T2.dirs), T1.dirs) # T1 fully covers T2
 function can_be_combined(T1::FFTShift, T2::FFTShift)
     return (have_shifted_dims_even_length(T1) && have_shifted_dims_even_length(T2)) || are_shifted_dims_disjoint(T1, T2)
@@ -154,11 +154,11 @@ function can_be_combined(T1::IFFTShift, T2::FFTShift)
     return (have_shifted_dims_even_length(T1) && have_shifted_dims_even_length(T2)) || does_fully_cover(T1, T2) || does_fully_cover(T2, T1)
 end
 function combine(T1::FFTShift, T2::FFTShift)
-    new_dirs = Tuple(d for d in 1:ndims(T1) if (d in T1.dirs) || (d in T2.dirs))
+    new_dirs = Tuple(d for d in 1:ndims(T1, 2) if (d in T1.dirs) || (d in T2.dirs))
     return FFTShift(domain_type(T1), size(T1, 2), new_dirs)
 end
 function combine(T1::IFFTShift, T2::IFFTShift)
-    new_dirs = Tuple(d for d in 1:ndims(T1) if (d in T1.dirs) || (d in T2.dirs))
+    new_dirs = Tuple(d for d in 1:ndims(T1, 2) if (d in T1.dirs) || (d in T2.dirs))
     return IFFTShift(domain_type(T1), size(T1, 2), new_dirs)
 end
 function combine(T1::FFTShift, T2::IFFTShift)

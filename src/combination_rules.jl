@@ -296,7 +296,7 @@ function combine(T1::AdjointOperator{<:DiagOp}, T2::MatrixOp)
     return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(conj(T1.A.d), T2.A))
 end
 function combine(T1::DiagOp, T2::AdjointOperator{<:MatrixOp})
-    return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.d, T2.A'))
+    return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.d, T2.A.A'))
 end
 function combine(T1::MatrixOp, T2::AdjointOperator{<:DiagOp})
     return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.A, conj(T2.A.d)))

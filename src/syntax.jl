@@ -75,7 +75,7 @@ end
 function Base.getindex(H::HCAT, idx::Union{AbstractArray, Int})
     unfolded = vcat([[i...] for i in H.idxs]...)
     if length(idx) == length(unfolded)
-        return permute(H, idx)
+        return permute(H, idx isa Int ? [idx] : idx)
     else
         new_H = ()
         for i in idx
@@ -97,7 +97,7 @@ end
 function Base.getindex(H::VCAT, idx::Union{AbstractArray, Int})
     unfolded = vcat([[i...] for i in H.idxs]...)
     if length(idx) == length(unfolded)
-        return permute(H, idx)
+        return permute(H, idx isa Int ? [idx] : idx)
     else
         new_H = ()
         for i in idx

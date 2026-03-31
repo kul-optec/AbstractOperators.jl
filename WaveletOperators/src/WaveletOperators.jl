@@ -117,7 +117,7 @@ AbstractOperators.is_thread_safe(::WaveletOp) = true
 has_fast_opnorm(::WaveletOp) = true
 has_fast_opnorm(::AdjointOperator{<:WaveletOp}) = true
 opnorm(::WaveletOp{T}) where {T} = one(T)
-opnorm(::AdjointOperator{<:WaveletOp}) = one(eltype(domain_type(L.A)))
+opnorm(L::AdjointOperator{<:WaveletOp}) = one(eltype(domain_type(L.A)))
 
 # Utils
 
