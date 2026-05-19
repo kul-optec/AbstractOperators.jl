@@ -346,7 +346,7 @@ function build_body(
 
 $(summary)
 
-<details open>
+<details>
 <summary>Time benchmarks</summary>
 
 $(time_table)
