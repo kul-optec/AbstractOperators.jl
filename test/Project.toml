@@ -1,6 +1,5 @@
 [deps]
 AbstractOperators = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
-AcceleratedDCTs = "16e42a1c-b1d1-5566-807a-fe3b9ee7f6e1"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
