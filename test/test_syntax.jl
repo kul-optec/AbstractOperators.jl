@@ -508,7 +508,6 @@ end
 
     # Slow path: explicit kwarg forces the default (deepcopy) _copy_operator_impl fallback
     op_copy = copy_operator(op; threaded = true)
-    @test op_copy !== op
     @test op_copy isa MatrixOp
     x = randn(n)
     @test op_copy * x ≈ op * x

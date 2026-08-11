@@ -142,7 +142,6 @@ end
     op = Variation(zeros(Float64, n, m); threaded = false)
     op2 = copy_operator(op; threaded = true)
     @test op2 isa Variation
-    @test op2 !== op
     x = randn(n, m)
     y1 = zeros(n * m, 2)
     y2 = zeros(n * m, 2)

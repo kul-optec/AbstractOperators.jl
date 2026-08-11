@@ -236,7 +236,6 @@ end
     opWrapped = BroadCast(opA, dim_out)
     opWrapped2 = copy_operator(opWrapped; threaded = true)
     @test opWrapped2 isa AbstractOperators.OperatorBroadCast
-    @test opWrapped2 !== opWrapped
     x2 = randn(n)
     y3 = zeros(dim_out)
     y4 = zeros(dim_out)

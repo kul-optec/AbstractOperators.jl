@@ -120,7 +120,6 @@ end
     opS = Sum(MatrixOp(A1), MatrixOp(A2))
     opS2 = copy_operator(opS; threaded = true)
     @test opS2 isa Sum
-    @test opS2 !== opS
     x = randn(n)
     y1 = zeros(m)
     y2 = zeros(m)

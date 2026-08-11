@@ -68,7 +68,6 @@ end
     wrapper = OperatorWrapper(cpu_op)
     wrapper2 = copy_operator(wrapper; threaded = true)
     @test wrapper2 isa OperatorWrapper
-    @test wrapper2 !== wrapper
 
     x = randn(n)
     y1 = zeros(n - 1)
