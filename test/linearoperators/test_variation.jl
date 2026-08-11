@@ -134,6 +134,23 @@ end
     end
 end
 
+@testitem "Variation: copy_operator" tags = [:linearoperator, :Variation] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(6)
+
+    n, m = 10, 5
+    op = Variation(zeros(Float64, n, m); threaded = false)
+    op2 = copy_operator(op; threaded = true)
+    @test op2 isa Variation
+    @test op2 !== op
+    x = randn(n, m)
+    y1 = zeros(n * m, 2)
+    y2 = zeros(n * m, 2)
+    mul!(y1, op, x)
+    mul!(y2, op2, x)
+    @test y1 ≈ y2
+end
+
 @testitem "Variation (GPU)" tags = [:gpu, :linearoperator, :Variation] setup = [TestUtils] begin
     using Random, AbstractOperators, GPUEnv
 

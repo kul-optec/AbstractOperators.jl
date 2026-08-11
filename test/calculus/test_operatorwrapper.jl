@@ -59,6 +59,25 @@ end
     test_op(wrapper, randn(n), randn(n), verb)
 end
 
+@testitem "OperatorWrapper: copy_operator" tags = [:calculus, :OperatorWrapper] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(43)
+
+    n = 8
+    cpu_op = FiniteDiff(Float64, (n,), 1)
+    wrapper = OperatorWrapper(cpu_op)
+    wrapper2 = copy_operator(wrapper; threaded = true)
+    @test wrapper2 isa OperatorWrapper
+    @test wrapper2 !== wrapper
+
+    x = randn(n)
+    y1 = zeros(n - 1)
+    y2 = zeros(n - 1)
+    mul!(y1, wrapper, x)
+    mul!(y2, wrapper2, x)
+    @test y1 ≈ y2
+end
+
 @testitem "OperatorWrapper (GPU)" tags = [:gpu, :calculus, :OperatorWrapper] setup = [TestUtils] begin
     using Random, AbstractOperators, GPUEnv
 

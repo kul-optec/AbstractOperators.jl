@@ -109,3 +109,22 @@ end
     x = randn(n)
     @test all(result * x .== 0)
 end
+
+@testitem "Sum: copy_operator" tags = [:calculus, :Sum] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(4)
+
+    m, n = 5, 7
+    A1 = randn(m, n)
+    A2 = randn(m, n)
+    opS = Sum(MatrixOp(A1), MatrixOp(A2))
+    opS2 = copy_operator(opS; threaded = true)
+    @test opS2 isa Sum
+    @test opS2 !== opS
+    x = randn(n)
+    y1 = zeros(m)
+    y2 = zeros(m)
+    mul!(y1, opS, x)
+    mul!(y2, opS2, x)
+    @test y1 ≈ y2
+end

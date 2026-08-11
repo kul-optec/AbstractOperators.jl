@@ -492,3 +492,24 @@ end
     @test ndoms(C, 2) == 2
     @test_throws ErrorException C[1:2]
 end
+
+@testitem "copy_operator: fast path, slow path, default fallback" tags = [:misc, :Syntax] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(8)
+
+    n = 5
+    A = randn(n, n)
+    op = MatrixOp(A)
+    @test is_thread_safe(op) == true
+
+    # Fast path: thread-safe operator, no kwargs -> same object shared
+    op_shared = copy_operator(op)
+    @test op_shared === op
+
+    # Slow path: explicit kwarg forces the default (deepcopy) _copy_operator_impl fallback
+    op_copy = copy_operator(op; threaded = true)
+    @test op_copy !== op
+    @test op_copy isa MatrixOp
+    x = randn(n)
+    @test op_copy * x ≈ op * x
+end

@@ -211,3 +211,36 @@ end
     x_back = B_noncompact' * y_test
     @test size(x_back) == (n,)
 end
+
+@testitem "BroadCast: copy_operator" tags = [:calculus, :BroadCast] setup = [TestUtils] begin
+    using Random, AbstractOperators, LinearAlgebra
+    Random.seed!(7)
+
+    m, n = 8, 4
+    dim_out = (m, 10)
+
+    # NoOperatorBroadCast branch (identity input)
+    opEye = Eye(m)
+    opNo = BroadCast(opEye, dim_out)
+    opNo2 = copy_operator(opNo; threaded = true)
+    @test opNo2 isa AbstractOperators.NoOperatorBroadCast
+    x = randn(m)
+    y1 = zeros(dim_out)
+    y2 = zeros(dim_out)
+    mul!(y1, opNo, x)
+    mul!(y2, opNo2, x)
+    @test y1 ≈ y2
+
+    # OperatorBroadCast branch (wraps another operator)
+    opA = MatrixOp(randn(m, n))
+    opWrapped = BroadCast(opA, dim_out)
+    opWrapped2 = copy_operator(opWrapped; threaded = true)
+    @test opWrapped2 isa AbstractOperators.OperatorBroadCast
+    @test opWrapped2 !== opWrapped
+    x2 = randn(n)
+    y3 = zeros(dim_out)
+    y4 = zeros(dim_out)
+    mul!(y3, opWrapped, x2)
+    mul!(y4, opWrapped2, x2)
+    @test y3 ≈ y4
+end
