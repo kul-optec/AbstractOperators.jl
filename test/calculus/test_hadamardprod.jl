@@ -1,5 +1,6 @@
 @testitem "HadamardProd: basic mul" tags = [:calculus, :HadamardProd] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing HadamardProd: basic mul --- ")
 
     # Basic square identity factors (Eye.*Eye)
     n = 3
@@ -37,6 +38,7 @@ end
 
 @testitem "HadamardProd: properties" tags = [:calculus, :HadamardProd] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing HadamardProd: properties --- ")
 
     # Re-create the HCAT-based P for remove_displacement and permute tests
     m, n = 3, 5
@@ -83,6 +85,7 @@ end
 
 @testitem "HadamardProd: equality and permute" tags = [:calculus, :HadamardProd] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing HadamardProd: equality and permute --- ")
 
     # Equality / inequality
     n = 3
@@ -132,7 +135,7 @@ end
     @test remove_displacement(Prd) == Prd
 end
 
-@testitem "HadamardProd (GPU)" tags = [:gpu, :calculus, :HadamardProd] setup = [TestUtils] begin
+@testitem "HadamardProd (GPU)" tags = [:gpu, :calculus, :HadamardProd] setup = [TestUtils, GPUNLTestUtils] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -148,7 +151,8 @@ end
         test_NLop_gpu(P, x, r, false)
 
         n2, l = 3, 2
-        P2 = HadamardProd(Sin(gpu_zeros(backend, Float64, n2, l)), Cos(gpu_zeros(backend, Float64, n2, l)))
+        AT = gpu_wrapper(backend, Float64, n2, l)
+        P2 = HadamardProd(Sin(Float64, (n2, l); array_type = AT), Cos(Float64, (n2, l); array_type = AT))
         x2 = gpu_randn(backend, n2, l)
         r2 = gpu_randn(backend, n2, l)
         test_NLop_gpu(P2, x2, r2, false)

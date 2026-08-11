@@ -327,12 +327,7 @@ is_sliced(L::HCAT) = any(is_sliced.(L.A))
 function get_slicing_expr(L::HCAT)
     exprs = ()
     for i in eachindex(L.A)
-        expr = get_slicing_expr(L[i])
-        if expr isa Tuple && all(e -> e isa Tuple, expr)
-            exprs = (exprs..., expr...)
-        else
-            exprs = (exprs..., expr)
-        end
+        exprs = (exprs..., get_slicing_expr(L.A[i]))
     end
     if length(exprs) == 1
         return exprs[1]
@@ -364,8 +359,8 @@ end
 
 remove_displacement(H::HCAT) = HCAT(remove_displacement.(H.A), H.idxs, H.buf)
 
-function _copy_operator_impl(op::HCAT; array_type = nothing, threaded = nothing)
-    new_buf = _convert_buffer(op.buf, array_type)
-    new_ops = tuple([copy_operator(a; array_type, threaded) for a in op.A]...)
+function _copy_operator_impl(op::HCAT; storage_type = nothing, threaded = nothing)
+    new_buf = _convert_buffer(op.buf, storage_type)
+    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return HCAT(new_ops, op.idxs, new_buf)
 end

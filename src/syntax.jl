@@ -56,8 +56,6 @@ function Base.getindex(A::Compose, idx...)
     if ndoms(A, 2) == 1
         Gout = GetIndex(codomain_type(A), size(A, 1), idx)
         return Gout * A
-    elseif all(is_diagonal, A.A[2:end])
-        return Compose((getindex(A.A[1], idx...), A.A[2:end]...), A.buf)
     else
         error("cannot split operator of type $(typeof(A))")
     end
@@ -103,11 +101,7 @@ function Base.getindex(H::VCAT, idx::Union{AbstractArray, Int})
         for i in idx
             for ii in eachindex(H.idxs)
                 if i in H.idxs[ii]
-                    if typeof(H.idxs[ii]) <: Int
-                        new_H = (new_H..., H.A[ii])
-                    else
-                        error("cannot split operator: $H")
-                    end
+                    new_H = (new_H..., H.A[ii])
                 end
             end
         end

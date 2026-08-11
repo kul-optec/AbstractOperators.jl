@@ -427,6 +427,15 @@ end
     sliced = S[2:(n - 1)]
     x = randn(n)
     @test sliced * x ≈ (S * x)[2:(n - 1)]
+
+    # Line 71: Sum with multi-domain input (ndoms > 1 → iterates over A.A)
+    # getindex on multi-domain Sum selects domain sub-operators (not codomain rows)
+    n2, m1, m2 = 4, 2, 3
+    Hbase = HCAT(MatrixOp(randn(n2, m1)), MatrixOp(randn(n2, m2)))
+    S_md = Sum(Hbase, Hbase)
+    sliced_md = S_md[1]   # selects first sub-op (domain = m1) from each HCAT member
+    x1 = randn(m1)
+    @test sliced_md * x1 ≈ (Hbase[1] + Hbase[1]) * x1
 end
 
 @testitem "Syntax: Scale getindex (ndoms == 1 branch)" tags = [:misc, :Syntax] setup = [TestUtils] begin
@@ -437,4 +446,49 @@ end
     sliced = s[1:2]
     x = randn(n)
     @test sliced * x ≈ (s * x)[1:2]
+
+    # Line 132: Scale wrapping multi-domain operator
+    # getindex on multi-domain Scale selects domain sub-operators (not codomain rows)
+    n2, m1, m2 = 4, 2, 3
+    Hbase = HCAT(MatrixOp(randn(n2, m1)), MatrixOp(randn(n2, m2)))
+    sc_md = Scale(2.0, Hbase)
+    sc_sliced = sc_md[1]   # selects first sub-op (domain = m1)
+    x1 = randn(m1)
+    @test sc_sliced * x1 ≈ 2.0 .* (Hbase[1] * x1)
+end
+
+@testitem "Syntax: check domain/codomain ArrayPartition errors" tags = [:misc, :Syntax] setup = [TestUtils] begin
+    using AbstractOperators, RecursiveArrayTools
+    n, m1, m2 = 4, 2, 3
+    op_multi_in = HCAT(MatrixOp(randn(n, m1)), MatrixOp(randn(n, m2)))
+    y = zeros(n)
+    # utils.jl:104 — multi-domain op with non-ArrayPartition input
+    @test_throws ArgumentError AbstractOperators.check(y, op_multi_in, randn(m1))
+
+    # utils.jl:128 — multi-codomain op with non-ArrayPartition output
+    op_multi_out = DCAT(MatrixOp(randn(m1, m1)), MatrixOp(randn(m2, m2)))
+    @test_throws ArgumentError AbstractOperators.check(
+        randn(m1), op_multi_out, ArrayPartition(randn(m1), randn(m2))
+    )
+end
+
+@testitem "Syntax: Scale complex coeff on real AdjointMatrixOp errors" tags = [:misc, :Syntax] setup = [TestUtils] begin
+    using AbstractOperators
+    # MatrixOp.jl:84 — real-codomain adjoint MatrixOp scaled by complex scalar
+    n = 4
+    op = MatrixOp(randn(n, n))'
+    @test_throws ErrorException Scale(1.0im, op)
+end
+
+@testitem "Syntax: Compose getindex with multi-domain errors (line 62)" tags = [:misc, :Syntax] setup = [TestUtils] begin
+    using AbstractOperators, RecursiveArrayTools
+    # syntax.jl:62: Compose with ndoms>1 cannot be split (error branch)
+    # diagonal * HCAT always simplifies to HCAT via combination rules,
+    # so any Compose with ndoms>1 has a non-diagonal tail and hits the error.
+    n = 4
+    M = MatrixOp(randn(n, n))
+    H = HCAT(DiagOp(randn(n)), DiagOp(randn(n)))
+    C = M * H   # non-diagonal outer: Compose with ndoms>1 and non-diagonal tail
+    @test ndoms(C, 2) == 2
+    @test_throws ErrorException C[1:2]
 end

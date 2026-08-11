@@ -18,3 +18,18 @@
 
     @test all(norm.(y1 .- y2) .<= 1.0e-12)
 end
+
+@testitem "WaveletOp constructor errors" tags = [:wavelet, :WaveletOp] setup = [TestUtils] begin
+    using Wavelets, WaveletOperators
+    wt = wavelet(WT.db4)
+
+    # 1D: odd dimension
+    @test_throws ArgumentError WaveletOp(Float64, wt, 5)
+    # 1D: too many levels
+    @test_throws ArgumentError WaveletOp(Float64, wt, 8, 100)
+
+    # ND: odd dimension in tuple
+    @test_throws ArgumentError WaveletOp(Float64, wt, (5, 8))
+    # ND: too many levels
+    @test_throws ArgumentError WaveletOp(Float64, wt, (8, 8), 100)
+end

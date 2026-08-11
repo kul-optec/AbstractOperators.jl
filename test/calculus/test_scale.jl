@@ -332,3 +332,25 @@ end
         test_op(op, gpu_randn(backend, n), gpu_randn(backend, n), false)
     end
 end
+
+@testitem "Scale(coeff, AdjointMatrixOp) constructor paths" tags = [:calculus, :Scale] setup = [TestUtils] begin
+    using Random, AbstractOperators, LinearAlgebra
+    Random.seed!(0)
+    n = 5
+    A = MatrixOp(randn(n, n))
+    adj_A = A'
+    # coeff == 1 → returns the AdjointOperator unchanged (line 79)
+    result1 = Scale(1.0, adj_A)
+    @test result1 === adj_A
+    x = randn(n)
+    @test result1 * x ≈ adj_A * x
+    # coeff != 1 → returns AdjointOperator(Scale(conj(coeff), A)) (line 84)
+    result2 = Scale(2.0, adj_A)
+    @test result2 * x ≈ 2.0 * (adj_A * x)
+    # complex coefficient on complex adjoint MatrixOp
+    B = MatrixOp(randn(ComplexF64, n, n))
+    adj_B = B'
+    result3 = Scale(1.5 + 0.5im, adj_B)
+    xc = randn(ComplexF64, n)
+    @test result3 * xc ≈ (1.5 + 0.5im) * (adj_B * xc)
+end

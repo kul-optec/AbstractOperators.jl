@@ -66,21 +66,21 @@ end
         Random.seed!(42)
         n = 32
         op = FiniteDiff(Float32, (n,), 1)
-        array_type = gpu_wrapper(backend, Float32, n)
-        wrapper = OperatorWrapper(op; array_type = array_type)
+        storage_type = gpu_wrapper(backend, Float32, n)
+        wrapper = OperatorWrapper(op; array_type = storage_type)
         @test domain_array_type(wrapper) <: backend.array_type
         @test codomain_array_type(wrapper) <: backend.array_type
 
         x = gpu_randn(backend, Float32, n)
         y = gpu_zeros(backend, Float32, n - 1)
         mul!(y, wrapper, x)
-        @test y isa array_type
+        @test y isa storage_type
         @test collect(y) ≈ op * collect(x)
 
         r = gpu_randn(backend, Float32, n - 1)
         z = gpu_zeros(backend, Float32, n)
         mul!(z, wrapper', r)
-        @test z isa array_type
+        @test z isa storage_type
         ref = zeros(Float32, n)
         mul!(ref, op', collect(r))
         @test collect(z) ≈ ref

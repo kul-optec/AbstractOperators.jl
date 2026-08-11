@@ -1,6 +1,15 @@
 @testitem "Variation: basic mul" tags = [:linearoperator, :Variation] setup = [TestUtils] begin
     using Random, SparseArrays, LinearAlgebra, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Variation: basic mul --- ")
+
+    function test_variation_mul(conv, verb)
+        n, m = 10, 5
+        op = Variation(conv(zeros(Float64, n, m)); threaded = false)
+        test_op(op, conv(randn(n, m)), conv(randn(n * m, 2)), verb)
+    end
+
+    test_variation_mul(identity, verb)
 
     for threaded in (false, true)
         n, m = 10, 5
@@ -42,6 +51,7 @@ end
 @testitem "Variation: 3D mul and constructors" tags = [:linearoperator, :Variation] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Variation: 3D mul and constructors --- ")
 
     for threaded in (false, true)
         n, m, l = 100, 50, 30
@@ -74,6 +84,7 @@ end
 @testitem "Variation: adjoint and properties" tags = [:linearoperator, :Variation] setup = [TestUtils] begin
     using Random, LinearAlgebra, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Variation: adjoint and properties --- ")
 
     for threaded in (false, true)
         n, m, l = 100, 50, 30

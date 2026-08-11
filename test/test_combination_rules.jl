@@ -727,3 +727,22 @@ end
     c7 = combine(scl_adj, mat_adj)
     @test c7 * x ≈ scl_adj * (mat_adj * x)
 end
+
+@testitem "CR: generic combine branches" tags = [:calculus, :CombinationRules] begin
+    using AbstractOperators
+    using AbstractOperators: combine
+
+    n = 4
+    mat = MatrixOp(randn(n, n))
+    eye = Eye(Float64, (n,))
+    z = Zeros(Float64, (n,), Float64, (n,))
+
+    # combine(L, R) where is_eye(R) → returns L (line 345)
+    result = combine(mat, eye)
+    @test result === mat
+
+    # combine(L, R) where is_null(R), L linear, zero displacement, square → returns R (line 354)
+    diag_op = DiagOp(ones(n))  # square, linear, zero displacement
+    result2 = combine(diag_op, z)
+    @test result2 === z
+end

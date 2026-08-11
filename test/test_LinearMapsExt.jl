@@ -25,6 +25,7 @@
     @test is_full_column_rank(LM)
     @test is_positive_definite(LM) == all(d .> 0)
     @test is_positive_semidefinite(LM) == all(d .>= 0)
+    @test isposdef(LM) == all(d .> 0)
 
     # Complex Diagonal
     d = rand(ComplexF64, 10, 10)

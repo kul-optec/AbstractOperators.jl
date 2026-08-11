@@ -103,6 +103,7 @@ end
 
     for backend in gpu_backends()
         Random.seed!(0)
-        test_zeropad_mul(x -> to_gpu(backend, x), false, test_op, to_cpu, norm)
+        conv = x -> to_gpu(backend, x)
+        test_zeropad_mul(conv, false, test_op, collect, norm)
     end
 end

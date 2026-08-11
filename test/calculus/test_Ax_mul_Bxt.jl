@@ -1,6 +1,7 @@
 @testitem "Ax_mul_Bxt: basic mul" tags = [:calculus, :Ax_mul_Bxt] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Ax_mul_Bxt: basic mul --- ")
 
     n = 10
     A, B = Eye(n), Sin(n)
@@ -38,6 +39,7 @@ end
 @testitem "Ax_mul_Bxt: HCAT and permute" tags = [:calculus, :Ax_mul_Bxt] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Ax_mul_Bxt: HCAT and permute --- ")
 
     # testing with HCAT
     m, n = 3, 5
@@ -72,6 +74,7 @@ end
 @testitem "Ax_mul_Bxt: error paths and equality" tags = [:calculus, :Ax_mul_Bxt] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Ax_mul_Bxt: error paths and equality --- ")
 
     # ndims==2 branch with mismatched second codomain dimension
     struct AxDummy2D <: AbstractOperator
@@ -109,7 +112,7 @@ end
     @test Jacobian(Ax_mul_Bxt(A, B), x) == Jacobian(Ax_mul_Bxt(A, B), x)
 end
 
-@testitem "Ax_mul_Bxt (GPU)" tags = [:gpu, :calculus, :Ax_mul_Bxt] setup = [TestUtils] begin
+@testitem "Ax_mul_Bxt (GPU)" tags = [:gpu, :calculus, :Ax_mul_Bxt] setup = [TestUtils, GPUNLTestUtils] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -118,10 +121,18 @@ end
         n = 10
         P = Ax_mul_Bxt(
             Eye(Float64, (n,); array_type = gpu_wrapper(backend, Float64, n)),
-            Sin(gpu_zeros(backend, Float64, n)),
+            Sin(Float64, (n,); array_type = gpu_wrapper(backend, Float64, n)),
         )
         x = gpu_randn(backend, n)
         r = gpu_randn(backend, n, n)
         test_NLop_gpu(P, x, r, false)
     end
+end
+
+@testitem "Ax_mul_Bxt: size mismatch error (1D)" tags = [:calculus, :Ax_mul_Bxt] setup = [TestUtils] begin
+    using AbstractOperators
+    # Two 1D operators with different sizes -> triggers size(A) != size(B) in inner constructor
+    A = MatrixOp(randn(3, 4))   # size = ((3,), (4,))
+    B = MatrixOp(randn(5, 4))   # size = ((5,), (4,)) -- different codomain
+    @test_throws DimensionMismatch Ax_mul_Bxt(A, B)
 end

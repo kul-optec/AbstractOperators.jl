@@ -144,10 +144,6 @@ dct_op = CpuOperatorWrapper(DCT(Float32, (64,)); array_type = CuArray{Float32}) 
 y_gpu = dct_op * x_gpu  # GPU in → CPU DCT → GPU out
 ```
 
-### WaveletOperators CPU-only status
-
-WaveletOperators.jl currently relies on CPU execution. Its operators do not yet support GPU arrays, so wavelet transforms should remain on CPU or be wrapped explicitly as CPU operators when building mixed CPU/GPU pipelines.
-
 ## CpuOperatorWrapper
 
 For operators that do not natively support GPU arrays (e.g., FFTWOperators DCT, custom CPU-only operators), use `CpuOperatorWrapper`. This wrapper preallocates CPU buffers for the operator's domain and codomain, allowing GPU arrays to be passed in and out while the computation happens on CPU.
@@ -166,11 +162,17 @@ using AbstractOperators, CUDA
 op = FiniteDiff(Float32, (64,))  # or any FFTWOperators, etc.
 
 # Wrap it — preallocates CPU buffers for domain and codomain
-wrapper = CpuOperatorWrapper(op; array_type = CuArray{Float32})  # specify GPU array type for buffers
+wrapper = CpuOperatorWrapper(op)
 
 x_gpu = CUDA.randn(Float32, 64)
 y_gpu = similar(x_gpu, 63)
 
 mul!(y_gpu, wrapper, x_gpu)   # GPU in → CPU compute → GPU out
 mul!(x_gpu, wrapper', y_gpu)  # GPU in → CPU adjoint → GPU out
+```
+
+The wrapper preallocates CPU buffers (`dom_buf`, `cod_buf`) to avoid allocations during `mul!`. For parallel use, create independent copies per thread:
+
+```julia
+wrappers = [CpuOperatorWrapper(op) for _ in 1:Threads.nthreads()]
 ```

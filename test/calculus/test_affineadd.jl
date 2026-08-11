@@ -147,3 +147,21 @@ end
         @test collect(r_adj) ≈ collect(r_adj2)
     end
 end
+
+@testitem "AffineAdd: array type mismatch error" tags = [:calculus, :AffineAdd] setup = [TestUtils] begin
+    using AbstractOperators
+    n = 5
+    op = Eye(Float64, (n,))
+    # eltype(d) != codomain_type(op): ComplexF64 vs Float64 (line 39)
+    @test_throws ErrorException AffineAdd(op, randn(ComplexF64, n))
+    # Float32 vs Float64
+    @test_throws ErrorException AffineAdd(op, Float32.(randn(n)))
+end
+
+@testitem "AffineAdd: element type mismatch error" tags = [:calculus, :AffineAdd] setup = [TestUtils] begin
+    using AbstractOperators
+    n = 4
+    op = MatrixOp(randn(n, n))    # codomain_type = Float64
+    d = randn(Float32, n)          # eltype = Float32 != Float64
+    @test_throws ErrorException AffineAdd(op, d)
+end

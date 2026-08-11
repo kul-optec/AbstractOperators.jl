@@ -90,10 +90,34 @@ end
 
     y = similar(z)
     @test_throws ArgumentError alternate_sign!(y, z)
+
+    # too many dirs (N < M)
+    m2d = ones(2, 2)
+    @test_throws ArgumentError alternate_sign!(m2d, (1, 2, 3))
+    y2d = similar(m2d)
+    @test_throws ArgumentError alternate_sign!(y2d, m2d, (1, 2, 3))
+
+    # unsorted dirs
+    @test_throws ArgumentError alternate_sign!(m2d, (2, 1))
+    @test_throws ArgumentError alternate_sign!(y2d, m2d, (2, 1))
+
+    # out-of-range dirs
+    @test_throws ArgumentError alternate_sign!(z, 0)
+    @test_throws ArgumentError alternate_sign!(z, 2)  # 1D array, dir=2 > ndims
+
+    # non-threaded paths (threaded=false)
+    v2 = collect(1.0:4.0)
+    alternate_sign!(v2, 1; threaded = false)
+    @test v2 == [1.0, -2.0, 3.0, -4.0]
+
+    x2 = collect(reshape(1.0:4.0, 2, 2))
+    y2 = similar(x2)
+    alternate_sign!(y2, x2, 1, 2; threaded = false)
+    @test y2 == [1.0 -3.0; -2.0 4.0]
 end
 
 @testitem "fftshift/ifftshift wrappers" tags = [:fftw, :FFTShift] setup = [TestUtils] begin
-    using FFTW, LinearAlgebra, Random, FFTWOperators
+    using FFTW, LinearAlgebra, Random, FFTWOperators, AbstractOperators
     # Even length
     n = 4
     A = DFT(n)
@@ -132,6 +156,27 @@ end
 
     T6 = ifftshift_op(A; domain_shifts = (1,))
     @test (T6 * x) ≈ (A * FFTW.ifftshift(x, (1,)))
+
+    # Compose operators: DiagOp * DFT (all-diagonal/DFT → _is_dft_op true from all() branch)
+    n = 8
+    Random.seed!(42)
+    dft_c = DFT(ComplexF64, n)
+    d = randn(ComplexF64, n)
+    diag_op = DiagOp(d)
+    composed1 = diag_op * dft_c  # Compose: DFT applied first, then DiagOp
+    xc = randn(ComplexF64, n)
+    T7 = fftshift_op(composed1; domain_shifts = (1,))
+    @test T7 * xc ≈ composed1 * FFTW.fftshift(xc, (1,))
+    T8 = fftshift_op(composed1; codomain_shifts = (1,))
+    @test T8 * xc ≈ FFTW.fftshift(composed1 * xc, (1,))
+
+    # MatrixOp * DFT (else branch: not all-diagonal/DFT, but first subop is DFT)
+    mat_op = MatrixOp(randn(ComplexF64, n, n))
+    composed2 = mat_op * dft_c  # Compose: DFT applied first, then MatrixOp
+    T9 = fftshift_op(composed2; domain_shifts = (1,))
+    @test T9 * xc ≈ composed2 * FFTW.fftshift(xc, (1,))
+    T10 = fftshift_op(composed2; codomain_shifts = (1,))
+    @test T10 * xc ≈ FFTW.fftshift(composed2 * xc, (1,))
 end
 
 @testitem "Combination rules: FFTShift/IFFTShift with DFT/IDFT" tags = [:fftw, :CombinationRules] setup = [TestUtils] begin

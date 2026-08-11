@@ -1,5 +1,6 @@
 @testitem "Jacobian: basic HCAT" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: basic HCAT --- ")
 
     m, n = 3, 5
     x = ArrayPartition(randn(m), randn(n))
@@ -19,6 +20,7 @@ end
 
 @testitem "Jacobian: LinearOperator and Scale paths" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: LinearOperator and Scale paths --- ")
 
     # 1. LinearOperator path (Jacobian of a LinearOperator returns itself)
     n_lin = 6
@@ -40,6 +42,7 @@ end
 
 @testitem "Jacobian: AffineAdd and Transpose paths" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: AffineAdd and Transpose paths --- ")
 
     # 3. AffineAdd path (Jacobian should drop displacement)
     n_aff = 4
@@ -58,6 +61,7 @@ end
 
 @testitem "Jacobian: Compose Sum VCAT paths" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: Compose Sum VCAT paths --- ")
 
     # 5. Compose path (single op) with tuple input to trigger second Compose method
     n_cp = 3
@@ -93,6 +97,7 @@ end
 
 @testitem "Jacobian: HCAT and DCAT paths" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: HCAT and DCAT paths --- ")
 
     # 8. HCAT path with multi-index block (length(idx) > 1) to cover else branch
     m_h1, m_h2 = 3, 2
@@ -121,6 +126,7 @@ end
 
 @testitem "Jacobian: Reshape and BroadCast paths" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: Reshape and BroadCast paths --- ")
 
     # 10. Reshape path
     n_rs = 6
@@ -142,6 +148,7 @@ end
 
 @testitem "Jacobian: equality and properties" tags = [:calculus, :Jacobian] setup = [TestUtils] begin
     using AbstractOperators
+    verb && println(" --- Testing Jacobian: equality and properties --- ")
 
     # 12. Equality and show output
     n_eq = 4

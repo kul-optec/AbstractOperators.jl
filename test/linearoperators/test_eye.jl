@@ -18,8 +18,10 @@
 end  # @testmodule EyeTestHelper
 
 @testitem "Eye" tags = [:linearoperator, :Eye] setup = [TestUtils, EyeTestHelper] begin
-    using Random, AbstractOperators
+    using Random, AbstractOperators, JLArrays
     Random.seed!(0)
+
+    test_eye_mul(identity, verb, test_op, to_cpu, norm)
 
     test_eye_mul(identity, verb, test_op, to_cpu, norm)
 
@@ -94,6 +96,7 @@ end
 
     for backend in gpu_backends()
         Random.seed!(0)
-        test_eye_mul(x -> to_gpu(backend, x), false, test_op, to_cpu, norm)
+        conv = x -> to_gpu(backend, x)
+        test_eye_mul(conv, false, test_op, collect, norm)
     end
 end

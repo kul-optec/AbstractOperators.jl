@@ -111,6 +111,28 @@ end
     @test exprs[1] == (1:5,) && exprs[2] == (6:10,)
     @test !is_sliced(AbstractOperators.remove_slicing(Vs))
 
+    # remove_slicing second branch: VCAT of HCATs with GetIndex of different output sizes
+    # Forces the elseif branch where new_ops have different domain sizes after remove_slicing
+    g3 = GetIndex(Float64, (5,), (1:3,))  # 5-dim → 3-dim
+    g4 = GetIndex(Float64, (5,), (1:4,))  # 5-dim → 4-dim
+    z3 = Zeros(Float64, (5,), Float64, (3,))  # domain (5,), codomain (3,)
+    z4 = Zeros(Float64, (5,), Float64, (4,))  # domain (5,), codomain (4,)
+    H1 = HCAT(g3, z3)  # 3×(5+5), both ops have codomain (3,)
+    H2 = HCAT(z4, g4)  # 4×(5+5), both ops have codomain (4,)
+    Vs2 = VCAT(H1, H2)  # 7×10
+    @test is_sliced(Vs2)
+    rs2 = AbstractOperators.remove_slicing(Vs2)
+    @test rs2 isa VCAT
+    @test !is_sliced(rs2)
+    # Result should act like DCAT(Eye(3), Eye(4)): maps (x1, x2) → (x1, x2) with no-op zeros
+    b3 = randn(3)
+    b4 = randn(4)
+    b_domain = ArrayPartition(b3, b4)
+    y_codomain = ArrayPartition(randn(3), randn(4))
+    mul!(y_codomain, rs2, b_domain)
+    @test y_codomain.x[1] ≈ b3
+    @test y_codomain.x[2] ≈ b4
+
     # fun_name and equality
     A1 = Eye(3)
     A2 = Eye(3)
@@ -134,7 +156,7 @@ end
         Random.seed!(0)
 
         n = 4
-        opV = VCAT(DiagOp(gpu_ones(backend, Float64, n)), DiagOp(2 .* gpu_ones(backend, Float64, n)))
+        opV = VCAT(DiagOp(gpu_ones(backend, Float64, n)), DiagOp(to_gpu(backend, 2 .* ones(n))))
         test_op(opV, gpu_randn(backend, n), ArrayPartition(gpu_randn(backend, n), gpu_randn(backend, n)), false)
 
         m1, m2, n = 4, 7, 5
@@ -143,6 +165,31 @@ end
         opV2 = VCAT(MatrixOp(A1), MatrixOp(A2))
         test_op(opV2, gpu_randn(backend, n), ArrayPartition(gpu_randn(backend, m1), gpu_randn(backend, m2)), false)
     end
+end
+
+@testitem "VCAT: constructor errors" tags = [:calculus, :VCAT] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+
+    # Line 49: domain dimension mismatch → DimensionMismatch
+    @test_throws DimensionMismatch VCAT(MatrixOp(randn(3, 4)), MatrixOp(randn(3, 5)))
+
+    # Line 52: domain type mismatch → generic error (throw(error(...)))
+    @test_throws Exception VCAT(MatrixOp(randn(3, 4)), MatrixOp(ones(ComplexF64, 2, 4)))
+end
+
+@testitem "VCAT remove_slicing: unsupported VCAT error (line 200)" tags = [:calculus, :VCAT] setup = [TestUtils] begin
+    using AbstractOperators
+    n = 8
+    # VCAT of HCATs with no null operators: both removal branches fail → error at line 200
+    g1 = GetIndex(Float64, (n,), (1:4,))
+    g2 = GetIndex(Float64, (n,), (3:6,))
+    g3 = GetIndex(Float64, (n,), (5:8,))
+    H1 = HCAT(g1, g2)
+    H2 = HCAT(g2, g3)
+    Vs = VCAT(H1, H2)
+    @test AbstractOperators.is_sliced(Vs)
+    @test_throws ErrorException AbstractOperators.remove_slicing(Vs)
 end
 
 @testitem "VCAT: copy_operator" tags = [:calculus, :VCAT] setup = [TestUtils] begin

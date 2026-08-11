@@ -244,19 +244,19 @@ function permute(R::OperatorBroadCast{T, N, M, true}, p::AbstractVector{Int}) wh
 end
 
 function _copy_operator_impl(
-        op::NoOperatorBroadCast{T, N, M, Th, S}; array_type = nothing, threaded = nothing
+        op::NoOperatorBroadCast{T, N, M, Th, S}; storage_type = nothing, threaded = nothing
     ) where {T, N, M, Th, S}
     new_threaded = threaded === nothing ? Th : threaded
-    new_S = array_type === nothing ? S : array_type
+    new_S = storage_type === nothing ? S : storage_type
     return NoOperatorBroadCast(T, new_S, op.dim_in, op.reshaped_dim_in, op.dim_out; threaded = new_threaded)
 end
 
 function _copy_operator_impl(
-        op::OperatorBroadCast{T, N, M, Th}; array_type = nothing, threaded = nothing
+        op::OperatorBroadCast{T, N, M, Th}; storage_type = nothing, threaded = nothing
     ) where {T, N, M, Th}
     new_threaded = threaded === nothing ? Th : threaded
     inner_op = Th ? op.A[1] : op.A
-    new_op = copy_operator(inner_op; array_type, threaded)
+    new_op = copy_operator(inner_op; storage_type, threaded)
     return BroadCast(new_op, op.dim_out; threaded = new_threaded)
 end
 

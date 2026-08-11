@@ -177,6 +177,20 @@ end
     @test norm(op * (op' * y1) - diag_AAc(op) * y1) <= 1.0e-12
 end
 
+@testitem "DFT ORTHO normalization" tags = [:fftw, :DFT] setup = [TestUtils] begin
+    using AbstractOperators, FFTW, LinearAlgebra, Random, FFTWOperators
+    Random.seed!(0)
+    n = 8
+    op = DFT(Float64, (n,); normalization = FFTWOperators.ORTHO)
+    x1 = randn(n)
+    y1 = op * x1
+    y2 = fft(x1) ./ sqrt(n)
+    @test norm(y1 .- y2) <= 1.0e-12
+    # Adjoint applies ORTHO scaling too
+    z1 = op' * y1
+    @test norm(z1 .- x1) <= 1.0e-12
+end
+
 @testitem "IDFT" tags = [:fftw, :IDFT] setup = [TestUtils] begin
     using AbstractOperators
     using FFTW, LinearAlgebra, Random, FFTWOperators

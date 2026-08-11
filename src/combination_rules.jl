@@ -284,8 +284,6 @@ end
 combine_matrix(L::AbstractMatrix, R::AbstractMatrix) = L * R
 combine_matrix(L::AbstractMatrix, R::AbstractVector) = L * Diagonal(R)
 combine_matrix(L::AbstractVector, R::AbstractMatrix) = Diagonal(L) * R
-combine_matrix(L::Number, R::AbstractMatrix) = L * R
-combine_matrix(L::AbstractMatrix, R::Number) = R * L
 function combine(T1::DiagOp, T2::MatrixOp)
     return MatrixOp(domain_type(T2), size(T2, 2), combine_matrix(T1.d, T2.A))
 end

@@ -3,10 +3,6 @@ function _to_gpu_indices(ref_array::AbstractGPUArray, cpu_idx::AbstractVector{<:
     return ArrayT(Vector{Int}(cpu_idx))
 end
 
-function _to_gpu_indices(ref_array::AbstractGPUArray, gpu_idx::AbstractGPUArray{<:Integer})
-    return gpu_idx
-end
-
 function _to_gpu_indices(array_type::Type, cpu_idx::AbstractVector{<:Integer})
     ArrayT = Base.typename(array_type).wrapper
     return ArrayT(Vector{Int}(cpu_idx))

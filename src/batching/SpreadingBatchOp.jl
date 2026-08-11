@@ -109,7 +109,17 @@ function BatchOp(
         threaded::Bool = nthreads() > 1,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     )
-    return BatchOp(operators, (); threaded, threading_strategy)
+    op_domain_dims = ndims(operators[1], 2)
+    op_codomain_dims = ndims(operators[1], 1)
+    spreading_dims = ndims(operators)
+    batch_domain_dim_mask = get_batch_dim_mask(op_domain_dims, spreading_dims, ())
+    batch_codomain_dim_mask = get_batch_dim_mask(op_codomain_dims, spreading_dims, ())
+    return BatchOp(
+        operators,
+        batch_domain_dim_mask => batch_codomain_dim_mask;
+        threaded,
+        threading_strategy,
+    )
 end
 
 function BatchOp(

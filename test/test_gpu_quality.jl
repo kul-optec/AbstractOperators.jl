@@ -1,4 +1,4 @@
-@testitem "GpuExt Quality" tags = [:gpu, :quality] begin
+@testitem "GpuExt Quality" tags = [:quality, :gpu] begin
     using AbstractOperators, JLArrays, LinearAlgebra
 
     # Loading JLArrays triggers GpuExt (GPUArrays is transitive dep)
@@ -28,7 +28,7 @@
     @test y_alloc isa JLArrays.JLArray
 end
 
-@testitem "GpuExt JET" tags = [:gpu, :jet] begin
+@testitem "GpuExt JET" tags = [:jet, :gpu] begin
     using AbstractOperators, JET, JLArrays
 
     # Verify key GPU-dispatched functions are type-stable (no dynamic dispatch)
@@ -55,7 +55,10 @@ end
     @test_call target_modules = (AbstractOperators,) mul!(y10, op_zp, x)
     @test_call target_modules = (AbstractOperators,) mul!(x, op_zp', y10)
 
-    # _should_thread dispatches to false for GPU arrays
+    # _should_thread dispatches to false for GPU arrays (Type and instance overloads)
     @test AbstractOperators._should_thread(typeof(d)) == false
+    @test AbstractOperators._should_thread(d) == false
     @test AbstractOperators._should_thread(Array{Float64}) == (Threads.nthreads() > 1)
+    # storage_type_display_string returns GPU marker for GPU array types
+    @test AbstractOperators.array_type_display_string(typeof(d)) == "ᵍᵖᵘ"
 end

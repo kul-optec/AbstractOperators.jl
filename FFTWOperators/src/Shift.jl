@@ -439,13 +439,14 @@ function _is_dft_op(op, side)
         return true
     elseif op isa Compose
         subops = AbstractOperators.get_operators(op)
-        if all(o -> is_diagonal(o) || _is_dft_op(o, side), subops)
-            # it is an elementwise modification of a DFT/IDFT
-            return true
+        if side == :domain
+            # Domain shift: innermost (first) op must be DFT-like; all outer ops must be
+            # diagonal so they commute with SignAlternation.
+            return _is_dft_op(first(subops), side) && all(is_diagonal, subops[2:end])
         else
-            # alternatively, it is enough to check the first/last operator
-            op = size == :domain ? first(subops) : last(subops)
-            return _is_dft_op(op, side)
+            # Codomain shift: outermost (last) op must be DFT-like; all inner ops must be
+            # diagonal so they commute with SignAlternation.
+            return _is_dft_op(last(subops), side) && all(is_diagonal, subops[1:(end - 1)])
         end
     else
         return false

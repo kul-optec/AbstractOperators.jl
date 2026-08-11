@@ -1,6 +1,7 @@
 @testitem "Combinations: HCAT and Compose" tags = [:calculus, :Combinations] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(42)
+    verb && println(" --- Testing Combinations: HCAT and Compose --- ")
 
     m1, m2, m3, m4 = 4, 7, 3, 2
     A1 = randn(m3, m1)
@@ -44,6 +45,7 @@ end
 @testitem "Combinations: VCAT and HCAT mixtures" tags = [:calculus, :Combinations] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(43)
+    verb && println(" --- Testing Combinations: VCAT/HCAT --- ")
 
     # VCAT of HCATs
     m1, m2, n1 = 4, 7, 3
@@ -98,6 +100,7 @@ end
 @testitem "Combinations: Sum structures" tags = [:calculus, :Combinations] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(44)
+    verb && println(" --- Testing Combinations: Sum --- ")
 
     # Sum of HCATs
     m, n1, n2, n3 = 4, 7, 5, 3
@@ -142,6 +145,7 @@ end
 @testitem "Combinations: Scale structures" tags = [:calculus, :Combinations] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(45)
+    verb && println(" --- Testing Combinations: Scale --- ")
 
     # Scale of DCAT
     m1, n1 = 4, 7
@@ -229,6 +233,7 @@ end
 @testitem "Combinations: Nonlinear" tags = [:calculus, :Combinations] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(46)
+    verb && println(" --- Testing Combinations: Nonlinear --- ")
 
     # Nonlinear HCAT of VCAT
     n, m1, m2, m3 = 4, 3, 2, 7
@@ -287,6 +292,208 @@ end
     x = randn(size(T2, 2))
     y, grad = test_NLop(T2, x, r, verb)
     @test norm(y - (sin.(exp.(x + d1) - d2) .+ d3)) < 1.0e-8
+end
+
+@testitem "Combinations: AffineAdd merging and Zeros" tags = [:calculus, :Combinations] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(47)
+    verb && println(" --- Testing Combinations: AffineAdd merging and Zeros --- ")
+
+    n = 8
+
+    # AffineAdd(linear) * AffineAdd(linear) — S1==S2==true
+    d1 = randn(n)
+    d2 = randn(n)
+    T1 = AffineAdd(Eye(n), d1)        # x + d1, S=true
+    T2 = AffineAdd(Eye(n), d2)        # x + d2, S=true
+    Tc = T1 * T2                       # should combine, not stay as Compose
+    @test !(Tc isa AbstractOperators.Compose)
+    x = randn(n)
+    @test norm(Tc * x - (x + d2 + d1)) < 1.0e-12
+
+    # AffineAdd(linear) * AffineAdd(linear) — S1=true, S2=false
+    T3 = AffineAdd(Eye(n), d1, true)  # x + d1
+    T4 = AffineAdd(Eye(n), d2, false) # x - d2
+    Tc2 = T3 * T4
+    @test !(Tc2 isa AbstractOperators.Compose)
+    @test norm(Tc2 * x - (x - d2 + d1)) < 1.0e-12
+
+    # AffineAdd(linear) * AffineAdd(linear) — S1=false, S2=true
+    T5 = AffineAdd(Eye(n), d1, false) # x - d1
+    T6 = AffineAdd(Eye(n), d2, true)  # x + d2
+    Tc3 = T5 * T6
+    @test !(Tc3 isa AbstractOperators.Compose)
+    @test norm(Tc3 * x - (x + d2 - d1)) < 1.0e-12
+
+    # combine(linear_op, AffineAdd) with scalar displacement
+    m = 6
+    A = randn(m, n)
+    scalar_d = 2.5
+    opA = MatrixOp(A)
+    opAA_scalar = AffineAdd(Eye(n), scalar_d)  # scalar displacement: x + 2.5
+    Tc4 = opA * opAA_scalar                     # A * (x + 2.5) = A*x + A*fill(2.5,n)
+    @test !(Tc4 isa AbstractOperators.Compose)
+    @test norm(Tc4 * x - A * (x .+ scalar_d)) < 1.0e-12
+
+    # combine(L, Sum) with non-square L
+    n2, m2 = 5, 7
+    A_outer = MatrixOp(randn(n2, m2))  # n2 × m2 (non-square)
+    A1 = MatrixOp(randn(m2, n2))       # m2 × n2
+    A2 = MatrixOp(randn(m2, n2))       # m2 × n2
+    Sop = Sum(A1, A2)
+    combined_sum = A_outer * Sop       # should combine; non-square → Sum(ops...) branch
+    @test !(combined_sum isa AbstractOperators.Compose)
+    x2 = randn(n2)
+    y_ref = A_outer.A * (A1.A * x2 + A2.A * x2)
+    @test norm(combined_sum * x2 - y_ref) < 1.0e-12
+
+    # combine(Zeros, R) — is_null(L): square R with same types (returns L)
+    Z_sq = Zeros(Float64, (n,), Float64, (n,))
+    E_sq = Eye(n)
+    ZE = Z_sq * E_sq
+    @test is_null(ZE)
+    @test size(ZE) == size(Z_sq)
+
+    # combine(Zeros, R) — is_null(L): non-square R (creates new Zeros)
+    # Z_rect: domain=(p,), codomain=(q,); A_rect must have codomain=(p,) to compose with Z_rect
+    p, q = 4, 6
+    Z_rect = Zeros(Float64, (p,), Float64, (q,))  # domain=(p,), codomain=(q,)
+    A_rect = MatrixOp(randn(p, n))                 # domain=(n,), codomain=(p,)
+    ZA = Z_rect * A_rect
+    @test is_null(ZA)
+    @test size(ZA, 1) == (q,)   # codomain of Z_rect
+    @test size(ZA, 2) == (n,)   # domain of A_rect
+
+    # combine(L, Zeros) — is_null(R): square L (returns R)
+    EZ = E_sq * Z_sq
+    @test is_null(EZ)
+    @test size(EZ) == size(Z_sq)
+
+    # combine(L, Zeros) — is_null(R): non-square L (creates new Zeros)
+    A_ns = MatrixOp(randn(m2, n2))  # m2×n2 (non-square)
+    Z_ns = Zeros(Float64, (n2,), Float64, (n2,))  # n2×n2
+    AZ = A_ns * Z_ns
+    @test is_null(AZ)
+    @test size(AZ, 1) == (m2,)
+    @test size(AZ, 2) == (n2,)
+end
+
+@testitem "Combinations: Scale+Compose forwarding branches" tags = [:calculus, :Combinations] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(48)
+
+    n, m = 4, 5
+    d = randn(n)
+    A = randn(n, m)
+    d2 = randn(n)
+
+    # combine(Scale, Compose): can_be_combined(L.A, R.A[end]) path (line 82)
+    # Compose(DiagOp(d2), MatrixOp(A)) stores as A=(MatrixOp,DiagOp), so A[end] = DiagOp(d2)
+    # can_be_combined(DiagOp(d), DiagOp(d2)) = true → forwarding branch
+    inner_comp = DiagOp(d2) * MatrixOp(A)
+    s_diag = Scale(2.0, DiagOp(d))
+    combined_sc = s_diag * inner_comp
+    x = randn(m)
+    @test combined_sc * x ≈ s_diag * (inner_comp * x)
+
+    # combine(Scale, MatrixOp): can_be_combined(T1.A, T2) = true path (line 199)
+    # Scale(DiagOp) * MatrixOp — can_be_combined(DiagOp, MatrixOp) = true
+    sm = Scale(3.0, DiagOp(d)) * MatrixOp(A)
+    @test sm * x ≈ 3.0 * (d .* (A * x))
+
+    # combine(Scale, AdjointMatrixOp): else branch (line 208)
+    # Scale(FiniteDiff) * MatrixOp(n×n)' — can_be_combined(FiniteDiff, AdjointMatrixOp) = false
+    A2 = randn(n, n)
+    sf = Scale(2.0, FiniteDiff((n,))) * MatrixOp(A2)'
+    xf = randn(n)
+    @test sf * xf ≈ 2.0 * (FiniteDiff((n,)) * (MatrixOp(A2)' * xf))
+
+    # combine(AdjointScale, DiagOp): can_be_combined forwarding branch (line 234)
+    sd = Scale(2.0, DiagOp(d))
+    adj_sd_diag = sd' * DiagOp(d2)
+    xd = randn(n)
+    @test adj_sd_diag * xd ≈ sd' * (DiagOp(d2) * xd)
+
+    # combine(DiagOp, Scale) forwarding branch (line 250)
+    ds = DiagOp(d) * Scale(2.0, DiagOp(d2))
+    @test ds * xd ≈ DiagOp(d) * (2.0 * (DiagOp(d2) * xd))
+
+    # combine(AdjointDiagOp, Scale) forwarding branch (line 258)
+    ads = DiagOp(d)' * Scale(2.0, DiagOp(d2))
+    @test ads * xd ≈ DiagOp(d)' * (2.0 * (DiagOp(d2) * xd))
+end
+
+@testitem "Combinations: AdjointScale and Compose*Scale forwarding branches" tags = [:calculus, :Combinations] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(49)
+
+    n = 4
+    d, d2 = randn(n), randn(n)
+    A = randn(n, n)
+
+    # combine(AdjointScale, Compose): can_be_combined(Scale.A', Compose.A[end]) = true path (line 90)
+    # Scale(DiagOp(d))' * Compose(DiagOp(d2), MatrixOp(A))
+    # Compose stores as (MatrixOp, DiagOp), A[end] = DiagOp(d2)
+    # can_be_combined(DiagOp(d)', DiagOp(d2)) = true → forwarding
+    sc = Scale(2.0, DiagOp(d))
+    inner_comp = DiagOp(d2) * MatrixOp(A)
+    combined_adj = sc' * inner_comp
+    x = randn(n)
+    @test combined_adj * x ≈ sc' * (inner_comp * x)
+
+    # combine(Compose, Scale): can_be_combined(Compose.A[1], Scale.A) = true path (lines 98-99)
+    # Compose(MatrixOp(A), DiagOp(d)) stores as (DiagOp, MatrixOp), A[1] = DiagOp(d)
+    # can_be_combined(DiagOp(d), DiagOp(d2)) = true → forwarding
+    comp_sc = MatrixOp(A) * DiagOp(d)  # Compose(MatrixOp, DiagOp), stored (DiagOp, MatrixOp)
+    combined_cs = comp_sc * Scale(2.0, DiagOp(d2))
+    @test combined_cs * x ≈ comp_sc * (2.0 * (DiagOp(d2) * x))
+
+    # combine(Compose, AdjointScale): can_be_combined(Compose.A[1], Scale.A') = true path (lines 109-110)
+    # Same Compose(MatrixOp, DiagOp), Scale(DiagOp)' → can_be_combined(DiagOp, AdjointDiagOp) = true
+    combined_cas = comp_sc * Scale(2.0, DiagOp(d2))'
+    @test combined_cas * x ≈ comp_sc * (Scale(2.0, DiagOp(d2))' * x)
+end
+
+
+@testitem "Combinations: Scale+Compose else branches (lines 82, 90, 98-99, 109-110)" tags = [:calculus, :Combinations] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    using AbstractOperators: combine, can_be_combined
+    Random.seed!(0)
+    n = 5
+    # Build a 2-op Compose that doesn't get simplified: FD(n) * MatrixOp(n-1,n-1)
+    # A tuple order is (inner, outer) so comp.A = (FD(n), MatrixOp(n-1,n-1))
+    comp = MatrixOp(randn(n-1, n-1)) * FiniteDiff((n,))   # domain (n,) → codomain (n-1,)
+
+    # Line 82 else: combine(Scale, Compose) when can_be_combined(L.A, comp.A[end]) = false
+    # but can_be_combined(Scale, comp) = true via the all-linear+MatrixOp condition
+    L_82 = Scale(2.0, FiniteDiff((n-1,)))  # domain (n-1,) → codomain (n-2,)
+    @test can_be_combined(L_82, comp)
+    result_82 = combine(L_82, comp)
+    x1 = randn(n)
+    @test result_82 * x1 ≈ L_82 * (comp * x1)
+
+    # Line 90 else: combine(AdjointScale, Compose) when can_be_combined(FD(n)', comp.A[end]) = false
+    # Use MatrixOp(n-1,n-1) * FD(n,) so inner operator (FD') doesn't combine with outer (MatrixOp)
+    comp2 = MatrixOp(randn(n-1, n-1)) * FiniteDiff((n,))  # domain (n,) → codomain (n-1,)
+    adj_L = Scale(2.0, FiniteDiff((n,)))'   # domain (n-1,) → codomain (n,)
+    @test can_be_combined(adj_L, comp2)
+    result_90 = combine(adj_L, comp2)
+    x2 = randn(n)
+    @test result_90 * x2 ≈ adj_L * (comp2 * x2)
+
+    # Lines 98-99 else: combine(Compose, Scale) when can_be_combined(comp.A[1]=FD(n), FD(n+1)) = false
+    scale_inner = Scale(2.0, FiniteDiff((n+1,)))  # domain (n+1,) → codomain (n,)
+    @test can_be_combined(comp, scale_inner)
+    result_98 = combine(comp, scale_inner)
+    x3 = randn(n+1)
+    @test result_98 * x3 ≈ comp * (scale_inner * x3)
+
+    # Lines 109-110 else: combine(Compose, AdjointScale) when can_be_combined(comp.A[1]=FD(n), FD(n)') = false
+    adj_scale_inner = Scale(2.0, FiniteDiff((n,)))'  # domain (n-1,) → codomain (n,)
+    @test can_be_combined(comp, adj_scale_inner)
+    result_109 = combine(comp, adj_scale_inner)
+    x4 = randn(n-1)
+    @test result_109 * x4 ≈ comp * (adj_scale_inner * x4)
 end
 
 @testitem "Combinations (GPU)" tags = [:gpu, :calculus, :Combinations] setup = [TestUtils] begin

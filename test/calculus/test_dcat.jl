@@ -1,6 +1,31 @@
+@testitem "DCAT: nested DCAT" tags = [:calculus, :DCAT] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
+
+    # DCAT does NOT flatten inner DCATs: when an inner DCAT{2} is an element,
+    # _ndoms_from_type returns 2, creating tuple indices in idxD/idxC.
+    # This exercises the `else` (tuple-index) branches in @generated mul!.
+    inner = DCAT(Eye(2), Eye(3))
+    outer = DCAT(inner, Eye(4))
+
+    # The domain storage type expands the inner DCAT's ArrayPartition:
+    # DS = ArrayPartition{Float64, Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}}}
+    # so input is a flat 3-element ArrayPartition.
+    x = ArrayPartition(randn(2), randn(3), randn(4))
+    y_ref = ArrayPartition(randn(2), randn(3), randn(4))
+
+    # test_op verifies forward mul!, adjoint mul!, and adjoint consistency
+    y = test_op(outer, x, y_ref, verb)
+
+    # Since all sub-operators are identity, output == input
+    @test norm(collect(y) - collect(x)) <= 1.0e-12
+    @test norm(collect(outer' * y) - collect(x)) <= 1.0e-12
+end
+
 @testitem "DCAT: basic mul" tags = [:calculus, :DCAT] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing DCAT --- ")
 
     m1, n1, m2, n2, m3, n3 = 4, 7, 5, 2, 5, 5
     A1 = randn(m1, n1)
@@ -91,7 +116,7 @@ end
         Random.seed!(0)
 
         n1, n2 = 3, 4
-        opD = DCAT(DiagOp(gpu_ones(backend, Float64, n1)), DiagOp(2 .* gpu_ones(backend, Float64, n2)))
+        opD = DCAT(DiagOp(gpu_ones(backend, Float64, n1)), DiagOp(to_gpu(backend, 2 .* ones(n2))))
         test_op(
             opD,
             ArrayPartition(gpu_randn(backend, n1), gpu_randn(backend, n2)),

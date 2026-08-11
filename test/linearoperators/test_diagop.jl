@@ -108,7 +108,8 @@ end
 
     for backend in gpu_backends()
         Random.seed!(0)
-        test_diagop_mul(x -> to_gpu(backend, x), false, test_op, to_cpu, norm)
+        conv = x -> to_gpu(backend, x)
+        test_diagop_mul(conv, false, test_op, collect, norm)
         x = gpu_randn(backend, 4)
         op = DiagOp(x)
         @test domain_array_type(op) <: backend.array_type

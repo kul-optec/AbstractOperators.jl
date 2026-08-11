@@ -74,7 +74,7 @@ RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{Co
 ```
 """
 function domain_array_type(L::AbstractOperator)
-    return _array_type_for_elem(domain_type(L))
+    return _storage_type_for_elem(domain_type(L))
 end
 
 """
@@ -91,11 +91,11 @@ RecursiveArrayTools.ArrayPartition{ComplexF64, Tuple{Array{ComplexF64}, Array{Co
 ```
 """
 function codomain_array_type(L::AbstractOperator)
-    return _array_type_for_elem(codomain_type(L))
+    return _storage_type_for_elem(codomain_type(L))
 end
 
-_array_type_for_elem(T::Type) = Array{T}
-function _array_type_for_elem(dt::Tuple)
+_storage_type_for_elem(T::Type) = Array{T}
+function _storage_type_for_elem(dt::Tuple)
     arrayTypes = Tuple{[Array{t} for t in dt]...}
     return ArrayPartition{promote_type(dt...), arrayTypes}
 end
@@ -108,6 +108,7 @@ end
 function _normalize_array_type(array_type::Type{A}, elem_type::Type{T}) where {A <: AbstractArray, T}
     return _array_wrapper_type(A){T}
 end
+
 _storage_eltype(::Type{<:AbstractArray{T}}) where {T} = T
 
 function allocate_in_domain(L::AbstractOperator, dims... = size(L, 2)...)
@@ -342,8 +343,6 @@ julia> AbstractOperators.combine(Eye(10), DiagOp(rand(10)))
 function combine(L, R)
     if is_eye(L)
         return R
-    elseif is_eye(R)
-        return L
     elseif is_null(L)
         if size(R, 1) == size(R, 2) && domain_type(R) == codomain_type(R)
             return L
@@ -486,28 +485,28 @@ function string_dom(dm::Tuple, sz::Tuple)
 end
 
 """
-    copy_operator(op::AbstractOperator; array_type=nothing, threaded=nothing)
+    copy_operator(op::AbstractOperator; storage_type=nothing, threaded=nothing)
 
 Create a copy of `op` suitable for parallel use.
 
 - Immutable fields (operator arrays, type params) are **shared** (no copy).
 - Mutable buffer fields are **deep-copied**.
-- `array_type`: if provided (e.g., `CuArray`), convert buffer arrays to that storage.
+- `storage_type`: if provided (e.g., `CuArray`), convert buffer arrays to that storage.
 - `threaded`: if provided (`true`/`false`), toggle threading for operators that support it.
 
-When `array_type` is `nothing` and `threaded` is `nothing`, equivalent to the old `copy_op`
+When `storage_type` is `nothing` and `threaded` is `nothing`, equivalent to the old `copy_op`
 but more efficient (shares immutable data).
 """
-function copy_operator(op::AbstractOperator; array_type = nothing, threaded = nothing)
-    if is_thread_safe(op) && threaded === nothing && array_type === nothing
+function copy_operator(op::AbstractOperator; storage_type = nothing, threaded = nothing)
+    if is_thread_safe(op) && threaded === nothing && storage_type === nothing
         return op  # safe to share
     end
-    return _copy_operator_impl(op; array_type, threaded)
+    return _copy_operator_impl(op; storage_type, threaded)
 end
 
 # Default implementation: just deepcopy (fallback)
 function _copy_operator_impl(
-        op::T; array_type = nothing, threaded = nothing
+        op::T; storage_type = nothing, threaded = nothing
     ) where {T <: AbstractOperator}
     return deepcopy(op)
 end
@@ -516,8 +515,8 @@ end
 function _convert_buffer(buf::AbstractArray, ::Nothing)
     return similar(buf)  # same type, new allocation
 end
-function _convert_buffer(buf::AbstractArray{T}, array_type::Type) where {T}
-    return similar(array_type{T}, size(buf))
+function _convert_buffer(buf::AbstractArray{T}, storage_type::Type) where {T}
+    return similar(storage_type{T}, size(buf))
 end
 
 _should_thread(::Number) = false

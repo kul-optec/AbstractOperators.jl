@@ -8,6 +8,17 @@
     y1 = test_op(op, randn(n), randn(m), verb)
     @test y1 == zeros(Float64, m)
 
+    function test_zeros_mul(conv, verb)
+        n = (3, 4)
+        m = (5, 2)
+        ST = Base.typename(typeof(conv(zeros(Float64, 1)))).wrapper
+        op = Zeros(Float64, n, Float64, m; array_type = ST)
+        y1 = test_op(op, conv(randn(n)), conv(randn(m)), verb)
+        @test to_cpu(y1) == zeros(Float64, m)
+    end
+
+    test_zeros_mul(identity, verb)
+
     n = (3, 4)
     D = Float64
     m = (5, 2)

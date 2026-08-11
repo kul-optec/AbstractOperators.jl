@@ -18,5 +18,8 @@ docs/Manifest.toml
 Manifest.toml
 Manifest-v*.toml
 .temp/
+
+# Julia coverage files
+*.cov
 test/gpu_env/
 benchmark/gpu_env/

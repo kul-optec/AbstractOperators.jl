@@ -110,6 +110,49 @@ end
     @test_throws DimensionMismatch AbstractOperators.Compose((B, A), ())
 end
 
+@testitem "Compose: type mismatch error" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using AbstractOperators
+    # Compose L1 ∘ L2 where domain_type(L1) ≠ codomain_type(L2)
+    L1 = MatrixOp(randn(Float64, 3, 4))
+    L2 = MatrixOp(randn(ComplexF64, 4, 5))
+    @test_throws DomainError Compose(L1, L2)
+end
+
+@testitem "Compose: L'*L shortcut to get_normal_op" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # DiagOp has has_optimized_normalop = true
+    # L' * L should short-circuit through line 118-119 in Compose(L1, L2)
+    d = randn(4)
+    op = DiagOp(d)
+    normal = op' * op
+    x = randn(4)
+    @test normal * x ≈ op' * (op * x)
+end
+
+@testitem "get_normal_op(Compose): optimized if branch" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # MatrixOp as outer/left operator has has_optimized_normalop = true
+    # L.A[end] = MatrixOp → hits the if branch in get_normal_op(L::Compose)
+    A = randn(4, 5)
+    L = Compose(MatrixOp(A), FiniteDiff((6,)))
+    N = AbstractOperators.get_normal_op(L)
+    x = randn(6)
+    @test N isa AbstractOperator
+    @test N * x ≈ L' * (L * x)
+end
+
+@testitem "Scale(1, Compose) returns Compose unchanged" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    A = randn(4, 5)
+    d = randn(4)
+    comp = Compose(DiagOp(d), MatrixOp(A))
+    s1 = Scale(1.0, comp)
+    @test s1 === comp
+end
+
 @testitem "Adjacent adjoint optimized normal (GetIndex*GetIndex')" tags = [:calculus, :Compose] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
@@ -340,6 +383,61 @@ end
     end
 end
 
+@testitem "get_normal_op(Compose) if branch" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
+    # get_normal_op lines 227-229: has_optimized_normalop(L.A[end]) == true
+    # Compose(MatrixOp, FiniteDiff) stores A = (FiniteDiff, MatrixOp); A[end] = MatrixOp
+    L = Compose(MatrixOp(randn(5, 4)), FiniteDiff((5,)))
+    @test AbstractOperators.has_optimized_normalop(L) == true
+    N = AbstractOperators.get_normal_op(L)
+    @test N isa AbstractOperator
+    x = randn(5)
+    @test N * x ≈ L' * (L * x)
+end
+
+@testitem "copy_operator on Compose" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # _copy_operator_impl lines 307-309: use FiniteDiff+MatrixOp (no combine rule → stays Compose)
+    A = randn(4, 4)
+    L = Compose(FiniteDiff((4,)), MatrixOp(A))
+    @test L isa Compose
+    L2 = copy_operator(L)
+    @test L2 isa Compose
+    @test length(L2.A) == length(L.A)
+    x = randn(4)
+    @test L2 * x ≈ L * x
+    y = randn(3)
+    @test L2' * y ≈ L' * y
+end
+
+@testitem "remove_slicing Compose: is_eye path" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # is_sliced(L.A[1]) && is_eye(remove_slicing(L.A[1])) branch (lines 267-273)
+    # AffineAdd(GetIndex): is_sliced=true, not isa GetIndex, remove_slicing returns Eye
+    G = GetIndex((5,), 2:4)
+    b = randn(3)
+    af = AffineAdd(G, b)
+    @test AbstractOperators.is_sliced(af)
+    @test !(af isa GetIndex)
+    @test AbstractOperators.is_eye(AbstractOperators.remove_slicing(af))
+    # length == 2 case: Compose((af, A2), buf) → remove_slicing returns A2
+    A2 = MatrixOp(randn(3, 3))
+    L2 = AbstractOperators.Compose((af, A2), (zeros(3),))
+    out = AbstractOperators.remove_slicing(L2)
+    @test out === A2
+    # length > 2 case: Compose((af, fd, M), bufs) → remove_slicing returns Compose(fd, M)
+    # use FiniteDiff + MatrixOp (no combine rule → stays Compose after remove_slicing)
+    fd = FiniteDiff((3,))
+    A3 = MatrixOp(randn(4, 3))
+    L3 = AbstractOperators.Compose((af, fd, A3), (zeros(3), zeros(3)))
+    out3 = AbstractOperators.remove_slicing(L3)
+    @test out3 isa Compose
+    @test length(out3.A) == 2
+end
+
 @testitem "Compose (GPU)" tags = [:gpu, :calculus, :Compose] setup = [TestUtils] begin
     using Random, AbstractOperators, GPUEnv
 
@@ -355,4 +453,59 @@ end
         opC2 = DiagOp(gpu_randn(backend, n)) * DiagOp(gpu_randn(backend, n))
         test_op(opC2, gpu_randn(backend, n), gpu_randn(backend, n), false)
     end
+end
+
+@testitem "Compose: combine-at-i2 inlines nested Compose (line 73)" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators, LinearAlgebra
+    Random.seed!(0)
+    n = 6
+    fd = FiniteDiff((n,))                   # domain (n,) → codomain (n-1,)
+    M = MatrixOp(randn(n - 1, n - 1))       # domain (n-1,) → codomain (n-1,)
+    s = Scale(2.0, FiniteDiff((n - 1,)))    # domain (n-1,) → codomain (n-2,)
+    # At i=2: can_be_combined(s, M) → combine returns a Compose → triggers i -= 1 (line 73)
+    buf1 = zeros(n - 1)
+    buf2 = zeros(n - 1)
+    L = AbstractOperators.Compose((fd, M, s), (buf1, buf2))
+    @test L isa AbstractOperators.Compose
+    x = randn(n)
+    @test L * x ≈ s * (M * (fd * x))
+end
+
+@testitem "Compose: 4-op chain mid-pair combination triggers i-decrement (line 88)" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators, LinearAlgebra
+    Random.seed!(0)
+    n = 6
+    d1, d2 = randn(n - 1), randn(n - 1)
+    fd_n = FiniteDiff((n,))        # domain (n,) → codomain (n-1,)
+    diag1 = DiagOp(d1)             # domain/codomain (n-1,)
+    diag2 = DiagOp(d2)             # domain/codomain (n-1,)
+    fd_nm1 = FiniteDiff((n - 1,))  # domain (n-1,) → codomain (n-2,)
+    # At i=2: can_be_combined(diag2, diag1)=true → non-Compose result → elseif branch,
+    # i > 1 and buffers not equal → i -= 1 (line 88)
+    buf1, buf2, buf3 = zeros(n - 1), zeros(n - 1), zeros(n - 1)
+    L = AbstractOperators.Compose((fd_n, diag1, diag2, fd_nm1), (buf1, buf2, buf3))
+    @test L isa AbstractOperators.Compose
+    x = randn(n)
+    @test length(L * x) == n - 2
+    @test L * x ≈ fd_nm1 * (diag2 * (diag1 * (fd_n * x)))
+end
+
+@testitem "Compose: buffer adjacency check after combination (lines 81-82)" tags = [:calculus, :Compose] setup = [TestUtils] begin
+    using Random, AbstractOperators, LinearAlgebra
+    Random.seed!(0)
+    n = 6
+    d1, d2 = randn(n - 1), randn(n - 1)
+    fd_n = FiniteDiff((n,))
+    diag1 = DiagOp(d1)
+    diag2 = DiagOp(d2)
+    fd_nm1 = FiniteDiff((n - 1,))
+    # buf[1] === buf[3]: after DiagOp pair combines at i=2 and buffers are rebuilt,
+    # buf[i-1] === buf[i] is detected → reallocation triggered (lines 81-82)
+    shared_buf = zeros(n - 1)
+    mid_buf = zeros(n - 1)
+    L = AbstractOperators.Compose((fd_n, diag1, diag2, fd_nm1), (shared_buf, mid_buf, shared_buf))
+    @test L isa AbstractOperators.Compose
+    x = randn(n)
+    @test length(L * x) == n - 2
+    @test L * x ≈ fd_nm1 * (diag2 * (diag1 * (fd_n * x)))
 end

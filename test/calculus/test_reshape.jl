@@ -1,6 +1,7 @@
 @testitem "Reshape: basic 1D->2D" tags = [:calculus, :Reshape] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Reshape: basic 1D->2D --- ")
 
     m, n = 8, 4
     dim_out = (2, 2, 2)
@@ -29,6 +30,7 @@ end
 @testitem "Reshape: displacement and storage" tags = [:calculus, :Reshape] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Reshape: displacement and storage --- ")
 
     # testing displacement
     m, n = 8, 4
@@ -62,6 +64,7 @@ end
 @testitem "Reshape: Scale mul" tags = [:calculus, :Reshape] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Reshape: Scale mul --- ")
 
     m, n = 8, 4
     coeff = pi
@@ -90,6 +93,7 @@ end
 @testitem "Reshape: Scale properties" tags = [:calculus, :Reshape] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Reshape: Scale properties --- ")
 
     m, n = 8, 4
     coeff = pi
@@ -147,6 +151,7 @@ end
 @testitem "Reshape: equality and adjoint" tags = [:calculus, :Reshape] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Reshape: equality and adjoint --- ")
 
     # Equality / inequality
     m, n = 8, 4
@@ -191,6 +196,7 @@ end
 @testitem "Reshape: permute and nonlinear" tags = [:calculus, :Reshape] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Reshape: permute and nonlinear --- ")
 
     # permute domain ordering (wrap HCAT to get multi-domain) and ensure same behavior when inputs permuted
     mH = 6

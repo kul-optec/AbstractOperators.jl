@@ -35,12 +35,7 @@ struct VCAT{
         CS <: AbstractArray,  # codomain storage type (fixed at construction)
     } <: AbstractOperator
     A::L     # tuple of AbstractOperators
-    idxs::P  # indices
-    # H = VCAT(Eye(n),VCAT(Eye(n),Eye(n))) has H.idxs = (1,2,3)
-    # `AbstractOperators` are flatten
-    # H = VCAT(Eye(n),Compose(MatrixOp(randn(n,n)),VCAT(Eye(n),Eye(n))))
-    # has H.idxs = (1,(2,3))
-    # `AbstractOperators` are stack
+    idxs::P  # indices; always NTuple{N, Int} since inner VCATs are flattened at construction
     buf::C   # buffer memory
     function VCAT(
             A::L, idxs::P, buf::C
@@ -86,27 +81,16 @@ function VCAT(A::Vararg{AbstractOperator})
     return VCAT(AA, buf)
 end
 
-# compile-time codomain ndoms for VCAT's sub-operators
-_ndoms_from_type(::Type{<:VCAT{N}}, dim::Int) where {N} = dim == 1 ? N : 1
-
 @generated function VCAT(AA::NTuple{N, AbstractOperator}, buf) where {N}
-    N == 1 && return :(AA[1])
-    # Build idxs at compile time using operator element types
-    K = 0
-    idx_exprs = []
-    for i in 1:N
-        nd = _ndoms_from_type(fieldtype(AA, i), 1)
-        if nd == 1
-            K += 1
-            push!(idx_exprs, K)
-        else
-            K0 = K
-            push!(idx_exprs, ntuple(j -> K0 + j, nd))
-            K += nd
-        end
+    if N isa Int
+        N == 1 && return :(AA[1])
+        # Build idxs at compile time: inner VCATs are always flattened, so all elements have nd=1
+        idxs_literal = Expr(:tuple, (1:N)...)
+        return :(VCAT(AA, $idxs_literal, buf))
+    else
+        # N is not statically known (e.g. built up in a loop); fall back to runtime length
+        return :(VCAT(AA, ntuple(identity, length(AA)), buf))
     end
-    idxs_literal = Expr(:tuple, idx_exprs...)
-    return :(VCAT(AA, $idxs_literal, buf))
 end
 
 VCAT(A::AbstractOperator) = A
@@ -116,17 +100,8 @@ VCAT(A::AbstractOperator) = A
 @generated function mul!(y::ArrayPartition, H::VCAT{N, L, P}, b::AbstractArray) where {N, L, P}
     ex = :(check(y, H, b))
     for i in 1:N
-        if fieldtype(P, i) <: Int
-            # flatten operator
-            # build mul!(y.x[H.idxs[i]], H.A[i], b)
-            yy = :(y.x[H.idxs[$i]])
-        else
-            # stacked operator
-            # build mul!(ArrayPartition( y[.xH.idxs[i][1]], y.x[H.idxs[i][2]] ...  ), H.A[i], b)
-            yy = [:(y.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-            yy = :(ArrayPartition($(yy...)))
-        end
-        ex = :($ex; mul!($yy, H.A[$i], b))
+        # P always has Int elements (inner VCATs are flattened at construction)
+        ex = :($ex; mul!(y.x[H.idxs[$i]], H.A[$i], b))
     end
     ex = :($ex; return y)
     return ex
@@ -137,30 +112,11 @@ end
     ) where {N, L, P}
     ex = :(check(y, A, b); H = A.A)
 
-    if fieldtype(P, 1) <: Int
-        # flatten operator
-        # build mul!(y, H.A[1]', b.x[H.idxs[1]])
-        bb = :(b.x[H.idxs[1]])
-    else
-        # stacked operator
-        # build mul!(y, H.A[1]',ArrayPartition( b.x[H.idxs[1][1]], b.x[H.idxs[1][2]] ...  ))
-        bb = [:(b.x[H.idxs[1][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, 1)))]
-        bb = :(ArrayPartition($(bb...)))
-    end
-    ex = :($ex; mul!(y, H.A[1]', $bb)) # write on y
+    # P always has Int elements (inner VCATs are flattened at construction)
+    ex = :($ex; mul!(y, H.A[1]', b.x[H.idxs[1]])) # write on y
 
     for i in 2:N
-        if fieldtype(P, i) <: Int
-            # flatten operator
-            # build mul!(H.buf, H.A[i]', b.x[H.idxs[i]])
-            bb = :(b.x[H.idxs[$i]])
-        else
-            # stacked operator
-            # build mul!(H.buf, H.A[i]',( b.x[H.idxs[i][1]], b.x[H.idxs[i][2]] ...  ))
-            bb = [:(b.x[H.idxs[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P, i)))]
-            bb = :(ArrayPartition($(bb...)))
-        end
-        ex = :($ex; mul!(H.buf, H.A[$i]', $bb)) # write on H.buf
+        ex = :($ex; mul!(H.buf, H.A[$i]', b.x[H.idxs[$i]])) # write on H.buf
         # sum H.buf with y
         ex = :($ex; y .+= H.buf)
     end
@@ -175,17 +131,8 @@ function Base.:(==)(H1::VCAT{N, L1, P1, C}, H2::VCAT{N, L2, P2, C}) where {N, L1
 end
 
 @generated function size(H::VCAT{N, L, P}) where {N, L, P}
-    exprs = []
-    for i in 1:N
-        Pi = fieldtype(P, i)
-        if Pi <: Integer
-            push!(exprs, :(size(H.A[$i], 1)))
-        else
-            for ii in eachindex(fieldnames(Pi))
-                push!(exprs, :(size(H.A[$i], 1)[$ii]))
-            end
-        end
-    end
+    # P always has Int elements (inner VCATs are flattened at construction)
+    exprs = [:(size(H.A[$i], 1)) for i in 1:N]
     natural_expr = Expr(:tuple, exprs...)
     return :((_vcat_apply_invperm($natural_expr, H.idxs), size(H.A[1], 2)))
 end
@@ -203,17 +150,8 @@ end
 
 domain_type(L::VCAT) = domain_type.(Ref(L.A[1]))
 @generated function codomain_type(H::VCAT{N, L, P}) where {N, L, P}
-    exprs = []
-    for i in 1:N
-        Pi = fieldtype(P, i)
-        if Pi <: Integer
-            push!(exprs, :(codomain_type(H.A[$i])))
-        else
-            for ii in eachindex(fieldnames(Pi))
-                push!(exprs, :(codomain_type(H.A[$i])[$ii]))
-            end
-        end
-    end
+    # P always has Int elements (inner VCATs are flattened at construction)
+    exprs = [:(codomain_type(H.A[$i])) for i in 1:N]
     natural_expr = Expr(:tuple, exprs...)
     return :(_vcat_apply_invperm($natural_expr, H.idxs))
 end
@@ -230,7 +168,7 @@ function get_slicing_expr(L::VCAT)
     return get_slicing_expr.(Tuple(L.A[i] for i in eachindex(L.A)))
 end
 function remove_slicing(L::VCAT)
-    new_ops = remove_slicing.(L[i] for i in eachindex(L.A))
+    new_ops = collect(map(remove_slicing, L.A))
     if !any(a -> a isa HCAT, new_ops) && all(i -> i isa Int, L.idxs)
         return DCAT(new_ops[collect(L.idxs)]...)
     elseif all(a -> a isa HCAT, L.A) && any(a -> any(is_null, a.A), L.A) && any(op -> size(op, 2) != size(new_ops[1], 2), new_ops)
@@ -284,8 +222,8 @@ end
 
 remove_displacement(V::VCAT) = VCAT(remove_displacement.(V.A), V.idxs, V.buf)
 
-function _copy_operator_impl(op::VCAT; array_type = nothing, threaded = nothing)
-    new_buf = _convert_buffer(op.buf, array_type)
-    new_ops = tuple([copy_operator(a; array_type, threaded) for a in op.A]...)
+function _copy_operator_impl(op::VCAT; storage_type = nothing, threaded = nothing)
+    new_buf = _convert_buffer(op.buf, storage_type)
+    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return VCAT(new_ops, op.idxs, new_buf)
 end

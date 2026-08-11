@@ -1,5 +1,5 @@
 @testmodule SimpleBatchOpHelpers begin
-    using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, Test
+    using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, JLArrays, Test
 
     function test_simple_batchop(op, batch_op, x, y, z, threaded)
         if threaded && Threads.nthreads() > 1
@@ -169,6 +169,52 @@ end
     if Threads.nthreads() > 1
         SimpleBatchOpHelpers.other_tests(true)
     end
+end
+
+@testitem "SimpleBatchOpMultiThreaded properties" tags = [:batching, :SimpleBatchOp] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
+    # Directly construct SimpleBatchOpMultiThreaded to test property/diag methods
+    # without requiring nthreads() > 1 at test time.
+    op = DiagOp([1.0, 2.0])
+    st = BatchOp(op, (2,); threaded = false)  # creates SimpleBatchOpSingleThreaded
+    @assert st isa AbstractOperators.SimpleBatchOpSingleThreaded
+    # Build MultiThreaded variant with same shape, 2 operator copies
+    mt = let T = typeof(st)
+        dT = T.parameters[1]
+        cT = T.parameters[2]
+        dM = T.parameters[3]
+        cM = T.parameters[4]
+        opT = typeof(op)
+        N = length(st.domain_size)
+        M = length(st.codomain_size)
+        C = 2
+        ops = (op, copy_operator(op))
+        AbstractOperators.SimpleBatchOpMultiThreaded{dT, cT, dM, cM, opT, N, M, C}(
+            ops, st.domain_size, st.codomain_size, CartesianIndices(st.batch_size)
+        )
+    end
+    @test diag_AAc(mt) == diag_AAc(st)
+    @test diag_AcA(mt) == diag_AcA(st)
+    @test diag(mt) == diag(st)
+    @test AbstractOperators.has_optimized_normalop(mt) == AbstractOperators.has_optimized_normalop(st)
+    @test opnorm(mt) == opnorm(st)
+    @test estimate_opnorm(mt) == estimate_opnorm(st)
+    # Eye operator: scalar diag paths
+    eye_op = Eye(Float64, (2,))
+    eye_st = BatchOp(eye_op, (2,); threaded = false)
+    eye_mt = let T = typeof(eye_st)
+        dT, cT, dM, cM = T.parameters[1], T.parameters[2], T.parameters[3], T.parameters[4]
+        opT = typeof(eye_op)
+        N, M, C = length(eye_st.domain_size), length(eye_st.codomain_size), 2
+        ops = (eye_op, copy_operator(eye_op))
+        AbstractOperators.SimpleBatchOpMultiThreaded{dT, cT, dM, cM, opT, N, M, C}(
+            ops, eye_st.domain_size, eye_st.codomain_size, CartesianIndices(eye_st.batch_size)
+        )
+    end
+    @test diag(eye_mt) == 1.0
+    @test diag_AcA(eye_mt) == 1.0
+    @test diag_AAc(eye_mt) == 1.0
 end
 
 @testitem "SimpleBatchOp benchmark" tags = [:batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin

@@ -1,6 +1,7 @@
 @testitem "L-BFGS: construction and basic mul" tags = [:linearoperator, :LBFGS] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: LBFGS, update!, mul!, reset!
+    verb && println(" --- Testing L-BFGS: construction and basic mul --- ")
 
     mem = 3
     x = zeros(10)
@@ -25,6 +26,7 @@ end
 @testitem "L-BFGS: update and two-loop recursion" tags = [:linearoperator, :LBFGS] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: LBFGS, update!, mul!, reset!
+    verb && println(" --- Testing L-BFGS: update and two-loop recursion --- ")
 
     Q = [
         32.0 13.1 -4.9 -3.0 6.0 2.2 2.6 3.4 -1.9 -7.5
@@ -130,6 +132,7 @@ end
 @testitem "L-BFGS: memory limit and reset" tags = [:linearoperator, :LBFGS] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: LBFGS, update!, mul!, reset!
+    verb && println(" --- Testing L-BFGS: memory limit and reset --- ")
 
     Q = [
         32.0 13.1 -4.9 -3.0 6.0 2.2 2.6 3.4 -1.9 -7.5

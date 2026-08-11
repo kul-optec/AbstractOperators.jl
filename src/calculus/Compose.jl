@@ -303,8 +303,8 @@ remove_displacement(C::Compose) = Compose(remove_displacement.(C.A), C.buf)
 
 get_operators(C::Compose) = C.A
 
-function _copy_operator_impl(op::Compose; array_type = nothing, threaded = nothing)
-    new_bufs = tuple([_convert_buffer(b, array_type) for b in op.buf]...)
-    new_ops = tuple([copy_operator(a; array_type, threaded) for a in op.A]...)
+function _copy_operator_impl(op::Compose; storage_type = nothing, threaded = nothing)
+    new_bufs = tuple([_convert_buffer(b, storage_type) for b in op.buf]...)
+    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return Compose(new_ops, new_bufs)
 end

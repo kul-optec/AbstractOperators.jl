@@ -101,7 +101,7 @@
     @test Jacobian(Ax_mul_Bx(A, B), x) == Jacobian(Ax_mul_Bx(A, B), x)
 end
 
-@testitem "Ax_mul_Bx (GPU)" tags = [:gpu, :calculus, :Ax_mul_Bx] setup = [TestUtils] begin
+@testitem "Ax_mul_Bx (GPU)" tags = [:gpu, :calculus, :Ax_mul_Bx] setup = [TestUtils, GPUNLTestUtils] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -117,7 +117,8 @@ end
         test_NLop_gpu(P, x, r, false)
 
         n2 = 3
-        P2 = Ax_mul_Bx(Sin(gpu_zeros(backend, Float64, n2, n2)), Cos(gpu_zeros(backend, Float64, n2, n2)))
+        AT = gpu_wrapper(backend, Float64, n2, n2)
+        P2 = Ax_mul_Bx(Sin(Float64, (n2, n2); array_type = AT), Cos(Float64, (n2, n2); array_type = AT))
         x2 = gpu_randn(backend, n2, n2)
         r2 = gpu_randn(backend, n2, n2)
         test_NLop_gpu(P2, x2, r2, false)

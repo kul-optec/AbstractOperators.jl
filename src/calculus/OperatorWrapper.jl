@@ -61,8 +61,6 @@ function OperatorWrapper(op::AbstractOperator; array_type::Type = Array)
     S = _array_wrapper_type(array_type)
     T_dom = domain_type(op)
     T_cod = codomain_type(op)
-    N_dom = ndims(dom_buf)
-    N_cod = ndims(cod_buf)
     DS = S{T_dom}
     CS = S{T_cod}
     return OperatorWrapper{typeof(op), typeof(dom_buf), typeof(cod_buf), DS, CS}(op, dom_buf, cod_buf)
@@ -127,9 +125,9 @@ displacement(A::OperatorWrapper) = displacement(A.op)
 remove_displacement(A::OperatorWrapper) = OperatorWrapper(remove_displacement(A.op))
 
 function _copy_operator_impl(
-        A::OperatorWrapper{Op, DB, CB, DS, CS}; array_type = nothing, threaded = nothing
+        A::OperatorWrapper{Op, DB, CB, DS, CS}; storage_type = nothing, threaded = nothing
     ) where {Op, DB, CB, DS, CS}
-    new_op = copy_operator(A.op; array_type = nothing, threaded)
+    new_op = copy_operator(A.op; storage_type = nothing, threaded)
     return OperatorWrapper{typeof(new_op), DB, CB, DS, CS}(
         new_op, similar(A.dom_buf), similar(A.cod_buf)
     )

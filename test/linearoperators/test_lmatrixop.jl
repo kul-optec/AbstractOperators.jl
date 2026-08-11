@@ -2,11 +2,16 @@
     using Random, AbstractOperators
 
     Random.seed!(0)
+    verb && println(" --- Testing LMatrixOp: basic mul --- ")
 
-    n, m = 5, 6
-    b = randn(m)
-    op = LMatrixOp(Float64, (n, m), b)
-    test_op(op, randn(n, m), randn(n), verb)
+    function test_lmatrixop_mul(conv, verb)
+        n, m = 5, 6
+        b = randn(m)
+        op = LMatrixOp(Float64, (n, m), conv(b))
+        test_op(op, conv(randn(n, m)), conv(randn(n)), verb)
+    end
+
+    test_lmatrixop_mul(identity, verb)
 
     n, m = 5, 6
     b = randn(m)
@@ -54,6 +59,7 @@ end
 @testitem "LMatrixOp: other constructors" tags = [:linearoperator, :LMatrixOp] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing LMatrixOp: other constructors --- ")
 
     n, m, l = 5, 6, 7
 
@@ -95,6 +101,7 @@ end
 @testitem "LMatrixOp: scale and properties" tags = [:linearoperator, :LMatrixOp] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing LMatrixOp: scale and properties --- ")
 
     n, m, l = 5, 6, 7
     bvec = randn(m)
@@ -135,7 +142,7 @@ end
     @test occursin("(⋅)b", s)
 end
 
-@testitem "LMatrixOp (GPU)" tags = [:gpu, :linearoperator, :LMatrixOp] setup = [TestUtils] begin
+@testitem "LMatrixOp (GPU)" tags = [:linearoperator, :LMatrixOp, :gpu] setup = [TestUtils] begin
     using Random, AbstractOperators, GPUEnv
     for backend in gpu_backends()
         Random.seed!(0)

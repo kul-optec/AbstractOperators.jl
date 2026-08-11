@@ -214,10 +214,10 @@ codomain_array_type(::Variation{T, N, Th, S}) where {T, N, Th, S} = S
 is_thread_safe(::Variation) = true
 
 function _copy_operator_impl(
-        op::Variation{T, N, Th, S}; array_type = nothing, threaded = nothing
+        op::Variation{T, N, Th, S}; storage_type = nothing, threaded = nothing
     ) where {T, N, Th, S}
     new_threaded = threaded === nothing ? Th : threaded
-    new_at = array_type === nothing ? _array_wrapper_type(S) : array_type
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
     return Variation(T, op.dim_in; threaded = new_threaded, array_type = new_at)
 end
 

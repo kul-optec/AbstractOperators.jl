@@ -1,5 +1,5 @@
 @testmodule SpreadingBatchOpHelpers begin
-    using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, Test
+    using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, JLArrays, Test
 
     function test_spreading_batchop(operators, batch_op, x, y, z, threaded)
         if !threaded
@@ -317,5 +317,34 @@ end
         @test size(Array(y_gpu)) == (2, 4, 3)
         @test all(Array(y_gpu)[1, :, :] .≈ 1.0)
         @test all(Array(y_gpu)[2, :, :] .≈ 2.0)
+    end
+end
+
+@testitem "BatchOp without explicit sizes (lines 107, 112)" tags = [:batching, :SpreadingBatchOp] setup = [TestUtils, SpreadingBatchOpHelpers] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # BatchOp(operators) with no size args → calls BatchOp(operators, ()) → line 112
+    n = 5
+    ops = [Eye(Float64, (n,)) for _ in 1:3]
+    bop = BatchOp(ops; threaded = false)
+    @test bop isa AbstractOperators.SpreadingBatchOp
+    x = randn(n, 3)
+    y = bop * x
+    @test size(y) == (n, 3)
+    @test y ≈ x
+end
+
+@testitem "BatchOp unsupported threading strategy for non-thread-safe ops (line 404)" tags = [:batching, :SpreadingBatchOp] setup = [TestUtils, SpreadingBatchOpHelpers] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    if Threads.nthreads() > 1
+        n = 5
+        # LBFGS is not thread-safe; an unknown strategy reaches the else branch at line 404
+        ops = [LBFGS(zeros(n), 3) for _ in 1:3]
+        @test_throws ArgumentError BatchOp(
+            ops, (4,), (:b, :s, :_);
+            threaded = true,
+            threading_strategy = :UNKNOWN_STRATEGY,
+        )
     end
 end

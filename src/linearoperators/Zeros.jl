@@ -60,7 +60,7 @@ function Zeros(
         codomain_type::NTuple{NN, Type},
         dim_out::NTuple{NN, Tuple},
     ) where {NN}
-    return VCAT([Zeros(domain_type, dim_in, codomain_type[i], dim_out[i]) for i in 1:NN]...)
+    return VCAT(ntuple(i -> Zeros(domain_type, dim_in, codomain_type[i], dim_out[i]), Val(NN))...)
 end
 
 Zeros(A::AbstractOperator) = Zeros(domain_type(A), size(A, 2), codomain_type(A), size(A, 1))

@@ -186,10 +186,10 @@ end
 
 remove_displacement(S::Sum) = Sum(remove_displacement.(S.A), S.bufC, S.bufD)
 
-function _copy_operator_impl(op::Sum; array_type = nothing, threaded = nothing)
-    new_bufC = _convert_buffer(op.bufC, array_type)
-    new_bufD = _convert_buffer(op.bufD, array_type)
-    new_ops = tuple([copy_operator(a; array_type, threaded) for a in op.A]...)
+function _copy_operator_impl(op::Sum; storage_type = nothing, threaded = nothing)
+    new_bufC = _convert_buffer(op.bufC, storage_type)
+    new_bufD = _convert_buffer(op.bufD, storage_type)
+    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     K = length(new_ops)
     L = typeof(new_ops)
     return Sum{K, typeof(new_bufC), typeof(new_bufD), L}(new_ops, new_bufC, new_bufD)

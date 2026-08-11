@@ -1,6 +1,7 @@
 @testitem "Axt_mul_Bx: basic mul" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Axt_mul_Bx: basic mul --- ")
 
     n = 10
     A, B = Eye(n), Sin(n)
@@ -40,6 +41,7 @@ end
 @testitem "Axt_mul_Bx: HCAT and permute" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Axt_mul_Bx: HCAT and permute --- ")
 
     # testing with HCAT
     m, n = 3, 5
@@ -74,6 +76,7 @@ end
 @testitem "Axt_mul_Bx: error paths and equality" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing Axt_mul_Bx: error paths and equality --- ")
 
     # ndims==2 branch with mismatched first codomain dimension
     struct AxtDummy2D <: AbstractOperator
@@ -138,4 +141,29 @@ end
         Bx = Array(B2.A) * Array(x2)
         @test Array(y2) ≈ Ax' * Bx
     end
+end
+
+@testitem "Axt_mul_Bx 2D operator DimensionMismatch" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # 2D operators with same domain but different first codomain dimension (line 39)
+    A = MatrixOp(randn(3, 5), 4)
+    B = MatrixOp(randn(6, 5), 4)
+    @test_throws DimensionMismatch Axt_mul_Bx(A, B)
+end
+
+@testitem "Axt_mul_Bx: size mismatch error (1D)" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
+    using AbstractOperators
+    # Two 1D operators with different sizes -> triggers size(A) != size(B) in inner constructor
+    A = MatrixOp(randn(3, 4))   # size = ((3,), (4,))
+    B = MatrixOp(randn(5, 4))   # size = ((5,), (4,)) -- different codomain
+    @test_throws DimensionMismatch Axt_mul_Bx(A, B)
+end
+
+@testitem "Axt_mul_Bx: size mismatch error (1D)" tags = [:calculus, :Axt_mul_Bx] setup = [TestUtils] begin
+    using AbstractOperators
+    # Two 1D operators with different sizes -> triggers size(A) != size(B) in inner constructor
+    A = MatrixOp(randn(3, 4))   # size = ((3,), (4,))
+    B = MatrixOp(randn(5, 4))   # size = ((5,), (4,)) -- different codomain
+    @test_throws DimensionMismatch Axt_mul_Bx(A, B)
 end

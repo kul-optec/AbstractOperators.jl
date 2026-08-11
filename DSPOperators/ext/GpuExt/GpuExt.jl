@@ -40,7 +40,7 @@ end
 
 function _make_gpu_filt(ref::AbstractGPUArray{T}, cpu_op::AbstractFilt{T, N}) where {T <: Real, N}
     fftlen = nextpow(2, cpu_op.dim_in[1] + length(cpu_op.b) - 1)
-    array_type = _wrapper_type(ref){T}
+    storage_type = _wrapper_type(ref){T}
     buf = similar(ref, T, fftlen)
     buf_fft = _gpu_complex_buffer(ref, fftlen)
     buf_out = similar(ref, T, fftlen)
@@ -57,7 +57,7 @@ function _make_gpu_filt(ref::AbstractGPUArray{T}, cpu_op::AbstractFilt{T, N}) wh
     h_fft_conj = similar(h_fft)
     h_fft_conj .= conj.(h_fft)
 
-    return GpuFilt{T, N, array_type, typeof(buf), typeof(buf_fft), typeof(plan_fwd), typeof(plan_inv)}(
+    return GpuFilt{T, N, storage_type, typeof(buf), typeof(buf_fft), typeof(plan_fwd), typeof(plan_inv)}(
         cpu_op.dim_in,
         collect(cpu_op.b),
         collect(cpu_op.a),

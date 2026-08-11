@@ -87,8 +87,7 @@ end
         Random.seed!(0)
 
         n = 5
-        x = gpu_ones(backend, Float64, n)
-        opS = Sum(Eye(x), Scale(2.0, Eye(x)))
+        opS = Sum(DiagOp(gpu_ones(backend, Float64, n)), DiagOp(to_gpu(backend, 2 .* ones(n))))
         test_op(opS, gpu_randn(backend, n), gpu_randn(backend, n), false)
 
         m, n2 = 5, 7
@@ -97,4 +96,16 @@ end
         opS2 = Sum(MatrixOp(A1), MatrixOp(A2))
         test_op(opS2, gpu_randn(backend, n2), gpu_randn(backend, m), false)
     end
+end
+
+@testitem "Sum: all-Zeros degenerate case (line 79)" tags = [:calculus, :Sum] setup = [TestUtils] begin
+    using AbstractOperators
+    n, m = 5, 4
+    # Sum of two Zeros: @generated code returns A[1] when n_flat == 0 (line 79)
+    z1 = Zeros(Float64, (n,), Float64, (m,))
+    z2 = Zeros(Float64, (n,), Float64, (m,))
+    result = Sum(z1, z2)
+    @test result === z1
+    x = randn(n)
+    @test all(result * x .== 0)
 end

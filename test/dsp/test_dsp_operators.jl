@@ -31,6 +31,31 @@
     @test is_full_column_rank(op) == true
 end
 
+@testitem "Conv complex domain" tags = [:dsp, :Conv] setup = [TestUtils] begin
+    using DSPOperators, DSP, LinearAlgebra, Random
+    Random.seed!(0)
+    n, m = 5, 6
+    h = randn(ComplexF64, m)
+    op = Conv(ComplexF64, (n,), h)
+    x1 = randn(ComplexF64, n)
+    y1 = test_op(op, x1, randn(ComplexF64, n + m - 1), verb)
+    y2 = conv(x1, h)
+    @test all(norm.(y1 .- y2) .<= 1.0e-10)
+end
+
+@testitem "Filt: a[1] != 1 normalization" tags = [:dsp, :Filt] setup = [TestUtils] begin
+    using DSPOperators, DSP, LinearAlgebra, Random
+    Random.seed!(0)
+    n = 10
+    b = [2.0; 0.0; 2.0; 0.0; 0.0]
+    a = [2.0; 2.0; 2.0]    # a[1] != 1, triggers normalization
+    op = Filt(Float64, (n,), b, a)
+    # after normalization b/2 and a/2 => same IIR
+    op_ref = Filt(Float64, (n,), b ./ 2, a ./ 2)
+    x1 = randn(n)
+    @test op * x1 ≈ op_ref * x1
+end
+
 @testitem "Filt: IIR and FIR mappings" tags = [:dsp, :Filt] setup = [TestUtils] begin
     using DSPOperators, DSP, LinearAlgebra, Random
 
@@ -322,4 +347,18 @@ end
         mul!(z, op', r)
         @test collect(z) ≈ z_cpu atol = 1.0e-10
     end
+end
+
+@testitem "Xcorr complex domain" tags = [:dsp, :Xcorr] setup = [TestUtils] begin
+    using DSPOperators, LinearAlgebra, Random
+    Random.seed!(0)
+    n, m = 5, 6
+    h = randn(ComplexF64, m)
+    op = Xcorr(ComplexF64, (n,), h)
+    x1 = randn(ComplexF64, n)
+    y1 = op * x1
+    @test length(y1) == 2 * max(n, m) - 1
+    z1 = op' * y1
+    @test length(z1) == n
+    @test z1 ≈ op' * (op * x1)
 end

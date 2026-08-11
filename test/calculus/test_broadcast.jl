@@ -1,6 +1,7 @@
 @testitem "BroadCast: basic mul" tags = [:calculus, :BroadCast] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
+    verb && println(" --- Testing BroadCast --- ")
 
     m, n = 8, 4
     dim_out = (m, 10)
@@ -179,4 +180,34 @@ end
         )
         test_op(opR2, gpu_randn(backend, m2, n2), gpu_randn(backend, dim_out2...), false)
     end
+end
+
+@testitem "BroadCast same-size returns operator unchanged" tags = [:calculus, :BroadCast] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    m, n = 5, 3
+    A = MatrixOp(randn(m, n))
+    # BroadCast with dim_out == size(A, 1) should return A unchanged (line 80)
+    result = BroadCast(A, size(A, 1))
+    @test result === A
+    # Same for 2D Eye
+    B = Eye(m, n)
+    result2 = BroadCast(B, size(B, 1))
+    @test result2 === B
+end
+
+@testitem "BroadCast non-compact adjoint reshape" tags = [:calculus, :BroadCast] setup = [TestUtils] begin
+    using Random, AbstractOperators, LinearAlgebra
+    Random.seed!(0)
+    m, n = 3, 2
+    # Reshape codomain to (1, m) so slices of dim_out=(4,m,5) won't match (line 144)
+    A = reshape(MatrixOp(randn(m, n)), 1, m)
+    dim_out = (4, m, 5)
+    B_noncompact = BroadCast(A, dim_out; threaded = false)
+    x = randn(n)
+    y = B_noncompact * x
+    @test size(y) == dim_out
+    y_test = randn(dim_out)
+    x_back = B_noncompact' * y_test
+    @test size(x_back) == (n,)
 end

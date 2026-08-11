@@ -226,7 +226,7 @@ end
         Random.seed!(0)
 
         n = 4
-        opH = HCAT(DiagOp(gpu_ones(backend, Float64, n)), DiagOp(2 .* gpu_ones(backend, Float64, n)))
+        opH = HCAT(DiagOp(gpu_ones(backend, Float64, n)), DiagOp(to_gpu(backend, 2 .* ones(n))))
         test_op(opH, ArrayPartition(gpu_randn(backend, n), gpu_randn(backend, n)), gpu_randn(backend, n), false)
 
         m, n1, n2 = 4, 7, 5
@@ -235,4 +235,43 @@ end
         opH2 = HCAT(MatrixOp(A1), MatrixOp(A2))
         test_op(opH2, ArrayPartition(gpu_randn(backend, n1), gpu_randn(backend, n2)), gpu_randn(backend, m), false)
     end
+end
+
+@testitem "HCAT fun_name reversed idxs (line 294)" tags = [:calculus, :HCAT] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    n = 8
+    A1 = MatrixOp(randn(4, n))
+    A2 = MatrixOp(randn(4, n))
+    H = HCAT(A1, A2)
+    # permute swaps domain slot ordering → idxs[1] == 2 triggers reversed branch (line 294)
+    Hp = AbstractOperators.permute(H, [2, 1])
+    @test Hp isa HCAT
+    name = AbstractOperators.fun_name(Hp)
+    @test occursin(",", name)
+end
+
+@testitem "HCAT get_slicing_expr: single-expr return (line 337)" tags = [:calculus, :HCAT] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    n = 10
+    # Single-element HCAT → length(exprs) == 1 → return exprs[1]
+    op_gi = GetIndex(Float64, (n,), (1:4,))
+    H_single = HCAT((op_gi,), (1,), zeros(4))
+    @test AbstractOperators.is_sliced(H_single)
+    expr_single = AbstractOperators.get_slicing_expr(H_single)
+    @test expr_single == (1:4,)
+end
+
+@testitem "HCAT getindex: tuple-idxs error (line 87)" tags = [:calculus, :HCAT] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    n = 4
+    # HCAT with a Compose(MatrixOp, HCAT) sub-operator gives tuple idxs
+    H_inner = HCAT(MatrixOp(randn(n, n)), MatrixOp(randn(n, n)))
+    C_sub = Compose(MatrixOp(randn(n, n)), H_inner)
+    H_outer = HCAT(MatrixOp(randn(n, n)), C_sub)
+    @test H_outer.idxs == (1, (2, 3))
+    # Selecting partial index into the tuple-idxs sub-op should error
+    @test_throws ErrorException H_outer[2]
 end

@@ -72,14 +72,6 @@ end
     return first(t) == v ? i : _dcat_find_in_tuple(Base.tail(t), v, i + 1)
 end
 
-# Apply the inverse permutation encoded in idxs to natural, using only tuple
-# operations so that no Vector is allocated on the hot path.
-function _dcat_apply_invperm(natural::Tuple, idxs::Tuple)
-    N = length(natural)
-    p = _dcat_flatten_idxs(idxs)
-    return ntuple(j -> natural[_dcat_find_in_tuple(p, j)], Val(N))
-end
-
 # Constructors
 DCAT(A::AbstractOperator) = A
 
@@ -201,6 +193,14 @@ has_optimized_normalop(L::DCAT) = any(has_optimized_normalop.(L.A))
 function get_normal_op(H::DCAT)
     idxs = tuple((1:length(H.A))...)
     return DCAT(tuple([get_normal_op(H.A[i]) for i in eachindex(H.A)]...), idxs, idxs)
+end
+
+# Apply inverse permutation encoded in idxs to natural, using only tuple
+# operations so that no Vector is allocated on the hot path.
+function _dcat_apply_invperm(natural::Tuple, idxs::Tuple)
+    N = length(natural)
+    p = _dcat_flatten_idxs(idxs)
+    return ntuple(j -> natural[_dcat_find_in_tuple(p, j)], Val(N))
 end
 
 # Properties

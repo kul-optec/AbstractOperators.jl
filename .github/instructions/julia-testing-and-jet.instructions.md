@@ -19,7 +19,9 @@ applyTo: "test/**/*.jl,docs/**/*.md"
 - Keep Aqua and doctests passing alongside functional tests.
 - Never remove assertions to force green tests.
 - All temporary test and benchmark outputs must go under `.temp/` only.
-- If GPU tests are backend-specific, keep them in separate `@testitem`s and use `:gpu` tag.
+- If GPU tests are backend-specific, keep them in separate `@testitem`s and use `:cuda` / `:amdgpu` tags.
+- In non-FFTW/non-DSP operator tests, prefer JLArray backend checks over CUDA/AMDGPU device checks.
+- Use direct `import CUDA` / `import AMDGPU` + `functional()` guards in testitems; avoid try/catch gating.
 - When `VERB` is enabled, print each running testitem name at test-runner filter time.
 - For local coverage, mirror CI with `julia --project=test --code-coverage=user test/runtests.jl`, then process `*.cov` / `*.info` artifacts into `lcov.info` if needed.
 - Subpackages (DSPOperators, FFTWOperators, NFFTOperators, WaveletOperators) have no standalone `test/` directory; they are tested and their coverage is gathered exclusively through the parent package's `test/` project. Do not attempt a separate subpackage coverage run.

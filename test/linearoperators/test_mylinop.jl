@@ -60,6 +60,31 @@ end
     @test op2 * x1 ≈ A * x1
 end
 
+@testitem "AbstractOperator fallback properties" tags = [:misc, :MyLinOp] setup = [TestUtils] begin
+    using AbstractOperators, LinearAlgebra, Random
+    Random.seed!(0)
+    n, m = 5, 4
+    A = randn(n, m)
+    op = MyLinOp(Float64, (m,), (n,), (y, x) -> mul!(y, A, x), (y, x) -> mul!(y, A', x))
+
+    # is_thread_safe falls back to false for custom operators
+    @test is_thread_safe(op) == false
+    # is_sliced falls back to false
+    @test is_sliced(op) == false
+    # get_slicing_expr falls back to Colon() for non-null operators
+    @test AbstractOperators.get_slicing_expr(op) == Colon()
+    # get_slicing_mask throws for operators without specialization
+    @test_throws ErrorException AbstractOperators.get_slicing_mask(op)
+    # has_optimized_normalop falls back to false
+    @test AbstractOperators.has_optimized_normalop(op) == false
+    # get_normal_op falls back to L' * L
+    normal = AbstractOperators.get_normal_op(op)
+    x = randn(m)
+    @test normal * x ≈ A' * (A * x)
+    # diag throws for non-diagonal operators
+    @test_throws ErrorException diag(op)
+end
+
 @testitem "MyLinOp (GPU)" tags = [:gpu, :linearoperator, :MyLinOp] setup = [TestUtils] begin
     using Random, AbstractOperators, GPUEnv
 

@@ -114,11 +114,11 @@ end
     for backend in gpu_backends()
         Random.seed!(0)
         n, m = 5, 4
-        A = gpu_randn(backend, n, m)
-        test_op(MatrixOp(A), gpu_randn(backend, m), gpu_randn(backend, n), false)
-        Ac = gpu_randn(backend, ComplexF64, n, m)
+        A = randn(n, m)
+        test_op(MatrixOp(to_gpu(backend, A)), gpu_randn(backend, m), gpu_randn(backend, n), false)
+        Ac = randn(n, m) + im * randn(n, m)
         test_op(
-            MatrixOp(Ac),
+            MatrixOp(to_gpu(backend, Ac)),
             gpu_randn(backend, ComplexF64, m),
             gpu_randn(backend, ComplexF64, n),
             false,

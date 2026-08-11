@@ -96,7 +96,7 @@ end
         Random.seed!(0)
 
         n = 5
-        op = FiniteDiff(gpu_zeros(backend, Float64, n))
+        op = FiniteDiff(Float64, (n,); array_type = gpu_wrapper(backend, Float64, n))
         opT = AdjointOperator(op)
         test_op(opT, gpu_randn(backend, n - 1), gpu_randn(backend, n), false)
 
