@@ -178,4 +178,11 @@ end
     y3 = zeros(n)
     mul!(y3, P2, x2)
     @test y3 ≈ P * x2
+
+    # Explicit threaded kwarg: exercise _copy_operator_impl unambiguously
+    P3 = copy_operator(P; threaded = true, storage_type = nothing)
+    @test P3 isa HadamardProd
+    y4 = zeros(n)
+    mul!(y4, P3, x)
+    @test y4 ≈ y1
 end

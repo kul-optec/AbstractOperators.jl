@@ -263,6 +263,18 @@ end
     @test expr_single == (1:4,)
 end
 
+@testitem "HCAT get_slicing_expr: multi-element loop (line 330)" tags = [:calculus, :HCAT] setup = [TestUtils] begin
+    using AbstractOperators
+    n = 12
+    op1 = GetIndex(Float64, (n,), (1:4,))
+    op2 = GetIndex(Float64, (n,), (5:8,))
+    op3 = GetIndex(Float64, (n,), (9:12,))
+    H = HCAT(op1, op2, op3)
+    @test AbstractOperators.is_sliced(H)
+    exprs = AbstractOperators.get_slicing_expr(H)
+    @test exprs == ((1:4,), (5:8,), (9:12,))
+end
+
 @testitem "HCAT getindex: tuple-idxs error (line 87)" tags = [:calculus, :HCAT] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(0)
