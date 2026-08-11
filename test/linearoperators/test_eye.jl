@@ -18,8 +18,10 @@
 end  # @testmodule EyeTestHelper
 
 @testitem "Eye" tags = [:linearoperator, :Eye] setup = [TestUtils, EyeTestHelper] begin
-    using Random, AbstractOperators
+    using Random, AbstractOperators, JLArrays
     Random.seed!(0)
+
+    test_eye_mul(identity, verb, test_op, to_cpu, norm)
 
     test_eye_mul(identity, verb, test_op, to_cpu, norm)
 

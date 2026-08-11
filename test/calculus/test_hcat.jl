@@ -302,3 +302,4 @@ end
     x2 = ArrayPartition(randn(n1), randn(n2))
     @test collect(opH2 * x2) ≈ collect(opH * x2)
 end
+>>>>>>> d84c552 (Port test coverage expansion and refactors beyond upstream GPU-support merge)
