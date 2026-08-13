@@ -25,8 +25,6 @@ end  # @testmodule FiniteDiffTestHelper
 
     test_finitediff_mul(identity, verb, test_op)
 
-    test_finitediff_mul(identity, verb, test_op)
-
     n = 10
     op = FiniteDiff(Float64, (n,))
     x1 = randn(n)
