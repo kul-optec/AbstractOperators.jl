@@ -17,12 +17,14 @@
         Pkg.develop(path = normpath(joinpath(@__DIR__, "..", "FFTWOperators"))) # FFTWOperators
         Pkg.develop(path = normpath(joinpath(@__DIR__, "..", "NFFTOperators"))) # NFFTOperators
         Pkg.develop(path = normpath(joinpath(@__DIR__, "..", "WaveletOperators"))) # WaveletOperators
-    elseif VERSION >= v"1.11" && Base.find_package("AcceleratedDCTs") === nothing
-        Pkg.add(name = "AcceleratedDCTs", version = "0.4")
     end
 
     using GPUEnv
     GPUEnv.activate(; persist = true)
+
+    if VERSION >= v"1.11" && Base.find_package("AcceleratedDCTs") === nothing
+        Pkg.add(name = "AcceleratedDCTs", version = "0.4")
+    end
 
     const verb = get(ENV, "ABSTRACTOPERATORS_TEST_VERBOSE", "false") == "true"
 

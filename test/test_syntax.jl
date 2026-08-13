@@ -428,7 +428,7 @@ end
     x = randn(n)
     @test sliced * x ≈ (S * x)[2:(n - 1)]
 
-    # Line 71: Sum with multi-domain input (ndoms > 1 → iterates over A.A)
+    # Sum with multi-domain input (ndoms > 1 → iterates over A.A)
     # getindex on multi-domain Sum selects domain sub-operators (not codomain rows)
     n2, m1, m2 = 4, 2, 3
     Hbase = HCAT(MatrixOp(randn(n2, m1)), MatrixOp(randn(n2, m2)))
@@ -447,7 +447,7 @@ end
     x = randn(n)
     @test sliced * x ≈ (s * x)[1:2]
 
-    # Line 132: Scale wrapping multi-domain operator
+    # Scale wrapping multi-domain operator
     # getindex on multi-domain Scale selects domain sub-operators (not codomain rows)
     n2, m1, m2 = 4, 2, 3
     Hbase = HCAT(MatrixOp(randn(n2, m1)), MatrixOp(randn(n2, m2)))
@@ -462,10 +462,10 @@ end
     n, m1, m2 = 4, 2, 3
     op_multi_in = HCAT(MatrixOp(randn(n, m1)), MatrixOp(randn(n, m2)))
     y = zeros(n)
-    # utils.jl:104 — multi-domain op with non-ArrayPartition input
+    # multi-domain op with non-ArrayPartition input
     @test_throws ArgumentError AbstractOperators.check(y, op_multi_in, randn(m1))
 
-    # utils.jl:128 — multi-codomain op with non-ArrayPartition output
+    # multi-codomain op with non-ArrayPartition output
     op_multi_out = DCAT(MatrixOp(randn(m1, m1)), MatrixOp(randn(m2, m2)))
     @test_throws ArgumentError AbstractOperators.check(
         randn(m1), op_multi_out, ArrayPartition(randn(m1), randn(m2))
@@ -474,7 +474,7 @@ end
 
 @testitem "Syntax: Scale complex coeff on real AdjointMatrixOp errors" tags = [:misc, :Syntax] setup = [TestUtils] begin
     using AbstractOperators
-    # MatrixOp.jl:84 — real-codomain adjoint MatrixOp scaled by complex scalar
+    # real-codomain adjoint MatrixOp scaled by complex scalar
     n = 4
     op = MatrixOp(randn(n, n))'
     @test_throws ErrorException Scale(1.0im, op)
@@ -482,7 +482,7 @@ end
 
 @testitem "Syntax: Compose getindex with multi-domain errors (line 62)" tags = [:misc, :Syntax] setup = [TestUtils] begin
     using AbstractOperators, RecursiveArrayTools
-    # syntax.jl:62: Compose with ndoms>1 cannot be split (error branch)
+    # Compose with ndoms>1 cannot be split (error branch)
     # diagonal * HCAT always simplifies to HCAT via combination rules,
     # so any Compose with ndoms>1 has a non-diagonal tail and hits the error.
     n = 4

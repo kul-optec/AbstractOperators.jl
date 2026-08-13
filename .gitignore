@@ -23,3 +23,6 @@ Manifest-v*.toml
 *.cov
 test/gpu_env/
 benchmark/gpu_env/
+
+# MCP server folders
+.serena

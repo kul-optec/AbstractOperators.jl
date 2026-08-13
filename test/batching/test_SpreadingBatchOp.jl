@@ -1,5 +1,5 @@
 @testmodule SpreadingBatchOpHelpers begin
-    using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, JLArrays, Test
+    using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, Test
 
     function test_spreading_batchop(operators, batch_op, x, y, z, threaded)
         if !threaded

@@ -19,9 +19,9 @@ localized; avoid unrelated refactors.
   - property traits such as linearity, diagonal structure, and rank-related predicates.
 - `check` utility function must be called in all effective `mul!` paths to ensure consistent
   argument validation and error messages.
-- Preserve `domain_array_type`/`codomain_array_type` semantics and dispatch compatibility;
+- Preserve `domain_storage_type`/`codomain_storage_type` semantics and dispatch compatibility;
   keep them consistent with constructor-selected storage.
-- Constructors should expose an `array_type` keyword where storage backend selection is
+- Constructors should expose an `storage_type` keyword where storage backend selection is
   meaningful.
 - When storage checks become stricter, fix operator traits and tests instead of relaxing
   `check`.
@@ -29,7 +29,7 @@ localized; avoid unrelated refactors.
   method size, but do not weaken checks.
 - If modifying copy semantics, preserve the convention that immutable/read-only arrays are
   shared while mutable working buffers are copied deliberately (see
-  `copy_operator(op; array_type=nothing, threaded=nothing)`).
+  `copy_operator(op; storage_type=nothing, threaded=nothing)`).
 - Keep source formatted with Runic-compatible Julia style.
 
 GPU extension conventions live in `ext/GpuExt/CLAUDE.md`.
@@ -68,8 +68,8 @@ GPU extension conventions live in `ext/GpuExt/CLAUDE.md`.
   - `@test_call` for key public call signatures and runtime-like call paths.
   Missing any of the three is an incomplete migration. Public API changes must update JET
   tests in the same change.
-- JET `@test_opt` flags `array_type::Type` (unparameterized keyword) as a source of runtime
-  dispatch. Use `array_type::Type{<:AbstractArray}` and avoid kwarg-to-kwarg forwarding; route
+- JET `@test_opt` flags `storage_type::Type` (unparameterized keyword) as a source of runtime
+  dispatch. Use `storage_type::Type{<:AbstractArray}` and avoid kwarg-to-kwarg forwarding; route
   through a typed positional-arg helper (e.g. `_make_eye(T, dims, S)`) so JET can resolve
   dispatch statically.
 - Keep Aqua and doctests passing alongside functional tests. When Aqua reports "Unexpected
@@ -80,14 +80,14 @@ GPU extension conventions live in `ext/GpuExt/CLAUDE.md`.
   device checks. Use direct `import CUDA`/`import AMDGPU` + `functional()` guards in
   testitems; avoid try/catch gating. Restrict GPU `GetIndex` test indices to ranges, colons,
   and scalar integers — bool-mask and integer-vector `view` forms are not universally
-  supported across GPU backends. Add `domain_array_type`/`codomain_array_type` tests and
+  supported across GPU backends. Add `domain_storage_type`/`codomain_storage_type` tests and
   verify `op * x` allocates on the active backend. Migrate GPU-backend storage-type assertions
   into each operator's own CUDA/AMDGPU `@testitem` (e.g.
-  `@test domain_array_type(op) <: CUDA.CuArray`) so they run with the functional tests.
+  `@test domain_storage_type(op) <: CUDA.CuArray`) so they run with the functional tests.
 - Stochastic test assertions like `op * randn(n) ≈ other_op * (op * randn(n))` are wrong when
   the two `randn` calls produce different vectors — always capture into a variable first.
-- Agent sub-tasks frequently generate `Eye(T, dims, array_type)` (3 positional args) instead
-  of `Eye(T, dims; array_type=...)` (keyword). Always verify agent output for this pattern.
+- Agent sub-tasks frequently generate `Eye(T, dims, storage_type)` (3 positional args) instead
+  of `Eye(T, dims; storage_type=...)` (keyword). Always verify agent output for this pattern.
 - All temporary test and benchmark outputs must go under `.temp/` only.
 - When `VERB` is enabled, print each running testitem name at test-runner filter time.
 
