@@ -418,6 +418,24 @@ end
     @test_throws MethodError mul!(zeros(3), op, zeros(3))
 end
 
+@testitem "Syntax: domain/codomain_array_type generic fallback for Tuple domain_type" tags = [
+    :misc, :Syntax,
+] setup = [TestUtils] begin
+    using AbstractOperators
+    # Custom operator that relies on the generic AbstractOperator fallback for
+    # domain_array_type/codomain_array_type (no override), with a Tuple-valued
+    # domain_type/codomain_type — exercises _storage_type_for_elem(::Tuple).
+    struct _TupleDomainOp <: AbstractOperators.LinearOperator end
+    AbstractOperators.size(::_TupleDomainOp) = (((3,), (3,)), ((3,), (3,)))
+    AbstractOperators.domain_type(::_TupleDomainOp) = (Float64, Float64)
+    AbstractOperators.codomain_type(::_TupleDomainOp) = (Float64, Float64)
+    op = _TupleDomainOp()
+    ds = domain_array_type(op)
+    cs = codomain_array_type(op)
+    @test ds <: AbstractOperators.ArrayPartition{Float64, Tuple{Array{Float64}, Array{Float64}}}
+    @test cs <: AbstractOperators.ArrayPartition{Float64, Tuple{Array{Float64}, Array{Float64}}}
+end
+
 @testitem "Syntax: Sum getindex (multi-domain)" tags = [:misc, :Syntax] setup = [TestUtils] begin
     using AbstractOperators
     n = 5

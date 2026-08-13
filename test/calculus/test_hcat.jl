@@ -287,3 +287,18 @@ end
     # Selecting partial index into the tuple-idxs sub-op should error
     @test_throws ErrorException H_outer[2]
 end
+
+@testitem "HCAT: copy_operator" tags = [:calculus, :HCAT] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(4)
+
+    m, n1, n2 = 4, 7, 5
+    opH = HCAT(MatrixOp(randn(m, n1)), MatrixOp(randn(m, n2)))
+    opH2 = copy_operator(opH; threaded = true)
+    @test opH2 isa HCAT
+    x = ArrayPartition(randn(n1), randn(n2))
+    @test collect(opH * x) ≈ collect(opH2 * x)
+    # Verify independence: forward into opH2 alone
+    x2 = ArrayPartition(randn(n1), randn(n2))
+    @test collect(opH2 * x2) ≈ collect(opH * x2)
+end

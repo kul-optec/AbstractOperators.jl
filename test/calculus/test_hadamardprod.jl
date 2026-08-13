@@ -186,3 +186,25 @@ end
     mul!(y4, P3, x)
     @test y4 ≈ y1
 end
+
+@testitem "HadamardProdJac: copy_operator" tags = [:calculus, :HadamardProd] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(3)
+
+    n = 6
+    P = HadamardProd(Sin((n,)), Cos((n,)))
+    x = randn(n)
+    P * x  # forward pass populates P's buffers, which Jacobian(P, x) reuses
+    J = Jacobian(P, x)
+    J2 = copy_operator(J; threaded = true, storage_type = nothing)
+    @test J2 isa AbstractOperators.HadamardProdJac
+    # Buffers must be independent copies, not aliases, before either gets mutated
+    @test J2.bufA !== J.bufA
+    @test J2.bufB !== J.bufB
+    @test J2.bufD !== J.bufD
+
+    y = randn(n)
+    g1 = J' * y
+    g2 = J2' * y
+    @test g1 ≈ g2
+end
