@@ -496,7 +496,7 @@ end
     @test result_109 * x4 ≈ comp * (adj_scale_inner * x4)
 end
 
-@testitem "Combinations (GPU)" tags = [:gpu, :calculus, :Combinations] setup = [TestUtils] begin
+@testitem "Combinations (GPU)" tags = [:gpu, :calculus, :Combinations] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

@@ -101,7 +101,7 @@
     @test Jacobian(Ax_mul_Bx(A, B), x) == Jacobian(Ax_mul_Bx(A, B), x)
 end
 
-@testitem "Ax_mul_Bx (GPU)" tags = [:gpu, :calculus, :Ax_mul_Bx] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "Ax_mul_Bx (GPU)" tags = [:gpu, :calculus, :Ax_mul_Bx] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

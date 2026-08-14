@@ -77,7 +77,7 @@ end
     @test y1 ≈ y2
 end
 
-@testitem "OperatorWrapper (GPU)" tags = [:gpu, :calculus, :OperatorWrapper] setup = [TestUtils] begin
+@testitem "OperatorWrapper (GPU)" tags = [:gpu, :calculus, :OperatorWrapper] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

@@ -138,7 +138,7 @@ end
 
 # ─── GPU test items for nonlinear operators ───────────────────────────────────
 
-@testitem "NonlinearOp: Sigmoid (GPU)" tags = [:gpu, :nonlinearoperator, :Sigmoid] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Sigmoid (GPU)" tags = [:gpu, :nonlinearoperator, :Sigmoid] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -150,7 +150,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: SoftMax (GPU)" tags = [:gpu, :nonlinearoperator, :SoftMax] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: SoftMax (GPU)" tags = [:gpu, :nonlinearoperator, :SoftMax] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -162,7 +162,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: SoftPlus (GPU)" tags = [:gpu, :nonlinearoperator, :SoftPlus] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: SoftPlus (GPU)" tags = [:gpu, :nonlinearoperator, :SoftPlus] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -174,7 +174,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Exp (GPU)" tags = [:gpu, :nonlinearoperator, :Exp] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Exp (GPU)" tags = [:gpu, :nonlinearoperator, :Exp] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -186,7 +186,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Sin (GPU)" tags = [:gpu, :nonlinearoperator, :Sin] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Sin (GPU)" tags = [:gpu, :nonlinearoperator, :Sin] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -198,7 +198,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Cos (GPU)" tags = [:gpu, :nonlinearoperator, :Cos] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Cos (GPU)" tags = [:gpu, :nonlinearoperator, :Cos] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -210,7 +210,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Atan (GPU)" tags = [:gpu, :nonlinearoperator, :Atan] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Atan (GPU)" tags = [:gpu, :nonlinearoperator, :Atan] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -222,7 +222,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Tanh (GPU)" tags = [:gpu, :nonlinearoperator, :Tanh] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Tanh (GPU)" tags = [:gpu, :nonlinearoperator, :Tanh] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -234,7 +234,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Sech (GPU)" tags = [:gpu, :nonlinearoperator, :Sech] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Sech (GPU)" tags = [:gpu, :nonlinearoperator, :Sech] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -246,7 +246,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Pow (GPU)" tags = [:gpu, :nonlinearoperator, :Pow] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Pow (GPU)" tags = [:gpu, :nonlinearoperator, :Pow] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()

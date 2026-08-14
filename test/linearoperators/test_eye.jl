@@ -89,7 +89,7 @@ end  # @testmodule EyeTestHelper
     @test all(y .== x1)
 end
 
-@testitem "Eye (GPU)" tags = [:gpu, :linearoperator, :Eye] setup = [TestUtils, EyeTestHelper] begin
+@testitem "Eye (GPU)" tags = [:gpu, :linearoperator, :Eye] setup = [TestUtils, EyeTestHelper, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

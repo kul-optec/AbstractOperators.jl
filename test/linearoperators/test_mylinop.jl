@@ -85,7 +85,7 @@ end
     @test_throws ErrorException diag(op)
 end
 
-@testitem "MyLinOp (GPU)" tags = [:gpu, :linearoperator, :MyLinOp] setup = [TestUtils] begin
+@testitem "MyLinOp (GPU)" tags = [:gpu, :linearoperator, :MyLinOp] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

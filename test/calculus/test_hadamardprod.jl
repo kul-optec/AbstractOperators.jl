@@ -135,7 +135,7 @@ end
     @test remove_displacement(Prd) == Prd
 end
 
-@testitem "HadamardProd (GPU)" tags = [:gpu, :calculus, :HadamardProd] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "HadamardProd (GPU)" tags = [:gpu, :calculus, :HadamardProd] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

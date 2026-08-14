@@ -317,7 +317,7 @@ end
     @test S * x ≈ α * (A * x)
 end
 
-@testitem "Scale (GPU)" tags = [:gpu, :calculus, :Scale] setup = [TestUtils] begin
+@testitem "Scale (GPU)" tags = [:gpu, :calculus, :Scale] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

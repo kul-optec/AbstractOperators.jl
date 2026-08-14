@@ -227,7 +227,7 @@ end
     end
 end
 
-@testitem "SimpleBatchOp (GPU)" tags = [:gpu, :batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin
+@testitem "SimpleBatchOp (GPU)" tags = [:gpu, :batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

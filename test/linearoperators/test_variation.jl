@@ -150,7 +150,7 @@ end
     @test y1 ≈ y2
 end
 
-@testitem "Variation (GPU)" tags = [:gpu, :linearoperator, :Variation] setup = [TestUtils] begin
+@testitem "Variation (GPU)" tags = [:gpu, :linearoperator, :Variation] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

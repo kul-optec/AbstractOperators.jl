@@ -306,7 +306,7 @@ end
     @test diag_AAc(bop) == scale_val^2
 end
 
-@testitem "SpreadingBatchOp (GPU)" tags = [:gpu, :batching, :SpreadingBatchOp] setup = [TestUtils, SpreadingBatchOpHelpers] begin
+@testitem "SpreadingBatchOp (GPU)" tags = [:gpu, :batching, :SpreadingBatchOp] setup = [TestUtils, SpreadingBatchOpHelpers, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

@@ -159,7 +159,7 @@ end
     end
 end
 
-@testitem "BroadCast (GPU)" tags = [:gpu, :calculus, :BroadCast] setup = [TestUtils] begin
+@testitem "BroadCast (GPU)" tags = [:gpu, :calculus, :BroadCast] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

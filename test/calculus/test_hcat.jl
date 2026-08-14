@@ -219,7 +219,7 @@ end
     @test H_single === A
 end
 
-@testitem "HCAT (GPU)" tags = [:gpu, :calculus, :HCAT] setup = [TestUtils] begin
+@testitem "HCAT (GPU)" tags = [:gpu, :calculus, :HCAT] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

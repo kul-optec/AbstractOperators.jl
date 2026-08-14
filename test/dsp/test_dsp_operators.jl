@@ -233,7 +233,7 @@ end
     @test is_full_column_rank(op) == true
 end
 
-@testitem "Conv (GPU)" tags = [:gpu, :dsp, :Conv] setup = [TestUtils] begin
+@testitem "Conv (GPU)" tags = [:gpu, :dsp, :Conv] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(0)
@@ -262,7 +262,7 @@ end
     end
 end
 
-@testitem "Xcorr (GPU)" tags = [:gpu, :dsp, :Xcorr] setup = [TestUtils] begin
+@testitem "Xcorr (GPU)" tags = [:gpu, :dsp, :Xcorr] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(0)
@@ -292,7 +292,7 @@ end
     end
 end
 
-@testitem "Filt (GPU, FIR)" tags = [:gpu, :dsp, :Filt] setup = [TestUtils] begin
+@testitem "Filt (GPU, FIR)" tags = [:gpu, :dsp, :Filt] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(42)
@@ -320,7 +320,7 @@ end
     end
 end
 
-@testitem "MIMOFilt (GPU, FIR)" tags = [:gpu, :dsp, :MIMOFilt] setup = [TestUtils] begin
+@testitem "MIMOFilt (GPU, FIR)" tags = [:gpu, :dsp, :MIMOFilt] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(7)

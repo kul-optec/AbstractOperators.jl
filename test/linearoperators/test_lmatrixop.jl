@@ -142,7 +142,7 @@ end
     @test occursin("(⋅)b", s)
 end
 
-@testitem "LMatrixOp (GPU)" tags = [:linearoperator, :LMatrixOp, :gpu] setup = [TestUtils] begin
+@testitem "LMatrixOp (GPU)" tags = [:linearoperator, :LMatrixOp, :gpu] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
     for backend in gpu_backends()
         Random.seed!(0)
