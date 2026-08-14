@@ -32,13 +32,6 @@ import AbstractOperators:
     has_fast_opnorm,
     check
 
-function __init__()
-    return push!(
-        AbstractOperators.thread_count_functions[],
-        FFTW.get_num_threads => FFTW.set_num_threads,
-    )
-end
-
 include("DFT.jl")
 include("RDFT.jl")
 include("IRDFT.jl")

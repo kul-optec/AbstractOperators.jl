@@ -108,30 +108,25 @@ function _nfft_plan(::Type{Array}, trajectory, image_size, threaded; kwargs...)
 end
 _nfft_adapt(::Type{Array}, arr::AbstractArray) = collect(arr)
 
-function set_nfft_threading_expr(threading_state_expr, thread_count_expr, body_expr)
-    return quote
-        local prev_nfft_threading_state = NFFT._use_threads[]
-        NFFT._use_threads[] = $threading_state_expr
-        local res = $(set_thread_counts_expr(thread_count_expr, body_expr))
-        NFFT._use_threads[] = prev_nfft_threading_state
-        res
-    end
-end
+"""
+    with_nfft_threading(f, threaded::Bool)
 
-macro enable_nfft_threading(expr)
-    return set_nfft_threading_expr(true, nthreads(), expr)
-end
+Run `f()` with NFFT's, BLAS's and FFTW's threading turned on or off together.
 
-macro disable_nfft_threading(expr)
-    return set_nfft_threading_expr(false, 1, expr)
-end
+`threaded = true` actively *enables* them rather than merely leaving them alone, because
+`NFFT._use_threads[]` defaults to off and is what the NFFT plan consults. Both directions
+go through `NestedThreading`, so the request is clamped by any outer budget: an operator
+constructed with `threaded = true` that ends up being called from inside a saturated batch
+loop stays single-threaded, and the save/restore bookkeeping is refcounted rather than
+per-call.
+"""
+with_nfft_threading(f::F, threaded::Bool) where {F} =
+    threaded ? with_full_threads(f) : with_restricted_threads(f)
 
 function mul!(ksp::AbstractArray, op::NFFTOp, img::AbstractArray)
     AbstractOperators.check(ksp, op, img)
-    if op.threaded
-        @enable_nfft_threading mul!(vec(ksp), op.plan, img)
-    else
-        @disable_nfft_threading mul!(vec(ksp), op.plan, img)
+    with_nfft_threading(op.threaded) do
+        mul!(vec(ksp), op.plan, img)
     end
     return ksp
 end
@@ -145,10 +140,11 @@ function mul!(
     op = adjop.A
     if op.threaded
         @.. thread = true op.ksp_buffer = ksp * op.dcf
-        @enable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
     else
         @.. op.ksp_buffer = ksp * op.dcf
-        @disable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
+    end
+    with_nfft_threading(op.threaded) do
+        mul!(img, op.plan', vec(op.ksp_buffer))
     end
     return img
 end
@@ -177,10 +173,8 @@ end
 
 function create_plan(trajectory, image_size, threaded; kwargs...)
     traj = reshape(trajectory, size(trajectory, 1), :)
-    return if threaded
-        return @enable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
-    else
-        return @disable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
+    return with_nfft_threading(threaded) do
+        NFFTPlan(traj, image_size; kwargs...)
     end
 end
 

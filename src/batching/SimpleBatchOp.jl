@@ -198,7 +198,7 @@ end
 
 function mul!(out::AbstractArray, op::SimpleBatchOpMultiThreaded, inp::AbstractArray)
     check(out, op, inp)
-    @restrict_threading @threads for j in 1:length(op.operator)
+    @budgeted_threads for j in 1:length(op.operator)
         @inbounds for i in j:length(op.operator):length(op.batch_indices)
             idx = op.batch_indices[i]
             mul!(
@@ -218,7 +218,7 @@ function mul!(
     )
     check(out, op, inp)
     op = op.A
-    @restrict_threading @threads for j in 1:length(op.operator)
+    @budgeted_threads for j in 1:length(op.operator)
         @inbounds for i in j:length(op.operator):length(op.batch_indices)
             idx = op.batch_indices[i]
             mul!(

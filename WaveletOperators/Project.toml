@@ -9,7 +9,7 @@ OperatorCore = "3945cd23-d97e-4db0-9df2-35342dbd287d"
 Wavelets = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
 
 [compat]
-AbstractOperators = "0.4"
+AbstractOperators = "0.5"
 LinearAlgebra = "1.10.0"
 OperatorCore = "0.1"
 Wavelets = "0.10.2"

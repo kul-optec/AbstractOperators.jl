@@ -37,10 +37,8 @@ end
 
 function mul!(y::AbstractArray, op::NfftNormalOp, x::AbstractArray)
     AbstractOperators.check(y, op, x)
-    return if op.threaded
-        @enable_nfft_threading _mul!(y, op, x)
-    else
-        @disable_nfft_threading _mul!(y, op, x)
+    return with_nfft_threading(op.threaded) do
+        _mul!(y, op, x)
     end
 end
 
@@ -56,10 +54,8 @@ end
 
 AbstractOperators.has_optimized_normalop(::NFFTOp) = true
 function AbstractOperators.get_normal_op(op::NFFTOp)
-    return if op.threaded
-        @enable_nfft_threading _get_normal_op(op)
-    else
-        @disable_nfft_threading _get_normal_op(op)
+    return with_nfft_threading(op.threaded) do
+        _get_normal_op(op)
     end
 end
 

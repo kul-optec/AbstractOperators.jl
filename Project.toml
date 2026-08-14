@@ -1,13 +1,22 @@
 name = "AbstractOperators"
 uuid = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
-version = "0.4.0"
+version = "0.5.0"
 
 [workspace]
 projects = ["test", "docs", "benchmark", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"]
 
+# TEMPORARY: NestedThreading.jl is not registered in General yet. `[sources]` needs Pkg
+# >= 1.11 and is honored only for the top-level activated environment, so this entry
+# supports local development from a checkout, not consumption from a registry — which is
+# also why these changes are not pushed until NestedThreading is registered. Drop this
+# section once it is; the `julia = "1.10"` compat bound below is what CI will need then.
+[sources]
+NestedThreading = {path = "../NestedThreading"}
+
 [deps]
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NestedThreading = "e10243f7-6390-482b-b557-80f41d32665c"
 OperatorCore = "3945cd23-d97e-4db0-9df2-35342dbd287d"
 Polyester = "f517fe37-dbe3-4b94-8317-1923a5111588"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -28,6 +37,7 @@ GPUArrays = "10, 11"
 KernelAbstractions = "0.9"
 LinearAlgebra = "1"
 LinearMaps = "3.11.4"
+NestedThreading = "0.1"
 OperatorCore = "0.1"
 Polyester = "0.7.18"
 Random = "1.10.0"

@@ -476,7 +476,7 @@ macro threaded_mul_body(is_adj, get_operators_expr)
     return esc(
         quote
             num_threads = min(nthreads(), length(op.batch_indices))
-            @restrict_threading @threads for j in 1:num_threads
+            @budgeted_threads for j in 1:num_threads
                 @inbounds for i in j:num_threads:length(op.batch_indices)
                     idx = op.batch_indices[i]
                     mul!(
@@ -521,18 +521,22 @@ end
 
 function mul!(out::AbstractArray, op::SpreadingBatchOpLocking, inp::AbstractArray)
     check(out, op, inp)
-    @restrict_threading @sync for idx in op.batch_indices
-        op_lock = get_lock(op, idx)
-        @spawn begin
-            lock(op_lock)
-            try
-                @inbounds mul!(
-                    get_codomain_view(out, op, idx),
-                    get_threadsafe_spreading_operator(op, idx),
-                    get_domain_view(inp, op, idx),
-                )
-            finally
-                unlock(op_lock)
+    # Not a plain `for` loop shape, so this uses the function form rather than
+    # `@budgeted_threads`; the budget scope covers the whole `@sync` block.
+    with_restricted_threads() do
+        @sync for idx in op.batch_indices
+            op_lock = get_lock(op, idx)
+            @spawn begin
+                lock(op_lock)
+                try
+                    @inbounds mul!(
+                        get_codomain_view(out, op, idx),
+                        get_threadsafe_spreading_operator(op, idx),
+                        get_domain_view(inp, op, idx),
+                    )
+                finally
+                    unlock(op_lock)
+                end
             end
         end
     end
@@ -544,18 +548,20 @@ function mul!(
     )
     check(out, op, inp)
     op = op.A
-    @restrict_threading @sync for idx in op.batch_indices
-        op_lock = get_lock(op, idx)
-        @spawn begin
-            lock(op_lock)
-            try
-                @inbounds mul!(
-                    get_domain_view(out, op, idx),
-                    get_threadsafe_adj_spreading_operator(op, idx),
-                    get_codomain_view(inp, op, idx),
-                )
-            finally
-                unlock(op_lock)
+    with_restricted_threads() do
+        @sync for idx in op.batch_indices
+            op_lock = get_lock(op, idx)
+            @spawn begin
+                lock(op_lock)
+                try
+                    @inbounds mul!(
+                        get_domain_view(out, op, idx),
+                        get_threadsafe_adj_spreading_operator(op, idx),
+                        get_codomain_view(inp, op, idx),
+                    )
+                finally
+                    unlock(op_lock)
+                end
             end
         end
     end
@@ -564,7 +570,7 @@ end
 
 function mul!(out::AbstractArray, op::SpreadingBatchOpFixedOperator, inp::AbstractArray)
     check(out, op, inp)
-    @restrict_threading @threads for op_idx in op.operator_indices
+    @budgeted_threads for op_idx in op.operator_indices
         current_op = op.operators[op_idx]
         @inbounds for batch_idx in op.batch_indices
             idx = merge_indices(op_idx, batch_idx)
@@ -581,7 +587,7 @@ function mul!(
     )
     check(out, op, inp)
     op = op.A
-    @restrict_threading @threads for op_idx in op.operator_indices
+    @budgeted_threads for op_idx in op.operator_indices
         current_op = op.operators[op_idx]
         @inbounds for batch_idx in op.batch_indices
             idx = merge_indices(op_idx, batch_idx)
