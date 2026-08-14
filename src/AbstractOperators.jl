@@ -14,7 +14,7 @@ abstract type NonLinearOperator <: AbstractOperator end
 
 import LinearAlgebra: mul!
 import Base: size, ndims, @lock
-import Base.Threads: @spawn, @threads, nthreads
+import Base.Threads: @spawn, nthreads
 
 import OperatorCore:
     is_linear,

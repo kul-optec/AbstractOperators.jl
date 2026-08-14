@@ -160,7 +160,10 @@ function mul!(y, A::AdjointOperator{<:OperatorBroadCast{T, N, M, true}}, b) wher
     lock = ReentrantLock()
     thread_count = min(Threads.nthreads(), length(R.idxs))
     batch_size = length(R.idxs) / thread_count
-    @threads for t in 1:thread_count
+    # Budgeted: the body calls `mul!` on arbitrary sub-operators, which may themselves use
+    # BLAS/FFTW. This loop never went through the old `@restrict_threading`, so it was a
+    # genuine oversubscription source.
+    @budgeted_threads for t in 1:thread_count
         idx_start = max(1, floor(Int, (t - 1) * batch_size + 1))
         idx_end = min(length(R.idxs), floor(Int, t * batch_size))
         for i in idx_start:idx_end
