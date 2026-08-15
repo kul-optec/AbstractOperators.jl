@@ -238,3 +238,98 @@ end
         @test is_threaded(DCAT([fd(1 << 16) for _ in 1:8]...)) == false
     end
 end
+
+@testitem "Threading contract: batching an operator that has no threaded path" tags = [
+    :batching, :Threading, :fftw, :dsp,
+] setup = [TestUtils] begin
+    using AbstractOperators, FFTWOperators, DSPOperators, LinearAlgebra, Random
+    Random.seed!(0)
+
+    # Regression guard. FFTW/DSP operators are not thread-safe, so a threaded batch has to
+    # make one private copy per thread; and they have no threaded path of their own, so
+    # `threaded = false` asks nothing of them. The `copy_operator` fallback must therefore
+    # accept that request rather than refuse it -- refusing broke batching for every
+    # subpackage operator that owns scratch buffers.
+    for op in (RDFT(Float64, (16,)), DCT(Float64, (16,)), Conv(Float64, (16,), randn(4)))
+        @test is_thread_safe(op) == false
+        @test supports_threading(op) == false
+        @test copy_operator(op; threaded = false) isa typeof(op)
+
+        if Threads.nthreads() > 1
+            bop = BatchOp(op, (8,); threaded = true)
+            @test is_threaded(bop) == true
+        end
+    end
+
+    # A request the fallback genuinely cannot satisfy is still refused loudly.
+    @test_throws ArgumentError copy_operator(RDFT(Float64, (16,)); storage_type = Array)
+end
+
+@testitem "Threading contract: subpackage operators declare their threading" tags = [
+    :Threading, :fftw, :dsp, :nfft, :wavelets,
+] setup = [TestUtils] begin
+    using AbstractOperators, FFTWOperators, DSPOperators, NFFTOperators, WaveletOperators
+    using LinearAlgebra, Random
+    Random.seed!(0)
+
+    # FFTW is a *counted* thread pool: `threaded` picks a plan-time thread count, so it is
+    # fixed at construction and `is_threaded` reads it back rather than switching a loop.
+    serial_dft = DFT(Float64, (16,); threaded = false)
+    threaded_dft = DFT(Float64, (16,); threaded = true)
+    @test supports_threading(serial_dft) == true
+    @test is_threaded(serial_dft) == false
+    @test is_threaded(threaded_dft) == (Threads.nthreads() > 1)
+
+    x = randn(16)
+    @test serial_dft * x ≈ threaded_dft * x
+
+    # `num_threads`, FFTW's own spelling, still works and still wins.
+    @test is_threaded(DFT(Float64, (16,); num_threads = 1)) == false
+
+    # Switching the flag has to replan, and must preserve the *domain* element type --
+    # for a real-input DFT the codomain is complex, so replanning from the codomain would
+    # silently produce an operator with the wrong domain.
+    replanned = copy_operator(serial_dft; threaded = true)
+    @test domain_type(replanned) == domain_type(serial_dft)
+    @test replanned * x ≈ serial_dft * x
+
+    # IDFT must stay an adjoint-wrapped DFT: that is what makes the DFT/IDFT combination
+    # rules fire.
+    @test IDFT(8) isa AbstractOperators.AdjointOperator
+    @test AbstractOperators.can_be_combined(DFT(ComplexF64, 8), IDFT(8))
+
+    # DSP and Wavelet operators have no Julia-level threaded path; they say so rather than
+    # inheriting the default silently.
+    for op in (Conv(Float64, (16,), randn(4)), Xcorr(Float64, (16,), randn(4)))
+        @test supports_threading(op) == false
+        @test is_threaded(op) == false
+    end
+end
+
+@testitem "Threading contract: NFFTOp reports its plan-time threading" tags = [
+    :Threading, :nfft,
+] setup = [TestUtils] begin
+    using AbstractOperators, NFFTOperators, LinearAlgebra, Random
+    Random.seed!(0)
+
+    traj = rand(2, 32, 8) .- 0.5
+    dcf = rand(32, 8)
+    op = NFFTOp((16, 16), traj, dcf; threaded = false)
+
+    @test supports_threading(op) == true
+    @test is_threaded(op) == false
+    @test is_thread_safe(op) == false   # ksp_buffer is operator-owned scratch
+
+    # A copy shares the immutable plan and dcf but gets its own scratch buffer -- sharing
+    # that buffer is precisely what makes the operator unsafe to run from two threads.
+    c = copy_operator(op)
+    @test c.plan === op.plan
+    @test c.ksp_buffer !== op.ksp_buffer
+    x = rand(ComplexF64, 16, 16)
+    @test op * x ≈ c * x
+
+    # The plan is built for a fixed thread count and backend, so requests that would need a
+    # different plan are refused rather than silently ignored.
+    @test_throws ArgumentError copy_operator(op; threaded = true)
+    @test_throws ArgumentError copy_operator(op; storage_type = Array)
+end

@@ -13,6 +13,8 @@ import AbstractOperators:
     codomain_array_type,
     fun_name,
     is_thread_safe,
+    supports_threading,
+    is_threaded,
     has_fast_opnorm,
     _normalize_array_type
 import OperatorCore:
@@ -138,5 +140,15 @@ opnorm(L::AdjointOperator{<:WaveletOp}) = one(eltype(domain_type(L.A)))
 
 get_max_transform_levels(dim_in::Integer) = maxtransformlevels(dim_in)
 get_max_transform_levels(dim_in::Tuple) = minimum(maxtransformlevels.(dim_in))
+
+
+# ─── Threading ────────────────────────────────────────────────────────────────
+#
+# No Julia-level threaded path: the work is done inside Wavelets.jl, which manages its own
+# parallelism. `threaded` is therefore accepted by `copy_operator` (so a threaded batch
+# operator can ask for a serial child) but changes nothing here, which is exactly what
+# `supports_threading = false` states.
+AbstractOperators.is_threaded(::WaveletOp) = false
+AbstractOperators.supports_threading(::WaveletOp) = false
 
 end # module

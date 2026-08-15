@@ -30,7 +30,27 @@ import AbstractOperators:
     is_full_column_rank,
     is_symmetric,
     has_fast_opnorm,
-    check
+    check,
+    is_threaded,
+    supports_threading,
+    _copy_operator_impl
+
+"""
+	_fftw_num_threads(num_threads, threaded) -> Int
+
+Resolve the plan-time FFTW thread count from the two spellings a caller may use.
+
+`num_threads` is FFTW's own vocabulary and wins when given. `threaded` is the vocabulary
+used uniformly across AbstractOperators, and maps onto it: `true` means "use the available
+Julia threads", `false` means one thread. FFTW is a *counted* pool in NestedThreading, so
+this is a plan property rather than a loop property -- which is why it is fixed at
+construction and `is_threaded` merely reads it back.
+"""
+function _fftw_num_threads(num_threads, threaded)
+    num_threads !== nothing && return Int(num_threads)
+    threaded === nothing && return Threads.nthreads()
+    return threaded ? Threads.nthreads() : 1
+end
 
 include("DFT.jl")
 include("RDFT.jl")

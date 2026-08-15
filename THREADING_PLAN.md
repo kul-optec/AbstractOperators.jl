@@ -1,6 +1,6 @@
 # Unified Threading Plan for AbstractOperators.jl
 
-Status: proposed, not yet implemented. Branch: `nested-threading`.
+Status: implemented (Phases 0-6). Branch: `nested-threading`. See the Execution record below.
 
 ## Goals
 
@@ -114,6 +114,92 @@ in one process — so the env-var handshake is well-ordered and part 2 stands.
 **Validation.** `:calculus` is not a valid before/after case — it selects `*(GPU)` items by
 their `:calculus` tag, so it still activates, correctly. The win shows on filters that select
 no `:gpu` item: a single non-GPU testitem went 3m20s → 8.7s.
+
+---
+
+## Execution record (Phases 1-6)
+
+Status: implemented. Commits: 9a5a12a (Phase 0), f8025eb (Phases 1-4), f2a3e62 (Phase 5),
+plus Phase 6. What follows records where reality differed from the plan; the original
+phase text is kept below for reference.
+
+### Thresholds became measurements
+
+`benchmark/threading_sweep.jl` was built first, as the plan intended, and every constant in
+`src/threading_policy.jl` now carries a PROVENANCE line. Measured on AMD EPYC 7352,
+8 threads, `OPENBLAS_NUM_THREADS=1`:
+
+| constant | plan guess | measured |
+|---|---|---|
+| `THRESHOLD_ELEMENTWISE_TRANSCENDENTAL` | 2^13 | **2^10** |
+| `THRESHOLD_ELEMENTWISE_ARITHMETIC` | (2^16 implied) | **2^15** |
+| `THRESHOLD_MEMORY_BOUND` | 2^18 | **2^18** (kernel changed, see below) |
+| `THRESHOLD_BLOCK_PARALLEL` | 2^16 | **2^18** + `MIN_BLOCKS_FOR_PARALLEL = 4` |
+
+### Where the plan's hypotheses were wrong
+
+1. **FastBroadcast does not win or tie everywhere.** For a pure `y = x` copy, `@.. thread =
+   true` is *time-identical to serial at every swept size* — FastBroadcast does not thread a
+   plain copy. `@batch` does, crossing over at 2^15. So memory-bound operators are marked
+   `@batch`, not FastBroadcast.
+
+2. **Aggregate work does not predict block parallelism.** 2 blocks x 2^18 is a 2^19
+   aggregate but measures 1.02x, while the same 2^19 across 8 blocks measures 1.9x. Hence
+   the second constant `MIN_BLOCKS_FOR_PARALLEL`, which the plan did not anticipate.
+
+3. **`require_thread_safe` cannot do what the plan asked of it.** The plan has all three
+   nesting sites call `adapt_operator(op; threaded=false, require_thread_safe=true)`. But
+   thread safety is a property of an operator's *type* — copying an operator that owns
+   scratch buffers yields another operator that owns scratch buffers. So the flag can only
+   withhold the sharing fast path, never manufacture safety. The nesting sites instead
+   branch on `is_thread_safe` themselves (`_per_thread_operators`), and the kwarg's
+   docstring states the limitation.
+
+4. **`is_threaded` on forwarders is load-bearing, not cosmetic.** Without it a forwarder
+   inherits the `false` default, so `adapt_operator(op; threaded=false)` reports the
+   constraint already satisfied and returns an operator whose children are still threaded —
+   a silent nesting bug. Caught by the batching tests.
+
+5. **A third trait was needed.** `threaded = true` is a *permission* ("thread where you
+   can") while `threaded = false` is a *demand* (nesting safety). Without
+   `supports_threading` to tell "can thread, currently isn't" from "has no threaded path",
+   passing `threaded = true` down a `Compose` to a memory-bound `Eye` copies forever without
+   ever satisfying the constraint — and, worse, the strict `copy_operator` fallback made
+   batching *any* FFTW/DSP operator raise.
+
+### Copy semantics
+
+The plan's test criterion "`copy_operator` never returns `===` its input" is **not
+assertable**: most operators are immutable structs holding only dimensions, and Julia makes
+two such structs with identical fields `===` regardless of construction. The tests assert
+the observable contract instead — mutable buffers are never shared, constraints are
+honoured — which is also why such checks were removed in 4839a08.
+
+### Not done
+
+- **VCAT forward / HCAT adjoint** (Phase 5). Only `DCAT` was measured and shipped. The plan's
+  own rule is that unmeasured variants are dropped, and these need their own sweep.
+- **`DCT`/`RDFT`/`IRDFT` plan-time thread counts** (Phase 6). Only `DFT`/`IDFT` gained the
+  `threaded` keyword; the other three FFTW transforms have no `num_threads` plumbing at all
+  today, so they are declared `supports_threading = false` rather than half-wired.
+- `Scale`/`DiagOp` keep their `FastBroadcast` singleton parameters, bridged by
+  `_fbthread`/`_fbbool` as the plan specified.
+- **The four legacy thresholds are not yet consolidated.** The plan says all four move into
+  `src/threading_policy.jl` and get re-derived by benchmark. Operators added or reworked in
+  Phases 3-5 do go through `threading_threshold`/`default_threaded`, but these four remain
+  where they were and still gate the operators that predate this work:
+
+  | site | expression |
+  |---|---|
+  | `src/properties.jl:550` | `_should_thread(d) = length(d) > 2^16` |
+  | `src/calculus/BroadCast.jl:14` | `prod(dim_in) * sizeof(T) > 2^16` |
+  | `src/calculus/Scale.jl:54` | `get_output_length(L) > 1e4` |
+  | `src/linearoperators/Variation.jl:37` | `prod(dim_in) * sizeof(T) > 2^16` |
+
+  `_should_thread` in particular is still what `create_BatchOp` and `create_BatchOp`'s
+  spreading twin consult to decide whether to thread at all, so moving it is a behaviour
+  change to the batch operators and wants its own benchmark + test pass rather than being
+  folded into this one.
 
 ---
 

@@ -257,3 +257,45 @@ function NFFTPlan(
         B,
     )
 end
+
+# ─── Threading ────────────────────────────────────────────────────────────────
+#
+# NFFT is a *counted* pool in NestedThreading: the plan itself is built for a thread count
+# and `mul!` runs under `with_full_threads`/`with_restricted_threads` (see `_nfft_run`).
+# So `threaded` here selects a plan-time thread count, not a Julia loop, and it cannot be
+# flipped after construction -- switching it rebuilds the plan.
+is_threaded(op::NFFTOp) = op.threaded
+supports_threading(::NFFTOp) = true
+
+# Not thread-safe: `ksp_buffer` is operator-owned scratch written by every `mul!`.
+is_thread_safe(::NFFTOp) = false
+
+function _copy_operator_impl(
+        op::NFFTOp{T, D, P, K, DC}; storage_type = nothing, threaded = nothing
+    ) where {T, D, P, K, DC}
+    new_threaded = threaded === nothing ? op.threaded : threaded
+    # The plan is immutable and thread-count-specific: it can be shared only when the
+    # thread count is unchanged *and* the storage backend is unchanged. Otherwise the
+    # caller must rebuild the operator from its trajectory, which this operator no longer
+    # retains -- so say so rather than return something that silently ignores the request.
+    if storage_type !== nothing
+        throw(
+            ArgumentError(
+                "NFFTOp cannot change storage_type after construction: the NFFT plan is " *
+                    "built for a specific array backend. Rebuild with " *
+                    "NFFTOp(image_size, trajectory, dcf; array_type = ...) instead."
+            ),
+        )
+    end
+    if new_threaded != op.threaded
+        throw(
+            ArgumentError(
+                "NFFTOp cannot change `threaded` after construction: the NFFT plan is " *
+                    "built for a fixed thread count. Rebuild with " *
+                    "NFFTOp(image_size, trajectory, dcf; threaded = $(new_threaded)) instead."
+            ),
+        )
+    end
+    # Same constraints: share the (immutable) plan and dcf, give the copy its own scratch.
+    return NFFTOp{T, D, P, K, DC}(op.plan, similar(op.ksp_buffer), op.dcf, op.threaded)
+end

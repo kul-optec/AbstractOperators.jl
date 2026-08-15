@@ -510,21 +510,29 @@ end
 _normalize_storage_request(::Nothing) = nothing
 _normalize_storage_request(S::Type{<:AbstractArray}) = _array_wrapper_type(S)
 
-# Fallback. `deepcopy` cannot honour `storage_type` or `threaded` — it reproduces the
-# operator exactly as it is — so silently accepting those keywords here would return an
-# operator that does not meet the caller's constraints. Refuse instead, naming the type
-# that needs a `_copy_operator_impl` method.
+# Fallback. `deepcopy` reproduces the operator exactly as it is, so it can only answer a
+# request it does not have to change anything for. Two cases qualify:
+#
+#   * `storage_type === nothing` — nothing to convert.
+#   * `threaded` given but `supports_threading(op) == false` — the operator has no threaded
+#     path, so the request is vacuous. This is the same rule `_satisfies_constraints` uses,
+#     and it is what lets a threaded batch operator wrap an FFTW/DSP operator: those are
+#     never threaded themselves, so `threaded = false` asks nothing of them.
+#
+# Anything else would return an operator that does not meet the caller's constraints, so
+# refuse instead, naming the type that needs a `_copy_operator_impl` method.
 function _copy_operator_impl(
         op::T; storage_type = nothing, threaded = nothing
     ) where {T <: AbstractOperator}
-    if storage_type === nothing && threaded === nothing
+    if storage_type === nothing && (threaded === nothing || !supports_threading(op))
         return deepcopy(op)
     end
+    unmet = storage_type === nothing ? "threaded" : "storage_type"
     return throw(
         ArgumentError(
-            "copy_operator does not support storage_type/threaded for $(T): no " *
-                "_copy_operator_impl method is defined for it, and the deepcopy fallback " *
-                "would silently ignore both keywords. Define " *
+            "copy_operator cannot honour `$(unmet)` for $(T): no _copy_operator_impl " *
+                "method is defined for it, and the deepcopy fallback would silently " *
+                "ignore the request. Define " *
                 "AbstractOperators._copy_operator_impl(::$(T); storage_type, threaded)."
         ),
     )

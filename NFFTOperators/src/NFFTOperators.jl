@@ -20,6 +20,10 @@ import AbstractOperators:
     domain_array_type,
     codomain_array_type,
     _array_wrapper_type,
+    is_threaded,
+    supports_threading,
+    is_thread_safe,
+    _copy_operator_impl,
     AdjointOperator
 
 import FFTW: FFTW
