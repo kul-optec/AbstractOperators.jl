@@ -184,3 +184,57 @@ end
         @test bop * x == serial_batch * x
     end
 end
+
+@testitem "Threading contract: DCAT block-parallel loop" tags = [:calculus, :Threading, :DCAT] setup = [
+    TestUtils,
+] begin
+    using AbstractOperators, LinearAlgebra, Random
+    using RecursiveArrayTools: ArrayPartition
+    Random.seed!(0)
+
+    nb, bs = 8, 1 << 16
+    blocks = [FiniteDiff(Float64, (bs,); threaded = false) for _ in 1:nb]
+
+    serial = DCAT(blocks...; threaded = false)
+    threaded = DCAT(blocks...; threaded = true)
+    @test is_threaded(serial) == false
+    @test is_threaded(threaded) == true
+    @test supports_threading(serial) == true
+
+    # Inputs captured once and shared by both operators.
+    x = ArrayPartition([randn(bs) for _ in 1:nb]...)
+    r = ArrayPartition([randn(bs - 1) for _ in 1:nb]...)
+
+    # Blocks are independent and write disjoint outputs, so parallelising them must not
+    # perturb a single bit.
+    @test serial * x == threaded * x
+    @test serial' * r == threaded' * r
+
+    # copy_operator round-trips the block-loop flag.
+    @test is_threaded(copy_operator(serial; threaded = true)) == true
+    @test is_threaded(copy_operator(threaded; threaded = false)) == false
+
+    # Nesting safety: when the block loop threads, the blocks themselves must not.
+    nested = DCAT([FiniteDiff(Float64, (bs,); threaded = true) for _ in 1:nb]...; threaded = true)
+    @test all(!is_threaded, nested.A)
+end
+
+@testitem "Threading contract: DCAT default policy tracks the benchmark" tags = [
+    :calculus, :Threading, :DCAT,
+] begin
+    using AbstractOperators
+
+    # These three cases are the measured boundary, not arbitrary sizes. Block-level
+    # threading needs BOTH a large aggregate and enough blocks: 2 blocks x 2^18 has a 2^19
+    # aggregate yet measured only 1.03x, while 8 x 2^16 (also 2^19) measured 1.9x.
+    fd(n) = FiniteDiff(Float64, (n,); threaded = false)
+
+    if Threads.nthreads() > 1
+        @test is_threaded(DCAT([fd(1 << 16) for _ in 1:8]...)) == true    # measured 1.9x
+        @test is_threaded(DCAT([fd(1 << 18) for _ in 1:2]...)) == false   # measured 1.03x
+        @test is_threaded(DCAT([fd(1 << 12) for _ in 1:8]...)) == false   # measured 0.26x
+    else
+        # Single-threaded session: never thread the block loop, whatever the size.
+        @test is_threaded(DCAT([fd(1 << 16) for _ in 1:8]...)) == false
+    end
+end

@@ -58,14 +58,30 @@ takes the conservative Float32 value. `@budgeted_threads` never wins at Float64.
 const THRESHOLD_MEMORY_BOUND = 2^18
 
 """
-Aggregate work across the blocks of a block-parallel calculus operator (`DCAT`, `VCAT`
-forward, `HCAT` adjoint). Unlike the elementwise thresholds this counts *total elements
-over all blocks*, since the parallel unit is a block, not an element.
+Aggregate work across the blocks of a block-parallel calculus operator (`DCAT`). Unlike the
+elementwise thresholds this counts *total elements over all blocks*, since the parallel
+unit is a block, not an element. Kernel: `@budgeted_threads` (the loop body is a whole
+child `mul!`, not element access).
 
-PROVENANCE: provisional -- the elementwise sweep does not measure block-level parallelism.
-Confirmed or revised in Phase 5, where the parallel unit is a whole child `mul!`.
+PROVENANCE: measured. Block sweep over block count x block size, same machine and settings
+as above. `@budgeted_threads` has a fixed ~25-40us setup cost here, so small blocks lose
+badly (16 blocks x 2^12 = 0.56x, 8 x 2^12 = 0.16x) while large aggregates win big
+(8 x 2^16 = 2.2x, 8 x 2^18 = 9.4x).
 """
-const THRESHOLD_BLOCK_PARALLEL = 2^16
+const THRESHOLD_BLOCK_PARALLEL = 2^18
+
+"""
+Minimum number of blocks before block-level threading is considered, independent of total
+size.
+
+PROVENANCE: measured, and this constant exists *because* of the measurement: total work
+alone is not a sufficient predictor. At 2 blocks x 2^18 elements the aggregate is 2^19 --
+comfortably over `THRESHOLD_BLOCK_PARALLEL` -- yet the speedup is 1.02x, because two blocks
+cap the achievable gain at 2x and the threading overhead eats it. The same 2^19 aggregate
+split across 8 blocks gives 2.2x. Both conditions together admit every measured win and
+exclude every measured loss.
+"""
+const MIN_BLOCKS_FOR_PARALLEL = 4
 
 # ─── Storage classification ───────────────────────────────────────────────────
 
@@ -131,6 +147,22 @@ function _elementwise_threaded(
     ) where {Op <: AbstractOperator, T, S <: AbstractArray}
     threaded === nothing && return default_threaded(Op, T, dims, S)
     return threaded::Bool
+end
+
+"""
+	default_block_threaded(blocks) -> Bool
+
+Whether a block-parallel calculus operator over `blocks` should thread its block loop.
+
+Requires **both** a large enough aggregate and enough blocks — see
+[`MIN_BLOCKS_FOR_PARALLEL`](@ref) for why total work alone is not sufficient.
+"""
+function default_block_threaded(blocks)
+    Threads.nthreads() > 1 || return false
+    length(blocks) >= MIN_BLOCKS_FOR_PARALLEL || return false
+    _is_cpu_storage(_array_wrapper_type(domain_array_type(first(blocks)))) || return false
+    total = sum(b -> _total_elements(size(b, 2)), blocks; init = 0)
+    return total >= THRESHOLD_BLOCK_PARALLEL
 end
 
 _total_elements(dims::Tuple{Vararg{Integer}}) = prod(dims; init = 1)

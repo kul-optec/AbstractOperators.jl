@@ -28,14 +28,21 @@ struct DCAT{
         P2 <: NTuple{N, Union{Int, Tuple}},
         DS <: AbstractArray,  # domain storage type (fixed at construction)
         CS <: AbstractArray,  # codomain storage type (fixed at construction)
+        Th,                   # thread the block loop?
     } <: AbstractOperator
     A::L
     idxD::P1
     idxC::P2
-    function DCAT(A::L, idxD::P1, idxC::P2) where {L, P1, P2}
+    function DCAT(A::L, idxD::P1, idxC::P2; threaded = nothing) where {L, P1, P2}
         DS = _compute_dcat_ds(A, idxD)
         CS = _compute_dcat_cs(A, idxC)
-        return new{length(A), L, P1, P2, DS, CS}(A, idxD, idxC)
+        th = threaded === nothing ? default_block_threaded(A) : threaded::Bool
+        if th
+            # The block loop is the parallel layer, so the blocks themselves must not
+            # thread -- same nesting rule as the batch operators.
+            A = map(a -> adapt_operator(a; threaded = false), A)
+        end
+        return new{length(A), typeof(A), P1, P2, DS, CS, th}(A, idxD, idxC)
     end
 end
 
@@ -73,16 +80,16 @@ end
 end
 
 # Constructors
-DCAT(A::AbstractOperator) = A
+DCAT(A::AbstractOperator; threaded = nothing) = A
 
 # compile-time ndoms for DCAT (both domain and codomain have N components)
 _ndoms_from_type(::Type{<:DCAT{N}}, dim::Int) where {N} = N
 
-function DCAT(A::Vararg{AbstractOperator})
-    return _dcat_impl(A)
+function DCAT(A::Vararg{AbstractOperator}; threaded = nothing)
+    return _dcat_impl(A, threaded)
 end
 
-@generated function _dcat_impl(A::NTuple{N, AbstractOperator}) where {N}
+@generated function _dcat_impl(A::NTuple{N, AbstractOperator}, threaded) where {N}
     N == 1 && return :(A[1])
     # Build idxC (codomain, dim=1) and idxD (domain, dim=2) at compile time
     idx_exprs_C = []
@@ -113,80 +120,108 @@ end
     end
     idxC_literal = Expr(:tuple, idx_exprs_C...)
     idxD_literal = Expr(:tuple, idx_exprs_D...)
-    return :(DCAT(A, $idxD_literal, $idxC_literal))
+    return :(DCAT(A, $idxD_literal, $idxC_literal; threaded = threaded))
 end
 
 # Mappings
-@generated function mul!(
-        yy::ArrayPartition, H::DCAT{N, L, P1, P2}, bb::ArrayPartition
-    ) where {N, L, P1, P2}
-
-    # extract stuff
-    ex = :(check(yy, H, bb); y = yy.x; b = bb.x)
-
+#
+# The per-block argument expressions are identical for the serial and threaded variants, so
+# they are built once here and assembled two different ways below.
+function _dcat_block_exprs(N, P_out, P_in, out_field, in_field, adjoint::Bool)
+    blocks = Expr[]
     for i in 1:N
-        if fieldtype(P2, i) <: Int
+        if fieldtype(P_out, i) <: Int
             # flatten operator
-            # build mul!(y[H.idxC[i]], H.A[i], b)
-            yyi = :(y[H.idxC[$i]])
+            yyi = :(y[H.$out_field[$i]])
         else
             # stacked operator
-            # build mul!(( y[H.idxC[i][1]], y[H.idxC[i][2]] ...  ), H.A[i], b)
-            yyi = [:(y[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2, i)))]
+            yyi = [:(y[H.$out_field[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P_out, i)))]
             yyi = :(ArrayPartition($(yyi...)))
         end
 
-        if fieldtype(P1, i) <: Int
-            # flatten operator
-            # build mul!(H.buf, H.A[i], b[H.idxD[i]])
-            bbi = :(b[H.idxD[$i]])
+        if fieldtype(P_in, i) <: Int
+            bbi = :(b[H.$in_field[$i]])
         else
-            # stacked operator
-            # build mul!(H.buf, H.A[i],( b[H.idxD[i][1]], b[H.idxD[i][2]] ...  ))
-            bbi = [:(b[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1, i)))]
+            bbi = [:(b[H.$in_field[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P_in, i)))]
             bbi = :(ArrayPartition($(bbi...)))
         end
 
-        ex = :($ex; mul!($yyi, H.A[$i], $bbi))
+        op = adjoint ? :(H.A[$i]') : :(H.A[$i])
+        push!(blocks, :(mul!($yyi, $op, $bbi)))
     end
-    ex = :($ex; return yy)
-    return ex
+    return blocks
+end
+
+# Serial: the blocks inlined one after another, exactly as before.
+_dcat_serial_body(blocks) = Expr(:block, blocks...)
+
+@generated function mul!(
+        yy::ArrayPartition, H::DCAT{N, L, P1, P2, DS, CS, false}, bb::ArrayPartition
+    ) where {N, L, P1, P2, DS, CS}
+    blocks = _dcat_block_exprs(N, P2, P1, :idxC, :idxD, false)
+    return quote
+        check(yy, H, bb)
+        y = yy.x
+        b = bb.x
+        $(_dcat_serial_body(blocks))
+        return yy
+    end
+end
+
+# Threaded variants are deliberately *not* `@generated`: a generated function body must be
+# pure, and the threading macros expand to closures. So the parallel loop lives in a plain
+# function and only the single-block body -- selected by `Val(i)` -- is generated. The
+# `Val` is built from the loop variable, so each iteration pays one dynamic dispatch; that
+# is nanoseconds against a whole child `mul!`, and it buys back the per-block type
+# stability that a closure over a heterogeneous tuple would have lost.
+#
+# `@budgeted_threads` rather than `@batch` because each body is an arbitrary child `mul!`
+# that may itself reach BLAS/FFTW; the budget is what keeps that from oversubscribing.
+@generated function _dcat_block_fwd!(y, H::DCAT{N, L, P1, P2}, b, ::Val{I}) where {N, L, P1, P2, I}
+    return _dcat_block_exprs(N, P2, P1, :idxC, :idxD, false)[I]
+end
+
+@generated function _dcat_block_adj!(y, H::DCAT{N, L, P1, P2}, b, ::Val{I}) where {N, L, P1, P2, I}
+    return _dcat_block_exprs(N, P1, P2, :idxD, :idxC, true)[I]
+end
+
+function mul!(
+        yy::ArrayPartition, H::DCAT{N, L, P1, P2, DS, CS, true}, bb::ArrayPartition
+    ) where {N, L, P1, P2, DS, CS}
+    check(yy, H, bb)
+    y = yy.x
+    b = bb.x
+    @budgeted_threads for i in 1:N
+        _dcat_block_fwd!(y, H, b, Val(i))
+    end
+    return yy
 end
 
 @generated function mul!(
-        yy::ArrayPartition, A::AdjointOperator{<:DCAT{N, L, P1, P2}}, bb::ArrayPartition
-    ) where {N, L, P1, P2}
-
-    # extract stuff
-    ex = :(check(yy, A, bb); H = A.A; y = yy.x; b = bb.x)
-
-    for i in 1:N
-        if fieldtype(P1, i) <: Int
-            # flatten operator
-            # build mul!(y[H.idxD[i]], H.A[i]', b)
-            yyi = :(y[H.idxD[$i]])
-        else
-            # stacked operator
-            # build mul!(( y[H.idxD[i][1]], y[H.idxD[i][2]] ...  ), H.A[i]', b)
-            yyi = [:(y[H.idxD[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P1, i)))]
-            yyi = :(ArrayPartition($(yyi...)))
-        end
-
-        if fieldtype(P2, i) <: Int
-            # flatten operator
-            # build mul!(H.buf, H.A[i]', b[H.idxC[i]])
-            bbi = :(b[H.idxC[$i]])
-        else
-            # stacked operator
-            # build mul!(H.buf, H.A[i]',( b[H.idxC[i][1]], b[H.idxC[i][2]] ...  ))
-            bbi = [:(b[H.idxC[$i][$ii]]) for ii in eachindex(fieldnames(fieldtype(P2, i)))]
-            bbi = :(ArrayPartition($(bbi...)))
-        end
-
-        ex = :($ex; mul!($yyi, H.A[$i]', $bbi))
+        yy::ArrayPartition, A::AdjointOperator{<:DCAT{N, L, P1, P2, DS, CS, false}}, bb::ArrayPartition
+    ) where {N, L, P1, P2, DS, CS}
+    blocks = _dcat_block_exprs(N, P1, P2, :idxD, :idxC, true)
+    return quote
+        check(yy, A, bb)
+        H = A.A
+        y = yy.x
+        b = bb.x
+        $(_dcat_serial_body(blocks))
+        return yy
     end
-    ex = :($ex; return yy)
-    return ex
+end
+
+function mul!(
+        yy::ArrayPartition, A::AdjointOperator{<:DCAT{N, L, P1, P2, DS, CS, true}}, bb::ArrayPartition
+    ) where {N, L, P1, P2, DS, CS}
+    check(yy, A, bb)
+    H = A.A
+    y = yy.x
+    b = bb.x
+    @budgeted_threads for i in 1:N
+        _dcat_block_adj!(y, H, b, Val(i))
+    end
+    return yy
 end
 
 has_optimized_normalop(L::DCAT) = any(has_optimized_normalop.(L.A))
@@ -339,10 +374,17 @@ LinearAlgebra.opnorm(L::DCAT) = maximum(opnorm.(L.A))
 estimate_opnorm(L::DCAT) = maximum(estimate_opnorm.(L.A))
 
 _children(L::DCAT) = L.A
-is_threaded(L::DCAT) = _is_threaded_from_children(L)
-supports_threading(L::DCAT) = _supports_threading_from_children(L)
+# Threaded if the block loop itself threads, or any block does.
+is_threaded(L::DCAT{N, Ls, P1, P2, DS, CS, Th}) where {N, Ls, P1, P2, DS, CS, Th} =
+    Th || _is_threaded_from_children(L)
+supports_threading(::DCAT) = true
 
-function _copy_operator_impl(op::DCAT; storage_type = nothing, threaded = nothing)
-    new_ops = map(a -> copy_operator(a; storage_type, threaded), op.A)
-    return DCAT(new_ops, op.idxD, op.idxC)
+function _copy_operator_impl(
+        op::DCAT{N, L, P1, P2, DS, CS, Th}; storage_type = nothing, threaded = nothing
+    ) where {N, L, P1, P2, DS, CS, Th}
+    new_threaded = threaded === nothing ? Th : threaded
+    # When the block loop threads, the blocks are forced serial by the constructor, so only
+    # the storage request is forwarded to them here.
+    new_ops = map(a -> copy_operator(a; storage_type, threaded = new_threaded ? false : threaded), op.A)
+    return DCAT(new_ops, op.idxD, op.idxC; threaded = new_threaded)
 end
