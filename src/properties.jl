@@ -493,7 +493,15 @@ Create a copy of `op` suitable for parallel use. **Always returns a new object**
 - Immutable fields (operator arrays, type params) are **shared** (no copy).
 - Mutable buffer fields are **deep-copied**.
 - `storage_type`: if provided (e.g., `CuArray`), convert buffer arrays to that storage.
-- `threaded`: if provided (`true`/`false`), toggle threading for operators that support it.
+- `threaded`: if provided (`true`/`false`), request that threading state for operators that
+  support it; `nothing` (the default) preserves whatever the operator already has.
+
+Note these two are **constraint** arguments, which is why they accept `nothing` while the
+operator *constructors* take a plain `threaded::Bool`. `nothing` here means "no constraint
+on this axis", exactly as it does for `storage_type` — without it a plain `copy_operator(op)`
+could not preserve an explicitly serial operator, since it would re-derive threading from
+the policy. As everywhere else, a `threaded = true` request is a permission the policy may
+still decline; `threaded = false` is honoured absolutely.
 
 The "return `op` itself when it is already thread-safe" short-circuit that used to live
 here now lives in `adapt_operator`, so that the two functions have crisp contracts: one
@@ -546,7 +554,30 @@ function _convert_buffer(buf::AbstractArray{T}, storage_type::Type) where {T}
     return similar(storage_type{T}, size(buf))
 end
 
+# NOTE: `_should_thread` is the last of the four legacy threshold sites. The other three
+# (DiagOp/Variation, BroadCast, Scale) now route through `threading_policy.jl`; this one
+# survives only as the batch-operator gate, where it has been given the size component it
+# never had -- see `_should_thread(::AbstractOperator)`.
 _should_thread(::Number) = false
-_should_thread(d::AbstractArray) = length(d) > 2^16 && Threads.nthreads() > 1
-_should_thread(::Type{<:AbstractArray}) = Threads.nthreads() > 1
-_should_thread(op::AbstractOperator) = _should_thread(domain_array_type(op))
+_should_thread(d::AbstractArray) = length(d) >= THRESHOLD_MEMORY_BOUND && Threads.nthreads() > 1
+_should_thread(S::Type{<:AbstractArray}) = Threads.nthreads() > 1 && _is_cpu_storage(S)
+
+"""
+	_should_thread(op::AbstractOperator)
+
+Whether a *batch* loop over `op` should thread.
+
+This used to forward to the storage-type method, which is just `nthreads() > 1` -- so a
+batch operator threaded at any size, including a four-element one, paying the full
+`@budgeted_threads` setup to parallelise microseconds of work. It now also requires the
+wrapped operator to carry at least `MIN_BATCH_WORK_FOR_PARALLEL` elements per call.
+
+The batch *count* is not known here (it is decided by the caller), so this is deliberately
+only the per-item half of the condition.
+"""
+function _should_thread(op::AbstractOperator)
+    S = _policy_storage(domain_array_type(op))
+    Threads.nthreads() > 1 || return false
+    _is_cpu_storage(S) || return false
+    return _total_elements(size(op, 2)) >= MIN_BATCH_WORK_FOR_PARALLEL
+end

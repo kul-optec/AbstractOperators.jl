@@ -24,13 +24,19 @@ struct IRDFT{T <: Number, N, D, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan
     A::T1
     At::T2
     idx::T3
+    # Plan-time FFTW thread count; c2r is the inverse of the r2c measured above.
+    num_threads::Int
 end
 
 # Constructors
 #standard constructor
 
-function IRDFT(x::AbstractArray{Complex{T}, N}, d::Int, dims::Int = 1) where {T <: Number, N}
-    A = plan_irfft(x, d, dims)
+function IRDFT(
+        x::AbstractArray{Complex{T}, N}, d::Int, dims::Int = 1;
+        num_threads = nothing, threaded::Bool = true
+    ) where {T <: Number, N}
+    nthr = _fftw_num_threads(:r2c, num_threads, threaded, length(x))
+    A = _with_fftw_threads(() -> plan_irfft(x, d, dims), nthr)
     dim_in = size(x)
     dim_out = ()
     idx = ()
@@ -38,16 +44,18 @@ function IRDFT(x::AbstractArray{Complex{T}, N}, d::Int, dims::Int = 1) where {T 
         dim_out = i == dims ? (dim_out..., d) : (dim_out..., dim_in[i])
         idx = i == dims ? (idx..., 2:ceil(Int, d / 2)) : (idx..., Colon())
     end
-    At = plan_rfft(similar(x, T, dim_out), dims)
+    At = _with_fftw_threads(() -> plan_rfft(similar(x, T, dim_out), dims), nthr)
     S = _array_wrapper_type(typeof(x isa SubArray ? parent(x) : x))
-    return IRDFT{T, N, dims, typeof(A), typeof(At), typeof(idx), S}(dim_in, dim_out, A, At, idx)
+    return IRDFT{T, N, dims, typeof(A), typeof(At), typeof(idx), S}(
+        dim_in, dim_out, A, At, idx, nthr
+    )
 end
 
-function IRDFT(T::Type, dim_in::NTuple{N, Int}, d::Int, dims::Int = 1) where {N}
-    return IRDFT(zeros(T, dim_in), d, dims)
+function IRDFT(T::Type, dim_in::NTuple{N, Int}, d::Int, dims::Int = 1; kwargs...) where {N}
+    return IRDFT(zeros(T, dim_in), d, dims; kwargs...)
 end
-function IRDFT(dim_in::NTuple{N, Int}, d::Int, dims::Int = 1) where {N}
-    return IRDFT(zeros(Complex{Float64}, dim_in), d, dims)
+function IRDFT(dim_in::NTuple{N, Int}, d::Int, dims::Int = 1; kwargs...) where {N}
+    return IRDFT(zeros(Complex{Float64}, dim_in), d, dims; kwargs...)
 end
 
 # Mappings
@@ -94,3 +102,29 @@ is_full_row_rank(L::IRDFT) = true
 
 has_fast_opnorm(::IRDFT) = true
 LinearAlgebra.opnorm(L::IRDFT{T}) where {T} = sqrt(prod(L.dim_out)::Int / 2)
+
+# ─── Threading ────────────────────────────────────────────────────────────────
+
+is_threaded(op::IRDFT) = op.num_threads > 1
+supports_threading(::IRDFT) = true
+
+function _copy_operator_impl(
+        op::IRDFT{T, N, D, T1, T2, T3, S}; storage_type = nothing, threaded = nothing
+    ) where {T, N, D, T1, T2, T3, S}
+    if storage_type !== nothing
+        throw(
+            ArgumentError(
+                "IRDFT cannot change storage_type after construction: the FFTW plan is " *
+                    "built for a specific array backend. Rebuild the operator instead."
+            ),
+        )
+    end
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    # No per-call scratch fields, so an unchanged thread count means the plans can be shared.
+    if new_threaded == is_threaded(op)
+        return IRDFT{T, N, D, T1, T2, T3, S}(
+            op.dim_in, op.dim_out, op.A, op.At, op.idx, op.num_threads
+        )
+    end
+    return IRDFT(zeros(Complex{T}, op.dim_in), op.dim_out[D], D; threaded = new_threaded)
+end

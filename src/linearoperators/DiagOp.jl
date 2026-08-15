@@ -31,8 +31,8 @@ function DiagOp(
     ) where {N, T <: AbstractArray}
     size(d) != domain_dim && error("dimension of d must coincide with domain_dim")
     C = promote_type(eltype(d), D)
-    threaded = threaded && _should_thread(d)
-    B = threaded ? FastBroadcast.True() : FastBroadcast.False()
+    dS0 = _normalize_array_type(array_type, D)
+    B = _fbthread(_elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0))
     dS = _normalize_array_type(array_type, D)
     cS = _normalize_array_type(array_type, C)
     return DiagOp{B, D, C, N, dS, cS, T}(domain_dim, d)
@@ -44,8 +44,9 @@ function DiagOp(
         threaded::Bool = true, array_type::Type = Array{D},
     ) where {N, T <: Number}
     C = promote_type(eltype(d), D)
-    threaded = threaded && _should_thread(d)
-    B = threaded ? FastBroadcast.True() : FastBroadcast.False()
+    dS0 = _normalize_array_type(array_type, D)
+    # Scalar diagonal: the work still scales with the *domain*, not with `d`.
+    B = _fbthread(_elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0))
     dS = _normalize_array_type(array_type, D)
     cS = _normalize_array_type(array_type, C)
     return DiagOp{B, D, C, N, dS, cS, T}(domain_dim, d)
@@ -57,8 +58,8 @@ function DiagOp(
         threaded::Bool = true, array_type::Type = _array_wrapper(d),
     ) where {N, T <: Number}
     C = eltype(d)
-    threaded = threaded && _should_thread(d)
-    B = threaded ? FastBroadcast.True() : FastBroadcast.False()
+    S0 = _normalize_array_type(array_type, T)
+    B = _fbthread(_elementwise_threaded(DiagOp, threaded, T, size(d), S0))
     S = _normalize_array_type(array_type, T)
     return DiagOp{B, eltype(d), C, N, S, S, typeof(d)}(size(d), d)
 end
@@ -144,5 +145,7 @@ LinearAlgebra.opnorm(L::DiagOp) = maximum(abs, L.d)
 
 # DiagOp stores FastBroadcast's singleton flag rather than a Bool; bridge it to the trait.
 is_threaded(::DiagOp{B}) where {B} = _fbbool(B)
-threading_threshold(::Type{<:DiagOp}) = THRESHOLD_ELEMENTWISE_ARITHMETIC
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!`: Float64 2^17, Float32 2^16.
+threading_threshold(::Type{<:DiagOp}) = 2^17
 supports_threading(::DiagOp) = true

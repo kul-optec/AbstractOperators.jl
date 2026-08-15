@@ -33,16 +33,19 @@ struct DCAT{
     A::L
     idxD::P1
     idxC::P2
-    function DCAT(A::L, idxD::P1, idxC::P2; threaded = nothing) where {L, P1, P2}
+    function DCAT(A::L, idxD::P1, idxC::P2; threaded::Bool = true) where {L, P1, P2}
         DS = _compute_dcat_ds(A, idxD)
         CS = _compute_dcat_cs(A, idxC)
-        th = threaded === nothing ? default_block_threaded(A) : threaded::Bool
-        if th
-            # The block loop is the parallel layer, so the blocks themselves must not
-            # thread -- same nesting rule as the batch operators.
-            A = map(a -> adapt_operator(a; threaded = false), A)
+        # `A` is deliberately never reassigned: the closure below captures it, and a
+        # captured variable that is also assigned gets boxed to `Any`, which JET flags as
+        # runtime dispatch through the whole constructor.
+        th = _resolve_threaded(threaded) do
+            default_block_threaded(DCAT, A)
         end
-        return new{length(A), typeof(A), P1, P2, DS, CS, th}(A, idxD, idxC)
+        # The block loop is the parallel layer, so the blocks themselves must not thread --
+        # same nesting rule as the batch operators.
+        blocks = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        return new{length(blocks), typeof(blocks), P1, P2, DS, CS, th}(blocks, idxD, idxC)
     end
 end
 
@@ -80,12 +83,12 @@ end
 end
 
 # Constructors
-DCAT(A::AbstractOperator; threaded = nothing) = A
+DCAT(A::AbstractOperator; threaded::Bool = true) = A
 
 # compile-time ndoms for DCAT (both domain and codomain have N components)
 _ndoms_from_type(::Type{<:DCAT{N}}, dim::Int) where {N} = N
 
-function DCAT(A::Vararg{AbstractOperator}; threaded = nothing)
+function DCAT(A::Vararg{AbstractOperator}; threaded::Bool = true)
     return _dcat_impl(A, threaded)
 end
 
@@ -372,6 +375,14 @@ diag_AcA(L::DCAT{N, Tuple{E, Vararg{E, M}}}) where {N, M, E <: Eye} = 1.0
 has_fast_opnorm(L::DCAT) = all(has_fast_opnorm.(L.A))
 LinearAlgebra.opnorm(L::DCAT) = maximum(opnorm.(L.A))
 estimate_opnorm(L::DCAT) = maximum(estimate_opnorm.(L.A))
+
+# PROVENANCE: measured. DCAT block sweep: at 2^16 per block it wins at 4 blocks (1.18x)
+# and 8 blocks (1.9x); at 2^12 per block it loses badly (0.26x).
+block_threading_threshold(::Type{<:DCAT}) = THRESHOLD_BLOCK_PARALLEL
+
+# Whether the *block loop itself* threads, as distinct from `is_threaded`, which is also
+# true when merely a child threads. Mirrors the VCAT/HCAT accessors.
+is_block_threaded(::DCAT{N, L, P1, P2, DS, CS, Th}) where {N, L, P1, P2, DS, CS, Th} = Th
 
 _children(L::DCAT) = L.A
 # Threaded if the block loop itself threads, or any block does.

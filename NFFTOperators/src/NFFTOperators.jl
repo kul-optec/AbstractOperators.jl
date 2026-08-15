@@ -22,6 +22,7 @@ import AbstractOperators:
     _array_wrapper_type,
     is_threaded,
     supports_threading,
+    _resolve_threaded,
     is_thread_safe,
     _copy_operator_impl,
     AdjointOperator

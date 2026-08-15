@@ -31,34 +31,39 @@ end
 #default constructor
 function Variation(
         domain_type::Type{T}, dim_in::NTuple{N, Int};
-        threaded = true, array_type::Type = Array{T}
+        threaded::Bool = true, array_type::Type = Array{T}
     ) where {T, N}
     N == 1 && error("use FiniteDiff instead!")
-    threaded = threaded && Threads.nthreads() > 1 && prod(dim_in) * sizeof(domain_type) > 2^16
     S = _normalize_array_type(array_type, domain_type)
-    return Variation{domain_type, N, threaded, S}(dim_in)
+    th = _elementwise_threaded(Variation, threaded, domain_type, dim_in, S)
+    return Variation{domain_type, N, th, S}(dim_in)
 end
 
 function Variation(
-        domain_type::Type{T}, dim_in::Vararg{Int}; threaded = true, array_type::Type = Array{T}
+        domain_type::Type{T}, dim_in::Vararg{Int}; threaded::Bool = true, array_type::Type = Array{T}
     ) where {T}
     return Variation(domain_type, dim_in; threaded, array_type)
 end
 function Variation(
-        dim_in::NTuple{N, Int}; threaded = true, array_type::Type = Array{Float64}
+        dim_in::NTuple{N, Int}; threaded::Bool = true, array_type::Type = Array{Float64}
     ) where {N}
     return Variation(Float64, dim_in; threaded, array_type)
 end
-function Variation(dim_in::Vararg{Int}; threaded = true, array_type::Type = Array{Float64})
+function Variation(dim_in::Vararg{Int}; threaded::Bool = true, array_type::Type = Array{Float64})
     return Variation(dim_in; threaded, array_type)
 end
-function Variation(x::AbstractArray; threaded = true)
+function Variation(x::AbstractArray; threaded::Bool = true)
     S = _array_wrapper(x){eltype(x)}
     T = eltype(x)
     N = ndims(x)
-    threaded = threaded && _should_thread(x)
     N == 1 && error("use FiniteDiff instead!")
-    return Variation{T, N, threaded, S}(size(x))
+    # Routed through the same policy as the dimension-tuple constructor above. These two
+    # used to disagree: this one thresholded on element *count* (`_should_thread`, 2^16
+    # elements) while the other thresholded on *bytes* (`prod * sizeof > 2^16`, i.e. 8192
+    # Float64 elements), so `Variation(zeros(100,100))` and `Variation(Float64,(100,100))`
+    # produced operators with opposite threading for identical inputs.
+    th = _elementwise_threaded(Variation, threaded, T, size(x), S)
+    return Variation{T, N, th, S}(size(x))
 end
 
 # Mappings
@@ -226,5 +231,9 @@ size(L::Variation{T, N}) where {T, N} = ((prod(L.dim_in), N), L.dim_in)
 fun_name(L::Variation) = "Ʋ"
 
 is_threaded(::Variation{T, N, Th, S}) where {T, N, Th, S} = Th
-threading_threshold(::Type{<:Variation}) = THRESHOLD_ELEMENTWISE_ARITHMETIC
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!` (forward + adjoint): Float64 2^10, Float32 2^10.
+# Lower than FiniteDiff despite both being "arithmetic" because Variation makes one strided
+# pass per dimension, so each element carries several times more work.
+threading_threshold(::Type{<:Variation}) = 2^10
 supports_threading(::Variation) = true

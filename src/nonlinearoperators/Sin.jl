@@ -15,23 +15,23 @@ end
 
 function Sin(
         domain_type::Type{T}, DomainDim::NTuple{N, Int};
-        array_type::Type = Array{T}, threaded = nothing
+        array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return Sin{T, N, S, _elementwise_threaded(Sin, threaded, T, DomainDim, S)}(DomainDim)
 end
 
 function Sin(
-        DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded = nothing
+        DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N}
     return Sin(Float64, DomainDim; array_type, threaded)
 end
-function Sin(DomainDim::Vararg{Int}; array_type::Type = Array{Float64}, threaded = nothing)
+function Sin(DomainDim::Vararg{Int}; array_type::Type = Array{Float64}, threaded::Bool = true)
     return Sin(Float64, DomainDim; array_type, threaded)
 end
 
 function Sin(
-        x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded = nothing
+        x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return Sin{T, ndims(x), S, _elementwise_threaded(Sin, threaded, T, size(x), S)}(size(x))
@@ -73,7 +73,9 @@ domain_array_type(::Sin{T, N, S}) where {T, N, S} = S
 codomain_array_type(::Sin{T, N, S}) where {T, N, S} = S
 is_thread_safe(::Sin) = true
 is_threaded(::Sin{T, N, S, Th}) where {T, N, S, Th} = Th
-threading_threshold(::Type{<:Sin}) = THRESHOLD_ELEMENTWISE_TRANSCENDENTAL
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!`: Float64 2^10, Float32 2^10.
+threading_threshold(::Type{<:Sin}) = 2^10
 
 function _copy_operator_impl(
         op::Sin{T, N, S, Th}; storage_type = nothing, threaded = nothing

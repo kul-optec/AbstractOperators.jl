@@ -3,8 +3,22 @@ export is_threaded, adapt_operator, supports_threading
 # ─── Thresholds ───────────────────────────────────────────────────────────────
 #
 # There is deliberately no single global constant: the size at which threading starts to
-# pay depends on how much work each element costs. Operators with genuinely similar cost
-# profiles share a constant, operators that differ get their own.
+# pay depends on how much work each element costs.
+#
+# The thresholds come in two layers:
+#
+#   1. The cost-class constants below (`THRESHOLD_*`). These are the *defaults* and the
+#      documentation of each class's shape. An operator that has not been swept
+#      individually falls back to one of them.
+#   2. Per-operator `threading_threshold(::Type{Op})` methods, each a transcription of that
+#      operator's own crossover from `benchmark/operator_thresholds.jl`.
+#
+# Layer 2 is what governs in practice, and it is not cosmetic: measuring each operator's
+# real `mul!` showed the cost classes are too coarse. Within the "transcendental" class the
+# measured crossovers span 2^8 (SoftPlus) to 2^11 (integer Pow) -- an 8x spread. `Pow` even
+# splits internally, since a fractional exponent lowers to `exp(p*log(x))` and crosses over
+# three powers of two earlier than an integer one. Sharing one constant across a class would
+# leave most of its members either threading too early or not early enough.
 #
 # Each constant carries a PROVENANCE line stating where its value came from. Values marked
 # `measured` are transcriptions of a `benchmark/threading_sweep.jl` run whose machine and
@@ -58,30 +72,41 @@ takes the conservative Float32 value. `@budgeted_threads` never wins at Float64.
 const THRESHOLD_MEMORY_BOUND = 2^18
 
 """
-Aggregate work across the blocks of a block-parallel calculus operator (`DCAT`). Unlike the
-elementwise thresholds this counts *total elements over all blocks*, since the parallel
-unit is a block, not an element. Kernel: `@budgeted_threads` (the loop body is a whole
-child `mul!`, not element access).
+Default per-block work at which block-level threading starts to pay. Block-parallel
+operators override [`block_threading_threshold`](@ref) with their own measured value.
 
-PROVENANCE: measured. Block sweep over block count x block size, same machine and settings
-as above. `@budgeted_threads` has a fixed ~25-40us setup cost here, so small blocks lose
-badly (16 blocks x 2^12 = 0.56x, 8 x 2^12 = 0.16x) while large aggregates win big
-(8 x 2^16 = 2.2x, 8 x 2^18 = 9.4x).
+Kernel: `@budgeted_threads` (the loop body is a whole child `mul!`, not element access).
+
+PROVENANCE: measured, as the DCAT value; see `block_threading_threshold`.
 """
-const THRESHOLD_BLOCK_PARALLEL = 2^18
+const THRESHOLD_BLOCK_PARALLEL = 2^16
 
 """
 Minimum number of blocks before block-level threading is considered, independent of total
 size.
 
-PROVENANCE: measured, and this constant exists *because* of the measurement: total work
-alone is not a sufficient predictor. At 2 blocks x 2^18 elements the aggregate is 2^19 --
-comfortably over `THRESHOLD_BLOCK_PARALLEL` -- yet the speedup is 1.02x, because two blocks
-cap the achievable gain at 2x and the threading overhead eats it. The same 2^19 aggregate
-split across 8 blocks gives 2.2x. Both conditions together admit every measured win and
-exclude every measured loss.
+PROVENANCE: measured, and this constant exists *because* of the measurement: per-block work
+alone is not a sufficient predictor. At 2 blocks of 2^18 elements each block is far over
+`block_threading_threshold`, yet the DCAT speedup is 1.02x -- two blocks cap the achievable
+gain at 2x and the threading overhead eats it. The same work split across 8 blocks gives
+2.2x.
 """
 const MIN_BLOCKS_FOR_PARALLEL = 4
+
+"""
+Minimum per-item work before a *batch* operator threads its batch loop.
+
+Batch operators differ from the block-parallel calculus operators in that the number of
+items is typically large and known only at call time, so the gate is on the work of a single
+wrapped `mul!`.
+
+PROVENANCE: provisional. Set deliberately low relative to the block thresholds because a
+batch loop usually has far more items than a DCAT has blocks, so the per-item overhead is
+amortised much better -- but this specific value has not been swept. Its purpose is to close
+a hole rather than to tune: the previous gate had *no* size component whatsoever, so batches
+of four-element operators were threaded.
+"""
+const MIN_BATCH_WORK_FOR_PARALLEL = 2^10
 
 # ─── Storage classification ───────────────────────────────────────────────────
 
@@ -137,33 +162,62 @@ end
 """
 	_elementwise_threaded(Op, threaded, T, dims, S) -> Bool
 
-Resolve a constructor's `threaded` keyword for an elementwise operator: `nothing` means
-"apply the per-operator policy", anything else is taken as an explicit override.
+Resolve a constructor's `threaded` keyword for an elementwise operator.
+
+See [`_resolve_threaded`](@ref) for the meaning of the two values; in short, `false` vetoes
+and `true` defers to the per-operator policy.
 
 Returns a plain `Bool` so it can be spliced straight into a `Th` type parameter.
 """
 function _elementwise_threaded(
-        ::Type{Op}, threaded, ::Type{T}, dims, ::Type{S}
+        ::Type{Op}, threaded::Bool, ::Type{T}, dims, ::Type{S}
     ) where {Op <: AbstractOperator, T, S <: AbstractArray}
-    threaded === nothing && return default_threaded(Op, T, dims, S)
-    return threaded::Bool
+    return _resolve_threaded(threaded) do
+        default_threaded(Op, T, dims, S)
+    end
 end
 
 """
-	default_block_threaded(blocks) -> Bool
+	block_threading_threshold(::Type{<:AbstractOperator})
 
-Whether a block-parallel calculus operator over `blocks` should thread its block loop.
+Mean per-block element count at which this operator's block loop should thread.
 
-Requires **both** a large enough aggregate and enough blocks — see
-[`MIN_BLOCKS_FOR_PARALLEL`](@ref) for why total work alone is not sufficient.
+**Per-block, not aggregate.** The first version of this policy tested total work across all
+blocks, and measurement showed that is the wrong predictor: at a fixed 2^18 aggregate,
+VCAT-forward measures 1.32x with 4 blocks of 2^16 but 0.85x with 16 blocks of 2^14. What
+actually decides it is how much work each block carries against the per-block dispatch
+overhead, so the threshold is on the mean block size and the block *count* is handled
+separately by [`MIN_BLOCKS_FOR_PARALLEL`](@ref).
+
+The value differs per operator because the per-block overhead does — see the `HCAT` method.
 """
-function default_block_threaded(blocks)
+block_threading_threshold(::Type{<:AbstractOperator}) = THRESHOLD_BLOCK_PARALLEL
+
+"""
+	default_block_threaded(Op, blocks) -> Bool
+
+Whether a block-parallel calculus operator of type `Op` over `blocks` should thread its
+block loop. Requires enough blocks *and* enough work per block; see
+[`MIN_BLOCKS_FOR_PARALLEL`](@ref) and [`block_threading_threshold`](@ref) for why one
+condition alone is not sufficient.
+"""
+function default_block_threaded(::Type{Op}, blocks) where {Op <: AbstractOperator}
     Threads.nthreads() > 1 || return false
     length(blocks) >= MIN_BLOCKS_FOR_PARALLEL || return false
     _is_cpu_storage(_array_wrapper_type(domain_array_type(first(blocks)))) || return false
     total = sum(b -> _total_elements(size(b, 2)), blocks; init = 0)
-    return total >= THRESHOLD_BLOCK_PARALLEL
+    # Mean rather than minimum: with heterogeneous blocks the runtime is set by the total
+    # work spread over the loop, and a single small block should not veto the whole thing.
+    mean_block = total ÷ length(blocks)
+    return mean_block >= block_threading_threshold(Op)
 end
+
+# Multi-domain operators report an ArrayPartition, which the size policy cannot use
+# directly; fall back to a plain CPU array of the promoted element type.
+_policy_storage(S::Type{<:AbstractArray}) = S
+_policy_storage(S::Type{<:ArrayPartition}) = Array{_storage_eltype_or_float(S)}
+_storage_eltype_or_float(::Type{<:ArrayPartition{T}}) where {T} = T
+_storage_eltype_or_float(::Type) = Float64
 
 _total_elements(dims::Tuple{Vararg{Integer}}) = prod(dims; init = 1)
 _total_elements(dims::Tuple) = sum(_total_elements, dims; init = 0)
@@ -176,10 +230,55 @@ _total_elements(n::Integer) = Int(n)
 
 Whether `L` executes its `mul!` (and adjoint `mul!`) using multiple Julia threads.
 
-Defaults to `false`. Operators that can thread report the state they were constructed
-with, so that `is_threaded(copy_operator(L; threaded = t)) == t`.
+This reports what the operator will **actually do**, not what was asked for. Constructing
+with `threaded = true` below the operator's [`threading_threshold`](@ref), on GPU storage,
+or in a single-threaded session all yield `is_threaded(L) == false`, because in each case
+threading would not happen (or would be a pessimisation). See [`_resolve_threaded`](@ref)
+for the full rule.
+
+Consequently `is_threaded(copy_operator(L; threaded = true))` is **not** guaranteed to be
+`true`; `is_threaded(copy_operator(L; threaded = false))` *is* guaranteed to be `false`,
+which is the direction nesting safety depends on.
+
+Defaults to `false`.
 """
 is_threaded(::AbstractOperator) = false
+
+"""
+	_resolve_threaded(policy, threaded::Bool) -> Bool
+
+The single place the `threaded` keyword is interpreted, so that every operator in the
+package answers it the same way.
+
+The keyword is a `Bool` — there is no third state:
+
+| value | meaning |
+|---|---|
+| `false` | **veto.** Never thread. This is the only hard directive, and it has to be, because nesting safety depends on it: a threaded batch/block loop switches its children off with `threaded = false` and must be able to rely on that. |
+| `true` (default) | **permission.** Threading is enabled *if the policy also agrees*. It does not force threading on. |
+
+`true` being a permission rather than a command is what lets the policy keep the final say
+for correctness reasons (a kernel that is only valid for certain shapes; GPU storage, where
+Julia-level threading only adds overhead; a single-threaded session) and for performance
+reasons (below the operator's measured crossover, threading is a slowdown). It also keeps
+`is_threaded` honest: it reports what the operator will actually do, never what was merely
+asked for.
+
+To force threading on regardless of size — for a benchmark, say — call the constructor with
+a size above the operator's `threading_threshold`, or lower that threshold; there is
+deliberately no override that makes `is_threaded` disagree with the executed path.
+
+!!! note
+    `copy_operator` and `adapt_operator` also take a `threaded` keyword, and there it *does*
+    accept `nothing`. That is a different axis: those are **constraint** arguments, where
+    `nothing` means "no constraint on threading, preserve what the operator has", exactly as
+    `storage_type = nothing` means "no constraint on storage". Without it, a plain
+    `copy_operator(op)` could not preserve an explicitly serial operator.
+"""
+@inline function _resolve_threaded(policy::F, threaded::Bool) where {F}
+    threaded || return false
+    return policy()::Bool
+end
 
 """
 	_children(L::AbstractOperator) -> Tuple
@@ -243,6 +342,9 @@ This is the counterpart to [`copy_operator`](@ref), which always produces a new 
 
 - `adapt_operator` returns `op` itself (`===`) when every requested constraint already
   holds, and delegates to `copy_operator` otherwise.
+- `threaded = false` is a constraint that can always be met. `threaded = true` is a
+  *permission* (see [`_resolve_threaded`](@ref)), so a copy made for it may still come back
+  serial if the policy declines — asking twice will not change that.
 - Use `adapt_operator` when you need *an* operator meeting a constraint (the common case
   when wrapping child operators); use `copy_operator` when you need a *distinct* object,
   e.g. one private copy per thread.

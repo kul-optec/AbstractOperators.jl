@@ -61,7 +61,11 @@
     end
 
     function test_failing_nonthreadsafe_spreading_batch_op()
-        n, m = 10, 15
+        # `m` is above MIN_BATCH_WORK_FOR_PARALLEL so the batch actually takes its threaded
+        # path -- that is the only path that can raise. Below the gate a `threaded = true`
+        # request is declined and the single-threaded branch runs happily, which is correct
+        # behaviour but tests nothing here.
+        n, m = 10, 4096
         num_ops = Threads.nthreads() + 5
         op = GetIndex(Float64, (m - 1,), 1:6) * FiniteDiff((m,))
         ops = [reshape(i * op, 2, 3) for i in 1:num_ops]
@@ -344,7 +348,9 @@ end
     using Random, AbstractOperators
     Random.seed!(0)
     if Threads.nthreads() > 1
-        n = 5
+        # Sized above the batch policy's gate so the threaded branch -- the only one that
+        # validates the strategy -- is actually reached.
+        n = 4096
         # LBFGS is not thread-safe; an unknown strategy reaches the else branch at line 404
         ops = [LBFGS(zeros(n), 3) for _ in 1:3]
         @test_throws ArgumentError BatchOp(

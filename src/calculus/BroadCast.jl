@@ -7,12 +7,18 @@ struct NoOperatorBroadCast{T, N, M, Threaded, S} <: AbstractBroadCast{T, N, M, T
     reshaped_dim_in::NTuple{M, Int}
     dim_out::NTuple{M, Int}
     function NoOperatorBroadCast(
-            T::Type, S, dim_in::NTuple{N, Int}, reshaped_dim_in::NTuple{M, Int}, dim_out::NTuple{M, Int}; threaded::Bool = true
+            T::Type, S, dim_in::NTuple{N, Int}, reshaped_dim_in::NTuple{M, Int},
+            dim_out::NTuple{M, Int}; threaded::Bool = true
         ) where {N, M}
         Base.Broadcast.check_broadcast_shape(dim_out, reshaped_dim_in)
         compact = all(reshaped_dim_in[d] == dim_out[d] for d in 1:N)
-        threaded = threaded && _should_thread(S) && Threads.nthreads() > 1 && compact && prod(dim_in) * sizeof(T) > 2^16
-        return new{T, N, M, threaded, S}(dim_in, reshaped_dim_in, dim_out)
+        # `compact` is a hard prerequisite, not a size heuristic: the threaded kernel
+        # (`tbroadcast!`) is only correct when the broadcast dimensions are trailing. The
+        # size question then goes through the shared policy, which replaced a bespoke
+        # `prod(dim_in) * sizeof(T) > 2^16` **byte** cutoff -- the only threshold in the
+        # package that was expressed in bytes rather than elements.
+        th = compact && _elementwise_threaded(NoOperatorBroadCast, threaded, T, dim_out, S)
+        return new{T, N, M, th, S}(dim_in, reshaped_dim_in, dim_out)
     end
 end
 
@@ -26,7 +32,12 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
             A, dim_out::NTuple{M, Int}; threaded::Bool = true
         ) where {M}
         Base.Broadcast.check_broadcast_shape(dim_out, size(A, 1))
-        threaded = threaded && _should_thread(A) && Threads.nthreads() > 1
+        # Previously `_should_thread(A)`, which for an operator reduced to `nthreads() > 1`
+        # -- no size component at all, so this threaded a broadcast of any size.
+        threaded = _elementwise_threaded(
+            OperatorBroadCast, threaded, codomain_type(A), dim_out,
+            _policy_storage(codomain_array_type(A)),
+        )
         N = ndims(A, 1)
         T = codomain_type(A)
         dim_in = size(A, 1)
@@ -273,3 +284,17 @@ end
         @ncall($M, view, b, d -> Imask[d] ? Colon() : idx[d])
     end
 end
+
+# Broadcasting is pure data movement, so both flavours sit at the memory-bound threshold.
+threading_threshold(::Type{<:AbstractBroadCast}) = THRESHOLD_MEMORY_BOUND
+supports_threading(::AbstractBroadCast) = true
+
+# The `Threaded` type parameter was already there; without these methods the trait fell
+# through to the `false` default and contradicted the operator's own dispatch.
+is_threaded(::NoOperatorBroadCast{T, N, M, Th}) where {T, N, M, Th} = Th
+# For the operator flavour the wrapped operator can thread independently of the broadcast.
+is_threaded(R::OperatorBroadCast{T, N, M, Th}) where {T, N, M, Th} =
+    Th || any(is_threaded, _broadcast_children(R))
+_broadcast_children(R::OperatorBroadCast{T, N, M, false}) where {T, N, M} = (R.A,)
+_broadcast_children(R::OperatorBroadCast{T, N, M, true}) where {T, N, M} = R.A
+_children(R::OperatorBroadCast) = _broadcast_children(R)

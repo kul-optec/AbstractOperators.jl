@@ -56,7 +56,11 @@ end
     using AbstractOperators, Random
     Random.seed!(0)
 
-    op = FiniteDiff(Float64, (64,); threaded = false)
+    # Sized above FiniteDiff's measured threshold so that `threaded = true` is a permission
+    # the policy will actually grant -- below it, `true` is correctly declined and there
+    # would be nothing for `adapt_operator` to change.
+    n = 1 << 16
+    op = FiniteDiff(Float64, (n,); threaded = false)
     @test is_threaded(op) == false
 
     # Constraint already satisfied -> the very same object, no allocation.
@@ -64,18 +68,143 @@ end
     @test adapt_operator(op; threaded = false) === op
     @test adapt_operator(op; storage_type = Array{Float64}) === op
 
-    # Constraint unmet -> a copy that actually satisfies it.
+    # Constraint unmet -> a copy that actually satisfies it (the policy agrees at this size).
     threaded_copy = adapt_operator(op; threaded = true)
-    @test threaded_copy !== op
-    @test is_threaded(threaded_copy) == true
+    @test is_threaded(threaded_copy) == (Threads.nthreads() > 1)
     # ...and the original is untouched.
     @test is_threaded(op) == false
 
     # Numerically identical: threading changes the schedule, not the arithmetic.
-    x = randn(64)
+    x = randn(n)
     @test op * x == threaded_copy * x
 
     # require_thread_safe is an additional constraint, not a replacement.
     @test is_thread_safe(op) == true
     @test adapt_operator(op; require_thread_safe = true) === op
+end
+
+@testitem "threading policy: thresholds are per-operator, not per-cost-class" tags = [:misc, :Threading] setup = [TestUtils] begin
+    using AbstractOperators
+    using AbstractOperators: threading_threshold
+
+    # `threading_threshold` dispatches on the operator *type*, so each operator carries its
+    # own measured crossover. This test pins the property that motivated the design: the
+    # measured values genuinely differ within a single cost class, so a shared constant
+    # could not represent them.
+    #
+    # All of these are transcriptions from benchmark/operator_thresholds.jl.
+    @test threading_threshold(SoftPlus) == 2^8      # earliest of any operator
+    @test threading_threshold(Cos) == 2^9
+    @test threading_threshold(Sin) == 2^10
+    @test threading_threshold(Sigmoid) == 2^10
+
+    # An 8x spread inside what the cost-class scheme called one class.
+    @test threading_threshold(SoftPlus) < threading_threshold(Sin)
+
+    # Pow splits on the exponent kind: `x^0.5` lowers to `exp(p*log(x))` and so crosses over
+    # three powers of two earlier than integer `x^2`. A single method could not express this.
+    @test threading_threshold(typeof(Pow(Float64, (4,), 2))) == 2^11
+    @test threading_threshold(typeof(Pow(Float64, (4,), 0.5))) == 2^8
+
+    # Memory-bound work crosses over far later than compute-bound work.
+    @test threading_threshold(FiniteDiff) == 2^16
+    @test threading_threshold(DiagOp) == 2^17
+    @test threading_threshold(Scale) == 2^22
+    @test threading_threshold(Sin) < threading_threshold(FiniteDiff) < threading_threshold(Scale)
+end
+
+@testitem "threading policy: the four legacy thresholds are gone" tags = [:misc, :Threading] setup = [TestUtils] begin
+    using AbstractOperators
+    using AbstractOperators: _should_thread, MIN_BATCH_WORK_FOR_PARALLEL
+    using Random
+    Random.seed!(0)
+
+    # Regression guards for two defects the legacy thresholds carried.
+
+    # 1. Variation's two constructors disagreed: the dimension-tuple path thresholded on
+    #    *bytes* (`prod * sizeof > 2^16`) and the array path on *elements* (2^16), so the
+    #    same 10000-element input produced opposite threading.
+    @test is_threaded(Variation(Float64, (100, 100))) == is_threaded(Variation(zeros(100, 100)))
+    @test is_threaded(Variation(Float64, (4, 4))) == is_threaded(Variation(zeros(4, 4)))
+
+    # 2. `_should_thread(::AbstractOperator)` forwarded to the storage-type method, which is
+    #    just `nthreads() > 1` -- no size component at all, so a batch over a four-element
+    #    operator was threaded.
+    @test _should_thread(Eye(4)) == false
+    if Threads.nthreads() > 1
+        @test _should_thread(Eye(MIN_BATCH_WORK_FOR_PARALLEL)) == true
+    end
+
+    # Scale's legacy cutoff was 1e4 elements, ~400x below its measured 2^22 crossover.
+    @test is_threaded(Scale(2.0, DiagOp(randn(100_000); threaded = false))) == false
+end
+
+@testitem "threading policy: threaded=true is a permission, threaded=false a veto" tags = [
+    :misc, :Threading,
+] setup = [TestUtils] begin
+    using AbstractOperators, FFTWOperators, NFFTOperators, Random
+    Random.seed!(0)
+
+    # The package-wide rule, asserted across every family that takes the keyword. The
+    # keyword is a Bool -- there is no third state:
+    #
+    #   false -> veto. Never threads. Nesting safety depends on this being absolute.
+    #   true  -> permission (and the default). Threads only if the policy also agrees.
+    #
+    # `true` is checked below the operator's threshold, where the policy must decline it.
+    tiny_builders = (
+        (; threaded) -> Sin(Float64, (4,); threaded),
+        (; threaded) -> FiniteDiff(Float64, (4,); threaded),
+        (; threaded) -> Variation(Float64, (4, 4); threaded),
+        (; threaded) -> DiagOp(randn(4); threaded),
+        (; threaded) -> Scale(2.0, DiagOp(randn(4); threaded = false); threaded),
+        (; threaded) -> DFT(Float64, (256,); threaded),
+        (; threaded) -> DCT(Float64, (256,); threaded),
+        (; threaded) -> RDFT(Float64, (256,); threaded),
+        (; threaded) -> BatchOp(FiniteDiff(Float64, (4,); threaded = false), (8,); threaded),
+    )
+    for build in tiny_builders
+        @test is_threaded(build(; threaded = true)) == false    # permission declined
+        @test is_threaded(build(; threaded = false)) == false   # veto
+    end
+
+    # Above threshold, the permission is granted (given more than one thread).
+    if Threads.nthreads() > 1
+        big_builders = (
+            (; threaded) -> Sin(Float64, (1 << 20,); threaded),
+            (; threaded) -> FiniteDiff(Float64, (1 << 20,); threaded),
+            (; threaded) -> DiagOp(randn(1 << 20); threaded),
+            (; threaded) -> DFT(Float64, (1 << 16,); threaded),
+            (; threaded) -> DCT(Float64, (1 << 16,); threaded),
+            (; threaded) -> RDFT(Float64, (1 << 16,); threaded),
+            (; threaded) -> BatchOp(FiniteDiff(Float64, (1 << 20,); threaded = false), (8,); threaded),
+        )
+        for build in big_builders
+            @test is_threaded(build(; threaded = true)) == true
+            # The veto still wins over any amount of work.
+            @test is_threaded(build(; threaded = false)) == false
+        end
+    end
+
+    # FFTW's own `num_threads` remains an explicit *command* rather than a permission: it is
+    # the escape hatch for callers who know their workload better than the policy does.
+    @test is_threaded(DFT(Float64, (256,); num_threads = 8)) == (Threads.nthreads() >= 1)
+end
+
+@testitem "threading policy: `threaded` is Bool-only in constructors" tags = [:misc, :Threading] setup = [TestUtils] begin
+    using AbstractOperators
+
+    # `nothing` is not part of the constructor API -- the keyword is `Bool` with `true` as
+    # the default, so a stray `nothing` fails loudly rather than being reinterpreted.
+    @test_throws TypeError Sin(Float64, (4,); threaded = nothing)
+    @test_throws TypeError FiniteDiff(Float64, (4,); threaded = nothing)
+
+    # `copy_operator`/`adapt_operator` are the exception, and deliberately so: there
+    # `threaded` is a *constraint*, and `nothing` means "no constraint", exactly as it does
+    # for `storage_type`. Without it a plain copy could not preserve an explicitly serial
+    # operator -- it would re-derive threading from the policy instead.
+    op = Sin(Float64, (1 << 20,); threaded = false)
+    @test is_threaded(op) == false
+    @test is_threaded(copy_operator(op)) == false
+    @test adapt_operator(op) === op
 end

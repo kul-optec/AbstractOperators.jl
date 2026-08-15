@@ -33,12 +33,13 @@ struct VCAT{
         P <: Tuple,
         C <: AbstractArray,
         CS <: AbstractArray,  # codomain storage type (fixed at construction)
+        Th,                   # thread the forward block loop?
     } <: AbstractOperator
     A::L     # tuple of AbstractOperators
     idxs::P  # indices; always NTuple{N, Int} since inner VCATs are flattened at construction
     buf::C   # buffer memory
     function VCAT(
-            A::L, idxs::P, buf::C
+            A::L, idxs::P, buf::C; threaded::Bool = true
         ) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C <: AbstractArray}
         if any([size(A[1], 2) != size(a, 2) for a in A])
             throw(DimensionMismatch("operators must have the same domain dimension!"))
@@ -47,7 +48,15 @@ struct VCAT{
             throw(error("operators must all share the same domain_type!"))
         end
         CS = _compute_vcat_cs(A, idxs)
-        return new{N, L, P, C, CS}(A, idxs, buf)
+        # Only the *forward* direction is block-parallel: it writes disjoint output blocks.
+        # The adjoint accumulates every block into one shared `y`, so it stays serial.
+        # See the note in DCAT: `A` must not be reassigned while a closure captures it,
+        # or it gets boxed to `Any` and the whole constructor goes through runtime dispatch.
+        th = _resolve_threaded(threaded) do
+            default_block_threaded(VCAT, A)
+        end
+        blocks = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        return new{N, typeof(blocks), P, C, CS, th}(blocks, idxs, buf)
     end
 end
 
@@ -97,7 +106,9 @@ VCAT(A::AbstractOperator) = A
 
 # Mappings
 
-@generated function mul!(y::ArrayPartition, H::VCAT{N, L, P}, b::AbstractArray) where {N, L, P}
+@generated function mul!(
+        y::ArrayPartition, H::VCAT{N, L, P, C, CS, false}, b::AbstractArray
+    ) where {N, L, P, C, CS}
     ex = :(check(y, H, b))
     for i in 1:N
         # P always has Int elements (inner VCATs are flattened at construction)
@@ -105,6 +116,23 @@ VCAT(A::AbstractOperator) = A
     end
     ex = :($ex; return y)
     return ex
+end
+
+# Threaded forward. As in DCAT, the parallel loop cannot live in a `@generated` body (those
+# must be pure, and the threading macros expand to closures), so only the single-block call
+# is generated and selected by `Val(i)`.
+@generated function _vcat_block_fwd!(y, H::VCAT{N, L, P}, b, ::Val{I}) where {N, L, P, I}
+    return :(mul!(y.x[H.idxs[$I]], H.A[$I], b))
+end
+
+function mul!(
+        y::ArrayPartition, H::VCAT{N, L, P, C, CS, true}, b::AbstractArray
+    ) where {N, L, P, C, CS}
+    check(y, H, b)
+    @budgeted_threads for i in 1:N
+        _vcat_block_fwd!(y, H, b, Val(i))
+    end
+    return y
 end
 
 @generated function mul!(
@@ -195,7 +223,7 @@ function remove_slicing(L::VCAT)
                 new_ops[i] = hcat(ops...)
             end
         end
-        return VCAT(tuple(new_ops...), L.idxs, L.buf)
+        return VCAT(tuple(new_ops...), L.idxs, L.buf; threaded = is_block_threaded(L))
     end
     error("remove_slicing is not implemented for this VCAT: $(typeof(L))")
 end
@@ -217,17 +245,36 @@ function permute(H::VCAT{N, L, P, C}, p::AbstractVector{Int}) where {N, L, P, C}
         cnt += z
     end
 
-    return VCAT(H.A, new_part, H.buf)
+    return VCAT(H.A, new_part, H.buf; threaded = is_block_threaded(H))
 end
 
-remove_displacement(V::VCAT) = VCAT(remove_displacement.(V.A), V.idxs, V.buf)
+function remove_displacement(V::VCAT)
+    return VCAT(remove_displacement.(V.A), V.idxs, V.buf; threaded = is_block_threaded(V))
+end
 
-function _copy_operator_impl(op::VCAT; storage_type = nothing, threaded = nothing)
+function _copy_operator_impl(
+        op::VCAT{N, L, P, C, CS, Th}; storage_type = nothing, threaded = nothing
+    ) where {N, L, P, C, CS, Th}
+    new_threaded = threaded === nothing ? Th : threaded
     new_buf = _convert_buffer(op.buf, storage_type)
-    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
-    return VCAT(new_ops, op.idxs, new_buf)
+    # When the forward block loop threads, the constructor forces the blocks serial, so
+    # only the storage request is forwarded down.
+    child_threaded = new_threaded ? false : threaded
+    new_ops = tuple([copy_operator(a; storage_type, threaded = child_threaded) for a in op.A]...)
+    return VCAT(new_ops, op.idxs, new_buf; threaded = new_threaded)
 end
+
+# Whether the *block loop itself* threads, as distinct from `is_threaded`, which is also
+# true when merely a child threads. Structural transforms need the former to round-trip.
+# PROVENANCE: measured. VCAT-forward sweep, speedup by per-block size across 4/8/16
+# blocks: 2^14 -> 0.31/0.39/0.85 (all lose), 2^15 -> 0.74/1.11/1.26 (mixed),
+# 2^16 -> 1.32/1.74/1.60 (all win). 2^16 is the first size that wins at every block count.
+block_threading_threshold(::Type{<:VCAT}) = THRESHOLD_BLOCK_PARALLEL
+
+is_block_threaded(::VCAT{N, L, P, C, CS, Th}) where {N, L, P, C, CS, Th} = Th
 
 _children(L::VCAT) = L.A
-is_threaded(L::VCAT) = _is_threaded_from_children(L)
-supports_threading(L::VCAT) = _supports_threading_from_children(L)
+# Threaded if the forward block loop threads, or any block does.
+is_threaded(L::VCAT{N, Ls, P, C, CS, Th}) where {N, Ls, P, C, CS, Th} =
+    Th || _is_threaded_from_children(L)
+supports_threading(::VCAT) = true

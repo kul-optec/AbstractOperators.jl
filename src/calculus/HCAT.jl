@@ -45,6 +45,7 @@ struct HCAT{
         P <: Tuple,
         C <: AbstractArray,
         DS <: AbstractArray,  # domain storage type (fixed at construction)
+        Th,                   # thread the adjoint block loop?
     } <: AbstractOperator
     A::L     # tuple of AbstractOperators
     idxs::P  # indices
@@ -54,7 +55,7 @@ struct HCAT{
     # has H.idxs = (1,(2,3))
     # `AbstractOperators` are stack
     buf::C   # buffer memory
-    function HCAT(A::L, idxs::P, buf::C) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C}
+    function HCAT(A::L, idxs::P, buf::C; threaded::Bool = true) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C}
         if any([size(A[1], 1) != size(a, 1) for a in A])
             throw(DimensionMismatch("operators must have the same codomain dimension!"))
         end
@@ -62,7 +63,16 @@ struct HCAT{
             throw(error("operators must all share the same codomain_type!"))
         end
         DS = _compute_hcat_ds(A, idxs)
-        return new{N, L, P, C, DS}(A, idxs, buf)
+        # Only the *adjoint* direction is block-parallel: it writes disjoint domain blocks.
+        # The forward direction accumulates every block into one shared `y`, so it stays
+        # serial -- the mirror image of VCAT.
+        # See the note in DCAT: `A` must not be reassigned while a closure captures it,
+        # or it gets boxed to `Any` and the whole constructor goes through runtime dispatch.
+        th = _resolve_threaded(threaded) do
+            default_block_threaded(HCAT, A)
+        end
+        blocks = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        return new{N, typeof(blocks), P, C, DS, th}(blocks, idxs, buf)
     end
 end
 
@@ -155,7 +165,9 @@ function mul!(y::ArrayPartition, A::AdjointOperator{<:HCAT}, b::AbstractArray)
     return y
 end
 
-@generated function mul!(y::Tuple, A::AdjointOperator{<:HCAT{N, L, P}}, b::AbstractArray) where {N, L, P}
+@generated function mul!(
+        y::Tuple, A::AdjointOperator{<:HCAT{N, L, P, C, DS, false}}, b::AbstractArray
+    ) where {N, L, P, C, DS}
     K = 0
     function output_natural_expr(i)
         Pi = fieldtype(P, i)
@@ -195,6 +207,42 @@ end
     ex_indexed = :($ex_indexed; return y)
 
     return :(_hcat_has_natural_idxs(A.A) ? ($ex_natural) : ($ex_indexed))
+end
+
+# Threaded adjoint. Same structure as the serial method above -- including its runtime
+# choice between the natural-order and indexed expansions -- but with the per-block call
+# lifted into a `Val(i)`-selected helper so the parallel loop can live in a plain function
+# (a `@generated` body must be pure, and the threading macros expand to closures).
+@generated function _hcat_block_adj!(y::Tuple, H::HCAT{N, L, P}, b, ::Val{I}, ::Val{natural}) where {N, L, P, I, natural}
+    K = 0
+    target = nothing
+    for i in 1:N
+        Pi = fieldtype(P, i)
+        if Pi <: Integer
+            K += 1
+            i == I && (target = natural ? :(y[$K]) : :(y[H.idxs[$i]]))
+        else
+            n = fieldcount(Pi)
+            if i == I
+                parts = natural ? [:(y[$(K + j)]) for j in 1:n] :
+                    [:(y[H.idxs[$i][$j]]) for j in 1:n]
+                target = :(ArrayPartition($(parts...)))
+            end
+            K += n
+        end
+    end
+    return :(mul!($target, H.A[$I]', b))
+end
+
+function mul!(
+        y::Tuple, A::AdjointOperator{<:HCAT{N, L, P, C, DS, true}}, b::AbstractArray
+    ) where {N, L, P, C, DS}
+    H = A.A
+    natural = Val(_hcat_has_natural_idxs(H))
+    @budgeted_threads for i in 1:N
+        _hcat_block_adj!(y, H, b, Val(i), natural)
+    end
+    return y
 end
 
 _hcat_has_natural_idxs(H::HCAT{N, L, P}) where {N, L, P} = H.idxs == _hcat_natural_idxs(P)
@@ -354,17 +402,38 @@ function permute(H::HCAT, p::AbstractVector{Int})
         cnt += z
     end
 
-    return HCAT(H.A, new_part, H.buf)
+    return HCAT(H.A, new_part, H.buf; threaded = is_block_threaded(H))
 end
 
-remove_displacement(H::HCAT) = HCAT(remove_displacement.(H.A), H.idxs, H.buf)
+function remove_displacement(H::HCAT)
+    return HCAT(remove_displacement.(H.A), H.idxs, H.buf; threaded = is_block_threaded(H))
+end
 
-function _copy_operator_impl(op::HCAT; storage_type = nothing, threaded = nothing)
+function _copy_operator_impl(
+        op::HCAT{N, L, P, C, DS, Th}; storage_type = nothing, threaded = nothing
+    ) where {N, L, P, C, DS, Th}
+    new_threaded = threaded === nothing ? Th : threaded
     new_buf = _convert_buffer(op.buf, storage_type)
-    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
-    return HCAT(new_ops, op.idxs, new_buf)
+    # When the adjoint block loop threads, the constructor forces the blocks serial, so
+    # only the storage request is forwarded down.
+    child_threaded = new_threaded ? false : threaded
+    new_ops = tuple([copy_operator(a; storage_type, threaded = child_threaded) for a in op.A]...)
+    return HCAT(new_ops, op.idxs, new_buf; threaded = new_threaded)
 end
+
+# Whether the *adjoint block loop itself* threads, as distinct from `is_threaded`, which is
+# also true when merely a child threads. Structural transforms need the former to round-trip.
+# PROVENANCE: measured, and deliberately one step above DCAT/VCAT. HCAT's adjoint carries
+# per-block ArrayPartition indexing that the others do not, and it shows: speedup by
+# per-block size across 4/8/16 blocks is 2^15 -> 0.63/0.83/1.51, 2^16 -> 0.76/1.25/1.31
+# (4 blocks still LOSES), 2^17 -> 1.27/1.19/4.25 (all win). Sharing VCAT's 2^16 would ship
+# a measured 0.76x regression at 4 blocks -- this is exactly why the threshold is a
+# per-operator function rather than one shared constant.
+block_threading_threshold(::Type{<:HCAT}) = 2^17
+
+is_block_threaded(::HCAT{N, L, P, C, DS, Th}) where {N, L, P, C, DS, Th} = Th
 
 _children(L::HCAT) = L.A
-is_threaded(L::HCAT) = _is_threaded_from_children(L)
-supports_threading(L::HCAT) = _supports_threading_from_children(L)
+is_threaded(L::HCAT{N, Ls, P, C, DS, Th}) where {N, Ls, P, C, DS, Th} =
+    Th || _is_threaded_from_children(L)
+supports_threading(::HCAT) = true

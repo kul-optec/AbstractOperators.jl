@@ -30,7 +30,7 @@ k-space and back.
   second dimension must match the shape of the dcf array. The element type of the trajectory must
   match the element type of the dcf array. This argument is optional and defaults to `nothing`.
   If `nothing` is passed, the dcf will be estimated using the sample density compensation method [2].
-- `threaded::Bool=true`: Whether to use threading when applying the operator. Defaults to `true`.
+- `threaded`: `false` disables threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread and CPU storage. Fixed at construction, since the NFFT plan is built for a thread count.
 - `dcf_estimation_iterations::Union{Nothing,Int}=nothing`: The number of iterations to use when
   estimating the dcf. Defaults to `20`. This argument is only used if `dcf` is not provided.
 - `dcf_correction_function::Function=identity`: A correction function to apply to the estimated dcf.
@@ -73,11 +73,14 @@ function NFFTOp(
     ) where {T, D}
     check_traj_and_dcf(trajectory, dcf, D)
     arr_wrapper = _array_wrapper_type(array_type)
-    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded; kwargs...)
+    # Resolved before planning: the plan itself is built for this thread count, so the
+    # policy has to have had its say by now (a `nothing` reaching `create_plan` would not
+    # even dispatch).
+    threaded_flag = _nfft_threaded(threaded, arr_wrapper)
+    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded_flag; kwargs...)
     ksp_shape = size(trajectory)[2:end]
     ksp_buffer = _nfft_adapt(arr_wrapper, zeros(complex(T), ksp_shape...))
     adapted_dcf = _nfft_adapt(arr_wrapper, collect(dcf))
-    threaded_flag = threaded && arr_wrapper === Array
     return NFFTOp{T, D, typeof(plan), typeof(ksp_buffer), typeof(adapted_dcf)}(plan, ksp_buffer, adapted_dcf, threaded_flag)
 end
 
@@ -92,14 +95,34 @@ function NFFTOp(
     ) where {T, D}
     check_traj(trajectory, D)
     arr_wrapper = _array_wrapper_type(array_type)
-    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded; kwargs...)
+    # Resolved before planning: the plan itself is built for this thread count, so the
+    # policy has to have had its say by now (a `nothing` reaching `create_plan` would not
+    # even dispatch).
+    threaded_flag = _nfft_threaded(threaded, arr_wrapper)
+    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded_flag; kwargs...)
     ksp_shape = size(trajectory)[2:end]
     ksp_buffer = _nfft_adapt(arr_wrapper, zeros(complex(T), ksp_shape...))
     raw_dcf = NFFTTools.sdc(plan; iters = dcf_estimation_iterations)
     dcf_cpu = dcf_correction_function(reshape(raw_dcf, ksp_shape))
     adapted_dcf = _nfft_adapt(arr_wrapper, collect(dcf_cpu))
-    threaded_flag = threaded && arr_wrapper === Array
     return NFFTOp{T, D, typeof(plan), typeof(ksp_buffer), typeof(adapted_dcf)}(plan, ksp_buffer, adapted_dcf, threaded_flag)
+end
+
+"""
+	_nfft_threaded(threaded, arr_wrapper) -> Bool
+
+Resolve NFFT's `threaded` keyword under the package-wide rule: `false` vetoes, `true` and
+`nothing` enable subject to policy (see `AbstractOperators._resolve_threaded`).
+
+The policy here is the CPU/thread-count check only. NFFT has **no measured size gate**: the
+transform is planned for a specific trajectory rather than a plain array length, so there is
+no single element count to threshold on, and unlike FFTW it is not cheap to sweep. If a size
+gate is wanted later it belongs here.
+"""
+function _nfft_threaded(threaded::Bool, arr_wrapper)
+    return _resolve_threaded(threaded) do
+        Threads.nthreads() > 1 && arr_wrapper === Array
+    end
 end
 
 # Default (CPU) implementations — overridden by NFFTOperatorsGPUArraysExt for GPU types

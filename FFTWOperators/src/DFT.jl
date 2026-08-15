@@ -119,7 +119,7 @@ function DFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N}
     return DFT(zeros(dim_in), dims; normalization, flags, timelimit, num_threads, threaded)
 end
@@ -131,10 +131,10 @@ function DFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N, D <: Real}
     x = similar(x, Complex{D})
-    num_threads = _fftw_num_threads(num_threads, threaded)
+    num_threads = _fftw_num_threads(:c2c, num_threads, threaded, length(x))
     prev_fftw_threads = FFTW.get_num_threads()
     FFTW.set_num_threads(num_threads)
     A = plan_fft(x, dims; flags, timelimit)
@@ -155,12 +155,12 @@ function DFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N, D <: Complex}
     if x != FFTW.ESTIMATE
         x = similar(x) # FFTW.MEASURE and FFTW.PATIENT may cause the input array to be modified
     end
-    num_threads = _fftw_num_threads(num_threads, threaded)
+    num_threads = _fftw_num_threads(:c2c, num_threads, threaded, length(x))
     prev_fftw_threads = FFTW.get_num_threads()
     FFTW.set_num_threads(num_threads)
     A = plan_fft(x, dims; flags, timelimit)
@@ -182,7 +182,7 @@ function DFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N}
     return DFT(zeros(T, dim_in), dims; normalization, flags, timelimit, num_threads, threaded)
 end
@@ -192,7 +192,7 @@ function DFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     )
     return DFT(dim_in; normalization, flags, timelimit, num_threads, threaded)
 end
@@ -203,7 +203,7 @@ function DFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     )
     return DFT(T, dim_in; normalization, flags, timelimit, num_threads, threaded)
 end
@@ -217,7 +217,7 @@ function IDFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N}
     @assert T <: Complex "Input type for IDFT must be a complex type"
     return DFT(T, dim_in, dims; normalization, flags, timelimit, num_threads, threaded)'
@@ -230,7 +230,7 @@ function IDFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N, D}
     @assert D <: Complex "Input array for IDFT must have complex element type"
     return DFT(x, dims; normalization, flags, timelimit, num_threads, threaded)'
@@ -243,7 +243,7 @@ function IDFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {N}
     return DFT(ComplexF64, dim_in, dims; normalization, flags, timelimit, num_threads, threaded)'
 end
@@ -253,7 +253,7 @@ function IDFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     )
     return DFT(ComplexF64, dim_in; normalization, flags, timelimit, num_threads, threaded)'
 end
@@ -264,7 +264,7 @@ function IDFT(
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
         num_threads = nothing,
-        threaded = nothing,
+        threaded::Bool = true,
     )
     @assert T <: Complex "Input type for IDFT must be a complex type"
     return DFT(T, dim_in; normalization, flags, timelimit, num_threads, threaded)'

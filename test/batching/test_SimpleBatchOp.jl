@@ -2,11 +2,14 @@
     using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, JLArrays, Test
 
     function test_simple_batchop(op, batch_op, x, y, z, threaded)
-        if threaded && Threads.nthreads() > 1
-            @test batch_op.operator[1] == op
-        else
-            @test batch_op.operator == op
-        end
+        # Read the wrapped operator through the accessor rather than assuming which struct
+        # `threaded = true` produced. `threaded` is a permission, not a command: below the
+        # batch policy's size gate a threaded request yields a SingleThreaded batch op,
+        # whose `.operator` is the operator itself -- so `.operator[1]` would silently index
+        # *into* it (slicing a DiagOp) instead of failing usefully.
+        @test AbstractOperators._wrapped_operator(batch_op) == op
+        @test is_threaded(batch_op) == (threaded && Threads.nthreads() > 1 &&
+            AbstractOperators._should_thread(op))
         @test size(batch_op, 1) == size(y)
         @test size(batch_op, 2) == size(x)
         y2 = batch_op * x

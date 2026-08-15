@@ -160,7 +160,7 @@ Compose(::Eye, L2::AbstractOperator) = L2
 Compose(L1::AbstractOperator, ::Eye) = L1
 Compose(L1::Eye, ::Eye) = L1
 
-function Scale(coeff, L::Compose; threaded = default_should_thread(L))
+function Scale(coeff, L::Compose; threaded::Bool = true)
     if coeff == 1
         return L
     end

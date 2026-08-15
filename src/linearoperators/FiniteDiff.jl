@@ -29,17 +29,17 @@ struct FiniteDiff{N, D, T, S <: AbstractArray{T}, Th} <: LinearOperator
     end
 end
 
-# Threading defaults to the per-operator policy unless the caller says otherwise.
-function _finitediff_threaded(threaded, ::Type{T}, dim_in, ::Type{S}) where {T, S <: AbstractArray}
-    threaded === nothing && return default_threaded(FiniteDiff, T, dim_in, S)
-    return threaded::Bool
+# Thin alias for the shared resolver, kept because the constructors below read better with
+# a short name. `threaded = false` vetoes; anything else defers to the policy.
+function _finitediff_threaded(threaded::Bool, ::Type{T}, dim_in, ::Type{S}) where {T, S <: AbstractArray}
+    return _elementwise_threaded(FiniteDiff, threaded, T, dim_in, S)
 end
 
 # Constructors
 # Val-dispatch constructor — fully type-stable (D is known at compile time)
 function FiniteDiff(
         ::Type{T}, dim_in::NTuple{N, Int}, ::Val{D};
-        array_type::Type = Array{T}, threaded = nothing
+        array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N, D}
     S = _normalize_array_type(array_type, T)
     return FiniteDiff{N, D, T, S, _finitediff_threaded(threaded, T, dim_in, S)}(dim_in)
@@ -47,7 +47,7 @@ end
 
 # Specialized no-direction constructor: D=1 is a compile-time literal — fully type-stable
 function FiniteDiff(
-        dim_in::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded = nothing
+        dim_in::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N}
     S = _normalize_array_type(array_type, Float64)
     return FiniteDiff{N, 1, Float64, S, _finitediff_threaded(threaded, Float64, dim_in, S)}(dim_in)
@@ -58,7 +58,7 @@ end
 # below and pay a runtime dispatch on `Val(dir)` — which JET's `@test_opt` flags.
 function FiniteDiff(
         domain_type::Type{T}, dim_in::NTuple{N, Int};
-        array_type::Type = Array{T}, threaded = nothing
+        array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return FiniteDiff{N, 1, T, S, _finitediff_threaded(threaded, T, dim_in, S)}(dim_in)
@@ -69,18 +69,18 @@ end
 # performance-sensitive code.
 function FiniteDiff(
         domain_type::Type{T}, dim_in::NTuple{N, Int}, dir::Int;
-        array_type::Type = Array{T}, threaded = nothing
+        array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     return FiniteDiff(domain_type, dim_in, Val(dir); array_type, threaded)
 end
 
 function FiniteDiff(
-        dim_in::NTuple{N, Int}, dir::Int; array_type::Type = Array{Float64}, threaded = nothing
+        dim_in::NTuple{N, Int}, dir::Int; array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N}
     return FiniteDiff(Float64, dim_in, Val(dir); array_type, threaded)
 end
 
-function FiniteDiff(x::AbstractArray{T, N}, dir::Int = 1; threaded = nothing) where {T, N}
+function FiniteDiff(x::AbstractArray{T, N}, dir::Int = 1; threaded::Bool = true) where {T, N}
     S = _normalize_array_type(_array_wrapper(x), T)
     return FiniteDiff{N, dir, T, S, _finitediff_threaded(threaded, T, size(x), S)}(size(x))
 end
@@ -140,9 +140,9 @@ codomain_array_type(::FiniteDiff{N, D, T, S}) where {N, D, T, S} = S
 is_thread_safe(::FiniteDiff) = true
 is_threaded(::FiniteDiff{N, D, T, S, Th}) where {N, D, T, S, Th} = Th
 
-# Forward differences are cheap arithmetic per element, so they share the arithmetic
-# threshold (the `finitediff` sweep independently reproduced its crossover).
-threading_threshold(::Type{<:FiniteDiff}) = THRESHOLD_ELEMENTWISE_ARITHMETIC
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!`: Float64 2^15, Float32 2^16.
+threading_threshold(::Type{<:FiniteDiff}) = 2^16
 
 function _copy_operator_impl(
         op::FiniteDiff{N, D, T, S, Th}; storage_type = nothing, threaded = nothing

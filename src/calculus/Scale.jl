@@ -25,7 +25,7 @@ struct Scale{Th, T <: Number, L <: AbstractOperator} <: AbstractOperator
     coeff::T
     coeff_conj::T
     A::L
-    function Scale(coeff, coeff_conj, L; threaded = default_should_thread(L))
+    function Scale(coeff, coeff_conj, L; threaded::Bool = true)
         cT = codomain_type(L)
         isCodomainReal = typeof(cT) <: Tuple ? all([t <: Real for t in cT]) : cT <: Real
         if isCodomainReal && typeof(coeff) <: Complex
@@ -33,7 +33,7 @@ struct Scale{Th, T <: Number, L <: AbstractOperator} <: AbstractOperator
                 "Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
             )
         end
-        Th = threaded ? FastBroadcast.True() : FastBroadcast.False()
+        Th = _fbthread(_scale_threaded(threaded, L))
         return new{Th, typeof(coeff), typeof(L)}(coeff, coeff_conj, L)
     end
 end
@@ -41,7 +41,7 @@ end
 _ndoms_from_type(::Type{<:Scale{<:Any, <:Any, L}}, dim::Int) where {L} = _ndoms_from_type(L, dim)
 
 # Constructors
-function Scale(coeff, L; threaded = default_should_thread(L))
+function Scale(coeff, L; threaded::Bool = true)
     if coeff == 1
         return L
     end
@@ -51,11 +51,38 @@ function Scale(coeff, L; threaded = default_should_thread(L))
 end
 
 get_output_length(L) = ndoms(L, 1) == 1 ? prod(size(L, 1)) : sum(prod.(size(L, 1)))
-default_should_thread(L) = Threads.nthreads() > 1 && get_output_length(L) > 1.0e4
+
+"""
+	_scale_threaded(threaded, L) -> Bool
+
+Resolve `Scale`'s `threaded` keyword through the shared per-operator policy.
+
+Scale's own work is one pass over the *codomain*, so its size measure is the output length
+rather than the wrapped operator's domain. This replaced a bespoke `1e4` element cutoff that
+was neither measured nor expressed in the same units as any other threshold in the package.
+"""
+function _scale_threaded(threaded::Bool, L)
+    return _resolve_threaded(threaded) do
+        _default_threaded(
+            threading_threshold(Scale), codomain_type_for_policy(L),
+            get_output_length(L), codomain_array_type_for_policy(L),
+        )
+    end
+end
+
+# Multi-domain operators report tuples/ArrayPartitions; reduce them to something the size
+# policy can use, falling back to the conservative CPU-array assumption.
+codomain_type_for_policy(L) = _scalar_eltype(codomain_type(L))
+_scalar_eltype(T::Type) = T
+_scalar_eltype(T::Tuple) = promote_type(T...)
+function codomain_array_type_for_policy(L)
+    S = codomain_array_type(L)
+    return S <: ArrayPartition ? Array{codomain_type_for_policy(L)} : S
+end
 
 # Special Constructors
 # scale of scale
-function Scale(coeff::Number, L::Scale; threaded = default_should_thread(L))
+function Scale(coeff::Number, L::Scale; threaded::Bool = true)
     return Scale(*(promote(coeff, L.coeff)...), L.A; threaded)
 end
 
@@ -161,3 +188,14 @@ function _copy_operator_impl(
     new_A = copy_operator(L.A; storage_type, threaded)
     return Scale(L.coeff, L.coeff_conj, new_A; threaded = new_threaded)
 end
+
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of Scale's own `y .*= coeff` pass (over a deliberately serial child): Float64
+# 2^21, Float32 2^22; taking the conservative Float32 value. This is the latest crossover of
+# any operator, and for the same reason as THRESHOLD_MEMORY_BOUND: the pass is one read plus
+# one write per element with no arithmetic to hide the memory traffic.
+#
+# The legacy cutoff this replaces was `get_output_length(L) > 1e4` -- roughly 400x too
+# aggressive, so Scale has been threading itself into a slowdown for every size between 1e4
+# and 4M.
+threading_threshold(::Type{<:Scale}) = 2^22

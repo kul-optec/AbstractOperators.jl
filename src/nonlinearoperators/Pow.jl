@@ -13,7 +13,7 @@ end
 
 function Pow(
         domain_type::Type{T}, DomainDim::NTuple{N, Int}, p::I;
-        array_type::Type = Array{T}, threaded = nothing
+        array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N, I <: Real}
     S = _normalize_array_type(array_type, T)
     return Pow{T, N, I, S, _elementwise_threaded(Pow, threaded, T, DomainDim, S)}(DomainDim, p)
@@ -21,14 +21,14 @@ end
 
 function Pow(
         DomainDim::NTuple{N, Int}, p::I;
-        array_type::Type = Array{Float64}, threaded = nothing
+        array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N, I <: Real}
     return Pow(Float64, DomainDim, p; array_type, threaded)
 end
 
 function Pow(
         x::AbstractArray{T}, p::I;
-        array_type::Type = _array_wrapper(x), threaded = nothing
+        array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T, I <: Real}
     S = _normalize_array_type(array_type, T)
     return Pow{T, ndims(x), I, S, _elementwise_threaded(Pow, threaded, T, size(x), S)}(size(x), p)
@@ -73,9 +73,12 @@ domain_array_type(::Pow{T, N, I, S}) where {T, N, I, S} = S
 codomain_array_type(::Pow{T, N, I, S}) where {T, N, I, S} = S
 is_thread_safe(::Pow) = true
 is_threaded(::Pow{T, N, I, S, Th}) where {T, N, I, S, Th} = Th
-# `x^p` for non-integer `p` lowers to `exp(p*log(x))`, i.e. transcendental cost; integer
-# powers are cheaper but share the constant rather than splitting the type on `isinteger`.
-threading_threshold(::Type{<:Pow}) = THRESHOLD_ELEMENTWISE_TRANSCENDENTAL
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl. The exponent kind
+# matters enough to split the method: integer `x^2` crosses over at Float64 2^10 / Float32
+# 2^11, while fractional `x^0.5` -- which lowers to `exp(p*log(x))` -- crosses at 2^8 for
+# both. Taking the conservative value within each kind.
+threading_threshold(::Type{<:Pow{T, N, I}}) where {T, N, I <: Integer} = 2^11
+threading_threshold(::Type{<:Pow}) = 2^8
 
 function _copy_operator_impl(
         op::Pow{T, N, I, S, Th}; storage_type = nothing, threaded = nothing

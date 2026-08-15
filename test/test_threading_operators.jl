@@ -110,12 +110,17 @@ end
     # A forwarder is threaded when any child is. Without this, `adapt_operator(op;
     # threaded=false)` would report the constraint satisfied and leave the child threaded
     # -- a silent nesting bug, which is exactly what the batching tests caught.
-    @test is_threaded(Compose(DiagOp(randn(n - 1)), threaded_leaf)) == true
-    @test is_threaded(Compose(DiagOp(randn(n - 1)), serial_leaf)) == false
-    @test supports_threading(Compose(DiagOp(randn(n - 1)), serial_leaf)) == true
+    #
+    # The DiagOp is pinned to `threaded = false` rather than left to the policy: this
+    # asserts the *forwarding rule*, and should not start failing because DiagOp's measured
+    # threshold moved.
+    diag = DiagOp(randn(n - 1); threaded = false)
+    @test is_threaded(Compose(diag, threaded_leaf)) == true
+    @test is_threaded(Compose(diag, serial_leaf)) == false
+    @test supports_threading(Compose(diag, serial_leaf)) == true
 
     # ...and adapting the forwarder actually reaches the child.
-    op = Compose(DiagOp(randn(n - 1)), threaded_leaf)
+    op = Compose(diag, threaded_leaf)
     adapted = adapt_operator(op; threaded = false)
     @test is_threaded(adapted) == false
     @test all(!is_threaded, adapted.A)
@@ -245,23 +250,46 @@ end
     using AbstractOperators, FFTWOperators, DSPOperators, LinearAlgebra, Random
     Random.seed!(0)
 
-    # Regression guard. FFTW/DSP operators are not thread-safe, so a threaded batch has to
-    # make one private copy per thread; and they have no threaded path of their own, so
-    # `threaded = false` asks nothing of them. The `copy_operator` fallback must therefore
-    # accept that request rather than refuse it -- refusing broke batching for every
-    # subpackage operator that owns scratch buffers.
-    for op in (RDFT(Float64, (16,)), DCT(Float64, (16,)), Conv(Float64, (16,), randn(4)))
+    # Regression guard, in two flavours. Both kinds of operator are not thread-safe, so a
+    # threaded batch has to make one private copy per thread -- and that copy request must
+    # succeed. Refusing it broke batching for every subpackage operator with scratch
+    # buffers.
+    #
+    # Conv has no threaded path at all, so `threaded = false` is vacuous for it and the
+    # deepcopy fallback answers the request.
+    # Sized above MIN_BATCH_WORK_FOR_PARALLEL: the batch gate now has a size component, so
+    # a batch over a 16-element operator deliberately stays serial (see the gate test below).
+    for op in (Conv(Float64, (4096,), randn(4)), Xcorr(Float64, (4096,), randn(4)))
         @test is_thread_safe(op) == false
         @test supports_threading(op) == false
         @test copy_operator(op; threaded = false) isa typeof(op)
 
         if Threads.nthreads() > 1
-            bop = BatchOp(op, (8,); threaded = true)
-            @test is_threaded(bop) == true
+            @test is_threaded(BatchOp(op, (8,); threaded = true)) == true
         end
     end
 
-    # A request the fallback genuinely cannot satisfy is still refused loudly.
+    # RDFT/DCT *do* have a threaded path (FFTW threads r2c and r2r), so they answer the
+    # same request through their own `_copy_operator_impl` instead, replanning if needed.
+    for op in (RDFT(Float64, (4096,); threaded = false), DCT(Float64, (4096,); threaded = false))
+        @test is_thread_safe(op) == false
+        @test supports_threading(op) == true
+        @test is_threaded(op) == false
+        @test copy_operator(op; threaded = false) isa typeof(op)
+
+        if Threads.nthreads() > 1
+            @test is_threaded(BatchOp(op, (8,); threaded = true)) == true
+        end
+    end
+
+    # The batch gate's new size component: a batch over a tiny operator stays serial rather
+    # than paying `@budgeted_threads` setup to parallelise microseconds of work. Before the
+    # legacy `_should_thread` was unified this was threaded regardless of size.
+    if Threads.nthreads() > 1
+        @test is_threaded(BatchOp(Conv(Float64, (16,), randn(4)), (8,); threaded = true)) == false
+    end
+
+    # A request the FFTW operators genuinely cannot satisfy is still refused loudly.
     @test_throws ArgumentError copy_operator(RDFT(Float64, (16,)); storage_type = Array)
 end
 
@@ -274,17 +302,19 @@ end
 
     # FFTW is a *counted* thread pool: `threaded` picks a plan-time thread count, so it is
     # fixed at construction and `is_threaded` reads it back rather than switching a loop.
-    serial_dft = DFT(Float64, (16,); threaded = false)
-    threaded_dft = DFT(Float64, (16,); threaded = true)
+    # Above the measured c2c crossover (2^13), so `threaded = true` is granted; below it the
+    # policy declines and `is_threaded` would correctly report false.
+    serial_dft = DFT(Float64, (1 << 14,); threaded = false)
+    threaded_dft = DFT(Float64, (1 << 14,); threaded = true)
     @test supports_threading(serial_dft) == true
     @test is_threaded(serial_dft) == false
     @test is_threaded(threaded_dft) == (Threads.nthreads() > 1)
 
-    x = randn(16)
+    x = randn(1 << 14)
     @test serial_dft * x ≈ threaded_dft * x
 
     # `num_threads`, FFTW's own spelling, still works and still wins.
-    @test is_threaded(DFT(Float64, (16,); num_threads = 1)) == false
+    @test is_threaded(DFT(Float64, (1 << 14,); num_threads = 1)) == false
 
     # Switching the flag has to replan, and must preserve the *domain* element type --
     # for a real-input DFT the codomain is complex, so replanning from the codomain would
@@ -332,4 +362,122 @@ end
     # different plan are refused rather than silently ignored.
     @test_throws ArgumentError copy_operator(op; threaded = true)
     @test_throws ArgumentError copy_operator(op; storage_type = Array)
+end
+
+@testitem "Threading contract: FFTW r2r/r2c transforms thread their plans" tags = [
+    :Threading, :fftw, :DCT, :IDCT, :RDFT, :IRDFT,
+] setup = [TestUtils] begin
+    using AbstractOperators, FFTWOperators, Random
+    Random.seed!(0)
+
+    # FFTW threads these transform kinds -- measured at n = 2^22 with 8 threads:
+    # r2c (RDFT) 3.08x, r2r forward (DCT) 2.25x, r2r inverse (IDCT) 1.91x. That is why they
+    # carry a plan-time thread count rather than being declared unthreaded.
+    # Above every FFTW crossover measured for these kinds (c2c 2^13, r2r 2^15, r2c 2^15),
+    # so `threaded = true` is a permission the policy grants.
+    n = 1 << 16
+    x = randn(n)
+    z = randn(ComplexF64, n ÷ 2 + 1)
+
+    for (serial, threaded, inp) in (
+            (DCT(Float64, (n,); threaded = false), DCT(Float64, (n,); threaded = true), x),
+            (IDCT(Float64, (n,); threaded = false), IDCT(Float64, (n,); threaded = true), x),
+            (RDFT(Float64, (n,); threaded = false), RDFT(Float64, (n,); threaded = true), x),
+            (
+                IRDFT(ComplexF64, (n ÷ 2 + 1,), n; threaded = false),
+                IRDFT(ComplexF64, (n ÷ 2 + 1,), n; threaded = true), z,
+            ),
+        )
+        @test supports_threading(serial) == true
+        @test is_threaded(serial) == false
+        @test is_threaded(threaded) == (Threads.nthreads() > 1)
+
+        # Threading an FFT changes the schedule inside FFTW, not the transform, but FFTW is
+        # free to reassociate, so `≈` rather than `==`.
+        @test serial * inp ≈ threaded * inp
+
+        # Round-tripping the flag replans and stays numerically equivalent.
+        replanned = copy_operator(serial; threaded = true)
+        @test is_threaded(replanned) == (Threads.nthreads() > 1)
+        @test replanned * inp ≈ serial * inp
+        @test domain_type(replanned) == domain_type(serial)
+
+        # A plain copy preserves the operator's own (serial) thread count.
+        @test is_threaded(copy_operator(serial)) == false
+    end
+
+    # Scratch buffers are never shared with a copy.
+    d = DCT(Float64, (n,); threaded = false)
+    @test copy_operator(d).buf !== d.buf
+    r = RDFT(Float64, (n,); threaded = false)
+    @test copy_operator(r).b2 !== r.b2
+end
+
+@testitem "Threading contract: VCAT-forward and HCAT-adjoint block loops" tags = [
+    :calculus, :Threading, :VCAT, :HCAT,
+] setup = [TestUtils] begin
+    using AbstractOperators, LinearAlgebra, Random
+    using RecursiveArrayTools: ArrayPartition
+    const AO = AbstractOperators
+    Random.seed!(0)
+
+    nb, bs = 8, 1 << 16
+    blocks = [FiniteDiff(Float64, (bs,); threaded = false) for _ in 1:nb]
+
+    # VCAT threads its *forward* direction (disjoint output blocks); the adjoint
+    # accumulates into one shared `y` and stays serial. HCAT is the mirror image.
+    V = VCAT(blocks...)
+    vs = AO._copy_operator_impl(V; threaded = false)
+    vt = AO._copy_operator_impl(V; threaded = true)
+    @test AO.is_block_threaded(vs) == false
+    @test AO.is_block_threaded(vt) == true
+
+    x = randn(bs)
+    r = ArrayPartition([randn(bs - 1) for _ in 1:nb]...)
+    @test vs * x == vt * x
+    @test vs' * r == vt' * r
+
+    H = HCAT(blocks...)
+    hs = AO._copy_operator_impl(H; threaded = false)
+    ht = AO._copy_operator_impl(H; threaded = true)
+    xh = ArrayPartition([randn(bs) for _ in 1:nb]...)
+    rh = randn(bs - 1)
+    @test hs * xh == ht * xh
+    @test hs' * rh == ht' * rh
+
+    # Nesting safety: a threaded block loop forces its blocks serial.
+    nested = AO._copy_operator_impl(
+        VCAT([FiniteDiff(Float64, (bs,); threaded = true) for _ in 1:nb]...); threaded = true
+    )
+    @test all(!is_threaded, nested.A)
+end
+
+@testitem "Threading contract: block thresholds are per-operator and measured" tags = [
+    :calculus, :Threading, :VCAT, :HCAT, :DCAT,
+] begin
+    using AbstractOperators
+    const AO = AbstractOperators
+
+    # HCAT's adjoint carries per-block ArrayPartition indexing the others do not, so it
+    # needs more work per block before threading pays. These are the measured boundaries,
+    # not round numbers: at 4 blocks of 2^16, VCAT-forward measures 1.32x but HCAT-adjoint
+    # measures 0.76x -- a regression. One shared constant could not express both.
+    @test AO.block_threading_threshold(VCAT) < AO.block_threading_threshold(HCAT)
+    @test AO.block_threading_threshold(DCAT) == AO.block_threading_threshold(VCAT)
+
+    fd(n) = FiniteDiff(Float64, (n,); threaded = false)
+
+    if Threads.nthreads() > 1
+        # 4 blocks x 2^16: VCAT wins (1.32x), HCAT loses (0.76x).
+        @test AO.is_block_threaded(VCAT([fd(1 << 16) for _ in 1:4]...)) == true
+        @test AO.is_block_threaded(HCAT([fd(1 << 16) for _ in 1:4]...)) == false
+        # 4 blocks x 2^17: both win (1.32x / 1.27x).
+        @test AO.is_block_threaded(HCAT([fd(1 << 17) for _ in 1:4]...)) == true
+        # 16 blocks x 2^14: both lose (0.85x / 0.57x) despite a 2^18 aggregate -- which is
+        # why the threshold is on per-block work, not on the total.
+        @test AO.is_block_threaded(VCAT([fd(1 << 14) for _ in 1:16]...)) == false
+        @test AO.is_block_threaded(HCAT([fd(1 << 14) for _ in 1:16]...)) == false
+        # Too few blocks, however large: DCAT measures 1.03x at 2 blocks of 2^18.
+        @test AO.is_block_threaded(DCAT([fd(1 << 18) for _ in 1:2]...)) == false
+    end
 end

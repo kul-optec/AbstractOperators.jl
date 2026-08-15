@@ -19,7 +19,7 @@ function Sigmoid(
         DomainDim::NTuple{N, Int},
         gamma::G = 1.0;
         array_type::Type = Array{T},
-        threaded = nothing,
+        threaded::Bool = true,
     ) where {T, N, G <: Real}
     S = _normalize_array_type(array_type, T)
     return Sigmoid{T, N, G, S, _elementwise_threaded(Sigmoid, threaded, T, DomainDim, S)}(
@@ -29,14 +29,14 @@ end
 
 function Sigmoid(
         DomainDim::NTuple{N, Int}, gamma::G = 1.0;
-        array_type::Type = Array{Float64}, threaded = nothing
+        array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N, G}
     return Sigmoid(Float64, DomainDim, gamma; array_type, threaded)
 end
 
 function Sigmoid(
         x::AbstractArray{T};
-        gamma::G = 1.0, array_type::Type = _array_wrapper(x), threaded = nothing
+        gamma::G = 1.0, array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T, G <: Real}
     S = _normalize_array_type(array_type, T)
     return Sigmoid{T, ndims(x), G, S, _elementwise_threaded(Sigmoid, threaded, T, size(x), S)}(
@@ -89,7 +89,9 @@ domain_array_type(::Sigmoid{T, N, D, S}) where {T, N, D, S} = S
 codomain_array_type(::Sigmoid{T, N, D, S}) where {T, N, D, S} = S
 is_thread_safe(::Sigmoid) = true
 is_threaded(::Sigmoid{T, N, G, S, Th}) where {T, N, G, S, Th} = Th
-threading_threshold(::Type{<:Sigmoid}) = THRESHOLD_ELEMENTWISE_TRANSCENDENTAL
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!`: Float64 2^10, Float32 2^9.
+threading_threshold(::Type{<:Sigmoid}) = 2^10
 
 function _copy_operator_impl(
         op::Sigmoid{T, N, G, S, Th}; storage_type = nothing, threaded = nothing

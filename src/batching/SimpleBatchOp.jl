@@ -21,7 +21,7 @@ end
 		operator::AbstractOperators.AbstractOperator,
 		batch_dims::NTuple{N,Int},
 		batch_dim_mask::Union{NTuple{M,Symbol}, Pair{NTuple{M1,Symbol},NTuple{M2,Symbol}}};
-		threaded::Bool=nthreads() > 1,
+		threaded::Bool=true,
 	)
 
 Creates a "simple" `BatchOp` from an `AbstractOperator`. The `BatchOp` can be used to apply the operator to an array over
@@ -35,7 +35,7 @@ the selected batch dimensions.
    The symbols can be `:b` for batch dimensions or `:_` for dimensions on which the operator acts. If a pair is provided, the first tuple specifies
    the domain mask and the second tuple specifies the codomain mask. When omitted, the batch dimensions are assumed to proceed the operator's
    domain and codomain dimensions.
-- `threaded::Bool`: If `true`, the operator will execute in parallel over the batch dimensions. Default is `nthreads() > 1`.
+- `threaded`: `false` disables batch-level threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
 
 # Examples
 ```jldoctest
@@ -68,7 +68,7 @@ julia> batch_op = BatchOp(op, (2, 6), (:b, :_, :_, :_, :b) => (:b, :_, :b, :_))
 function BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size;
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     )
     batch_size = ensure_batch_size_is_tuple(batch_size)
     N = length(batch_size)
@@ -85,7 +85,7 @@ function BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size,
         batch_dim_mask::NTuple{M, Symbol};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {M}
     batch_size = ensure_batch_size_is_tuple(batch_size)
     N = length(batch_size)
@@ -99,7 +99,7 @@ function BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size,
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {M1, M2}
     batch_size = ensure_batch_size_is_tuple(batch_size)
     N = length(batch_size)
@@ -115,7 +115,7 @@ function create_BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::NTuple{M, Bool};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {N, M}
     @assert ndims(operator, 1) == ndims(operator, 2) "Operator must be square or batch_dim_mask must be a pair of domain and codomain masks"
     return create_BatchOp(operator, batch_size, batch_dim_mask => batch_dim_mask; threaded)
@@ -125,7 +125,7 @@ function create_BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::Pair{NTuple{M1, Bool}, NTuple{M2, Bool}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {N, M1, M2}
     return create_BatchOp(
         operator, calculate_shapes(operator, batch_size, batch_dim_mask)...; threaded
@@ -138,15 +138,15 @@ function create_BatchOp(
         domain_batch_dim_mask::NTuple{N2, Bool},
         codomain_size::NTuple{M, Int},
         codomain_batch_dim_mask::NTuple{M2, Bool};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {N, N2, M, M2}
     @assert M == M2 "Domain size and domain batch dimension mask must have the same length"
     @assert N == N2 "Codomain size and codomain batch dimension mask must have the same length"
     batch_size, dType, cdType = prepare_batch_op(
         operator, domain_size, domain_batch_dim_mask, codomain_size, codomain_batch_dim_mask
     )
-    threaded = threaded && _should_thread(operator)
-    return if threaded && nthreads() > 1
+    threaded = _resolve_threaded(() -> _should_thread(operator), threaded)
+    return if threaded
         batch_length = prod(batch_size)
         operators = tuple(
             _per_thread_operators(operator, min(nthreads(), batch_length))...,

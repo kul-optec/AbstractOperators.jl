@@ -161,9 +161,12 @@ function SignAlternation(
         threaded::Bool = true, array_type::Type{<:AbstractArray} = Array{T},
     ) where {T <: Number, N}
     d = _normalize_dirs(dim_in, dirs)
-    threaded = threaded && Threads.nthreads() > 1
     S = _normalize_array_type(array_type, T)
-    return SignAlternation{T, N, length(d), threaded, S}(dim_in, d)
+    # Routed through the shared resolver like every other operator: `false` vetoes, `true`
+    # enables subject to the policy (which also covers the thread count and GPU storage
+    # that the previous hand-rolled `threaded && nthreads() > 1` only half-covered).
+    th = _elementwise_threaded(SignAlternation, threaded, T, dim_in, S)
+    return SignAlternation{T, N, length(d), th, S}(dim_in, d)
 end
 function SignAlternation(
         dim_in::NTuple{N, Int}, dirs;
@@ -565,3 +568,13 @@ function ifftshift_op(
     )
     return _shift_op(IFFTShift, op, domain_shifts, codomain_shifts)
 end
+
+# Sign alternation is a strided in-place multiply by ±1 -- pure data movement, so it sits at
+# the memory-bound threshold.
+threading_threshold(::Type{<:SignAlternation}) = THRESHOLD_MEMORY_BOUND
+is_threaded(::SignAlternation{T, N, M, Th}) where {T, N, M, Th} = Th
+supports_threading(::SignAlternation) = true
+
+# FFTShift/IFFTShift have no threaded path of their own.
+is_threaded(::ShiftOp) = false
+supports_threading(::ShiftOp) = false

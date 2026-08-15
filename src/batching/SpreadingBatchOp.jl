@@ -62,7 +62,7 @@ end
 		operators::Array{<:AbstractOperators.AbstractOperator},
 		batch_size::NTuple{N,Int},
 		batch_dim_mask::Union{NTuple{M,Symbol}, Pair{NTuple{M1,Symbol},NTuple{M2,Symbol}};
-		threaded::Bool=nthreads() > 1,
+		threaded::Bool=true,
 		threading_strategy::Symbol=ThreadingStrategy.AUTO,
 	)
 
@@ -77,7 +77,7 @@ repeat the operator application over the batch dimensions.
 dimensions. The symbols can be `:b` for batch dimensions, `:s` for spreading dimensions or `:_` for dimensions on which the operator acts.
 If the mask is a pair, the first element specifies the domain batch dimensions and the second element specifies the codomain batch dimensions.
 If no mask is provided, the following order is assumed: (operator dims..., spreading dims..., batch dims...)
-- `threaded::Bool`: If `true`, the operator will execute in parallel over the batch dimensions. Default is `nthreads() > 1`.
+- `threaded`: `false` disables batch-level threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
 - `threading_strategy::Symbol`: The threading strategy to use. Default is `ThreadingStrategy.AUTO`, which will automatically choose the
 best strategy based on the size of the operators and the input arrays.
 
@@ -106,7 +106,7 @@ julia> batch_op = BatchOp(ops, 6, (:s, :_, :_, :_, :b) => (:s, :_, :b, :_))
 """
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     )
     op_domain_dims = ndims(operators[1], 2)
@@ -125,7 +125,7 @@ end
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_size;
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     )
     op_domain_dims = ndims(operators[1], 2)
@@ -149,7 +149,7 @@ end
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_dim_mask::NTuple{M, Symbol};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M}
     return BatchOp(
@@ -165,7 +165,7 @@ function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_size,
         batch_dim_mask::NTuple{M, Symbol};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M}
     return BatchOp(
@@ -180,7 +180,7 @@ end
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M1, M2}
     return BatchOp(
@@ -196,7 +196,7 @@ function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_size,
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M1, M2}
     batch_dims = [m for m in batch_dim_mask.first if m == :s || m == :b]
@@ -241,7 +241,7 @@ function create_BatchOp(
         codomain_size::NTuple{M, Int},
         codomain_batch_dim_mask::NTuple{M, Bool},
         spreading_dims::NTuple{K, Int};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M, N, K, opT <: AbstractOperators.AbstractOperator}
     batch_size, dType, cdType, opType = prepare_SpreadingBatchOp(
@@ -252,8 +252,8 @@ function create_BatchOp(
         codomain_batch_dim_mask,
         spreading_dims,
     )
-    threaded = threaded && _should_thread(operators[1])
-    if threaded && nthreads() > 1
+    threaded = _resolve_threaded(() -> _should_thread(operators[1]), threaded)
+    if threaded
         # Nesting safety, applied before `opType` is used: the batch loop is the parallel
         # layer, so the wrapped operators must not thread themselves. Threading is a type
         # parameter, so this changes `opType` -- hence it happens here rather than inside

@@ -33,23 +33,68 @@ import AbstractOperators:
     check,
     is_threaded,
     supports_threading,
+    _resolve_threaded,
+    _elementwise_threaded,
+    threading_threshold,
+    THRESHOLD_MEMORY_BOUND,
     _copy_operator_impl
 
 """
-	_fftw_num_threads(num_threads, threaded) -> Int
+	fftw_threading_threshold(kind::Symbol) -> Int
 
-Resolve the plan-time FFTW thread count from the two spellings a caller may use.
+Element count at which threading an FFTW transform of this `kind` starts to pay.
 
-`num_threads` is FFTW's own vocabulary and wins when given. `threaded` is the vocabulary
-used uniformly across AbstractOperators, and maps onto it: `true` means "use the available
-Julia threads", `false` means one thread. FFTW is a *counted* pool in NestedThreading, so
-this is a plan property rather than a loop property -- which is why it is fixed at
-construction and `is_threaded` merely reads it back.
+PROVENANCE: measured (AMD EPYC 7352, 8 threads, OPENBLAS_NUM_THREADS=1, 2026-08-15),
+sweeping `mul!` against a 1-thread plan of the same size:
+
+| kind | first sustained win | speedup there | at n = 2^22 |
+|---|---|---|---|
+| `:c2c` (DFT/IDFT) | 2^13 | 1.88x | 5.04x |
+| `:r2r` (DCT/IDCT) | 2^15 | 1.44x | 2.00x |
+| `:r2c` (RDFT/IRDFT) | 2^15 | 1.25x | 3.69x |
+
+Below these sizes threading an FFT is a *large* pessimisation, not a wash -- a 256-point
+c2c transform measures 0.02x -- which is why the policy applies here rather than trusting
+FFTW's planner to sort it out.
 """
-function _fftw_num_threads(num_threads, threaded)
+fftw_threading_threshold(kind::Symbol) = kind === :c2c ? 2^13 : 2^15
+
+"""
+	_fftw_num_threads(kind, num_threads, threaded, n) -> Int
+
+Resolve the plan-time FFTW thread count.
+
+`num_threads` is FFTW's own vocabulary and is an explicit **command**: given, it wins
+outright, which keeps an escape hatch for callers who know what they want. `threaded` is the
+package-wide keyword and follows the package-wide rule -- `false` vetoes, `true`/`nothing`
+enable subject to the policy above. See `AbstractOperators._resolve_threaded`.
+"""
+function _fftw_num_threads(kind::Symbol, num_threads, threaded::Bool, n::Int)
     num_threads !== nothing && return Int(num_threads)
-    threaded === nothing && return Threads.nthreads()
-    return threaded ? Threads.nthreads() : 1
+    use = _resolve_threaded(threaded) do
+        Threads.nthreads() > 1 && n >= fftw_threading_threshold(kind)
+    end
+    return use ? Threads.nthreads() : 1
+end
+
+"""
+	_with_fftw_threads(f, num_threads)
+
+Run the planning callable `f` with FFTW's global thread count temporarily set to
+`num_threads`, restoring the previous value afterwards.
+
+FFTW's thread count is process-global state consulted at *plan* time, so it has to be set
+around planning and put back; forgetting the restore would silently change the thread count
+of every plan built later in the session.
+"""
+function _with_fftw_threads(f, num_threads::Int)
+    prev = FFTW.get_num_threads()
+    FFTW.set_num_threads(num_threads)
+    try
+        return f()
+    finally
+        FFTW.set_num_threads(prev)
+    end
 end
 
 include("DFT.jl")

@@ -15,23 +15,23 @@ end
 
 function Sech(
         domain_type::Type{T}, DomainDim::NTuple{N, Int};
-        array_type::Type = Array{T}, threaded = nothing
+        array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return Sech{T, N, S, _elementwise_threaded(Sech, threaded, T, DomainDim, S)}(DomainDim)
 end
 
 function Sech(
-        DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded = nothing
+        DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N}
     return Sech(Float64, DomainDim; array_type, threaded)
 end
-function Sech(DomainDim::Vararg{Int}; array_type::Type = Array{Float64}, threaded = nothing)
+function Sech(DomainDim::Vararg{Int}; array_type::Type = Array{Float64}, threaded::Bool = true)
     return Sech(Float64, DomainDim; array_type, threaded)
 end
 
 function Sech(
-        x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded = nothing
+        x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return Sech{T, ndims(x), S, _elementwise_threaded(Sech, threaded, T, size(x), S)}(size(x))
@@ -73,7 +73,9 @@ domain_array_type(::Sech{T, N, S}) where {T, N, S} = S
 codomain_array_type(::Sech{T, N, S}) where {T, N, S} = S
 is_thread_safe(::Sech) = true
 is_threaded(::Sech{T, N, S, Th}) where {T, N, S, Th} = Th
-threading_threshold(::Type{<:Sech}) = THRESHOLD_ELEMENTWISE_TRANSCENDENTAL
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!`: Float64 2^9, Float32 2^9.
+threading_threshold(::Type{<:Sech}) = 2^9
 
 function _copy_operator_impl(
         op::Sech{T, N, S, Th}; storage_type = nothing, threaded = nothing

@@ -175,31 +175,69 @@ two such structs with identical fields `===` regardless of construction. The tes
 the observable contract instead — mutable buffers are never shared, constraints are
 honoured — which is also why such checks were removed in 4839a08.
 
-### Not done
+### Follow-up round (all items closed)
 
-- **VCAT forward / HCAT adjoint** (Phase 5). Only `DCAT` was measured and shipped. The plan's
-  own rule is that unmeasured variants are dropped, and these need their own sweep.
-- **`DCT`/`RDFT`/`IRDFT` plan-time thread counts** (Phase 6). Only `DFT`/`IDFT` gained the
-  `threaded` keyword; the other three FFTW transforms have no `num_threads` plumbing at all
-  today, so they are declared `supports_threading = false` rather than half-wired.
+- **VCAT forward / HCAT adjoint** — measured and shipped. Both pay, and the measurement
+  forced a redesign: the block threshold is now on **per-block** work, not aggregate (at a
+  fixed 2^18 aggregate, VCAT-forward measures 1.32x with 4 blocks of 2^16 but 0.85x with 16
+  blocks of 2^14), and it is **per-operator** (at 4 blocks of 2^16, VCAT-forward measures
+  1.32x while HCAT-adjoint measures 0.76x, because HCAT's adjoint carries per-block
+  ArrayPartition indexing).
+- **`DCT`/`IDCT`/`RDFT`/`IRDFT`** — FFTW *does* thread r2r and r2c: measured 3.08x (r2c),
+  2.25x (r2r forward), 1.91x (r2r inverse) at n = 2^22 with 8 threads. All four now carry a
+  plan-time thread count, `threaded`/`num_threads` keywords, and `_copy_operator_impl`.
+- **The four legacy thresholds** — unified into the policy, which fixed two live defects:
+  `Variation`'s two constructors thresholded in different *units* (bytes vs elements) and so
+  gave opposite threading for identical inputs, and `_should_thread(::AbstractOperator)` had
+  no size component at all, so batch operators threaded four-element work.
+- **Per-operator thresholds** — `benchmark/operator_thresholds.jl` now measures each
+  operator's real `mul!`. The cost-class constants remain as documented defaults, but every
+  swept operator carries its own transcribed value, because the classes proved too coarse:
+  within "transcendental" the measured crossovers span 2^8 (SoftPlus) to 2^11 (integer Pow),
+  and `Pow` splits internally by exponent kind. `Scale`'s legacy `1e4` cutoff was ~400x below
+  its measured 2^22 crossover.
+
+### The `threaded` keyword: one rule, everywhere
+
+The keyword is a `Bool` — there is no third state:
+
+| value | meaning |
+|---|---|
+| `false` | **veto.** Never threads. The only hard directive, and it has to be: nesting safety depends on a threaded batch/block loop being able to switch its children off and rely on it. |
+| `true` (default) | **permission.** Threading is enabled *if the policy also agrees*. |
+
+`copy_operator` and `adapt_operator` are the one exception, and deliberately so: their
+`threaded` is a **constraint** argument, where `nothing` means "no constraint, preserve what
+the operator has" — exactly as `storage_type = nothing` does. Without it a plain
+`copy_operator(op)` could not preserve an explicitly serial operator; it would re-derive
+threading from the policy instead.
+
+This is resolved in exactly one place, `AbstractOperators._resolve_threaded`, which every
+operator family routes through: elementwise operators, `Scale`, the block-parallel
+`DCAT`/`VCAT`/`HCAT`, the batch operators, the FFTW transforms and `NFFTOp`.
+
+The consequence worth knowing: **`is_threaded` reports what the operator will actually do,
+never what was asked for.** `Sin(Float64, (4,); threaded = true)` reports `false`, because
+at four elements threading is a pessimisation; so does any operator on GPU storage, and so
+does everything in a single-threaded session. `is_threaded(copy_operator(L; threaded=true))`
+is therefore *not* guaranteed `true`, while the `false` direction *is* guaranteed — which is
+the direction nesting safety needs.
+
+Before this unification the three families disagreed: elementwise operators and the block
+operators treated `true` as an absolute override, batch operators treated it as a permission,
+and the FFTW transforms bypassed the policy entirely (so a 256-point threaded DFT reported
+`true` while measuring **0.02x**). `num_threads` on the FFTW operators is deliberately left
+as an explicit *command* rather than a permission — it is the escape hatch for callers who
+know their workload better than the policy does.
+
+### Still not done
+
+- **`Variation`'s adjoint has a pre-existing `BoundsError`** whenever the trailing dimension
+  is exactly 2 (`Variation(Float64, (8,2))'`). Present on `master`, unrelated to threading,
+  found while sweeping. Not fixed here — it needs its own focused change to the adjoint's
+  index arithmetic, plus regression tests over trailing-dimension sizes.
 - `Scale`/`DiagOp` keep their `FastBroadcast` singleton parameters, bridged by
   `_fbthread`/`_fbbool` as the plan specified.
-- **The four legacy thresholds are not yet consolidated.** The plan says all four move into
-  `src/threading_policy.jl` and get re-derived by benchmark. Operators added or reworked in
-  Phases 3-5 do go through `threading_threshold`/`default_threaded`, but these four remain
-  where they were and still gate the operators that predate this work:
-
-  | site | expression |
-  |---|---|
-  | `src/properties.jl:550` | `_should_thread(d) = length(d) > 2^16` |
-  | `src/calculus/BroadCast.jl:14` | `prod(dim_in) * sizeof(T) > 2^16` |
-  | `src/calculus/Scale.jl:54` | `get_output_length(L) > 1e4` |
-  | `src/linearoperators/Variation.jl:37` | `prod(dim_in) * sizeof(T) > 2^16` |
-
-  `_should_thread` in particular is still what `create_BatchOp` and `create_BatchOp`'s
-  spreading twin consult to decide whether to thread at all, so moving it is a behaviour
-  change to the batch operators and wants its own benchmark + test pass rather than being
-  folded into this one.
 
 ---
 
