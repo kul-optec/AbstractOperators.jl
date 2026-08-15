@@ -93,3 +93,11 @@ end
 
 has_fast_opnorm(R::Reshape) = has_fast_opnorm(R.A)
 LinearAlgebra.opnorm(R::Reshape) = LinearAlgebra.opnorm(R.A)
+
+_children(R::Reshape) = (R.A,)
+is_threaded(R::Reshape) = _is_threaded_from_children(R)
+supports_threading(L::Reshape) = _supports_threading_from_children(L)
+
+function _copy_operator_impl(R::Reshape; storage_type = nothing, threaded = nothing)
+    return Reshape(copy_operator(R.A; storage_type, threaded), R.dim_out)
+end

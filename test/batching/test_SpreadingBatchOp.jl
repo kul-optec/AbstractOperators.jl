@@ -68,13 +68,19 @@
         return @test_throws ArgumentError BatchOp(ops, n, (:b, :s, :_) => (:b, :s, :_, :_); threaded = true, threading_strategy = AbstractOperators.ThreadingStrategy.FIXED_OPERATOR)
     end
 
-    function benchmark_threading_strategy(threaded, threading_strategy)
-        n, m = 300, 500
+    # Minimum over repetitions, and enough per-operator work (m) for the parallel gain to
+    # dominate the COPYING strategy's copy overhead -- see the longer note on
+    # SimpleBatchOp's `benchmark_threading` for why the margin needed widening.
+    function benchmark_threading_strategy(threaded, threading_strategy; repeats = 3)
+        n, m = 300, 1500
         num_ops = Threads.nthreads() + 50
         ops = [DiagOp(rand(m - 1)) * FiniteDiff((m,)) for i in 1:num_ops]
         batch_op = BatchOp(ops, n, (:_, :s, :b); threaded, threading_strategy)
         y = zeros(m - 1, num_ops, n)
-        return @belapsed(mul!($y, $batch_op, x), setup = ($y .= 0; x = rand($m, $num_ops, $n)))
+        return minimum(
+            @belapsed(mul!($y, $batch_op, x), setup = ($y .= 0; x = rand($m, $num_ops, $n)))
+                for _ in 1:repeats
+        )
     end
 
     function other_spreadingbatchop_tests(threaded)

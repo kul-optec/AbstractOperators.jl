@@ -42,12 +42,27 @@
         return test_simple_batchop(op, batch_op, x, y, z, threaded)
     end
 
-    function benchmark_threading(threaded)
-        n = 10000
+    # This test asserts that batch-level threading beats the serial batch loop. Two things
+    # keep that assertion honest rather than lucky:
+    #
+    # 1. Minimum across repetitions. A single `@belapsed` of this workload has ~30% spread
+    #    on the serial arm, enough to flip a bare `t_multi < t_single`.
+    # 2. Enough work per batch item (n) that the parallel gain dominates dispatch overhead.
+    #    Going the other way -- smaller items, more of them -- was *measured* to hurt:
+    #    at n=2000/20x20 and n=1000/30x30 the threaded arm came out slower than serial.
+    #
+    # The margin needed widening when FiniteDiff stopped allocating: that made the serial
+    # baseline ~3x faster, so the honest speedup shrank from ~2.5x to ~1.7x even though
+    # both arms got faster in absolute terms.
+    function benchmark_threading(threaded; repeats = 3)
+        n = 40000
         op = Compose(DiagOp(randn(n - 1)), FiniteDiff((n,), 1))
         batch_op = BatchOp(op, (10, 10), (:_, :b, :b); threaded)
         y = zeros(n - 1, 10, 10)
-        return @belapsed(mul!($y, $batch_op, x), setup = ($y .= 0; x = rand($n, 10, 10)))
+        return minimum(
+            @belapsed(mul!($y, $batch_op, x), setup = ($y .= 0; x = rand($n, 10, 10)))
+                for _ in 1:repeats
+        )
     end
 
     function test_shape_changing_simple_batch_op(threaded)

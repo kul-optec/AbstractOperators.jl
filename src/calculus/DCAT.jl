@@ -337,3 +337,12 @@ diag_AcA(L::DCAT{N, Tuple{E, Vararg{E, M}}}) where {N, M, E <: Eye} = 1.0
 has_fast_opnorm(L::DCAT) = all(has_fast_opnorm.(L.A))
 LinearAlgebra.opnorm(L::DCAT) = maximum(opnorm.(L.A))
 estimate_opnorm(L::DCAT) = maximum(estimate_opnorm.(L.A))
+
+_children(L::DCAT) = L.A
+is_threaded(L::DCAT) = _is_threaded_from_children(L)
+supports_threading(L::DCAT) = _supports_threading_from_children(L)
+
+function _copy_operator_impl(op::DCAT; storage_type = nothing, threaded = nothing)
+    new_ops = map(a -> copy_operator(a; storage_type, threaded), op.A)
+    return DCAT(new_ops, op.idxD, op.idxC)
+end

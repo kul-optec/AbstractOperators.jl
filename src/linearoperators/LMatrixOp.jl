@@ -82,3 +82,14 @@ end
 
 #is_full_row_rank(L::LMatrixOp) =
 #is_full_column_rank(L::MatrixOp) =
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::LMatrixOp{T, A, B, dS, cS}; storage_type = nothing, threaded = nothing
+    ) where {T, A, B, dS, cS}
+    new_b = storage_type === nothing ? op.b : similar(storage_type{eltype(op.b)}, size(op.b)) .= op.b
+    return LMatrixOp(T, (op.n_row_in, size(op.b, 1)), new_b)
+end

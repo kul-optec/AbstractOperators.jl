@@ -132,3 +132,7 @@ function _copy_operator_impl(
         new_op, similar(A.dom_buf), similar(A.cod_buf)
     )
 end
+
+_children(L::OperatorWrapper) = (L.op,)
+is_threaded(L::OperatorWrapper) = _is_threaded_from_children(L)
+supports_threading(L::OperatorWrapper) = _supports_threading_from_children(L)

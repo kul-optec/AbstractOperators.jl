@@ -145,16 +145,15 @@ function create_BatchOp(
     batch_size, dType, cdType = prepare_batch_op(
         operator, domain_size, domain_batch_dim_mask, codomain_size, codomain_batch_dim_mask
     )
-    opType = typeof(operator)
     threaded = threaded && _should_thread(operator)
     return if threaded && nthreads() > 1
         batch_length = prod(batch_size)
         operators = tuple(
-            [
-                i == 1 ? operator : AbstractOperators.copy_operator(operator) for
-                    i in 1:min(nthreads(), batch_length)
-            ]...,
+            _per_thread_operators(operator, min(nthreads(), batch_length))...,
         )
+        # `opType` must come from the *stored* operators, not from the argument: threading
+        # is a type parameter, so switching it off for nesting safety changes the type.
+        opType = typeof(operators[1])
         C = length(operators)
         SimpleBatchOpMultiThreaded{
             dType, cdType, domain_batch_dim_mask, codomain_batch_dim_mask, opType, N, M, C,
@@ -164,7 +163,8 @@ function create_BatchOp(
     else
         B = length(batch_size)
         SimpleBatchOpSingleThreaded{
-            dType, cdType, domain_batch_dim_mask, codomain_batch_dim_mask, opType, N, M, B,
+            dType, cdType, domain_batch_dim_mask, codomain_batch_dim_mask, typeof(operator),
+            N, M, B,
         }(
             operator, domain_size, codomain_size, batch_size
         )
@@ -232,6 +232,45 @@ function mul!(
 end
 
 # Properties
+
+# `threaded` on a batch operator refers to the *batch loop*, which is encoded in the struct
+# type rather than a type parameter: the single/multi split predates the `Th` convention.
+is_threaded(::SimpleBatchOpSingleThreaded) = false
+is_threaded(::SimpleBatchOpMultiThreaded) = true
+
+_wrapped_operator(L::SimpleBatchOpSingleThreaded) = L.operator
+_wrapped_operator(L::SimpleBatchOpMultiThreaded) = L.operator[1]
+
+# Structural equality. Without this a copy compares by identity and therefore never equals
+# its original -- which used to be masked by `copy_operator` returning the very same object
+# for thread-safe operators.
+function Base.:(==)(L1::SimpleBatchOp, L2::SimpleBatchOp)
+    return _wrapped_operator(L1) == _wrapped_operator(L2) &&
+        L1.domain_size == L2.domain_size &&
+        L1.codomain_size == L2.codomain_size &&
+        _batch_size(L1) == _batch_size(L2)
+end
+
+_batch_size(L::SimpleBatchOpSingleThreaded) = L.batch_size
+_batch_size(L::SimpleBatchOpMultiThreaded) = size(L.batch_indices)
+
+function _copy_operator_impl(
+        op::SimpleBatchOp; storage_type = nothing, threaded = nothing
+    )
+    inner = _wrapped_operator(op)
+    # Only the storage request reaches the wrapped operator; its threading is decided by
+    # `create_BatchOp`, which forces it off for nesting safety.
+    new_inner = storage_type === nothing ? inner : copy_operator(inner; storage_type)
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    return create_BatchOp(
+        new_inner,
+        op.domain_size,
+        get_domain_batch_dim_mask(typeof(op)),
+        op.codomain_size,
+        get_codomain_batch_dim_mask(typeof(op));
+        threaded = new_threaded,
+    )
+end
 
 fun_name(L::SimpleBatchOpSingleThreaded) = "⟳" * fun_name(L.operator)
 fun_name(L::SimpleBatchOpMultiThreaded) = "⟳" * fun_name(L.operator[1])
@@ -347,7 +386,7 @@ function get_normal_op(
         L::SimpleBatchOpMultiThreaded{dT, cT, dM, cM, opT, N, M, C}
     ) where {dT, cT, dM, cM, opT, N, M, C}
     new_op = get_normal_op(L.operator[1])
-    new_ops = tuple([i == 1 ? new_op : AbstractOperators.copy_operator(new_op) for i in 1:length(L.operator)]...)
+    new_ops = tuple(_per_thread_operators(new_op, length(L.operator))...)
     return SimpleBatchOpMultiThreaded{dT, cT, dM, dM, typeof(new_op), N, N, C}(
         new_ops, L.domain_size, L.domain_size, L.batch_indices
     )

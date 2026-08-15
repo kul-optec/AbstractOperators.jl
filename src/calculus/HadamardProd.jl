@@ -136,3 +136,10 @@ function _copy_operator_impl(op::HadamardProdJac; storage_type = nothing, thread
         new_A, new_B, new_bufA, new_bufB, new_bufD
     )
 end
+
+_children(L::HadamardProd) = (L.A, L.B)
+is_threaded(L::HadamardProd) = _is_threaded_from_children(L)
+_children(L::HadamardProdJac) = (L.A, L.B)
+is_threaded(L::HadamardProdJac) = _is_threaded_from_children(L)
+supports_threading(L::HadamardProd) = _supports_threading_from_children(L)
+supports_threading(L::HadamardProdJac) = _supports_threading_from_children(L)

@@ -138,3 +138,19 @@ size(A::LBFGS{R, T}) where {R, T <: ArrayPartition} = (size.(A.s.x), size.(A.s.x
 size(A::LBFGS) = (size(A.s), size(A.s))
 
 fun_name(A::LBFGS) = "LBFGS"
+
+# LBFGS is stateful: `s`, `y`, the history buffers and the scalars are all mutated by
+# `update!`/`mul!`. A copy therefore gets *fresh* buffers rather than sharing them -- two
+# operators sharing history would corrupt each other's curvature pairs -- which is also why
+# it is not thread-safe and has no threaded path.
+is_threaded(::LBFGS) = false
+
+function _copy_operator_impl(
+        op::LBFGS{R, T, M, I}; storage_type = nothing, threaded = nothing
+    ) where {R, T, M, I}
+    threaded === true && throw(
+        ArgumentError("LBFGS does not support threading; see is_threaded(::LBFGS)")
+    )
+    proto = storage_type === nothing ? op.s : similar(storage_type{eltype(op.s)}, size(op.s))
+    return LBFGS(proto, M)
+end

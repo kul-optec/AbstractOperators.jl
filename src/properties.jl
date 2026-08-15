@@ -487,28 +487,47 @@ end
 """
     copy_operator(op::AbstractOperator; storage_type=nothing, threaded=nothing)
 
-Create a copy of `op` suitable for parallel use.
+Create a copy of `op` suitable for parallel use. **Always returns a new object**; use
+[`adapt_operator`](@ref) when sharing `op` is acceptable provided it meets the constraints.
 
 - Immutable fields (operator arrays, type params) are **shared** (no copy).
 - Mutable buffer fields are **deep-copied**.
 - `storage_type`: if provided (e.g., `CuArray`), convert buffer arrays to that storage.
 - `threaded`: if provided (`true`/`false`), toggle threading for operators that support it.
 
-When `storage_type` is `nothing` and `threaded` is `nothing`, equivalent to the old `copy_op`
-but more efficient (shares immutable data).
+The "return `op` itself when it is already thread-safe" short-circuit that used to live
+here now lives in `adapt_operator`, so that the two functions have crisp contracts: one
+always copies, the other never copies needlessly.
 """
 function copy_operator(op::AbstractOperator; storage_type = nothing, threaded = nothing)
-    if is_thread_safe(op) && threaded === nothing && storage_type === nothing
-        return op  # safe to share
-    end
-    return _copy_operator_impl(op; storage_type, threaded)
+    return _copy_operator_impl(op; storage_type = _normalize_storage_request(storage_type), threaded)
 end
 
-# Default implementation: just deepcopy (fallback)
+# `_copy_operator_impl` methods uniformly build parameterized types as `storage_type{T}`,
+# so the request must arrive as a bare wrapper (`Array`, `CuArray`). Callers naturally
+# write either form, and `Array{Float64}{Float64}` is a confusing `MethodError` rather than
+# a helpful one -- so normalize here, once, instead of in every impl.
+_normalize_storage_request(::Nothing) = nothing
+_normalize_storage_request(S::Type{<:AbstractArray}) = _array_wrapper_type(S)
+
+# Fallback. `deepcopy` cannot honour `storage_type` or `threaded` — it reproduces the
+# operator exactly as it is — so silently accepting those keywords here would return an
+# operator that does not meet the caller's constraints. Refuse instead, naming the type
+# that needs a `_copy_operator_impl` method.
 function _copy_operator_impl(
         op::T; storage_type = nothing, threaded = nothing
     ) where {T <: AbstractOperator}
-    return deepcopy(op)
+    if storage_type === nothing && threaded === nothing
+        return deepcopy(op)
+    end
+    return throw(
+        ArgumentError(
+            "copy_operator does not support storage_type/threaded for $(T): no " *
+                "_copy_operator_impl method is defined for it, and the deepcopy fallback " *
+                "would silently ignore both keywords. Define " *
+                "AbstractOperators._copy_operator_impl(::$(T); storage_type, threaded)."
+        ),
+    )
 end
 
 # Helper: convert a buffer array to the target storage type

@@ -364,3 +364,7 @@ function _copy_operator_impl(op::HCAT; storage_type = nothing, threaded = nothin
     new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return HCAT(new_ops, op.idxs, new_buf)
 end
+
+_children(L::HCAT) = L.A
+is_threaded(L::HCAT) = _is_threaded_from_children(L)
+supports_threading(L::HCAT) = _supports_threading_from_children(L)

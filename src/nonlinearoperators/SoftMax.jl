@@ -58,3 +58,22 @@ codomain_type(::SoftMax{T}) where {T} = T
 domain_array_type(::SoftMax{T, N, B}) where {T, N, B} = _array_wrapper_type(B){T}
 codomain_array_type(::SoftMax{T, N, B}) where {T, N, B} = _array_wrapper_type(B){T}
 is_thread_safe(::SoftMax) = false
+
+# Deliberately never threaded. `mul!` is a reduction (`maximum`, then a normalising `sum`)
+# and the Jacobian adjoint additionally routes through the shared `buf` field, so an
+# elementwise parallel split is not applicable without a multi-pass rewrite with its own
+# reductions. Stated explicitly rather than inherited from the default so that the choice
+# is on the record; revisit only with a benchmark showing the rewrite pays.
+is_threaded(::SoftMax) = false
+
+function _copy_operator_impl(
+        op::SoftMax{T, N, B}; storage_type = nothing, threaded = nothing
+    ) where {T, N, B}
+    # `buf` is a working buffer, so it is always freshly allocated rather than shared --
+    # sharing it is exactly what makes SoftMax not thread-safe.
+    threaded === true && throw(
+        ArgumentError("SoftMax does not support threading; see is_threaded(::SoftMax)")
+    )
+    new_at = storage_type === nothing ? _array_wrapper_type(B) : storage_type
+    return SoftMax(T, op.dim; array_type = new_at)
+end

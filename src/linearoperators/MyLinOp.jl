@@ -76,3 +76,14 @@ domain_array_type(::MyLinOp{N, M, C, D, F, G, dS}) where {N, M, C, D, F, G, dS} 
 codomain_array_type(::MyLinOp{N, M, C, D, F, G, dS, cS}) where {N, M, C, D, F, G, dS, cS} = cS
 
 fun_name(L::MyLinOp) = "A"
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::MyLinOp{N, M, C, D, F, G, dS, cS}; storage_type = nothing, threaded = nothing
+    ) where {N, M, C, D, F, G, dS, cS}
+    new_at = storage_type === nothing ? _array_wrapper_type(dS) : storage_type
+    return MyLinOp(D, op.dim_in, C, op.dim_out, op.Fwd!, op.Adj!; array_type = new_at)
+end

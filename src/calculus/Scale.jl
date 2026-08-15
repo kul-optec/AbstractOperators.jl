@@ -147,3 +147,17 @@ function permute(S::Scale, p::AbstractVector{Int})
     A = permute(S.A, p)
     return Scale(S.coeff, S.coeff_conj, A)
 end
+
+# Scale's own broadcast threading lives in its FastBroadcast type parameter; it is threaded
+# if either that flag or the wrapped operator says so.
+_children(L::Scale) = (L.A,)
+is_threaded(L::Scale{Th}) where {Th} = _fbbool(Th) || _is_threaded_from_children(L)
+supports_threading(::Scale) = true
+
+function _copy_operator_impl(
+        L::Scale{Th}; storage_type = nothing, threaded = nothing
+    ) where {Th}
+    new_threaded = threaded === nothing ? _fbbool(Th) : threaded
+    new_A = copy_operator(L.A; storage_type, threaded)
+    return Scale(L.coeff, L.coeff_conj, new_A; threaded = new_threaded)
+end

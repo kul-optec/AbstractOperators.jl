@@ -227,3 +227,7 @@ function _copy_operator_impl(op::VCAT; storage_type = nothing, threaded = nothin
     new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return VCAT(new_ops, op.idxs, new_buf)
 end
+
+_children(L::VCAT) = L.A
+is_threaded(L::VCAT) = _is_threaded_from_children(L)
+supports_threading(L::VCAT) = _supports_threading_from_children(L)

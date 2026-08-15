@@ -129,3 +129,22 @@ displacement(A::AffineAdd{L, D, true}) where {L, D} = A.d .+ displacement(A.A)
 displacement(A::AffineAdd{L, D, false}) where {L, D} = -A.d .+ displacement(A.A)
 
 remove_displacement(A::AffineAdd) = remove_displacement(A.A)
+
+_children(L::AffineAdd) = (L.A,)
+is_threaded(L::AffineAdd) = _is_threaded_from_children(L)
+supports_threading(L::AffineAdd) = _supports_threading_from_children(L)
+
+function _copy_operator_impl(
+        L::AffineAdd{Op, D, S}; storage_type = nothing, threaded = nothing
+    ) where {Op, D, S}
+    new_A = copy_operator(L.A; storage_type, threaded)
+    # `d` is read-only displacement data, shared unless the storage backend must change.
+    new_d = _copy_displacement(L.d, storage_type)
+    return AffineAdd(new_A, new_d, S)
+end
+
+_copy_displacement(d::Number, ::Any) = d
+_copy_displacement(d::AbstractArray, ::Nothing) = d
+function _copy_displacement(d::AbstractArray, storage_type::Type{<:AbstractArray})
+    return copyto!(similar(storage_type{eltype(d)}, size(d)), d)
+end

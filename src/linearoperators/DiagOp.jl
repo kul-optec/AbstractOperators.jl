@@ -141,3 +141,8 @@ end
 
 has_fast_opnorm(::DiagOp) = true
 LinearAlgebra.opnorm(L::DiagOp) = maximum(abs, L.d)
+
+# DiagOp stores FastBroadcast's singleton flag rather than a Bool; bridge it to the trait.
+is_threaded(::DiagOp{B}) where {B} = _fbbool(B)
+threading_threshold(::Type{<:DiagOp}) = THRESHOLD_ELEMENTWISE_ARITHMETIC
+supports_threading(::DiagOp) = true

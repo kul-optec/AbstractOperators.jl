@@ -254,6 +254,13 @@ function create_BatchOp(
     )
     threaded = threaded && _should_thread(operators[1])
     if threaded && nthreads() > 1
+        # Nesting safety, applied before `opType` is used: the batch loop is the parallel
+        # layer, so the wrapped operators must not thread themselves. Threading is a type
+        # parameter, so this changes `opType` -- hence it happens here rather than inside
+        # `create_threaded_SpreadingBatchOp`, whose THREAD_SAFE and LOCKING strategies
+        # store the operators without ever reaching a copy.
+        operators = map(op -> AbstractOperators.adapt_operator(op; threaded = false), operators)
+        opType = eltype(operators)
         type_args = (
             dType,
             cdType,
@@ -366,8 +373,9 @@ function create_threaded_SpreadingBatchOp(
         end
         if threading_strategy == ThreadingStrategy.COPYING
             operators = [
-                i == 1 ? operators : [AbstractOperators.copy_operator(op) for op in operators] for
-                    i in 1:min(nthreads(), prod(batch_size))
+                i == 1 ? operators :
+                    [AbstractOperators.copy_operator(op; threaded = false) for op in operators]
+                    for i in 1:min(nthreads(), prod(batch_size))
             ]
             return SpreadingBatchOpCopying{type_args...}(
                 operators, sizes..., CartesianIndices(batch_size)
@@ -647,6 +655,45 @@ is_invertible(L::SpreadingBatchOp) = is_invertible(L.operators[1])
 is_invertible(L::SpreadingBatchOpCopying) = is_invertible(L.operators[1][1])
 is_orthogonal(L::SpreadingBatchOp) = is_orthogonal(L.operators[1])
 is_orthogonal(L::SpreadingBatchOpCopying) = is_orthogonal(L.operators[1][1])
+
+# The five SpreadingBatchOp structs differ in how they hold their operators; this is the
+# one place that difference is normalised, so equality, copying and the `is_threaded` trait
+# do not each have to re-derive it.
+_spreading_operators(L::SpreadingBatchOp) = L.operators
+_spreading_operators(L::SpreadingBatchOpCopying) = L.operators[1]
+
+_batch_size(L::SpreadingBatchOpSingleThreaded) = L.batch_size
+_batch_size(L::SpreadingBatchOp) = size(L.batch_indices)
+
+is_threaded(::SpreadingBatchOp) = true
+is_threaded(::SpreadingBatchOpSingleThreaded) = false
+
+function Base.:(==)(L1::SpreadingBatchOp, L2::SpreadingBatchOp)
+    return _spreading_operators(L1) == _spreading_operators(L2) &&
+        L1.domain_size == L2.domain_size &&
+        L1.codomain_size == L2.codomain_size &&
+        _batch_size(L1) == _batch_size(L2)
+end
+
+function _copy_operator_impl(
+        op::SpreadingBatchOp; storage_type = nothing, threaded = nothing
+    )
+    ops = _spreading_operators(op)
+    # As in SimpleBatchOp: only the storage request reaches the wrapped operators, their
+    # threading is forced off by `create_BatchOp` for nesting safety.
+    new_ops = storage_type === nothing ? ops :
+        map(o -> copy_operator(o; storage_type), ops)
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    return create_BatchOp(
+        collect(new_ops),
+        op.domain_size,
+        get_domain_batch_dim_mask(typeof(op)),
+        op.codomain_size,
+        get_codomain_batch_dim_mask(typeof(op)),
+        get_spreading_dims(typeof(op));
+        threaded = new_threaded,
+    )
+end
 
 function extend_single_diags(single_diags, L::BatchOp{T1, T2, dM, cM}) where {T1, T2, dM, cM}
     input_size = L.domain_size

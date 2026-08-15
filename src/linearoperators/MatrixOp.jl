@@ -169,3 +169,17 @@ get_normal_op(L::MatrixOp) = MatrixOp(domain_type(L), size(L, 2), L.A' * L.A)
 
 has_fast_opnorm(::MatrixOp) = true
 LinearAlgebra.opnorm(L::MatrixOp) = opnorm(L.A)
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::MatrixOp{D, T, M, NC, dS, cS}; storage_type = nothing, threaded = nothing
+    ) where {D, T, M, NC, dS, cS}
+    # `op.A` is read-only operator data, so it is shared rather than copied unless the
+    # storage backend actually has to change.
+    new_at = storage_type === nothing ? _array_wrapper_type(dS) : storage_type
+    new_A = storage_type === nothing ? op.A : similar(storage_type{T}, size(op.A)) .= op.A
+    return MatrixOp(D, (size(op.A, 2),), new_A; array_type = new_at)
+end

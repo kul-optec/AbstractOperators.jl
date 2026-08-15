@@ -224,3 +224,7 @@ end
 size(L::Variation{T, N}) where {T, N} = ((prod(L.dim_in), N), L.dim_in)
 
 fun_name(L::Variation) = "Ʋ"
+
+is_threaded(::Variation{T, N, Th, S}) where {T, N, Th, S} = Th
+threading_threshold(::Type{<:Variation}) = THRESHOLD_ELEMENTWISE_ARITHMETIC
+supports_threading(::Variation) = true

@@ -116,3 +116,14 @@ is_full_column_rank(L::ZeroPad) = true
 
 has_fast_opnorm(::ZeroPad) = true
 LinearAlgebra.opnorm(L::ZeroPad) = one(real(domain_type(L)))
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::ZeroPad{N, T, S}; storage_type = nothing, threaded = nothing
+    ) where {N, T, S}
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
+    return ZeroPad(T, op.dim_in, op.zp; array_type = new_at)
+end

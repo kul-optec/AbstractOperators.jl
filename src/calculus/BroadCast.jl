@@ -37,7 +37,10 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
         bufC = allocate_in_codomain(A)
         if threaded
             bufD = [allocate_in_domain(A) for _ in 1:Threads.nthreads()]
-            A = [i == 1 ? A : AbstractOperators.copy_operator(A) for i in 1:Threads.nthreads()]
+            # Nesting safety: the adjoint loop below threads over `idxs` and calls the
+            # wrapped operator inside it, so every per-thread instance -- including the
+            # first, which the previous code left untouched -- must be non-threaded.
+            A = _per_thread_operators(A, Threads.nthreads())
         else
             bufD = allocate_in_domain(A)
         end

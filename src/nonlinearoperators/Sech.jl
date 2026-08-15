@@ -9,36 +9,58 @@ Creates an hyperbolic secant non-linear operator with input dimensions `dim_in`:
 ```
 
 """
-struct Sech{T, N, S <: AbstractArray{T}} <: NonLinearOperator
+struct Sech{T, N, S <: AbstractArray{T}, Th} <: NonLinearOperator
     dim::NTuple{N, Int}
 end
 
 function Sech(
-        domain_type::Type{T}, DomainDim::NTuple{N, Int}; array_type::Type = Array{T}
+        domain_type::Type{T}, DomainDim::NTuple{N, Int};
+        array_type::Type = Array{T}, threaded = nothing
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
-    return Sech{T, N, S}(DomainDim)
+    return Sech{T, N, S, _elementwise_threaded(Sech, threaded, T, DomainDim, S)}(DomainDim)
 end
 
-function Sech(DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}) where {N}
-    return Sech(Float64, DomainDim; array_type)
+function Sech(
+        DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded = nothing
+    ) where {N}
+    return Sech(Float64, DomainDim; array_type, threaded)
 end
-Sech(DomainDim::Vararg{Int}; array_type::Type = Array{Float64}) = Sech(Float64, DomainDim; array_type)
+function Sech(DomainDim::Vararg{Int}; array_type::Type = Array{Float64}, threaded = nothing)
+    return Sech(Float64, DomainDim; array_type, threaded)
+end
 
-function Sech(x::AbstractArray{T}; array_type::Type = _array_wrapper(x)) where {T}
+function Sech(
+        x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded = nothing
+    ) where {T}
     S = _normalize_array_type(array_type, T)
-    return Sech{T, ndims(x), S}(size(x))
+    return Sech{T, ndims(x), S, _elementwise_threaded(Sech, threaded, T, size(x), S)}(size(x))
 end
 
-function mul!(y::AbstractArray, L::Sech, x::AbstractArray)
+function mul!(y::AbstractArray, L::Sech{T, N, S, false}, x::AbstractArray) where {T, N, S}
     check(y, L, x)
     return y .= sech.(x)
 end
 
-function mul!(y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sech}}, b::AbstractArray)
+function mul!(y::AbstractArray, L::Sech{T, N, S, true}, x::AbstractArray) where {T, N, S}
+    check(y, L, x)
+    return @.. thread = true y = sech(x)
+end
+
+function mul!(
+        y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sech{T, N, S, false}}}, b::AbstractArray
+    ) where {T, N, S}
     check(y, J, b)
     L = J.A
     return y .= -conj.(tanh.(L.x) .* sech.(L.x)) .* b
+end
+
+function mul!(
+        y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sech{T, N, S, true}}}, b::AbstractArray
+    ) where {T, N, S}
+    check(y, J, b)
+    L = J.A
+    return @.. thread = true y = -conj(tanh(L.x) * sech(L.x)) * b
 end
 
 fun_name(L::Sech) = "sech"
@@ -50,3 +72,14 @@ codomain_type(::Sech{T, N}) where {T, N} = T
 domain_array_type(::Sech{T, N, S}) where {T, N, S} = S
 codomain_array_type(::Sech{T, N, S}) where {T, N, S} = S
 is_thread_safe(::Sech) = true
+is_threaded(::Sech{T, N, S, Th}) where {T, N, S, Th} = Th
+threading_threshold(::Type{<:Sech}) = THRESHOLD_ELEMENTWISE_TRANSCENDENTAL
+
+function _copy_operator_impl(
+        op::Sech{T, N, S, Th}; storage_type = nothing, threaded = nothing
+    ) where {T, N, S, Th}
+    new_threaded = threaded === nothing ? Th : threaded
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
+    return Sech(T, op.dim; array_type = new_at, threaded = new_threaded)
+end
+supports_threading(::Sech) = true
