@@ -74,9 +74,10 @@ function _build_diagop(::Type{T}, n) where {T}
     return (DiagOp(d; threaded = false), DiagOp(d; threaded = true), x, similar(x))
 end
 
-# Variation needs >= 2 dims. The trailing dimension is deliberately 4, not 2: Variation's
-# adjoint has a pre-existing BoundsError whenever the last dimension is exactly 2 (present
-# on master, unrelated to threading), which would otherwise abort the sweep.
+# Variation needs >= 2 dims. The trailing dimension of 4 originally worked around a
+# BoundsError in the adjoint for length-2 dimensions; that bug is fixed, but the shape is
+# kept so the recorded `threading_threshold(::Type{<:Variation})` stays comparable to the
+# run it was transcribed from.
 function _build_variation(::Type{T}, n) where {T}
     m = max(4, n ÷ 4)
     x = randn(T, m, 4)
