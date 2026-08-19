@@ -106,3 +106,21 @@ end
         test_op(opT, gpu_randn(backend, n), gpu_randn(backend, n), false)
     end
 end
+
+@testitem "AdjointOperator: threading traits and copy_operator" tags = [:calculus, :AdjointOperator] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n = 1 << 16   # FiniteDiff's threshold is the "arithmetic" class (2^15)
+    threaded_leaf = FiniteDiff(Float64, (n,); threaded = true)
+    serial_leaf = FiniteDiff(Float64, (n,); threaded = false)
+    @test is_threaded(AdjointOperator(threaded_leaf)) == true
+    @test is_threaded(AdjointOperator(serial_leaf)) == false
+    @test supports_threading(AdjointOperator(serial_leaf)) == true
+
+    opT = AdjointOperator(serial_leaf)
+    opT2 = copy_operator(opT; threaded = true)
+    @test opT2 isa AdjointOperator
+    y = randn(n - 1)
+    @test opT * y ≈ opT2 * y
+end
