@@ -40,7 +40,7 @@ end
 
 # FFT planning flags: FFTW.MEASURE only for CPU Arrays; no flags for GPU backends.
 _xcorr_plan_kwargs(::Type{<:Array}) = (flags = FFTW.MEASURE,)
-_xcorr_plan_kwargs(::Type)          = (;)
+_xcorr_plan_kwargs(::Type) = (;)
 
 # Constructors
 function Xcorr(domain_type::Type, DomainDim::NTuple{N, Int}, h::H) where {H <: AbstractVector, N}
@@ -159,7 +159,7 @@ function _xcorr_fir_adj!(y, b, h, padlen)
         for k in 1:m
             hk = h[k]
             base = padlen + j - k
-            a0 = muladd(hk, b[base],     a0)
+            a0 = muladd(hk, b[base], a0)
             a1 = muladd(hk, b[base + 1], a1)
             a2 = muladd(hk, b[base + 2], a2)
             a3 = muladd(hk, b[base + 3], a3)
@@ -172,7 +172,7 @@ function _xcorr_fir_adj!(y, b, h, padlen)
         y[j + 4] = a4; y[j + 5] = a5; y[j + 6] = a6; y[j + 7] = a7
         j += 8
     end
-    @inbounds while j ≤ n
+    return @inbounds while j ≤ n
         acc = zero(T)
         for k in 1:m
             acc = muladd(h[k], b[padlen + j - k], acc)

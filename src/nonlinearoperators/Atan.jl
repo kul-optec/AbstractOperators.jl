@@ -60,7 +60,7 @@ function mul!(
     ) where {T, N, S}
     check(y, J, b)
     L = J.A
-    return @.. thread = true y = conj(1.0 / (1.0 + L.x ^ 2)) * b
+    return @.. thread = true y = conj(1.0 / (1.0 + L.x^2)) * b
 end
 
 fun_name(L::Atan) = "atan"

@@ -33,25 +33,25 @@ function parse_args_local(args)
     s = ArgParseSettings()
     @add_arg_table! s begin
         "--base-dir"
-            help    = "Absolute path to base revision checkout"
-            arg_type = String
-            required = true
+        help = "Absolute path to base revision checkout"
+        arg_type = String
+        required = true
         "--head-dir"
-            help    = "Absolute path to head revision checkout"
-            arg_type = String
-            required = true
+        help = "Absolute path to head revision checkout"
+        arg_type = String
+        required = true
         "--output-dir"
-            help    = "Directory where body.md and metadata are written"
-            arg_type = String
-            default  = "."
+        help = "Directory where body.md and metadata are written"
+        arg_type = String
+        default = "."
         "--pr"
-            help    = "Pull-request number"
-            arg_type = String
-            default  = ""
+        help = "Pull-request number"
+        arg_type = String
+        default = ""
         "--julia-version"
-            help    = "Julia version string for the comment header"
-            arg_type = String
-            default  = string(VERSION)
+        help = "Julia version string for the comment header"
+        arg_type = String
+        default = string(VERSION)
     end
     return parse_args(args, s)
 end
@@ -68,7 +68,7 @@ standard local manifest.
 """
 function run_suite(repo_dir::AbstractString, result_path::AbstractString)
     bench_project = joinpath(repo_dir, "benchmark")
-    bench_script  = joinpath(repo_dir, "benchmark", "benchmarks.jl")
+    bench_script = joinpath(repo_dir, "benchmark", "benchmarks.jl")
 
     # The runner script activates the benchmark project, includes benchmarks.jl,
     # tunes and runs SUITE, then serialises results.
@@ -97,7 +97,7 @@ Flatten a possibly nested BenchmarkGroup into a Dict{String,BenchmarkTools.Trial
 using "/" as the key separator.
 """
 function flatten_group(group::BenchmarkGroup, prefix = "")
-    out = Dict{String,BenchmarkTools.Trial}()
+    out = Dict{String, BenchmarkTools.Trial}()
     for (k, v) in group
         key = isempty(prefix) ? string(k) : "$prefix/$k"
         if v isa BenchmarkGroup
@@ -111,7 +111,7 @@ end
 
 # ---- time formatting -------------------------------------------------------
 
-const TIME_UNITS = [(:ns, 1e0), (Symbol("μs"), 1e3), (:ms, 1e6), (:s, 1e9)]
+const TIME_UNITS = [(:ns, 1.0e0), (Symbol("μs"), 1.0e3), (:ms, 1.0e6), (:s, 1.0e9)]
 
 function auto_time_unit(t_ns::Float64)
     for (unit, scale) in reverse(TIME_UNITS)
@@ -122,10 +122,10 @@ end
 
 function format_time(t::BenchmarkTools.Trial)
     med = Statistics.median(t.times)   # nanoseconds
-    lo  = Statistics.quantile(t.times, 0.25)
-    hi  = Statistics.quantile(t.times, 0.75)
+    lo = Statistics.quantile(t.times, 0.25)
+    hi = Statistics.quantile(t.times, 0.75)
     unit, scale = auto_time_unit(med)
-    v    = med / scale
+    v = med / scale
     verr = max(0.0, (hi - lo) / 2) / scale
     unit_str = string(unit)
     if isfinite(verr) && verr > 0
@@ -139,7 +139,7 @@ end
 
 function format_memory(t::BenchmarkTools.Trial)
     allocs = round(Int, Statistics.median(t.allocs))
-    bytes  = round(Int, Statistics.median(t.memory))
+    bytes = round(Int, Statistics.median(t.memory))
     if bytes == 0
         return "0 allocs (0 bytes)"
     elseif bytes < 1024
@@ -224,7 +224,7 @@ function markdown_table(; header::AbstractVector, data::AbstractMatrix)
     println(io)
     print(io, "|:$(repeat('-', cw[1]))|")
     for i in 2:length(header)
-        print(io, ":$(repeat('-', cw[i]-1)):|")
+        print(io, ":$(repeat('-', cw[i] - 1)):|")
     end
     println(io)
     for row in eachrow(data)
@@ -244,12 +244,12 @@ Build one markdown table (either :time or :memory) comparing `base_flat` and
 the missing column.
 """
 function build_table(
-    base_flat::Dict{String,BenchmarkTools.Trial},
-    head_flat::Dict{String,BenchmarkTools.Trial},
-    mode::Symbol,
-    base_label::String,
-    head_label::String,
-)
+        base_flat::Dict{String, BenchmarkTools.Trial},
+        head_flat::Dict{String, BenchmarkTools.Trial},
+        mode::Symbol,
+        base_label::String,
+        head_label::String,
+    )
     all_keys = sort(collect(union(keys(base_flat), keys(head_flat))))
     header = ["Benchmark", base_label, head_label, "Ratio (base/head)"]
 
@@ -277,27 +277,27 @@ end
 # ---------------------------------------------------------------------------
 
 function build_summary(
-    base_flat::Dict{String,BenchmarkTools.Trial},
-    head_flat::Dict{String,BenchmarkTools.Trial},
-)
+        base_flat::Dict{String, BenchmarkTools.Trial},
+        head_flat::Dict{String, BenchmarkTools.Trial},
+    )
     common = intersect(keys(base_flat), keys(head_flat))
 
-    time_speedups   = 0
+    time_speedups = 0
     time_regressions = 0
     mem_improvements = 0
-    mem_regressions  = 0
+    mem_regressions = 0
 
     for k in common
         r_t, re_t = compute_ratio(base_flat[k], head_flat[k], :time)
         if isfinite(r_t)
-            r_t - re_t > 1.2 && (time_speedups    += 1)
+            r_t - re_t > 1.2 && (time_speedups += 1)
             r_t + re_t < 0.8 && (time_regressions += 1)
         end
 
         r_m, _ = compute_ratio(base_flat[k], head_flat[k], :memory)
         if isfinite(r_m)
             r_m > 1.5 && (mem_improvements += 1)
-            r_m < 0.5 && (mem_regressions  += 1)
+            r_m < 0.5 && (mem_regressions += 1)
         end
     end
 
@@ -331,36 +331,36 @@ end
 # ---------------------------------------------------------------------------
 
 function build_body(
-    base_flat::Dict{String,BenchmarkTools.Trial},
-    head_flat::Dict{String,BenchmarkTools.Trial},
-    base_label::String,
-    head_label::String,
-    julia_version::String,
-)
-    time_table   = build_table(base_flat, head_flat, :time,   base_label, head_label)
+        base_flat::Dict{String, BenchmarkTools.Trial},
+        head_flat::Dict{String, BenchmarkTools.Trial},
+        base_label::String,
+        head_label::String,
+        julia_version::String,
+    )
+    time_table = build_table(base_flat, head_flat, :time, base_label, head_label)
     memory_table = build_table(base_flat, head_flat, :memory, base_label, head_label)
-    summary      = build_summary(base_flat, head_flat)
+    summary = build_summary(base_flat, head_flat)
 
     return """
-## Benchmark Results (Julia v$(julia_version))
+    ## Benchmark Results (Julia v$(julia_version))
 
-$(summary)
+    $(summary)
 
-<details>
-<summary>Time benchmarks</summary>
+    <details>
+    <summary>Time benchmarks</summary>
 
-$(time_table)
-</details>
+    $(time_table)
+    </details>
 
-<details>
-<summary>Memory benchmarks</summary>
+    <details>
+    <summary>Memory benchmarks</summary>
 
-$(memory_table)
-</details>
+    $(memory_table)
+    </details>
 
-> **Ratio interpretation:** values > 1 mean the PR is faster; values < 1 mean slower.
-> 🚀 significant speedup · 🐢 significant slowdown
-"""
+    > **Ratio interpretation:** values > 1 mean the PR is faster; values < 1 mean slower.
+    > 🚀 significant speedup · 🐢 significant slowdown
+    """
 end
 
 # ---------------------------------------------------------------------------
@@ -369,10 +369,10 @@ end
 
 function main(argv = ARGS)
     opts = parse_args_local(argv)
-    base_dir     = opts["base-dir"]
-    head_dir     = opts["head-dir"]
-    output_dir   = opts["output-dir"]
-    pr_number    = opts["pr"]
+    base_dir = opts["base-dir"]
+    head_dir = opts["head-dir"]
+    output_dir = opts["output-dir"]
+    pr_number = opts["pr"]
     julia_version = opts["julia-version"]
 
     mkpath(output_dir)
@@ -400,7 +400,7 @@ function main(argv = ARGS)
     write(joinpath(output_dir, "pr_number.txt"), pr_number)
     write(joinpath(output_dir, "julia_version.txt"), julia_version)
 
-    @info "Benchmark comparison written to $(output_dir)/body.md"
+    return @info "Benchmark comparison written to $(output_dir)/body.md"
 end
 
 main()

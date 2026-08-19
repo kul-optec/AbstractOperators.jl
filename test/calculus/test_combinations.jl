@@ -462,11 +462,11 @@ end
     n = 5
     # Build a 2-op Compose that doesn't get simplified: FD(n) * MatrixOp(n-1,n-1)
     # A tuple order is (inner, outer) so comp.A = (FD(n), MatrixOp(n-1,n-1))
-    comp = MatrixOp(randn(n-1, n-1)) * FiniteDiff((n,))   # domain (n,) → codomain (n-1,)
+    comp = MatrixOp(randn(n - 1, n - 1)) * FiniteDiff((n,))   # domain (n,) → codomain (n-1,)
 
     # Line 82 else: combine(Scale, Compose) when can_be_combined(L.A, comp.A[end]) = false
     # but can_be_combined(Scale, comp) = true via the all-linear+MatrixOp condition
-    L_82 = Scale(2.0, FiniteDiff((n-1,)))  # domain (n-1,) → codomain (n-2,)
+    L_82 = Scale(2.0, FiniteDiff((n - 1,)))  # domain (n-1,) → codomain (n-2,)
     @test can_be_combined(L_82, comp)
     result_82 = combine(L_82, comp)
     x1 = randn(n)
@@ -474,7 +474,7 @@ end
 
     # Line 90 else: combine(AdjointScale, Compose) when can_be_combined(FD(n)', comp.A[end]) = false
     # Use MatrixOp(n-1,n-1) * FD(n,) so inner operator (FD') doesn't combine with outer (MatrixOp)
-    comp2 = MatrixOp(randn(n-1, n-1)) * FiniteDiff((n,))  # domain (n,) → codomain (n-1,)
+    comp2 = MatrixOp(randn(n - 1, n - 1)) * FiniteDiff((n,))  # domain (n,) → codomain (n-1,)
     adj_L = Scale(2.0, FiniteDiff((n,)))'   # domain (n-1,) → codomain (n,)
     @test can_be_combined(adj_L, comp2)
     result_90 = combine(adj_L, comp2)
@@ -482,17 +482,17 @@ end
     @test result_90 * x2 ≈ adj_L * (comp2 * x2)
 
     # Lines 98-99 else: combine(Compose, Scale) when can_be_combined(comp.A[1]=FD(n), FD(n+1)) = false
-    scale_inner = Scale(2.0, FiniteDiff((n+1,)))  # domain (n+1,) → codomain (n,)
+    scale_inner = Scale(2.0, FiniteDiff((n + 1,)))  # domain (n+1,) → codomain (n,)
     @test can_be_combined(comp, scale_inner)
     result_98 = combine(comp, scale_inner)
-    x3 = randn(n+1)
+    x3 = randn(n + 1)
     @test result_98 * x3 ≈ comp * (scale_inner * x3)
 
     # Lines 109-110 else: combine(Compose, AdjointScale) when can_be_combined(comp.A[1]=FD(n), FD(n)') = false
     adj_scale_inner = Scale(2.0, FiniteDiff((n,)))'  # domain (n-1,) → codomain (n,)
     @test can_be_combined(comp, adj_scale_inner)
     result_109 = combine(comp, adj_scale_inner)
-    x4 = randn(n-1)
+    x4 = randn(n - 1)
     @test result_109 * x4 ≈ comp * (adj_scale_inner * x4)
 end
 

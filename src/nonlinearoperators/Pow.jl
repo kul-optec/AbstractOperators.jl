@@ -42,7 +42,7 @@ end
 function mul!(y::AbstractArray, L::Pow{T, N, I, S, true}, x::AbstractArray) where {T, N, I, S}
     check(y, L, x)
     p = L.p
-    return @.. thread = true y = x ^ p
+    return @.. thread = true y = x^p
 end
 
 function mul!(
@@ -60,7 +60,7 @@ function mul!(
     L = J.A
     p = L.A.p
     Lx = L.x
-    return @.. thread = true y = conj(p * Lx ^ (p - 1)) * b
+    return @.. thread = true y = conj(p * Lx^(p - 1)) * b
 end
 
 fun_name(L::Pow) = "『"

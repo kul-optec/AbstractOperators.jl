@@ -8,8 +8,10 @@
         # whose `.operator` is the operator itself -- so `.operator[1]` would silently index
         # *into* it (slicing a DiagOp) instead of failing usefully.
         @test AbstractOperators._wrapped_operator(batch_op) == op
-        @test is_threaded(batch_op) == (threaded && Threads.nthreads() > 1 &&
-            AbstractOperators._should_thread(op))
+        @test is_threaded(batch_op) == (
+            threaded && Threads.nthreads() > 1 &&
+                AbstractOperators._should_thread(op)
+        )
         @test size(batch_op, 1) == size(y)
         @test size(batch_op, 2) == size(x)
         y2 = batch_op * x

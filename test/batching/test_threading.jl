@@ -1,6 +1,6 @@
 @testitem "concurrent batched mul! restores thread counts" tags = [
-        :batching, :SimpleBatchOp, :SpreadingBatchOp,
-    ] begin
+    :batching, :SimpleBatchOp, :SpreadingBatchOp,
+] begin
     using AbstractOperators, LinearAlgebra, Random
 
     # Regression test for the save/restore race that the NestedThreading extraction fixed.
@@ -37,8 +37,8 @@
 end
 
 @testitem "nested batch operators do not widen the inner thread budget" tags = [
-        :batching, :SpreadingBatchOp,
-    ] begin
+    :batching, :SpreadingBatchOp,
+] begin
     using AbstractOperators, LinearAlgebra, Random
     import NestedThreading
 

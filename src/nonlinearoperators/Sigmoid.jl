@@ -52,7 +52,7 @@ end
 function mul!(y::AbstractArray, L::Sigmoid{T, N, G, S, true}, x::AbstractArray) where {T, N, G, S}
     check(y, L, x)
     gamma = L.gamma
-    return @.. thread = true y = (1 + exp(-gamma * x)) ^ (-1)
+    return @.. thread = true y = (1 + exp(-gamma * x))^(-1)
 end
 
 function mul!(
