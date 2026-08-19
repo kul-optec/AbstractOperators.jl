@@ -274,3 +274,27 @@ end
     opWrapped_serial = BroadCast(serial_child, dim_out_small; threaded = false)
     @test is_threaded(opWrapped_serial) == false
 end
+
+@testitem "OperatorBroadCast: threaded construction allocates per-thread state" tags = [
+    :calculus, :BroadCast,
+] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(3)
+
+    if Threads.nthreads() > 1
+        # dim_out sized above THRESHOLD_MEMORY_BOUND (2^18) so `threaded = true` is actually
+        # granted, exercising OperatorBroadCast's threaded-construction branch (per-thread
+        # domain buffers and per-thread operator copies), not just the serial one.
+        m, n = 8, 4
+        dim_out = (m, 40000)   # 320000 > 2^18
+        A = MatrixOp(randn(m, n))
+        opR = BroadCast(A, dim_out; threaded = true)
+        @test is_threaded(opR) == true
+        x = randn(n)
+        y = opR * x
+        @test y[:, 1] ≈ A * x
+        y_test = randn(dim_out)
+        x_back = opR' * y_test
+        @test x_back ≈ A' * dropdims(sum(y_test, dims = 2), dims = 2)
+    end
+end

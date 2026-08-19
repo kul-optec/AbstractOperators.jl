@@ -104,3 +104,15 @@ end
         @test collect(z) ≈ ref
     end
 end
+
+@testitem "OperatorWrapper: threading traits" tags = [:calculus, :OperatorWrapper] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n = 1 << 16   # FiniteDiff's threshold is the "arithmetic" class (2^15)
+    threaded_leaf = FiniteDiff(Float64, (n,); threaded = true)
+    serial_leaf = FiniteDiff(Float64, (n,); threaded = false)
+    @test is_threaded(OperatorWrapper(threaded_leaf)) == true
+    @test is_threaded(OperatorWrapper(serial_leaf)) == false
+    @test supports_threading(OperatorWrapper(serial_leaf)) == true
+end
