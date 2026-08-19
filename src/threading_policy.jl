@@ -164,7 +164,7 @@ end
 
 Resolve a constructor's `threaded` keyword for an elementwise operator.
 
-See [`_resolve_threaded`](@ref) for the meaning of the two values; in short, `false` vetoes
+See `_resolve_threaded` for the meaning of the two values; in short, `false` vetoes
 and `true` defers to the per-operator policy.
 
 Returns a plain `Bool` so it can be spliced straight into a `Th` type parameter.
@@ -231,9 +231,9 @@ _total_elements(n::Integer) = Int(n)
 Whether `L` executes its `mul!` (and adjoint `mul!`) using multiple Julia threads.
 
 This reports what the operator will **actually do**, not what was asked for. Constructing
-with `threaded = true` below the operator's [`threading_threshold`](@ref), on GPU storage,
+with `threaded = true` below the operator's `threading_threshold`, on GPU storage,
 or in a single-threaded session all yield `is_threaded(L) == false`, because in each case
-threading would not happen (or would be a pessimisation). See [`_resolve_threaded`](@ref)
+threading would not happen (or would be a pessimisation). See `_resolve_threaded`
 for the full rule.
 
 Consequently `is_threaded(copy_operator(L; threaded = true))` is **not** guaranteed to be
@@ -321,9 +321,7 @@ _supports_threading_from_children(L::AbstractOperator) = any(supports_threading,
 # `DiagOp` and `Scale` keep FastBroadcast's singleton thread flag as their type parameter.
 # These convert between that encoding and the plain `Bool` used everywhere else.
 
-@inline _fbthread(::Val{true}) = FastBroadcast.True()
-@inline _fbthread(::Val{false}) = FastBroadcast.False()
-@inline _fbthread(b::Bool) = _fbthread(Val(b))
+@inline _fbthread(b::Bool) = b ? FastBroadcast.True() : FastBroadcast.False()
 
 @inline _fbbool(::FastBroadcast.True) = true
 @inline _fbbool(::FastBroadcast.False) = false
@@ -343,7 +341,7 @@ This is the counterpart to [`copy_operator`](@ref), which always produces a new 
 - `adapt_operator` returns `op` itself (`===`) when every requested constraint already
   holds, and delegates to `copy_operator` otherwise.
 - `threaded = false` is a constraint that can always be met. `threaded = true` is a
-  *permission* (see [`_resolve_threaded`](@ref)), so a copy made for it may still come back
+  *permission* (see `_resolve_threaded`), so a copy made for it may still come back
   serial if the policy declines — asking twice will not change that.
 - Use `adapt_operator` when you need *an* operator meeting a constraint (the common case
   when wrapping child operators); use `copy_operator` when you need a *distinct* object,
