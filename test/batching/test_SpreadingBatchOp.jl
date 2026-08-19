@@ -360,3 +360,40 @@ end
         )
     end
 end
+
+@testitem "SpreadingBatchOp: threading trait, equality, and copy_operator" tags = [
+    :batching, :SpreadingBatchOp,
+] setup = [TestUtils, SpreadingBatchOpHelpers] begin
+    using Random, AbstractOperators
+    Random.seed!(2)
+
+    ops = [i * DiagOp([1.0im, 2.0im]) for i in 1:3]
+
+    bop_serial = BatchOp(ops, 4; threaded = false)
+    @test is_threaded(bop_serial) == false
+    @test bop_serial == BatchOp(ops, 4; threaded = false)
+
+    bop_copy = copy_operator(bop_serial)
+    @test bop_copy isa AbstractOperators.SpreadingBatchOpSingleThreaded
+    @test bop_copy == bop_serial
+    x = rand(ComplexF64, 2, 3, 4)
+    @test bop_copy * x ≈ bop_serial * x
+
+    bop_copy_storage = copy_operator(bop_serial; storage_type = Array{ComplexF64})
+    @test bop_copy_storage * x ≈ bop_serial * x
+
+    if Threads.nthreads() > 1
+        # Sized above MIN_BATCH_WORK_FOR_PARALLEL (2^10) so `threaded = true` actually
+        # resolves to threaded rather than being declined by the policy for being too small.
+        big_ops = [i * DiagOp(randn(ComplexF64, 2048)) for i in 1:3]
+        bop_threaded = BatchOp(big_ops, 4; threaded = true, threading_strategy = AbstractOperators.ThreadingStrategy.COPYING)
+        @test is_threaded(bop_threaded) == true
+        @test bop_threaded == BatchOp(big_ops, 4; threaded = true, threading_strategy = AbstractOperators.ThreadingStrategy.COPYING)
+        @test bop_threaded != bop_serial
+
+        big_x = rand(ComplexF64, 2048, 3, 4)
+        bop_threaded_copy = copy_operator(bop_threaded; threaded = false)
+        @test is_threaded(bop_threaded_copy) == false
+        @test bop_threaded_copy * big_x ≈ bop_threaded * big_x
+    end
+end

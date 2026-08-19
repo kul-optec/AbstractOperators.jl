@@ -114,9 +114,19 @@ is_thread_safe(::DiagOp) = true
 
 function _copy_operator_impl(op::DiagOp{B}; storage_type = nothing, threaded = nothing) where {B}
     new_threaded = threaded === nothing ? (B == FastBroadcast.True()) : threaded
-    new_d = storage_type === nothing ? op.d : _convert_buffer(op.d, storage_type)
+    # `d` is the operator's actual diagonal data, not a scratch buffer: a storage-type
+    # switch must carry its values over, so this goes through `copyto!` rather than
+    # `_convert_buffer` (which allocates uninitialized memory for buffers that `mul!`
+    # overwrites on the next call anyway).
+    new_d = _copy_diag(op.d, storage_type)
     new_at = storage_type === nothing ? _array_wrapper(op.d) : storage_type
     return DiagOp(domain_type(op), op.dim_in, new_d; threaded = new_threaded, array_type = new_at)
+end
+
+_copy_diag(d::Number, ::Any) = d
+_copy_diag(d::AbstractArray, ::Nothing) = d
+function _copy_diag(d::AbstractArray, storage_type::Type{<:AbstractArray})
+    return copyto!(similar(storage_type{eltype(d)}, size(d)), d)
 end
 
 size(L::DiagOp) = (L.dim_in, L.dim_in)

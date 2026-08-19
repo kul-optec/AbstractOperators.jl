@@ -124,6 +124,17 @@ end
     op3 = copy_operator(op; storage_type = Array)
     @test op3 isa DiagOp
     @test op3.d !== op.d
+    @test op3.d == op.d
+    y3 = zeros(n)
+    mul!(y3, op3, x)
+    @test y3 ≈ y1
+
+    # Scalar diagonal: storage_type is honoured for the array types it wraps, but a
+    # scalar `d` has no array to copy into a different storage.
+    op_scalar = DiagOp((n,), 2.0)
+    op_scalar2 = copy_operator(op_scalar; storage_type = Array{Float64})
+    @test op_scalar2.d == op_scalar.d
+    @test op_scalar2 * x ≈ op_scalar * x
 end
 
 @testitem "DiagOp (GPU)" tags = [:gpu, :linearoperator, :DiagOp] setup = [TestUtils, DiagOpTestHelper, GpuEnvSetup] begin

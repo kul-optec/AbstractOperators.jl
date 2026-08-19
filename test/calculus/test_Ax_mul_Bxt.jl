@@ -136,3 +136,23 @@ end
     B = MatrixOp(randn(5, 4))   # size = ((5,), (4,)) -- different codomain
     @test_throws DimensionMismatch Ax_mul_Bxt(A, B)
 end
+
+@testitem "Ax_mul_Bxt: threading traits and copy_operator" tags = [:calculus, :Ax_mul_Bxt] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n = 2000
+    threaded_leaf = Sin(Float64, (n,); threaded = true)
+    serial_leaf = Cos(Float64, (n,); threaded = false)
+    @test is_threaded(Ax_mul_Bxt(threaded_leaf, serial_leaf)) == true
+    @test is_threaded(Ax_mul_Bxt(serial_leaf, serial_leaf)) == false
+    @test supports_threading(Ax_mul_Bxt(serial_leaf, serial_leaf)) == true
+
+    n2 = 10
+    A, B = Eye(n2), Sin(n2)
+    P = Ax_mul_Bxt(A, B)
+    P2 = copy_operator(P; threaded = true)
+    @test P2 isa Ax_mul_Bxt
+    x = randn(n2)
+    @test P * x ≈ P2 * x
+end

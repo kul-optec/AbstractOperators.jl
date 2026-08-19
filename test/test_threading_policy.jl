@@ -208,3 +208,33 @@ end
     @test is_threaded(copy_operator(op)) == false
     @test adapt_operator(op) === op
 end
+
+@testitem "adapt_operator: require_thread_safe and storage_type mismatch trigger a copy" tags = [
+    :misc, :Threading,
+] setup = [TestUtils] begin
+    using AbstractOperators, Random, JLArrays
+    Random.seed!(0)
+
+    # require_thread_safe = true on a non-thread-safe operator cannot be satisfied by
+    # sharing, so it must fall through to `copy_operator`.
+    op = LBFGS(zeros(4), 3)
+    @test is_thread_safe(op) == false
+    copied = adapt_operator(op; require_thread_safe = true)
+    @test copied !== op
+
+    # storage_type mismatch: `_storage_matches` compares wrapper families (Array vs
+    # JLArray), so a request for a different family cannot be satisfied by sharing either.
+    op2 = MatrixOp(randn(4, 4))
+    @test domain_array_type(op2) <: Array
+    adapted = adapt_operator(op2; storage_type = JLArray)
+    @test adapted !== op2
+    @test domain_array_type(adapted) <: JLArray
+
+    # Multi-domain operator: `domain_array_type` is an `ArrayPartition`, whose storage is
+    # never comparable to a single requested wrapper, so `_storage_matches` is always false
+    # and a `storage_type` request always copies -- even when it names the family already
+    # in use.
+    op3 = HCAT(MatrixOp(randn(4, 3)), MatrixOp(randn(4, 5)))
+    adapted3 = adapt_operator(op3; storage_type = Array{Float64})
+    @test adapted3 !== op3
+end

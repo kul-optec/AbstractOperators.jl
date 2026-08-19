@@ -124,3 +124,23 @@ end
         test_NLop_gpu(P2, x2, r2, false)
     end
 end
+
+@testitem "Ax_mul_Bx: threading traits and copy_operator" tags = [:calculus, :Ax_mul_Bx] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n = 64
+    threaded_leaf = Sin(Float64, (n, n); threaded = true)
+    serial_leaf = Cos(Float64, (n, n); threaded = false)
+    @test is_threaded(Ax_mul_Bx(threaded_leaf, serial_leaf)) == true
+    @test is_threaded(Ax_mul_Bx(serial_leaf, serial_leaf)) == false
+    @test supports_threading(Ax_mul_Bx(serial_leaf, serial_leaf)) == true
+
+    n2 = 3
+    A, B = Sin(n2, n2), Cos(n2, n2)
+    P = Ax_mul_Bx(A, B)
+    P2 = copy_operator(P; threaded = true)
+    @test P2 isa Ax_mul_Bx
+    x = randn(n2, n2)
+    @test P * x ≈ P2 * x
+end

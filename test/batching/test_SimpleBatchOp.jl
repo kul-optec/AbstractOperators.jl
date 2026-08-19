@@ -220,6 +220,24 @@ end
     @test AbstractOperators.has_optimized_normalop(mt) == AbstractOperators.has_optimized_normalop(st)
     @test opnorm(mt) == opnorm(st)
     @test estimate_opnorm(mt) == estimate_opnorm(st)
+
+    # MultiThreaded-specific trait/equality/copy_operator paths, exercised without needing
+    # a workload large enough to actually cross the batch threshold.
+    @test is_threaded(mt) == true
+    @test is_threaded(st) == false
+    @test AbstractOperators._wrapped_operator(mt) == op
+    @test mt == mt
+    # `==` compares structure, not execution strategy, so a hand-built MultiThreaded and a
+    # SingleThreaded batch op over the same operator/shape do compare equal.
+    @test mt == st
+
+    # `copy_operator` always re-derives the threaded flag from the size policy, not from
+    # `is_threaded(mt)` directly (`threaded = true` is a permission, not a command) -- this
+    # tiny `op` is far below the batch threshold, so the copy comes back SingleThreaded even
+    # though `mt` itself was hand-built as MultiThreaded. Numerical behaviour is unaffected.
+    mt_copy = copy_operator(mt)
+    x = rand(2, 2)
+    @test mt_copy * x ≈ mt * x
     # Eye operator: scalar diag paths
     eye_op = Eye(Float64, (2,))
     eye_st = BatchOp(eye_op, (2,); threaded = false)

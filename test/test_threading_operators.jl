@@ -444,6 +444,25 @@ end
     rh = randn(bs - 1)
     @test hs * xh == ht * xh
     @test hs' * rh == ht' * rh
+    # `bs` sits below HCAT's own (higher) threshold, so `ht` above is not actually
+    # block-threaded -- confirmed by the block-threshold tests below. Exercise the threaded
+    # adjoint kernel itself (`_hcat_block_adj!`) with blocks sized to cross it.
+    big_bs = 1 << 17
+    big_blocks = [FiniteDiff(Float64, (big_bs,); threaded = false) for _ in 1:4]
+    H_big = AO._copy_operator_impl(HCAT(big_blocks...); threaded = true)
+    @test AO.is_block_threaded(H_big) == true
+    H_big_serial = AO._copy_operator_impl(H_big; threaded = false)
+    xhb = ArrayPartition([randn(big_bs) for _ in 1:4]...)
+    rhb = randn(big_bs - 1)
+    @test H_big * xhb == H_big_serial * xhb
+    @test H_big' * rhb == H_big_serial' * rhb
+    # Also exercise the natural-vs-indexed branch of `_hcat_block_adj!` through a permuted
+    # (non-natural) index HCAT.
+    p = [2, 1, 4, 3]
+    H_big_permuted = AO.permute(H_big, p)
+    @test AO.is_block_threaded(H_big_permuted) == true
+    expected = (H_big_serial' * rhb).x[p]
+    @test collect(H_big_permuted' * rhb) == collect(ArrayPartition(expected...))
 
     # Nesting safety: a threaded block loop forces its blocks serial.
     nested = AO._copy_operator_impl(

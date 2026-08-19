@@ -243,3 +243,34 @@ end
     mul!(y4, opWrapped2, x2)
     @test y3 ≈ y4
 end
+
+@testitem "BroadCast: threading traits" tags = [:calculus, :BroadCast] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(9)
+
+    # NoOperatorBroadCast: `is_threaded` reflects its own `Th` type parameter directly.
+    m = 1000
+    dim_out_big = (m, 300)   # m*300 = 300000 > THRESHOLD_MEMORY_BOUND (2^18)
+    opNo_big = BroadCast(Eye(m), dim_out_big; threaded = true)
+    @test supports_threading(opNo_big) == true
+    if Threads.nthreads() > 1
+        @test is_threaded(opNo_big) == true
+    end
+    opNo_small = BroadCast(Eye(4), (4, 2); threaded = true)
+    @test is_threaded(opNo_small) == false
+
+    # OperatorBroadCast: `is_threaded` is true either from its own `Th` or from a threaded
+    # child, even when the broadcast's own size is below its threshold.
+    n = 2000
+    threaded_child = Sin(Float64, (n,); threaded = true)   # n > transcendental threshold
+    dim_out_small = (n, 2)   # 4000 elements, below THRESHOLD_MEMORY_BOUND
+    opWrapped_child = BroadCast(threaded_child, dim_out_small; threaded = false)
+    @test supports_threading(opWrapped_child) == true
+    if Threads.nthreads() > 1
+        @test is_threaded(opWrapped_child) == true
+    end
+
+    serial_child = Cos(Float64, (n,); threaded = false)
+    opWrapped_serial = BroadCast(serial_child, dim_out_small; threaded = false)
+    @test is_threaded(opWrapped_serial) == false
+end

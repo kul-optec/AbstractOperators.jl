@@ -165,3 +165,35 @@ end
     d = randn(Float32, n)          # eltype = Float32 != Float64
     @test_throws ErrorException AffineAdd(op, d)
 end
+
+@testitem "AffineAdd: threading traits and copy_operator" tags = [:calculus, :AffineAdd] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n, m = 5, 6
+    threaded_leaf = FiniteDiff(Float64, (1 << 16,); threaded = true)
+    serial_leaf = FiniteDiff(Float64, (1 << 16,); threaded = false)
+    d1 = randn((1 << 16) - 1)
+    @test is_threaded(AffineAdd(threaded_leaf, d1)) == true
+    @test is_threaded(AffineAdd(serial_leaf, d1)) == false
+    @test supports_threading(AffineAdd(serial_leaf, d1)) == true
+
+    A = randn(n, m)
+    opA = MatrixOp(A)
+    d = randn(n)
+    T = AffineAdd(opA, d)
+    T2 = copy_operator(T; threaded = true)
+    @test T2 isa AffineAdd
+    x = randn(m)
+    @test T * x ≈ T2 * x
+
+    # storage_type request forces the (otherwise shared) displacement array to be copied.
+    T3 = copy_operator(T; storage_type = Array{Float64})
+    @test T3.d !== T.d
+    @test T3.d == T.d
+
+    # Scalar displacement: `_copy_displacement(::Number, ::Any)` shares rather than copies.
+    T_scalar = AffineAdd(opA, pi)
+    T_scalar2 = copy_operator(T_scalar; storage_type = Array{Float64})
+    @test T_scalar2.d === T_scalar.d
+end
