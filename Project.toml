@@ -5,14 +5,6 @@ version = "0.5.0"
 [workspace]
 projects = ["test", "docs", "benchmark", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"]
 
-# TEMPORARY: NestedThreading.jl is not registered in General yet. `[sources]` needs Pkg
-# >= 1.11 and is honored only for the top-level activated environment, so this entry
-# supports local development from a checkout, not consumption from a registry — which is
-# also why these changes are not pushed until NestedThreading is registered. Drop this
-# section once it is; the `julia = "1.10"` compat bound below is what CI will need then.
-[sources]
-NestedThreading = {path = "../NestedThreading"}
-
 [deps]
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
