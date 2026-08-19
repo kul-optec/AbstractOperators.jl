@@ -431,6 +431,9 @@ end
     vt = AO._copy_operator_impl(V; threaded = true)
     @test AO.is_block_threaded(vs) == false
     @test AO.is_block_threaded(vt) == true
+    @test is_threaded(vs) == false
+    @test is_threaded(vt) == true
+    @test supports_threading(vs) == true
 
     x = randn(bs)
     r = ArrayPartition([randn(bs - 1) for _ in 1:nb]...)
