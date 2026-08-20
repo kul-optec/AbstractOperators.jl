@@ -197,7 +197,7 @@ function _xcorr_fir_adj!(y, b, h, padlen)
         y[j + 4] = a4; y[j + 5] = a5; y[j + 6] = a6; y[j + 7] = a7
         j += 8
     end
-    return @inbounds while j ≤ n
+    @inbounds while j ≤ n
         acc = zero(T)
         for k in 1:m
             acc = muladd(h[k], b[padlen + j - k], acc)
@@ -205,6 +205,7 @@ function _xcorr_fir_adj!(y, b, h, padlen)
         y[j] = acc
         j += 1
     end
+    return
 end
 
 # Properties
@@ -220,14 +221,8 @@ supports_threading(::Xcorr) = true
 function _copy_operator_impl(
         op::Xcorr{T, H, Hc, P1, P2, P3, P4}; storage_type = nothing, threaded = nothing
     ) where {T, H, Hc, P1, P2, P3, P4}
-    storage_type !== nothing && throw(
-        ArgumentError(
-            "Xcorr cannot change storage_type after construction: the FFTW plan is " *
-                "built for a specific array backend. Rebuild the operator instead."
-        ),
-    )
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
-    if new_threaded == is_threaded(op)
+    if storage_type === nothing && new_threaded == is_threaded(op)
         # Plans are read-only during execution and safe to share; only the per-call
         # scratch buffers (mutated by `mul!`) need a fresh allocation.
         return Xcorr{T, H, Hc, P1, P2, P3, P4}(
@@ -237,7 +232,10 @@ function _copy_operator_impl(
             op.num_threads,
         )
     end
-    return Xcorr(T, op.dim_in, op.h; threaded = new_threaded)
+    # `h` is the operator's actual filter data, not a scratch buffer, so a storage-type
+    # change must carry its values over with `copyto!` rather than allocate uninitialized.
+    new_h = storage_type === nothing ? op.h : copyto!(similar(storage_type{T}, size(op.h)), op.h)
+    return Xcorr(T, op.dim_in, new_h; threaded = new_threaded)
 end
 
 is_full_row_rank(L::Xcorr) = true

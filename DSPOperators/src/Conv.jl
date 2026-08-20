@@ -119,21 +119,18 @@ supports_threading(::Conv) = true
 function _copy_operator_impl(
         op::Conv{T, N, H, Hc, P1, P2}; storage_type = nothing, threaded = nothing
     ) where {T, N, H, Hc, P1, P2}
-    storage_type !== nothing && throw(
-        ArgumentError(
-            "Conv cannot change storage_type after construction: the FFTW plan is " *
-                "built for a specific array backend. Rebuild the operator instead."
-        ),
-    )
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
-    if new_threaded == is_threaded(op)
+    if storage_type === nothing && new_threaded == is_threaded(op)
         # Plans are read-only during execution and safe to share; only the per-call
         # scratch buffers (mutated by `mul!`) need a fresh allocation.
         return Conv{T, N, H, Hc, P1, P2}(
             op.dim_in, op.h, similar(op.buf), similar(op.buf_c1), similar(op.buf_c2), op.R, op.I, op.num_threads
         )
     end
-    return Conv(op.dim_in, op.h; threaded = new_threaded)
+    # `h` is the operator's actual filter data, not a scratch buffer, so a storage-type
+    # change must carry its values over with `copyto!` rather than allocate uninitialized.
+    new_h = storage_type === nothing ? op.h : copyto!(similar(storage_type{T}, size(op.h)), op.h)
+    return Conv(op.dim_in, new_h; threaded = new_threaded)
 end
 
 #TODO find out a way to verify this,
