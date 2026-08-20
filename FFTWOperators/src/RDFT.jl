@@ -113,22 +113,17 @@ is_threaded(op::RDFT) = op.num_threads > 1
 supports_threading(::RDFT) = true
 
 function _copy_operator_impl(op::RDFT{T, N}; storage_type = nothing, threaded = nothing) where {T, N}
-    if storage_type !== nothing
-        throw(
-            ArgumentError(
-                "RDFT cannot change storage_type after construction: the FFTW plan is " *
-                    "built for a specific array backend. Rebuild the operator instead."
-            ),
-        )
-    end
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
     dims = findfirst(i -> op.dim_out[i] != op.dim_in[i], 1:N)
     dims = dims === nothing ? 1 : dims
     # b2/y2 are per-call scratch and must not be shared with the copy.
-    if new_threaded == is_threaded(op)
+    if storage_type === nothing && new_threaded == is_threaded(op)
         return RDFT{T, N, typeof(op.A), typeof(op.At), typeof(op.b2)}(
             op.dim_in, op.dim_out, op.A, op.At, similar(op.b2), similar(op.y2), op.Zp, op.num_threads
         )
     end
-    return RDFT(zeros(T, op.dim_in), dims; threaded = new_threaded)
+    # No persistent data to carry over (RDFT holds only plans and scratch), so the
+    # prototype can be uninitialized.
+    new_storage = storage_type === nothing ? _array_wrapper_type(typeof(op.b2)) : storage_type
+    return RDFT(similar(new_storage{T}, op.dim_in), dims; threaded = new_threaded)
 end

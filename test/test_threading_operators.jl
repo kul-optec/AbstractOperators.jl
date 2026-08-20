@@ -295,8 +295,10 @@ end
         @test is_threaded(BatchOp(Filt(16, randn(4)), (8,); threaded = true)) == false
     end
 
-    # A request the FFTW operators genuinely cannot satisfy is still refused loudly.
-    @test_throws ArgumentError copy_operator(RDFT(Float64, (16,)); storage_type = Array)
+    # RDFT has no persistent data beyond its plans, so a storage_type request is
+    # satisfiable by replanning against a same-shaped prototype on the new backend.
+    rdft_copy = copy_operator(RDFT(Float64, (16,)); storage_type = Array)
+    @test domain_array_type(rdft_copy) <: Array
 end
 
 @testitem "Threading contract: subpackage operators declare their threading" tags = [
@@ -383,10 +385,16 @@ end
     x = rand(ComplexF64, 16, 16)
     @test op * x ≈ c * x
 
-    # The plan is built for a fixed thread count and backend, so requests that would need a
-    # different plan are refused rather than silently ignored.
-    @test_throws ArgumentError copy_operator(op; threaded = true)
-    @test_throws ArgumentError copy_operator(op; storage_type = Array)
+    # The plan is built for a fixed thread count and backend, so a request for either means
+    # replanning -- recovering the trajectory from the existing plan (`plan.k`) and dcf
+    # rather than refusing, since both are still available.
+    threaded_copy = copy_operator(op; threaded = true)
+    @test is_threaded(threaded_copy) == (Threads.nthreads() > 1)
+    @test threaded_copy * x ≈ op * x
+
+    storage_copy = copy_operator(op; storage_type = Array)
+    @test domain_array_type(storage_copy) <: Array
+    @test storage_copy * x ≈ op * x
 end
 
 @testitem "Threading contract: FFTW r2r/r2c transforms thread their plans" tags = [

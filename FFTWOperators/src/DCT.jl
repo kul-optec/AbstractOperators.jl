@@ -192,20 +192,15 @@ function _copy_operator_impl(
 end
 
 function _copy_cosine_transform(ctor, op, ::Type{C}, storage_type, threaded) where {C}
-    if storage_type !== nothing
-        throw(
-            ArgumentError(
-                "$(nameof(ctor)) cannot change storage_type after construction: the FFTW " *
-                    "plan is built for a specific array backend. Rebuild the operator instead."
-            ),
-        )
-    end
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
     # `buf` is per-call scratch, so a copy always needs its own -- sharing it is what makes
     # these operators unsafe to run from two threads. Replanning is only needed when the
-    # thread count actually changes.
-    if new_threaded == is_threaded(op)
+    # storage type or thread count actually changes.
+    if storage_type === nothing && new_threaded == is_threaded(op)
         return typeof(op)(op.dim_in, op.A, op.At, similar(op.buf), op.num_threads)
     end
-    return ctor(zeros(C, op.dim_in); threaded = new_threaded)
+    # No persistent data to carry over (a cosine transform holds only plans and scratch),
+    # so the prototype can be uninitialized.
+    new_storage = storage_type === nothing ? _array_wrapper_type(typeof(op.buf)) : storage_type
+    return ctor(similar(new_storage{C}, op.dim_in); threaded = new_threaded)
 end

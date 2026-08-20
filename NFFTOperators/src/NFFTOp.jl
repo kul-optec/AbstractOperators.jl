@@ -297,28 +297,20 @@ function _copy_operator_impl(
         op::NFFTOp{T, D, P, K, DC}; storage_type = nothing, threaded = nothing
     ) where {T, D, P, K, DC}
     new_threaded = threaded === nothing ? op.threaded : threaded
-    # The plan is immutable and thread-count-specific: it can be shared only when the
-    # thread count is unchanged *and* the storage backend is unchanged. Otherwise the
-    # caller must rebuild the operator from its trajectory, which this operator no longer
-    # retains -- so say so rather than return something that silently ignores the request.
-    if storage_type !== nothing
-        throw(
-            ArgumentError(
-                "NFFTOp cannot change storage_type after construction: the NFFT plan is " *
-                    "built for a specific array backend. Rebuild with " *
-                    "NFFTOp(image_size, trajectory, dcf; array_type = ...) instead."
-            ),
-        )
+    # The plan is immutable and thread-count-specific: it can be shared only when neither
+    # the storage backend nor the thread count changes. Otherwise the whole operator has to
+    # be replanned, which requires the trajectory back -- this operator does not retain it
+    # as a separate field, but the plan itself does (`plan.k`, flattened to the 2D form
+    # `create_plan` already reshapes every trajectory into), so it can be recovered from
+    # there rather than genuinely refusing the request.
+    if storage_type === nothing && new_threaded == op.threaded
+        # Same constraints: share the (immutable) plan and dcf, give the copy its own scratch.
+        return NFFTOp{T, D, P, K, DC}(op.plan, similar(op.ksp_buffer), op.dcf, op.threaded)
     end
-    if new_threaded != op.threaded
-        throw(
-            ArgumentError(
-                "NFFTOp cannot change `threaded` after construction: the NFFT plan is " *
-                    "built for a fixed thread count. Rebuild with " *
-                    "NFFTOp(image_size, trajectory, dcf; threaded = $(new_threaded)) instead."
-            ),
-        )
-    end
-    # Same constraints: share the (immutable) plan and dcf, give the copy its own scratch.
-    return NFFTOp{T, D, P, K, DC}(op.plan, similar(op.ksp_buffer), op.dcf, op.threaded)
+    image_size = NFFT.size_in(op.plan)
+    ksp_shape = size(op.dcf)
+    trajectory = reshape(collect(op.plan.k), D, ksp_shape...)
+    dcf = collect(op.dcf)
+    new_array_type = storage_type === nothing ? _array_wrapper_type(K){T} : storage_type{T}
+    return NFFTOp(image_size, trajectory, dcf; threaded = new_threaded, array_type = new_array_type)
 end

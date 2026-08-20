@@ -395,26 +395,21 @@ function _copy_operator_impl(
         op::DFT{N, C, D, Dir, S, T1, T2, R}; storage_type = nothing, threaded = nothing
     ) where {N, C, D, Dir, S, T1, T2, R}
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
-    if storage_type !== nothing
-        throw(
-            ArgumentError(
-                "DFT cannot change storage_type after construction: the FFTW plan is " *
-                    "built for a specific array backend. Rebuild the operator instead."
-            ),
-        )
-    end
-    if new_threaded == is_threaded(op)
+    if storage_type === nothing && new_threaded == is_threaded(op)
         # Plans are immutable and hold no per-call scratch, so a copy shares them.
         return DFT{N, C, D, Dir, S, T1, T2, R}(
             op.dim_in, op.A, op.At, op.normalization, op.scale, op.num_threads
         )
     end
-    # Changing the thread count means replanning. The prototype must use the *domain*
-    # element type -- type parameter `D`, not the codomain `C`: for a real-input DFT they
-    # differ (`C == Complex{D}`), and planning from `C` would silently produce an operator
-    # with a complex domain.
+    # Changing the storage type or thread count means replanning. The prototype must use
+    # the *domain* element type -- type parameter `D`, not the codomain `C`: for a
+    # real-input DFT they differ (`C == Complex{D}`), and planning from `C` would silently
+    # produce an operator with a complex domain. There is no persistent data to carry over
+    # (a DFT holds only plans, not an array of values), so the prototype can be
+    # uninitialized -- unlike, say, `Conv`'s `h`.
+    new_storage = storage_type === nothing ? S : storage_type
     return DFT(
-        zeros(D, op.dim_in), Dir;
+        similar(new_storage{D}, op.dim_in), Dir;
         normalization = op.normalization, threaded = new_threaded,
     )
 end

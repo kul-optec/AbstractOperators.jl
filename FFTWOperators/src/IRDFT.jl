@@ -111,20 +111,16 @@ supports_threading(::IRDFT) = true
 function _copy_operator_impl(
         op::IRDFT{T, N, D, T1, T2, T3, S}; storage_type = nothing, threaded = nothing
     ) where {T, N, D, T1, T2, T3, S}
-    if storage_type !== nothing
-        throw(
-            ArgumentError(
-                "IRDFT cannot change storage_type after construction: the FFTW plan is " *
-                    "built for a specific array backend. Rebuild the operator instead."
-            ),
-        )
-    end
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
-    # No per-call scratch fields, so an unchanged thread count means the plans can be shared.
-    if new_threaded == is_threaded(op)
+    # No per-call scratch fields, so an unchanged storage type and thread count means the
+    # plans can be shared.
+    if storage_type === nothing && new_threaded == is_threaded(op)
         return IRDFT{T, N, D, T1, T2, T3, S}(
             op.dim_in, op.dim_out, op.A, op.At, op.idx, op.num_threads
         )
     end
-    return IRDFT(zeros(Complex{T}, op.dim_in), op.dim_out[D], D; threaded = new_threaded)
+    # No persistent data to carry over (IRDFT holds only plans), so the prototype can be
+    # uninitialized.
+    new_storage = storage_type === nothing ? S : storage_type
+    return IRDFT(similar(new_storage{Complex{T}}, op.dim_in), op.dim_out[D], D; threaded = new_threaded)
 end
