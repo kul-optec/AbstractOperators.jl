@@ -255,11 +255,10 @@ end
     # succeed. Refusing it broke batching for every subpackage operator with scratch
     # buffers.
     #
-    # Conv has no threaded path at all, so `threaded = false` is vacuous for it and the
-    # deepcopy fallback answers the request.
-    # Sized above MIN_BATCH_WORK_FOR_PARALLEL: the batch gate now has a size component, so
-    # a batch over a 16-element operator deliberately stays serial (see the gate test below).
-    for op in (Conv(Float64, (4096,), randn(4)), Xcorr(Float64, (4096,), randn(4)))
+    # Filt has no threaded path at all (IIR filtering is a sequential recursion, not an
+    # FFT), so `threaded = false` is vacuous for it and the deepcopy fallback answers the
+    # request.
+    for op in (Filt(4096, randn(4)),)
         @test is_thread_safe(op) == false
         @test supports_threading(op) == false
         @test copy_operator(op; threaded = false) isa typeof(op)
@@ -269,9 +268,16 @@ end
         end
     end
 
-    # RDFT/DCT *do* have a threaded path (FFTW threads r2c and r2r), so they answer the
-    # same request through their own `_copy_operator_impl` instead, replanning if needed.
-    for op in (RDFT(Float64, (4096,); threaded = false), DCT(Float64, (4096,); threaded = false))
+    # RDFT/DCT/Conv/Xcorr *do* have a threaded path (FFTW threads their plans), so they
+    # answer the same request through their own `_copy_operator_impl` instead, replanning
+    # if needed. Sized above MIN_BATCH_WORK_FOR_PARALLEL: the batch gate now has a size
+    # component, so a batch over a 16-element operator deliberately stays serial (see the
+    # gate test below).
+    h = randn(4)
+    for op in (
+            RDFT(Float64, (4096,); threaded = false), DCT(Float64, (4096,); threaded = false),
+            Conv(Float64, (4096,), h; threaded = false), Xcorr(Float64, (4096,), h; threaded = false),
+        )
         @test is_thread_safe(op) == false
         @test supports_threading(op) == true
         @test is_threaded(op) == false
@@ -286,7 +292,7 @@ end
     # than paying `@budgeted_threads` setup to parallelise microseconds of work. Before the
     # legacy `_should_thread` was unified this was threaded regardless of size.
     if Threads.nthreads() > 1
-        @test is_threaded(BatchOp(Conv(Float64, (16,), randn(4)), (8,); threaded = true)) == false
+        @test is_threaded(BatchOp(Filt(16, randn(4)), (8,); threaded = true)) == false
     end
 
     # A request the FFTW operators genuinely cannot satisfy is still refused loudly.
@@ -328,11 +334,30 @@ end
     @test IDFT(8) isa AbstractOperators.AdjointOperator
     @test AbstractOperators.can_be_combined(DFT(ComplexF64, 8), IDFT(8))
 
-    # DSP and Wavelet operators have no Julia-level threaded path; they say so rather than
-    # inheriting the default silently.
-    for op in (Conv(Float64, (16,), randn(4)), Xcorr(Float64, (16,), randn(4)))
-        @test supports_threading(op) == false
-        @test is_threaded(op) == false
+    # `Conv`/`Xcorr` plan their own FFTW transforms (DSPOperators does not depend on
+    # DSP.jl), so they follow the same counted-thread-pool contract as DFT above: below
+    # the size policy's threshold `threaded = true` is declined, above it it is granted.
+    for ctor in (
+            (dim, h; kw...) -> Conv(Float64, dim, h; kw...),
+            (dim, h; kw...) -> Xcorr(Float64, dim, h; kw...),
+        )
+        local h_small = randn(4)
+        local small_serial = ctor((16,), h_small; threaded = false)
+        local small_threaded = ctor((16,), h_small; threaded = true)
+        @test supports_threading(small_serial) == true
+        @test is_threaded(small_serial) == false
+        @test is_threaded(small_threaded) == false   # below threshold: declined
+
+        local h_big = randn(4)
+        local big_serial = ctor((1 << 14,), h_big; threaded = false)
+        local big_threaded = ctor((1 << 14,), h_big; threaded = true)
+        @test is_threaded(big_threaded) == (Threads.nthreads() > 1)
+        local xb = randn(1 << 14)
+        @test big_serial * xb ≈ big_threaded * xb
+
+        local replanned = copy_operator(big_serial; threaded = true)
+        @test is_threaded(replanned) == (Threads.nthreads() > 1)
+        @test replanned * xb ≈ big_serial * xb
     end
 end
 
