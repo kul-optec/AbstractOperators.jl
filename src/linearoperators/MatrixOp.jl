@@ -204,6 +204,5 @@ function _copy_operator_impl(
     # storage backend actually has to change.
     new_at = storage_type === nothing ? _array_wrapper_type(dS) : storage_type
     new_A = storage_type === nothing ? op.A : similar(storage_type{T}, size(op.A)) .= op.A
-    domain_n = NC == 1 ? (size(op.A, 2),) : (size(op.A, 2), NC)
-    return MatrixOp(D, domain_n, new_A; array_type = new_at, threaded = new_threaded)
+    return MatrixOp(D, size(op, 2), new_A; array_type = new_at, threaded = new_threaded)
 end

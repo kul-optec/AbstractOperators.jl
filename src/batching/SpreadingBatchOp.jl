@@ -675,10 +675,15 @@ function Base.:(==)(L1::SpreadingBatchOp, L2::SpreadingBatchOp)
         _batch_size(L1) == _batch_size(L2)
 end
 
+# `SingleThreaded`/`ThreadSafe` never consult `threading_strategy` in `create_BatchOp`
+# (the former forces `threaded=false`, the latter is picked purely from `is_thread_safe`),
+# so `AUTO` is a correct no-op for them, not a guess. Any future leaf type must add its own
+# case here rather than falling through, since falling through would silently mis-replay it.
+_threading_strategy_of(::SpreadingBatchOpSingleThreaded) = ThreadingStrategy.AUTO
+_threading_strategy_of(::SpreadingBatchOpThreadSafe) = ThreadingStrategy.AUTO
 _threading_strategy_of(::SpreadingBatchOpCopying) = ThreadingStrategy.COPYING
 _threading_strategy_of(::SpreadingBatchOpLocking) = ThreadingStrategy.LOCKING
 _threading_strategy_of(::SpreadingBatchOpFixedOperator) = ThreadingStrategy.FIXED_OPERATOR
-_threading_strategy_of(::SpreadingBatchOp) = ThreadingStrategy.AUTO
 
 function _copy_operator_impl(
         op::SpreadingBatchOp; storage_type = nothing, threaded = nothing

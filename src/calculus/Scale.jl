@@ -121,13 +121,13 @@ function mul!(y::Tuple, S::AdjointOperator{<:Scale{Th}}, x::AbstractArray) where
     return y
 end
 
+# Rebuilds a `Scale` around new coeffs/wrapped operator, preserving `S`'s own threading flag.
+_rethread_scale(::Scale{Th}, coeff, coeff_conj, A) where {Th} = Scale(coeff, coeff_conj, A; threaded = _fbbool(Th))
+
 has_optimized_normalop(L::Scale) = is_linear(L.A) && has_optimized_normalop(L.A)
-function get_normal_op(L::Scale{Th}) where {Th}
+function get_normal_op(L::Scale)
     if is_linear(L.A)
-        return Scale(
-            L.coeff * L.coeff_conj, L.coeff * L.coeff_conj, get_normal_op(L.A);
-            threaded = _fbbool(Th),
-        )
+        return _rethread_scale(L, L.coeff * L.coeff_conj, L.coeff * L.coeff_conj, get_normal_op(L.A))
     else
         return L' * L
     end
@@ -164,9 +164,7 @@ fun_name(L::Scale) = "α$(fun_name(L.A))"
 diag(L::Scale) = L.coeff * diag(L.A)
 diag_AcA(L::Scale) = (L.coeff)^2 * diag_AcA(L.A)
 diag_AAc(L::Scale) = (L.coeff)^2 * diag_AAc(L.A)
-function remove_displacement(S::Scale{Th}) where {Th}
-    return Scale(S.coeff, S.coeff_conj, remove_displacement(S.A); threaded = _fbbool(Th))
-end
+remove_displacement(S::Scale) = _rethread_scale(S, S.coeff, S.coeff_conj, remove_displacement(S.A))
 
 has_fast_opnorm(L::Scale) = has_fast_opnorm(L.A)
 LinearAlgebra.opnorm(L::Scale) = abs(L.coeff) * LinearAlgebra.opnorm(L.A)
@@ -174,10 +172,7 @@ estimate_opnorm(L::Scale) = abs(L.coeff) * estimate_opnorm(L.A)
 
 # utils
 
-function permute(S::Scale{Th}, p::AbstractVector{Int}) where {Th}
-    A = permute(S.A, p)
-    return Scale(S.coeff, S.coeff_conj, A; threaded = _fbbool(Th))
-end
+permute(S::Scale, p::AbstractVector{Int}) = _rethread_scale(S, S.coeff, S.coeff_conj, permute(S.A, p))
 
 # Scale's own broadcast threading lives in its FastBroadcast type parameter; it is threaded
 # if either that flag or the wrapped operator says so.
