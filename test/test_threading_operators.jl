@@ -156,14 +156,13 @@ end
 end
 
 @testitem "Threading contract: leaf operators without a threaded path" tags = [
-    :linearoperator, :Threading, :Eye, :MatrixOp, :GetIndex, :ZeroPad, :Zeros,
+    :linearoperator, :Threading, :Eye, :GetIndex, :ZeroPad, :Zeros,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
 
     ops = (
         Eye(Float64, (16,)),
-        MatrixOp(randn(8, 16)),
         GetIndex(Float64, (16,), (1:8,)),
         ZeroPad(Float64, (16,), (4,)),
         Zeros(Float64, (16,), Float64, (8,)),
@@ -183,6 +182,50 @@ end
         c = copy_operator(op; storage_type = Array{Float64})
         @test domain_array_type(c) <: Array
     end
+end
+
+@testitem "Threading contract: MatrixOp/LMatrixOp real BLAS threading" tags = [
+    :linearoperator, :Threading, :MatrixOp, :LMatrixOp,
+] setup = [TestUtils] begin
+    using AbstractOperators, Random
+    Random.seed!(0)
+
+    # Large enough that BLAS actually threads (see MatrixOp.jl's benchmark note).
+    A = randn(2000, 3000)
+    serial = MatrixOp(A; threaded = false)
+    threaded = MatrixOp(A; threaded = true)
+    @test supports_threading(serial) == true
+    @test is_threaded(serial) == false
+    @test is_threaded(threaded) == true
+
+    x = randn(3000)
+    b = randn(2000)
+    # Forward (gemv) splits by output row, so each element is one thread's own dot
+    # product -- bit-identical regardless of thread count.
+    @test serial * x == threaded * x
+    # Adjoint (gemv on A') is not: BLAS reassociates the transposed-access reduction
+    # differently across thread counts, so only an approximate match holds.
+    @test serial' * b ≈ threaded' * b
+
+    # copy_operator round-trips the flag in both directions.
+    @test is_threaded(copy_operator(serial; threaded = true)) == true
+    @test is_threaded(copy_operator(threaded; threaded = false)) == false
+
+    # adapt_operator: share when satisfied, copy when not.
+    @test adapt_operator(serial; threaded = false) === serial
+    adapted = adapt_operator(serial; threaded = true)
+    @test is_threaded(adapted) == true
+    @test is_threaded(serial) == false   # original untouched
+
+    # LMatrixOp mirrors MatrixOp's BLAS-backed gemm path.
+    bmat = randn(3000, 200)
+    lserial = LMatrixOp(bmat, 2000; threaded = false)
+    lthreaded = LMatrixOp(bmat, 2000; threaded = true)
+    @test supports_threading(lserial) == true
+    @test is_threaded(lserial) == false
+    @test is_threaded(lthreaded) == true
+    X = randn(2000, 3000)
+    @test lserial * X == lthreaded * X
 end
 
 @testitem "Threading contract: batch operators disable threading in wrapped operators" tags = [
@@ -523,11 +566,16 @@ end
     expected = (H_big_serial' * rhb).x[p]
     @test collect(H_big_permuted' * rhb) == collect(ArrayPartition(expected...))
 
-    # Nesting safety: a threaded block loop forces its blocks serial.
+    # Nesting safety: a threaded block loop must not nest each block's own threading
+    # inside it. VCAT stores two block copies -- `A` (natural, used by the always-serial
+    # adjoint) and `A_par` (forced serial, used only by the threaded forward loop) -- so
+    # it's `A_par`, not `A`, that must be all-serial; `A` legitimately stays threaded since
+    # nothing nests under the adjoint direction.
     nested = AO._copy_operator_impl(
         VCAT([FiniteDiff(Float64, (bs,); threaded = true) for _ in 1:nb]...); threaded = true
     )
-    @test all(!is_threaded, nested.A)
+    @test all(is_threaded, nested.A)
+    @test all(!is_threaded, nested.A_par)
 end
 
 @testitem "Threading contract: block thresholds are per-operator and measured" tags = [
