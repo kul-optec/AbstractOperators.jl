@@ -22,8 +22,10 @@ function SoftPlus(
     return SoftPlus{T, N, S, Th}(DomainDim)
 end
 
-function SoftPlus(DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}) where {N}
-    return SoftPlus(Float64, DomainDim; array_type)
+function SoftPlus(
+        DomainDim::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded::Bool = true
+    ) where {N}
+    return SoftPlus(Float64, DomainDim; array_type, threaded)
 end
 
 function SoftPlus(

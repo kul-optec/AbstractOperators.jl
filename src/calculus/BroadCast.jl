@@ -259,7 +259,7 @@ function _copy_operator_impl(
         op::NoOperatorBroadCast{T, N, M, Th, S}; storage_type = nothing, threaded = nothing
     ) where {T, N, M, Th, S}
     new_threaded = threaded === nothing ? Th : threaded
-    new_S = storage_type === nothing ? S : storage_type
+    new_S = storage_type === nothing ? S : storage_type{T}
     return NoOperatorBroadCast(T, new_S, op.dim_in, op.reshaped_dim_in, op.dim_out; threaded = new_threaded)
 end
 

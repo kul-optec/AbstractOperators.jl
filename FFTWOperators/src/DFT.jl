@@ -61,6 +61,10 @@ struct DFT{N, C, D, Dir, S, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, R}
     # is a property of the plan, decided at construction, not of the `mul!` loop -- so it
     # is recorded rather than switchable, and `is_threaded` reads it back.
     num_threads::Int
+    # Recorded so that `_copy_operator_impl`'s replanning path (storage/thread-count change)
+    # reproduces the same plan quality instead of silently falling back to FFTW.ESTIMATE.
+    flags::UInt32
+    timelimit::Float64
 end
 
 """
@@ -144,7 +148,7 @@ function DFT(
     dims = tuple(dims...)
     scaling = _dft_scaling(size(x), dims, normalization)
     return DFT{N, Complex{D}, D, dims, S, typeof(A), typeof(At), Float64}(
-        size(x), A, At, normalization, scaling, num_threads
+        size(x), A, At, normalization, scaling, num_threads, flags, timelimit
     )
 end
 
@@ -170,7 +174,7 @@ function DFT(
     dims = tuple(dims...)
     scaling = _dft_scaling(size(x), dims, normalization)
     return DFT{N, D, D, dims, S, typeof(A), typeof(At), Float64}(
-        size(x), A, At, normalization, scaling, num_threads
+        size(x), A, At, normalization, scaling, num_threads, flags, timelimit
     )
 end
 
@@ -398,7 +402,7 @@ function _copy_operator_impl(
     if storage_type === nothing && new_threaded == is_threaded(op)
         # Plans are immutable and hold no per-call scratch, so a copy shares them.
         return DFT{N, C, D, Dir, S, T1, T2, R}(
-            op.dim_in, op.A, op.At, op.normalization, op.scale, op.num_threads
+            op.dim_in, op.A, op.At, op.normalization, op.scale, op.num_threads, op.flags, op.timelimit
         )
     end
     # Changing the storage type or thread count means replanning. The prototype must use
@@ -411,5 +415,6 @@ function _copy_operator_impl(
     return DFT(
         similar(new_storage{D}, op.dim_in), Dir;
         normalization = op.normalization, threaded = new_threaded,
+        flags = op.flags, timelimit = op.timelimit,
     )
 end

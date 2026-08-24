@@ -19,7 +19,7 @@ julia> RDFT((10,10,10),2)
 ```
 """
 struct RDFT{
-        T <: Number, N, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, T3 <: AbstractArray{Complex{T}, N},
+        T <: Number, N, D, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, T3 <: AbstractArray{Complex{T}, N},
     } <: LinearOperator
     dim_in::NTuple{N, Int}
     dim_out::NTuple{N, Int}
@@ -50,7 +50,7 @@ function RDFT(
         dim_out = i == dims ? (dim_out..., div(dim_in[i], 2) + 1) : (dim_out..., dim_in[i])
     end
     Z = ZeroPad(Complex{T}, dim_out, size(b2) .- dim_out)
-    return RDFT{T, N, typeof(A), typeof(At), typeof(b2)}(dim_in, dim_out, A, At, b2, y2, Z, nthr)
+    return RDFT{T, N, dims, typeof(A), typeof(At), typeof(b2)}(dim_in, dim_out, A, At, b2, y2, Z, nthr)
 end
 
 function RDFT(T::Type, dim_in::NTuple{N, Int}, dims::Int = 1; kwargs...) where {N}
@@ -65,16 +65,16 @@ RDFT(T::Type, dim_in::Vararg{Int}; kwargs...) = RDFT(T, dim_in; kwargs...)
 # Mappings
 
 function mul!(
-        y::T3, L::RDFT{T, N, T1, T2, T3}, b::T4
-    ) where {N, T, T1, T2, T3, T4 <: AbstractArray{T, N}}
+        y::T3, L::RDFT{T, N, D, T1, T2, T3}, b::T4
+    ) where {N, T, D, T1, T2, T3, T4 <: AbstractArray{T, N}}
     check(y, L, b)
     mul!(y, L.A, b)
     return y
 end
 
 function mul!(
-        y::T4, L::AdjointOperator{RDFT{T, N, T1, T2, T3}}, b::T3
-    ) where {N, T, T1, T2, T3, T4 <: AbstractArray{T, N}}
+        y::T4, L::AdjointOperator{RDFT{T, N, D, T1, T2, T3}}, b::T3
+    ) where {N, T, D, T1, T2, T3, T4 <: AbstractArray{T, N}}
     check(y, L, b)
     A = L.A
     fill!(A.b2, zero(eltype(A.b2)))
@@ -94,10 +94,10 @@ domain_type(::RDFT{T}) where {T} = T
 codomain_type(::RDFT{T}) where {T} = Complex{T}
 is_thread_safe(::RDFT) = false
 
-function domain_array_type(L::RDFT{T, N, T1, T2, T3}) where {T, N, T1, T2, T3}
+function domain_array_type(L::RDFT{T, N, D, T1, T2, T3}) where {T, N, D, T1, T2, T3}
     return T3.name.wrapper{T}
 end
-function codomain_array_type(L::RDFT{T, N, T1, T2, T3}) where {T, N, T1, T2, T3}
+function codomain_array_type(L::RDFT{T, N, D, T1, T2, T3}) where {T, N, D, T1, T2, T3}
     return T3.name.wrapper{Complex{T}}
 end
 
@@ -112,18 +112,18 @@ is_full_row_rank(L::RDFT) = true
 is_threaded(op::RDFT) = op.num_threads > 1
 supports_threading(::RDFT) = true
 
-function _copy_operator_impl(op::RDFT{T, N}; storage_type = nothing, threaded = nothing) where {T, N}
+function _copy_operator_impl(
+        op::RDFT{T, N, D}; storage_type = nothing, threaded = nothing
+    ) where {T, N, D}
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
-    dims = findfirst(i -> op.dim_out[i] != op.dim_in[i], 1:N)
-    dims = dims === nothing ? 1 : dims
     # b2/y2 are per-call scratch and must not be shared with the copy.
     if storage_type === nothing && new_threaded == is_threaded(op)
-        return RDFT{T, N, typeof(op.A), typeof(op.At), typeof(op.b2)}(
+        return RDFT{T, N, D, typeof(op.A), typeof(op.At), typeof(op.b2)}(
             op.dim_in, op.dim_out, op.A, op.At, similar(op.b2), similar(op.y2), op.Zp, op.num_threads
         )
     end
     # No persistent data to carry over (RDFT holds only plans and scratch), so the
     # prototype can be uninitialized.
     new_storage = storage_type === nothing ? _array_wrapper_type(typeof(op.b2)) : storage_type
-    return RDFT(similar(new_storage{T}, op.dim_in), dims; threaded = new_threaded)
+    return RDFT(similar(new_storage{T}, op.dim_in), D; threaded = new_threaded)
 end

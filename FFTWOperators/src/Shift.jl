@@ -574,6 +574,14 @@ threading_threshold(::Type{<:SignAlternation}) = THRESHOLD_MEMORY_BOUND
 is_threaded(::SignAlternation{T, N, M, Th}) where {T, N, M, Th} = Th
 supports_threading(::SignAlternation) = true
 
+function _copy_operator_impl(
+        op::SignAlternation{T, N, M, Th, S}; storage_type = nothing, threaded = nothing
+    ) where {T, N, M, Th, S}
+    new_threaded = threaded === nothing ? Th : threaded
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
+    return SignAlternation(T, op.dim_in, op.dirs; threaded = new_threaded, array_type = new_at)
+end
+
 # FFTShift/IFFTShift have no threaded path of their own.
 is_threaded(::ShiftOp) = false
 supports_threading(::ShiftOp) = false

@@ -257,9 +257,10 @@ function _copy_operator_impl(
         op::SimpleBatchOp; storage_type = nothing, threaded = nothing
     )
     inner = _wrapped_operator(op)
-    # Only the storage request reaches the wrapped operator; its threading is decided by
-    # `create_BatchOp`, which forces it off for nesting safety.
-    new_inner = storage_type === nothing ? inner : copy_operator(inner; storage_type)
+    # The wrapped operator is always copied (never shared) so that scratch buffers are not
+    # aliased between `op` and the returned copy; only the storage request is forwarded, since
+    # threading is decided by `create_BatchOp`, which forces it off for nesting safety.
+    new_inner = copy_operator(inner; storage_type)
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
     return create_BatchOp(
         new_inner,
@@ -386,7 +387,10 @@ function get_normal_op(
     ) where {dT, cT, dM, cM, opT, N, M, C}
     new_op = get_normal_op(L.operator[1])
     new_ops = tuple(_per_thread_operators(new_op, length(L.operator))...)
-    return SimpleBatchOpMultiThreaded{dT, cT, dM, dM, typeof(new_op), N, N, C}(
+    # `opT` must come from the *stored* operators, not `new_op`: `_per_thread_operators`
+    # forces threading off on each of them, which is a different type whenever `new_op`
+    # is threaded (see the matching convention in `create_BatchOp`).
+    return SimpleBatchOpMultiThreaded{dT, cT, dM, dM, typeof(new_ops[1]), N, N, C}(
         new_ops, L.domain_size, L.domain_size, L.batch_indices
     )
 end

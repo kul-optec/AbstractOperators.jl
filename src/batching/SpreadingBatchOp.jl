@@ -675,14 +675,19 @@ function Base.:(==)(L1::SpreadingBatchOp, L2::SpreadingBatchOp)
         _batch_size(L1) == _batch_size(L2)
 end
 
+_threading_strategy_of(::SpreadingBatchOpCopying) = ThreadingStrategy.COPYING
+_threading_strategy_of(::SpreadingBatchOpLocking) = ThreadingStrategy.LOCKING
+_threading_strategy_of(::SpreadingBatchOpFixedOperator) = ThreadingStrategy.FIXED_OPERATOR
+_threading_strategy_of(::SpreadingBatchOp) = ThreadingStrategy.AUTO
+
 function _copy_operator_impl(
         op::SpreadingBatchOp; storage_type = nothing, threaded = nothing
     )
     ops = _spreading_operators(op)
-    # As in SimpleBatchOp: only the storage request reaches the wrapped operators, their
-    # threading is forced off by `create_BatchOp` for nesting safety.
-    new_ops = storage_type === nothing ? ops :
-        map(o -> copy_operator(o; storage_type), ops)
+    # The wrapped operators are always copied (never shared) so that scratch buffers are not
+    # aliased between `op` and the returned copy; their threading is forced off by
+    # `create_BatchOp` for nesting safety regardless of the storage request.
+    new_ops = map(o -> copy_operator(o; storage_type), ops)
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
     return create_BatchOp(
         collect(new_ops),
@@ -692,6 +697,7 @@ function _copy_operator_impl(
         get_codomain_batch_dim_mask(typeof(op)),
         get_spreading_dims(typeof(op));
         threaded = new_threaded,
+        threading_strategy = _threading_strategy_of(op),
     )
 end
 

@@ -122,9 +122,12 @@ function mul!(y::Tuple, S::AdjointOperator{<:Scale{Th}}, x::AbstractArray) where
 end
 
 has_optimized_normalop(L::Scale) = is_linear(L.A) && has_optimized_normalop(L.A)
-function get_normal_op(L::Scale)
+function get_normal_op(L::Scale{Th}) where {Th}
     if is_linear(L.A)
-        return Scale(L.coeff * L.coeff_conj, L.coeff * L.coeff_conj, get_normal_op(L.A))
+        return Scale(
+            L.coeff * L.coeff_conj, L.coeff * L.coeff_conj, get_normal_op(L.A);
+            threaded = _fbbool(Th),
+        )
     else
         return L' * L
     end
@@ -161,7 +164,9 @@ fun_name(L::Scale) = "α$(fun_name(L.A))"
 diag(L::Scale) = L.coeff * diag(L.A)
 diag_AcA(L::Scale) = (L.coeff)^2 * diag_AcA(L.A)
 diag_AAc(L::Scale) = (L.coeff)^2 * diag_AAc(L.A)
-remove_displacement(S::Scale) = Scale(S.coeff, S.coeff_conj, remove_displacement(S.A))
+function remove_displacement(S::Scale{Th}) where {Th}
+    return Scale(S.coeff, S.coeff_conj, remove_displacement(S.A); threaded = _fbbool(Th))
+end
 
 has_fast_opnorm(L::Scale) = has_fast_opnorm(L.A)
 LinearAlgebra.opnorm(L::Scale) = abs(L.coeff) * LinearAlgebra.opnorm(L.A)
@@ -169,9 +174,9 @@ estimate_opnorm(L::Scale) = abs(L.coeff) * estimate_opnorm(L.A)
 
 # utils
 
-function permute(S::Scale, p::AbstractVector{Int})
+function permute(S::Scale{Th}, p::AbstractVector{Int}) where {Th}
     A = permute(S.A, p)
-    return Scale(S.coeff, S.coeff_conj, A)
+    return Scale(S.coeff, S.coeff_conj, A; threaded = _fbbool(Th))
 end
 
 # Scale's own broadcast threading lives in its FastBroadcast type parameter; it is threaded
