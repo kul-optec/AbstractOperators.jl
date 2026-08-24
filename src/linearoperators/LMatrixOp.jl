@@ -49,9 +49,9 @@ function LMatrixOp(
 end
 
 function LMatrixOp(
-        b::A, n_row_in::Int; kwargs...
+        b::A, n_row_in::Int; threaded::Bool = true
     ) where {T, A <: Union{AbstractVector{T}, AbstractMatrix{T}}}
-    return LMatrixOp(T, (n_row_in, size(b, 1)), b; array_type = _array_wrapper_type(A), kwargs...)
+    return LMatrixOp(T, (n_row_in, size(b, 1)), b; array_type = _array_wrapper_type(A), threaded)
 end
 
 # Mappings

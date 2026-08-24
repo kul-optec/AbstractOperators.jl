@@ -56,17 +56,21 @@ function MatrixOp(
 end
 ###
 
-function MatrixOp(A::M; array_type::Type = _array_wrapper_type(M), kwargs...) where {M <: AbstractMatrix}
-    return MatrixOp(eltype(A), (size(A, 2),), A; array_type, kwargs...)
+function MatrixOp(
+        A::M; array_type::Type = _array_wrapper_type(M), threaded::Bool = true
+    ) where {M <: AbstractMatrix}
+    return MatrixOp(eltype(A), (size(A, 2),), A; array_type, threaded)
 end
-function MatrixOp(D::Type, A::M; array_type::Type = _array_wrapper_type(M), kwargs...) where {M <: AbstractMatrix}
-    return MatrixOp(D, (size(A, 2),), A; array_type, kwargs...)
+function MatrixOp(
+        D::Type, A::M; array_type::Type = _array_wrapper_type(M), threaded::Bool = true
+    ) where {M <: AbstractMatrix}
+    return MatrixOp(D, (size(A, 2),), A; array_type, threaded)
 end
-function MatrixOp(A::M, n::Integer; kwargs...) where {M <: AbstractMatrix}
-    return MatrixOp(eltype(A), (size(A, 2), n), A; array_type = _array_wrapper_type(M), kwargs...)
+function MatrixOp(A::M, n::Integer; threaded::Bool = true) where {M <: AbstractMatrix}
+    return MatrixOp(eltype(A), (size(A, 2), n), A; array_type = _array_wrapper_type(M), threaded)
 end
-function MatrixOp(D::Type, A::M, n::Integer; kwargs...) where {M <: AbstractMatrix}
-    return MatrixOp(D, (size(A, 2), n), A; array_type = _array_wrapper_type(M), kwargs...)
+function MatrixOp(D::Type, A::M, n::Integer; threaded::Bool = true) where {M <: AbstractMatrix}
+    return MatrixOp(D, (size(A, 2), n), A; array_type = _array_wrapper_type(M), threaded)
 end
 
 function Scale(coeff::Number, A::MatrixOp{D, T, M, NC, dS, cS}) where {D, T, M, NC, dS, cS}
