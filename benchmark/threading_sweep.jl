@@ -23,6 +23,11 @@
 #
 # Output: a markdown table per kernel on stdout, plus `.temp/threading_sweep.md`.
 # BLAS is pinned to one thread so that Julia-level threading is what is being measured.
+#
+# Relation to `benchmark/operator_thresholds.jl`: this script settles the cost-class
+# defaults and kernel choice (layer 1 in `src/threading_policy.jl`) from proxy kernels;
+# `operator_thresholds.jl` instead times each operator's real `mul!` to derive a
+# per-operator override (layer 2) where a class default is too coarse for that operator.
 
 using BenchmarkTools
 using LinearAlgebra

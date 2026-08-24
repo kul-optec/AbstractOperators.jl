@@ -400,7 +400,8 @@ function main(argv = ARGS)
     write(joinpath(output_dir, "pr_number.txt"), pr_number)
     write(joinpath(output_dir, "julia_version.txt"), julia_version)
 
-    return @info "Benchmark comparison written to $(output_dir)/body.md"
+    @info "Benchmark comparison written to $(output_dir)/body.md"
+    return
 end
 
 main()

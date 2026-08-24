@@ -139,18 +139,16 @@ const BENCH_LINEAR_LMATRIX_N = 1024
 const BENCH_LINEAR_MYLIN_N = 524_288
 const BENCH_LINEAR_LBFGS_N = 8192
 
-const BENCH_NONLIN_N = Dict(
-    "Pow" => 131_072,
-    "Exp" => 131_072,
-    "Sin" => 32_768,
-    "Cos" => 32_768,
-    "Atan" => 32_768,
-    "Tanh" => 32_768,
-    "Sech" => 32_768,
-    "Sigmoid" => 65_536,
-    "SoftMax" => 65_536,
-    "SoftPlus" => 65_536,
-)
+const BENCH_NONLIN_POW_N = 131_072
+const BENCH_NONLIN_EXP_N = 131_072
+const BENCH_NONLIN_SIN_N = 32_768
+const BENCH_NONLIN_COS_N = 32_768
+const BENCH_NONLIN_ATAN_N = 32_768
+const BENCH_NONLIN_TANH_N = 32_768
+const BENCH_NONLIN_SECH_N = 32_768
+const BENCH_NONLIN_SIGMOID_N = 65_536
+const BENCH_NONLIN_SOFTMAX_N = 65_536
+const BENCH_NONLIN_SOFTPLUS_N = 65_536
 
 const BENCH_CALC_N = 32_768
 const BENCH_CALC_2D = (256, 128)

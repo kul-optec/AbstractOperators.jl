@@ -19,6 +19,13 @@
 #
 # Output: a per-operator table on stdout and in `.temp/operator_thresholds.md`, ending in a
 # block of ready-to-paste `threading_threshold` methods.
+#
+# Relation to `benchmark/threading_sweep.jl`: that script sweeps proxy kernels (plain
+# broadcasts/loops shaped like the operators' inner work) to settle the cost-class defaults
+# and kernel choice in `src/threading_policy.jl` (layer 1). This script instead times each
+# operator's actual `mul!` end to end, to override those defaults with a per-operator
+# `threading_threshold` (layer 2) where the class default is too coarse. See the header
+# comment of `src/threading_policy.jl` for how the two layers combine.
 
 using AbstractOperators
 using BenchmarkTools
@@ -140,8 +147,8 @@ function measure(case::Case, ::Type{T}, n::Int) where {T}
     serial, threaded, x, y = case.build(T, n)
     mul!(y, serial, x)
     mul!(y, threaded, x)
-    ts = median(@benchmark(mul!($y, $serial, $x), samples = 100, evals = 1)).time
-    tt = median(@benchmark(mul!($y, $threaded, $x), samples = 100, evals = 1)).time
+    ts = 1.0e9 * @belapsed(mul!($y, $serial, $x), samples = 100, evals = 1)
+    tt = 1.0e9 * @belapsed(mul!($y, $threaded, $x), samples = 100, evals = 1)
     if !case.adjoint
         return (ts, tt)
     end
@@ -152,8 +159,8 @@ function measure(case::Case, ::Type{T}, n::Int) where {T}
     at = threaded'
     mul!(xa, as, ya)
     mul!(xa, at, ya)
-    tsa = median(@benchmark(mul!($xa, $as, $ya), samples = 100, evals = 1)).time
-    tta = median(@benchmark(mul!($xa, $at, $ya), samples = 100, evals = 1)).time
+    tsa = 1.0e9 * @belapsed(mul!($xa, $as, $ya), samples = 100, evals = 1)
+    tta = 1.0e9 * @belapsed(mul!($xa, $at, $ya), samples = 100, evals = 1)
     # Report the *worse* of the two directions: a single threshold governs both, so it has
     # to be safe for whichever direction crosses over later.
     return (ts + tsa, tt + tta)

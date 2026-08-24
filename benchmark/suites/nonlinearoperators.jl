@@ -4,16 +4,16 @@
 isdefined(Main, :BENCH_COMMON_LOADED) || include(joinpath(@__DIR__, "..", "bench_common.jl"))
 
 for (name, builder, positive, threadable) in [
-        ("Pow", th -> Pow(Float64, (BENCH_NONLIN_N["Pow"],), 2; threaded = th), false, true),
-        ("Exp", th -> Exp(Float64, (BENCH_NONLIN_N["Exp"],); threaded = th), false, true),
-        ("Sin", th -> Sin(Float64, (BENCH_NONLIN_N["Sin"],); threaded = th), false, true),
-        ("Cos", th -> Cos(Float64, (BENCH_NONLIN_N["Cos"],); threaded = th), false, true),
-        ("Atan", th -> Atan(Float64, (BENCH_NONLIN_N["Atan"],); threaded = th), false, true),
-        ("Tanh", th -> Tanh(Float64, (BENCH_NONLIN_N["Tanh"],); threaded = th), false, true),
-        ("Sech", th -> Sech(Float64, (BENCH_NONLIN_N["Sech"],); threaded = th), false, true),
-        ("Sigmoid", th -> Sigmoid(Float64, (BENCH_NONLIN_N["Sigmoid"],), 1.5; threaded = th), false, true),
-        ("SoftMax", _ -> SoftMax(Float64, (BENCH_NONLIN_N["SoftMax"],)), false, false),
-        ("SoftPlus", th -> SoftPlus(Float64, (BENCH_NONLIN_N["SoftPlus"],); threaded = th), false, true),
+        ("Pow", th -> Pow(Float64, (BENCH_NONLIN_POW_N,), 2; threaded = th), false, true),
+        ("Exp", th -> Exp(Float64, (BENCH_NONLIN_EXP_N,); threaded = th), false, true),
+        ("Sin", th -> Sin(Float64, (BENCH_NONLIN_SIN_N,); threaded = th), false, true),
+        ("Cos", th -> Cos(Float64, (BENCH_NONLIN_COS_N,); threaded = th), false, true),
+        ("Atan", th -> Atan(Float64, (BENCH_NONLIN_ATAN_N,); threaded = th), false, true),
+        ("Tanh", th -> Tanh(Float64, (BENCH_NONLIN_TANH_N,); threaded = th), false, true),
+        ("Sech", th -> Sech(Float64, (BENCH_NONLIN_SECH_N,); threaded = th), false, true),
+        ("Sigmoid", th -> Sigmoid(Float64, (BENCH_NONLIN_SIGMOID_N,), 1.5; threaded = th), false, true),
+        ("SoftMax", _ -> SoftMax(Float64, (BENCH_NONLIN_SOFTMAX_N,)), false, false),
+        ("SoftPlus", th -> SoftPlus(Float64, (BENCH_NONLIN_SOFTPLUS_N,); threaded = th), false, true),
     ]
     nonlinear[name] = BenchmarkGroup()
     nonlinear[name]["forward-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (

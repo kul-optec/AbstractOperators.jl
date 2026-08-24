@@ -28,6 +28,7 @@ export is_threaded, adapt_operator, supports_threading
 #
 # Measurement context for the `measured` values below:
 #   AMD EPYC 7352 24-Core (96 logical), 8 Julia threads, OPENBLAS_NUM_THREADS=1, 2026-08-15
+#   Julia 1.12.6 (see Manifest.toml's `julia_version`)
 #   `OPENBLAS_NUM_THREADS=1 julia --project=benchmark -t 8 benchmark/threading_sweep.jl`
 # Each threshold takes the *more conservative* of the Float64 and Float32 crossovers, so a
 # threshold is never below the point where the narrower element type still pays.
