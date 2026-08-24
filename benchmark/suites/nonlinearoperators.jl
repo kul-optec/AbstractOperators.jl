@@ -12,7 +12,7 @@ for (name, builder, positive, threadable) in [
         ("Tanh", th -> Tanh(Float64, (BENCH_NONLIN_TANH_N,); threaded = th), false, true),
         ("Sech", th -> Sech(Float64, (BENCH_NONLIN_SECH_N,); threaded = th), false, true),
         ("Sigmoid", th -> Sigmoid(Float64, (BENCH_NONLIN_SIGMOID_N,), 1.5; threaded = th), false, true),
-        ("SoftMax", _ -> SoftMax(Float64, (BENCH_NONLIN_SOFTMAX_N,)), false, false),
+        ("SoftMax", th -> SoftMax(Float64, (BENCH_NONLIN_SOFTMAX_N,); threaded = th), false, true),
         ("SoftPlus", th -> SoftPlus(Float64, (BENCH_NONLIN_SOFTPLUS_N,); threaded = th), false, true),
     ]
     nonlinear[name] = BenchmarkGroup()

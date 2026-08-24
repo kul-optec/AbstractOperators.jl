@@ -46,21 +46,46 @@ end
     @test Jacobian(s, x)' * r ≈ Jacobian(t, x)' * r
 end
 
-@testitem "Threading contract: SoftMax is deliberately unthreaded" tags = [
+@testitem "Threading contract: SoftMax" tags = [
     :nonlinearoperator, :Threading, :SoftMax,
 ] setup = [TestUtils] begin
-    using AbstractOperators
+    using AbstractOperators, Random
+    Random.seed!(0)
 
-    op = SoftMax(Float64, (64,))
-    @test is_threaded(op) == false
-    @test supports_threading(op) == false
-    # Asking for threading must fail loudly rather than hand back a serial operator.
-    @test_throws ArgumentError copy_operator(op; threaded = true)
+    # Large enough to clear SoftMax's measured threading threshold (2^12).
+    n = 1 << 15
+    x = randn(n)
+    r = randn(n)
+
+    serial = SoftMax(Float64, (n,); threaded = false)
+    threaded = SoftMax(Float64, (n,); threaded = true)
+    @test is_threaded(serial) == false
+    @test is_threaded(threaded) == true
+    @test supports_threading(serial) == true
+    @test supports_threading(threaded) == true
+
+    # Not `==`: `mul!` is two reductions (max, then sum) around an elementwise `exp`, and
+    # Polyester's `@batch reduction=...` sums in a different order than the serial `sum`,
+    # so floating-point association differs even though the arithmetic is the same.
+    @test serial * x ≈ threaded * x
+    @test Jacobian(serial, x)' * r ≈ Jacobian(threaded, x)' * r
+
+    # copy_operator round-trips the flag in both directions.
+    @test is_threaded(copy_operator(serial; threaded = true)) == true
+    @test is_threaded(copy_operator(threaded; threaded = false)) == false
+
+    # adapt_operator: share when satisfied, copy when not.
+    @test adapt_operator(serial; threaded = false) === serial
+    adapted = adapt_operator(serial; threaded = true)
+    @test is_threaded(adapted) == true
+    @test is_threaded(serial) == false   # original untouched
 
     # A copy gets its own scratch buffer -- sharing it is what makes SoftMax unsafe to
-    # share between threads in the first place.
-    c = copy_operator(op)
-    @test c.buf !== op.buf
+    # share between threads in the first place, independent of whether a single `mul!`
+    # call itself threads.
+    c = copy_operator(serial)
+    @test c.buf !== serial.buf
+    @test is_thread_safe(serial) == false
 end
 
 @testitem "Threading contract: FiniteDiff" tags = [:linearoperator, :Threading, :FiniteDiff] setup = [
