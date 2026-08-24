@@ -46,8 +46,11 @@ struct HCAT{
         C <: AbstractArray,
         DS <: AbstractArray,  # domain storage type (fixed at construction)
         Th,                   # thread the adjoint block loop?
+        LP,                   # type of A_par (== L when Th is false: no separate copy)
     } <: AbstractOperator
-    A::L     # tuple of AbstractOperators
+    A::L     # tuple of AbstractOperators, unmodified -- used by the (always-serial) forward
+    # direction and by every property/introspection method (_children, is_threaded,
+    # domain_type, size, ...), so a block's own threading state is never silently lost.
     idxs::P  # indices
     # H = HCAT(Eye(n),HCAT(Eye(n),Eye(n))) has H.idxs = (1,2,3)
     # `AbstractOperators` are flatten
@@ -55,6 +58,9 @@ struct HCAT{
     # has H.idxs = (1,(2,3))
     # `AbstractOperators` are stack
     buf::C   # buffer memory
+    A_par::LP  # `A` with every block forced `threaded = false`; used only by the threaded
+    # adjoint block loop, to avoid nesting each block's own threading inside that loop.
+    # Aliases `A` (LP === L, no extra copy) whenever the adjoint loop itself is not threaded.
     function HCAT(A::L, idxs::P, buf::C; threaded::Bool = true) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C}
         if any([size(A[1], 1) != size(a, 1) for a in A])
             throw(DimensionMismatch("operators must have the same codomain dimension!"))
@@ -71,8 +77,8 @@ struct HCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(HCAT, A)
         end
-        blocks = th ? map(a -> adapt_operator(a; threaded = false), A) : A
-        return new{N, typeof(blocks), P, C, DS, th}(blocks, idxs, buf)
+        A_par = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        return new{N, L, P, C, DS, th, typeof(A_par)}(A, idxs, buf, A_par)
     end
 end
 
@@ -213,6 +219,10 @@ end
 # choice between the natural-order and indexed expansions -- but with the per-block call
 # lifted into a `Val(i)`-selected helper so the parallel loop can live in a plain function
 # (a `@generated` body must be pure, and the threading macros expand to closures).
+#
+# Reads `H.A_par[$I]` (each block forced `threaded = false`), not `H.A[$I]`: this loop
+# itself is the block-parallel layer, so a block that threaded internally too would nest
+# its own parallelism inside it.
 @generated function _hcat_block_adj!(y::Tuple, H::HCAT{N, L, P}, b, ::Val{I}, ::Val{natural}) where {N, L, P, I, natural}
     K = 0
     target = nothing
@@ -231,7 +241,7 @@ end
             K += n
         end
     end
-    return :(mul!($target, H.A[$I]', b))
+    return :(mul!($target, H.A_par[$I]', b))
 end
 
 function mul!(
@@ -414,10 +424,10 @@ function _copy_operator_impl(
     ) where {N, L, P, C, DS, Th}
     new_threaded = threaded === nothing ? Th : threaded
     new_buf = _convert_buffer(op.buf, storage_type)
-    # When the adjoint block loop threads, the constructor forces the blocks serial, so
-    # only the storage request is forwarded down.
-    child_threaded = new_threaded ? false : threaded
-    new_ops = tuple([copy_operator(a; storage_type, threaded = child_threaded) for a in op.A]...)
+    # `op.A` holds each block's own natural threading state (the constructor derives the
+    # adjoint-only forced-serial copy itself), so the original `threaded` request is
+    # forwarded to the children unchanged rather than forced false.
+    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return HCAT(new_ops, op.idxs, new_buf; threaded = new_threaded)
 end
 

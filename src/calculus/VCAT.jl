@@ -34,10 +34,16 @@ struct VCAT{
         C <: AbstractArray,
         CS <: AbstractArray,  # codomain storage type (fixed at construction)
         Th,                   # thread the forward block loop?
+        LP,                   # type of A_par (== L when Th is false: no separate copy)
     } <: AbstractOperator
-    A::L     # tuple of AbstractOperators
+    A::L     # tuple of AbstractOperators, unmodified -- used by the (always-serial) adjoint
+    # direction and by every property/introspection method (_children, is_threaded,
+    # domain_type, size, ...), so a block's own threading state is never silently lost.
     idxs::P  # indices; always NTuple{N, Int} since inner VCATs are flattened at construction
     buf::C   # buffer memory
+    A_par::LP  # `A` with every block forced `threaded = false`; used only by the threaded
+    # forward block loop, to avoid nesting each block's own threading inside that loop.
+    # Aliases `A` (LP === L, no extra copy) whenever the forward loop itself is not threaded.
     function VCAT(
             A::L, idxs::P, buf::C; threaded::Bool = true
         ) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C <: AbstractArray}
@@ -55,8 +61,8 @@ struct VCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(VCAT, A)
         end
-        blocks = th ? map(a -> adapt_operator(a; threaded = false), A) : A
-        return new{N, typeof(blocks), P, C, CS, th}(blocks, idxs, buf)
+        A_par = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        return new{N, L, P, C, CS, th, typeof(A_par)}(A, idxs, buf, A_par)
     end
 end
 
@@ -121,8 +127,12 @@ end
 # Threaded forward. As in DCAT, the parallel loop cannot live in a `@generated` body (those
 # must be pure, and the threading macros expand to closures), so only the single-block call
 # is generated and selected by `Val(i)`.
+#
+# Reads `H.A_par[$I]` (each block forced `threaded = false`), not `H.A[$I]`: this loop
+# itself is the block-parallel layer, so a block that threaded internally too would nest
+# its own parallelism inside it.
 @generated function _vcat_block_fwd!(y, H::VCAT{N, L, P}, b, ::Val{I}) where {N, L, P, I}
-    return :(mul!(y.x[H.idxs[$I]], H.A[$I], b))
+    return :(mul!(y.x[H.idxs[$I]], H.A_par[$I], b))
 end
 
 function mul!(
@@ -257,10 +267,10 @@ function _copy_operator_impl(
     ) where {N, L, P, C, CS, Th}
     new_threaded = threaded === nothing ? Th : threaded
     new_buf = _convert_buffer(op.buf, storage_type)
-    # When the forward block loop threads, the constructor forces the blocks serial, so
-    # only the storage request is forwarded down.
-    child_threaded = new_threaded ? false : threaded
-    new_ops = tuple([copy_operator(a; storage_type, threaded = child_threaded) for a in op.A]...)
+    # `op.A` holds each block's own natural threading state (the constructor derives the
+    # forward-only forced-serial copy itself), so the original `threaded` request is
+    # forwarded to the children unchanged rather than forced false.
+    new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return VCAT(new_ops, op.idxs, new_buf; threaded = new_threaded)
 end
 
