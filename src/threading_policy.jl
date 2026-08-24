@@ -329,6 +329,39 @@ _supports_threading_from_children(L::AbstractOperator) = any(supports_threading,
 @inline _fbbool(::Type{FastBroadcast.True}) = true
 @inline _fbbool(::Type{FastBroadcast.False}) = false
 
+# ─── BLAS bridge ───────────────────────────────────────────────────────────────
+#
+# Unlike FFTW/NFFT, BLAS has no plan: its thread count is a live, process-global setting
+# that `gemv!`/`gemm!` reads on every call, exactly like the elementwise kernels above.
+# `MatrixOp`/`LMatrixOp` therefore scope it per call rather than baking a count in at
+# construction. This must go through NestedThreading's refcounted budget scope
+# (`with_full_threads`/`with_restricted_threads`), not a raw `BLAS.set_num_threads`
+# save/restore: a `mul!` can run concurrently with other `mul!`s (e.g. several `MatrixOp`
+# blocks inside a threaded `HCAT`/`VCAT` block loop), and a naive save/restore of a
+# process-global from concurrent callers is exactly the interleaving bug NestedThreading
+# exists to prevent.
+
+"""
+	_with_blas_threading(f, threaded::Bool)
+
+Run `f()` with BLAS's thread count set to the full available budget (subject to any outer
+`NestedThreading` restriction) when `threaded`, or restricted to a single thread otherwise.
+"""
+_with_blas_threading(f::F, threaded::Bool) where {F} = threaded ? with_full_threads(f) : with_restricted_threads(f)
+
+"""
+	_blas_threaded(threaded, ::Type{T}, n, ::Type{S}) -> Bool
+
+Resolve a BLAS-backed operator's `threaded` keyword through the shared per-operator policy,
+using `n` (typically the backing matrix's element count, roughly proportional to a
+`gemv`/`gemm` call's FLOP count) as the size measure.
+"""
+function _blas_threaded(threaded::Bool, ::Type{T}, n::Int, ::Type{S}) where {T, S <: AbstractArray}
+    return _resolve_threaded(threaded) do
+        _default_threaded(threading_threshold(MatrixOp), T, n, S)
+    end
+end
+
 # ─── adapt_operator ───────────────────────────────────────────────────────────
 
 """
