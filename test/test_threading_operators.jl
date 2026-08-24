@@ -200,11 +200,10 @@ end
 
     x = randn(3000)
     b = randn(2000)
-    # Forward (gemv) splits by output row, so each element is one thread's own dot
-    # product -- bit-identical regardless of thread count.
-    @test serial * x == threaded * x
-    # Adjoint (gemv on A') is not: BLAS reassociates the transposed-access reduction
-    # differently across thread counts, so only an approximate match holds.
+    # Not `==`: BLAS's threaded kernels may split the reduction differently than the
+    # serial ones (confirmed by direct measurement -- this varies by direction, matrix
+    # shape and BLAS build), so only an approximate match is guaranteed across platforms.
+    @test serial * x ≈ threaded * x
     @test serial' * b ≈ threaded' * b
 
     # copy_operator round-trips the flag in both directions.
@@ -217,7 +216,10 @@ end
     @test is_threaded(adapted) == true
     @test is_threaded(serial) == false   # original untouched
 
-    # LMatrixOp mirrors MatrixOp's BLAS-backed gemm path.
+    # LMatrixOp mirrors MatrixOp's BLAS-backed gemm path -- a genuine matrix-matrix product
+    # (unlike MatrixOp's gemv), so unlike the forward check above this is not bit-identical:
+    # gemm implementations may split the reduction (contracted) dimension across threads,
+    # which reassociates the sum. Confirmed by direct measurement, not assumed.
     bmat = randn(3000, 200)
     lserial = LMatrixOp(bmat, 2000; threaded = false)
     lthreaded = LMatrixOp(bmat, 2000; threaded = true)
@@ -225,7 +227,7 @@ end
     @test is_threaded(lserial) == false
     @test is_threaded(lthreaded) == true
     X = randn(2000, 3000)
-    @test lserial * X == lthreaded * X
+    @test lserial * X ≈ lthreaded * X
 end
 
 @testitem "Threading contract: batch operators disable threading in wrapped operators" tags = [
