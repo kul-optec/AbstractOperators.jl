@@ -16,7 +16,8 @@ function Pow(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N, I <: Real}
     S = _normalize_array_type(array_type, T)
-    return Pow{T, N, I, S, _elementwise_threaded(Pow, threaded, T, DomainDim, S)}(DomainDim, p)
+    Th = _fbthread(_elementwise_threaded(Pow, threaded, T, DomainDim, S))
+    return Pow{T, N, I, S, Th}(DomainDim, p)
 end
 
 function Pow(
@@ -31,36 +32,27 @@ function Pow(
         array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T, I <: Real}
     S = _normalize_array_type(array_type, T)
-    return Pow{T, ndims(x), I, S, _elementwise_threaded(Pow, threaded, T, size(x), S)}(size(x), p)
+    Th = _fbthread(_elementwise_threaded(Pow, threaded, T, size(x), S))
+    return Pow{T, ndims(x), I, S, Th}(size(x), p)
 end
 
-function mul!(y::AbstractArray, L::Pow{T, N, I, S, false}, x::AbstractArray) where {T, N, I, S}
-    check(y, L, x)
-    return y .= x .^ L.p
-end
-
-function mul!(y::AbstractArray, L::Pow{T, N, I, S, true}, x::AbstractArray) where {T, N, I, S}
+# One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:
+# `Th` is `FastBroadcast.True()`/`False()` (see `_fbthread`), so `@.. thread = Th` resolves
+# to the same specialized code either way -- see `Scale`/`DiagOp` for the same pattern.
+function mul!(y::AbstractArray, L::Pow{T, N, I, S, Th}, x::AbstractArray) where {T, N, I, S, Th}
     check(y, L, x)
     p = L.p
-    return @.. thread = true y = x^p
+    return @.. thread = Th y = x^p
 end
 
 function mul!(
-        y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Pow{T, N, I, S, false}}}, b::AbstractArray
-    ) where {T, N, I, S}
-    check(y, J, b)
-    L = J.A
-    return y .= conj.(L.A.p .* (L.x) .^ (L.A.p - 1)) .* b
-end
-
-function mul!(
-        y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Pow{T, N, I, S, true}}}, b::AbstractArray
-    ) where {T, N, I, S}
+        y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Pow{T, N, I, S, Th}}}, b::AbstractArray
+    ) where {T, N, I, S, Th}
     check(y, J, b)
     L = J.A
     p = L.A.p
     Lx = L.x
-    return @.. thread = true y = conj(p * Lx^(p - 1)) * b
+    return @.. thread = Th y = conj(p * Lx^(p - 1)) * b
 end
 
 fun_name(L::Pow) = "『"
@@ -72,7 +64,7 @@ codomain_type(::Pow{T, N}) where {T, N} = T
 domain_array_type(::Pow{T, N, I, S}) where {T, N, I, S} = S
 codomain_array_type(::Pow{T, N, I, S}) where {T, N, I, S} = S
 is_thread_safe(::Pow) = true
-is_threaded(::Pow{T, N, I, S, Th}) where {T, N, I, S, Th} = Th
+is_threaded(::Pow{T, N, I, S, Th}) where {T, N, I, S, Th} = _fbbool(Th)
 # PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl. The exponent kind
 # matters enough to split the method: integer `x^2` crosses over at Float64 2^10 / Float32
 # 2^11, while fractional `x^0.5` -- which lowers to `exp(p*log(x))` -- crosses at 2^8 for
@@ -83,7 +75,7 @@ threading_threshold(::Type{<:Pow}) = 2^8
 function _copy_operator_impl(
         op::Pow{T, N, I, S, Th}; storage_type = nothing, threaded = nothing
     ) where {T, N, I, S, Th}
-    new_threaded = threaded === nothing ? Th : threaded
+    new_threaded = threaded === nothing ? _fbbool(Th) : threaded
     new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
     return Pow(T, op.dim, op.p; array_type = new_at, threaded = new_threaded)
 end
