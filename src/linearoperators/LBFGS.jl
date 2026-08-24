@@ -148,9 +148,9 @@ is_threaded(::LBFGS) = false
 function _copy_operator_impl(
         op::LBFGS{R, T, M, I}; storage_type = nothing, threaded = nothing
     ) where {R, T, M, I}
-    threaded === true && throw(
-        ArgumentError("LBFGS does not support threading; see is_threaded(::LBFGS)")
-    )
+    # LBFGS has no threaded path at all (`supports_threading(::LBFGS) == false`), so a
+    # `threaded` request -- true or false -- is vacuous here, exactly as the generic
+    # fallback treats it for any operator that doesn't support threading; see `properties.jl`.
     proto = storage_type === nothing ? op.s : similar(storage_type{eltype(op.s)}, size(op.s))
     return LBFGS(proto, M)
 end
