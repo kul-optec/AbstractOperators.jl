@@ -18,9 +18,9 @@ Two things happen here, and both are required for nesting safety:
 
 1. **Threading is switched off in the wrapped operator.** The batch loop is already the
    parallel layer; leaving the inner operator threaded would nest Julia threads inside
-   every batch iteration. Note this must apply to *every* instance including the first —
-   the previous code adapted only the copies (`i == 1 ? operator : copy(operator)`) and so
-   left instance 1 threaded, which is precisely how the nesting slipped through.
+   every batch iteration. This must apply to *every* instance including the first — using
+   the caller's operator instance directly for slot 1 (rather than adapting it too) would
+   leave that instance threaded, letting the nesting slip through.
 2. **Each thread gets a private instance unless sharing is provably safe.** Operators that
    own scratch buffers cannot be shared; `is_thread_safe` is what distinguishes them, and
    copying does not change that answer (see `adapt_operator`), so the branch has to happen

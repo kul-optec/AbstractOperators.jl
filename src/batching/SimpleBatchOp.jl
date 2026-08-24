@@ -233,8 +233,8 @@ end
 
 # Properties
 
-# `threaded` on a batch operator refers to the *batch loop*, which is encoded in the struct
-# type rather than a type parameter: the single/multi split predates the `Th` convention.
+# `threaded` on a batch operator refers to the *batch loop*, which is encoded via the
+# single/multi struct type rather than a `Th` type parameter.
 is_threaded(::SimpleBatchOpSingleThreaded) = false
 is_threaded(::SimpleBatchOpMultiThreaded) = true
 
@@ -242,8 +242,7 @@ _wrapped_operator(L::SimpleBatchOpSingleThreaded) = L.operator
 _wrapped_operator(L::SimpleBatchOpMultiThreaded) = L.operator[1]
 
 # Structural equality. Without this a copy compares by identity and therefore never equals
-# its original -- which used to be masked by `copy_operator` returning the very same object
-# for thread-safe operators.
+# its original.
 function Base.:(==)(L1::SimpleBatchOp, L2::SimpleBatchOp)
     return _wrapped_operator(L1) == _wrapped_operator(L2) &&
         L1.domain_size == L2.domain_size &&

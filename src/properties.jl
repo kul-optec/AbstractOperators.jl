@@ -554,10 +554,6 @@ function _convert_buffer(buf::AbstractArray{T}, storage_type::Type) where {T}
     return similar(storage_type{T}, size(buf))
 end
 
-# NOTE: `_should_thread` is the last of the four legacy threshold sites. The other three
-# (DiagOp/Variation, BroadCast, Scale) now route through `threading_policy.jl`; this one
-# survives only as the batch-operator gate, where it has been given the size component it
-# never had -- see `_should_thread(::AbstractOperator)`.
 _should_thread(::Number) = false
 _should_thread(d::AbstractArray) = length(d) >= THRESHOLD_MEMORY_BOUND && Threads.nthreads() > 1
 _should_thread(S::Type{<:AbstractArray}) = Threads.nthreads() > 1 && _is_cpu_storage(S)
@@ -567,10 +563,10 @@ _should_thread(S::Type{<:AbstractArray}) = Threads.nthreads() > 1 && _is_cpu_sto
 
 Whether a *batch* loop over `op` should thread.
 
-This used to forward to the storage-type method, which is just `nthreads() > 1` -- so a
-batch operator threaded at any size, including a four-element one, paying the full
-`@budgeted_threads` setup to parallelise microseconds of work. It now also requires the
-wrapped operator to carry at least `MIN_BATCH_WORK_FOR_PARALLEL` elements per call.
+Requires more than one Julia thread, CPU storage, and the wrapped operator to carry at
+least `MIN_BATCH_WORK_FOR_PARALLEL` elements per call -- otherwise a batch operator would
+thread at any size, including a four-element one, paying the full `@budgeted_threads`
+setup to parallelise microseconds of work.
 
 The batch *count* is not known here (it is decided by the caller), so this is deliberately
 only the per-item half of the condition.

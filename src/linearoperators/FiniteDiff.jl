@@ -87,8 +87,9 @@ end
 
 # Mappings
 
-# `b[idx]` would materialise a temporary for each side of the subtraction; `@views` keeps
-# the whole forward difference allocation-free, which is also what makes it worth threading.
+# `@views` keeps the whole forward difference allocation-free -- plain indexing would
+# materialise a temporary for each side of the subtraction -- which is also what makes it
+# worth threading.
 function _finitediff_indices(dim_in::NTuple{N, Int}, ::Val{D}) where {N, D}
     idx_1 = CartesianIndices(ntuple(i -> i == D ? (2:dim_in[i]) : (1:dim_in[i]), Val(N)))
     idx_2 = CartesianIndices(ntuple(i -> i == D ? (1:(dim_in[i] - 1)) : (1:dim_in[i]), Val(N)))

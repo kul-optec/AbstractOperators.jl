@@ -102,9 +102,9 @@ wrapped `mul!`.
 
 PROVENANCE: provisional. Set deliberately low relative to the block thresholds because a
 batch loop usually has far more items than a DCAT has blocks, so the per-item overhead is
-amortised much better -- but this specific value has not been swept. Its purpose is to close
-a hole rather than to tune: the previous gate had *no* size component whatsoever, so batches
-of four-element operators were threaded.
+amortised much better -- but this specific value has not been swept. Its purpose is to
+guarantee a size component exists at all, so that batches of four-element operators are not
+threaded.
 """
 const MIN_BATCH_WORK_FOR_PARALLEL = 2^10
 

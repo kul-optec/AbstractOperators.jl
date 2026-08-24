@@ -14,9 +14,7 @@ struct NoOperatorBroadCast{T, N, M, Threaded, S} <: AbstractBroadCast{T, N, M, T
         compact = all(reshaped_dim_in[d] == dim_out[d] for d in 1:N)
         # `compact` is a hard prerequisite, not a size heuristic: the threaded kernel
         # (`tbroadcast!`) is only correct when the broadcast dimensions are trailing. The
-        # size question then goes through the shared policy, which replaced a bespoke
-        # `prod(dim_in) * sizeof(T) > 2^16` **byte** cutoff -- the only threshold in the
-        # package that was expressed in bytes rather than elements.
+        # size question then goes through the shared policy, which is expressed in elements.
         th = compact && _elementwise_threaded(NoOperatorBroadCast, threaded, T, dim_out, S)
         return new{T, N, M, th, S}(dim_in, reshaped_dim_in, dim_out)
     end
@@ -32,8 +30,6 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
             A, dim_out::NTuple{M, Int}; threaded::Bool = true
         ) where {M}
         Base.Broadcast.check_broadcast_shape(dim_out, size(A, 1))
-        # Previously `_should_thread(A)`, which for an operator reduced to `nthreads() > 1`
-        # -- no size component at all, so this threaded a broadcast of any size.
         threaded = _elementwise_threaded(
             OperatorBroadCast, threaded, codomain_type(A), dim_out,
             _policy_storage(codomain_array_type(A)),
@@ -50,7 +46,7 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
             bufD = [allocate_in_domain(A) for _ in 1:Threads.nthreads()]
             # Nesting safety: the adjoint loop below threads over `idxs` and calls the
             # wrapped operator inside it, so every per-thread instance -- including the
-            # first, which the previous code left untouched -- must be non-threaded.
+            # first -- must be non-threaded.
             A = _per_thread_operators(A, Threads.nthreads())
         else
             bufD = allocate_in_domain(A)
@@ -175,8 +171,7 @@ function mul!(y, A::AdjointOperator{<:OperatorBroadCast{T, N, M, true}}, b) wher
     thread_count = min(Threads.nthreads(), length(R.idxs))
     batch_size = length(R.idxs) / thread_count
     # Budgeted: the body calls `mul!` on arbitrary sub-operators, which may themselves use
-    # BLAS/FFTW. This loop never went through the old `@restrict_threading`, so it was a
-    # genuine oversubscription source.
+    # BLAS/FFTW, so without budgeting this loop is a genuine oversubscription source.
     @budgeted_threads for t in 1:thread_count
         idx_start = max(1, floor(Int, (t - 1) * batch_size + 1))
         idx_end = min(length(R.idxs), floor(Int, t * batch_size))

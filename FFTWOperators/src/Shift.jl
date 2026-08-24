@@ -163,8 +163,7 @@ function SignAlternation(
     d = _normalize_dirs(dim_in, dirs)
     S = _normalize_array_type(array_type, T)
     # Routed through the shared resolver like every other operator: `false` vetoes, `true`
-    # enables subject to the policy (which also covers the thread count and GPU storage
-    # that the previous hand-rolled `threaded && nthreads() > 1` only half-covered).
+    # enables subject to the policy, which also covers the thread count and GPU storage.
     th = _elementwise_threaded(SignAlternation, threaded, T, dim_in, S)
     return SignAlternation{T, N, length(d), th, S}(dim_in, d)
 end

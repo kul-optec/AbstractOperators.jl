@@ -64,12 +64,9 @@ function Variation(dim_in::Vararg{Int}; threaded::Bool = true, array_type::Type 
 end
 function Variation(x::AbstractArray; threaded::Bool = true)
     # Delegates to the dimension-tuple constructor rather than building the struct directly,
-    # so the threading policy and the dimension validation are stated in exactly one place.
-    # These two used to disagree on threading: this one thresholded on element *count*
-    # (`_should_thread`, 2^16 elements) while the other thresholded on *bytes* (`prod *
-    # sizeof > 2^16`, i.e. 8192 Float64 elements), so `Variation(zeros(100,100))` and
-    # `Variation(Float64,(100,100))` produced operators with opposite threading for
-    # identical inputs.
+    # so the threading policy and the dimension validation are stated in exactly one place --
+    # otherwise `Variation(zeros(100,100))` and `Variation(Float64,(100,100))` could end up
+    # thresholding threading differently (element count vs. byte size) for identical inputs.
     return Variation(eltype(x), size(x); threaded, array_type = _array_wrapper(x){eltype(x)})
 end
 

@@ -74,9 +74,8 @@ end
     y = randn(n - 1)
     test_threading_contract((; threaded) -> FiniteDiff(Float64, (n,); threaded), x; adjoint_input = y)
 
-    # The `@views` rewrite that made threading worthwhile also removed the two temporaries
-    # the old `b[idx_1] .- b[idx_2]` materialised on every call. Guard that directly: an
-    # allocating inner loop is a defect, not a style preference.
+    # The inner loop must not allocate temporaries per call -- an allocating inner loop is
+    # a defect, not a style preference.
     # `op` and `op'` are hoisted into their own function so the measured call sees concrete
     # types; taking the adjoint inside `@allocated` measures the wrapper construction in a
     # type-unstable loop body rather than the kernel.
@@ -288,9 +287,8 @@ end
         end
     end
 
-    # The batch gate's new size component: a batch over a tiny operator stays serial rather
-    # than paying `@budgeted_threads` setup to parallelise microseconds of work. Before the
-    # legacy `_should_thread` was unified this was threaded regardless of size.
+    # The batch gate has a size component: a batch over a tiny operator stays serial rather
+    # than paying `@budgeted_threads` setup to parallelise microseconds of work.
     if Threads.nthreads() > 1
         @test is_threaded(BatchOp(Filt(16, randn(4)), (8,); threaded = true)) == false
     end

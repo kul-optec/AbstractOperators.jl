@@ -205,9 +205,9 @@ end
     :linearoperator, :Variation,
 ] setup = [TestUtils] begin
     using AbstractOperators
-    # A size-1 dimension has no finite difference to take; it used to fail with a
-    # `BoundsError` from inside the forward kernel. Every constructor must reject it, the
-    # array-based one included (it delegates rather than building the struct directly).
+    # A size-1 dimension has no finite difference to take, so every constructor must reject
+    # it, the array-based one included (it delegates rather than building the struct
+    # directly).
     for dims in [(4, 1), (1, 4), (1, 1), (3, 1, 3)]
         @test_throws ArgumentError Variation(Float64, dims)
         @test_throws ArgumentError Variation(zeros(Float64, dims))

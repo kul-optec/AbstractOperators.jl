@@ -58,8 +58,7 @@ get_output_length(L) = ndoms(L, 1) == 1 ? prod(size(L, 1)) : sum(prod.(size(L, 1
 Resolve `Scale`'s `threaded` keyword through the shared per-operator policy.
 
 Scale's own work is one pass over the *codomain*, so its size measure is the output length
-rather than the wrapped operator's domain. This replaced a bespoke `1e4` element cutoff that
-was neither measured nor expressed in the same units as any other threshold in the package.
+rather than the wrapped operator's domain.
 """
 function _scale_threaded(threaded::Bool, L)
     return _resolve_threaded(threaded) do
@@ -194,8 +193,4 @@ end
 # 2^21, Float32 2^22; taking the conservative Float32 value. This is the latest crossover of
 # any operator, and for the same reason as THRESHOLD_MEMORY_BOUND: the pass is one read plus
 # one write per element with no arithmetic to hide the memory traffic.
-#
-# The legacy cutoff this replaces was `get_output_length(L) > 1e4` -- roughly 400x too
-# aggressive, so Scale has been threading itself into a slowdown for every size between 1e4
-# and 4M.
 threading_threshold(::Type{<:Scale}) = 2^22

@@ -342,9 +342,10 @@ end
 
     # `permute` reindexes over the *flattened* domain slots (length 5 here: 3 singles + the
     # 2-slot tuple entry), not over the 4 top-level sub-operators -- a length-4 permutation
-    # vector silently corrupts `invpermute!`. Swapping only the two slots *within* the
-    # tuple entry keeps every slot's size matched to its new position (both are size `n`)
-    # while still making the resulting `idxs` non-natural, exercising the indexed branch.
+    # vector raises a `DimensionMismatch` from `invpermute!` rather than being accepted.
+    # Swapping only the two slots *within* the tuple entry keeps every slot's size matched
+    # to its new position (both are size `n`) while still making the resulting `idxs`
+    # non-natural, exercising the indexed branch.
     p = [1, 2, 3, 5, 4]
     H_perm = AbstractOperators.permute(H, p)
     @test !AbstractOperators._hcat_has_natural_idxs(H_perm)

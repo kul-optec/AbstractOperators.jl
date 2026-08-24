@@ -113,29 +113,29 @@ end
     @test threading_threshold(Sin) < threading_threshold(FiniteDiff) < threading_threshold(Scale)
 end
 
-@testitem "threading policy: the four legacy thresholds are gone" tags = [:misc, :Threading] setup = [TestUtils] begin
+@testitem "threading policy: consistent thresholds across constructors and operators" tags = [
+    :misc, :Threading,
+] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: _should_thread, MIN_BATCH_WORK_FOR_PARALLEL
     using Random
     Random.seed!(0)
 
-    # Regression guards for two defects the legacy thresholds carried.
-
-    # 1. Variation's two constructors disagreed: the dimension-tuple path thresholded on
-    #    *bytes* (`prod * sizeof > 2^16`) and the array path on *elements* (2^16), so the
-    #    same 10000-element input produced opposite threading.
+    # 1. Variation's two constructors must agree: both threshold on *elements*, so the
+    #    same input size produces the same threading decision regardless of which
+    #    constructor is used.
     @test is_threaded(Variation(Float64, (100, 100))) == is_threaded(Variation(zeros(100, 100)))
     @test is_threaded(Variation(Float64, (4, 4))) == is_threaded(Variation(zeros(4, 4)))
 
-    # 2. `_should_thread(::AbstractOperator)` forwarded to the storage-type method, which is
-    #    just `nthreads() > 1` -- no size component at all, so a batch over a four-element
-    #    operator was threaded.
+    # 2. `_should_thread(::AbstractOperator)` has a size component: a batch over a
+    #    four-element operator must not thread, only a sufficiently large one should.
     @test _should_thread(Eye(4)) == false
     if Threads.nthreads() > 1
         @test _should_thread(Eye(MIN_BATCH_WORK_FOR_PARALLEL)) == true
     end
 
-    # Scale's legacy cutoff was 1e4 elements, ~400x below its measured 2^22 crossover.
+    # Scale's threading threshold sits at its measured 2^22 crossover, so a 1e5-element
+    # operator (well below that) must stay serial.
     @test is_threaded(Scale(2.0, DiagOp(randn(100_000); threaded = false))) == false
 end
 
