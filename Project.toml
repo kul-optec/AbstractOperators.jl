@@ -1,6 +1,6 @@
 name = "AbstractOperators"
 uuid = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
-version = "0.5.0"
+version = "0.4.0"
 
 [workspace]
 projects = ["test", "docs", "benchmark", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"]

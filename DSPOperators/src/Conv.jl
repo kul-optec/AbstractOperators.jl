@@ -8,6 +8,12 @@ abstract type AbstractConv{T, N, H <: AbstractArray} <: LinearOperator end
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractVector`, returns the convolution between `x` and `h`. Uses `conv` and hence FFT algorithm.
 
+- `domain_type`: the element type of the operator's domain. Defaults to `Float64`, or, when
+  `x` is given instead of `dim_in`, to `eltype(x)`. Must match `eltype(h)`.
+- `dim_in::Tuple`: the size of the input array `x` the operator acts on.
+- `x::AbstractVector`: an input array whose `size` and `eltype` are used in place of
+  `dim_in`/`domain_type`.
+- `h::AbstractVector`: the filter kernel to convolve with.
 - `num_threads`: the number of FFTW threads to plan with. Defaults to the number of Julia
   threads available. `num_threads` wins if both it and `threaded` are given.
 - `threaded`: the package-wide spelling of the same choice: `true` (default) uses the

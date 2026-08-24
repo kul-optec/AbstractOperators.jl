@@ -19,7 +19,7 @@ GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 NFFTOperatorsGPUArraysExt = ["Adapt", "GPUArrays"]
 
 [compat]
-AbstractOperators = "0.5"
+AbstractOperators = "0.4"
 Adapt = "4"
 FFTW = "1.8.1"
 FastBroadcast = "0.3.5"

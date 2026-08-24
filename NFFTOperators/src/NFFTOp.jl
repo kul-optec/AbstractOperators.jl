@@ -30,7 +30,7 @@ k-space and back.
   second dimension must match the shape of the dcf array. The element type of the trajectory must
   match the element type of the dcf array. This argument is optional and defaults to `nothing`.
   If `nothing` is passed, the dcf will be estimated using the sample density compensation method [2].
-- `threaded`: `false` disables threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread and CPU storage. Fixed at construction, since the NFFT plan is built for a thread count.
+- `threaded::Bool=true`: `false` disables threading outright; `true` (the default) enables it subject to the threading policy, which also requires more than one Julia thread and CPU storage. Fixed at construction, since the NFFT plan is built for a thread count.
 - `dcf_estimation_iterations::Union{Nothing,Int}=nothing`: The number of iterations to use when
   estimating the dcf. Defaults to `20`. This argument is only used if `dcf` is not provided.
 - `dcf_correction_function::Function=identity`: A correction function to apply to the estimated dcf.
@@ -111,8 +111,8 @@ end
 """
 	_nfft_threaded(threaded, arr_wrapper) -> Bool
 
-Resolve NFFT's `threaded` keyword under the package-wide rule: `false` vetoes, `true` and
-`nothing` enable subject to policy (see `AbstractOperators._resolve_threaded`).
+Resolve NFFT's `threaded` keyword under the package-wide rule: `false` vetoes, `true`
+enables subject to policy (see `AbstractOperators._resolve_threaded`).
 
 The policy here is the CPU/thread-count check only. NFFT has **no measured size gate**: the
 transform is planned for a specific trajectory rather than a plain array length, so there is

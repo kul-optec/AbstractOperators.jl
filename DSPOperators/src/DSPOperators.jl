@@ -35,21 +35,21 @@ import AbstractOperators:
 # -- their `is_threaded`/`supports_threading = false` declarations are right after their
 # `include`s below.
 
+const THRESHOLD_C2C = 2^13
+
 """
 	_dsp_fftw_num_threads(num_threads, threaded, n) -> Int
 
 Resolve the plan-time FFTW thread count for `Conv`/`Xcorr`, mirroring
 `FFTWOperators._fftw_num_threads`: `num_threads` is FFTW's own vocabulary and an explicit
 command (wins outright if given); `threaded` is the package-wide keyword and follows the
-package-wide rule (`false` vetoes, `true`/`nothing` enable subject to the size policy).
+package-wide rule (`false` vetoes, `true` enables subject to the size policy).
 
 PROVENANCE: provisional. `THRESHOLD_C2C` is borrowed from FFTWOperators'
 `fftw_threading_threshold(:c2c) == 2^13` rather than independently measured -- both
 operators plan and execute a `c2c`/`r2c` FFT of the padded convolution length internally,
 so the same cost class applies, but this package has no benchmark sweep of its own yet.
 """
-const THRESHOLD_C2C = 2^13
-
 function _dsp_fftw_num_threads(num_threads, threaded::Bool, n::Int)
     num_threads !== nothing && return Int(num_threads)
     use = _resolve_threaded(threaded) do
