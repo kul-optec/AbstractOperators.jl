@@ -18,6 +18,7 @@ const BENCH_SUITE_FILES = [
     "fftwoperators.jl",
     "nfftoperators.jl",
     "waveletoperators.jl",
+    "contourletoperators.jl",
     "normaloperators.jl",
 ]
 
