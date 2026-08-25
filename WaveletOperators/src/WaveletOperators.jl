@@ -16,7 +16,9 @@ import AbstractOperators:
     supports_threading,
     is_threaded,
     has_fast_opnorm,
-    _normalize_array_type
+    _normalize_array_type,
+    _array_wrapper_type,
+    _copy_operator_impl
 import OperatorCore:
     is_AcA_diagonal,
     is_AAc_diagonal,
@@ -150,5 +152,15 @@ get_max_transform_levels(dim_in::Tuple) = minimum(maxtransformlevels.(dim_in))
 # `supports_threading = false` states.
 AbstractOperators.is_threaded(::WaveletOp) = false
 AbstractOperators.supports_threading(::WaveletOp) = false
+
+# No buffers to deep-copy (only `wavelet`/`dim_in`/`levels`, all immutable), so this method
+# exists purely to honour `storage_type` requests by rebuilding the `S` type parameter;
+# `threaded` is accepted for uniform forwarding but has no effect (see above).
+function _copy_operator_impl(
+        op::WaveletOp{T, N, W, S}; storage_type = nothing, threaded = nothing
+    ) where {T, N, W, S}
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
+    return WaveletOp{T, N, W, _normalize_array_type(new_at, T)}(op.wavelet, op.dim_in, op.levels)
+end
 
 end # module
