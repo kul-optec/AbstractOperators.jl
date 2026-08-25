@@ -133,6 +133,34 @@
         @test diag_AAc(eye_batch) == 1.0
         return
     end
+
+    # `benchmark_threading` is the only place in the test suite where the wrapped operator
+    # is large enough to cross `MIN_BATCH_WORK_FOR_PARALLEL`, and it is skipped whenever
+    # `CI == "true"` (it asserts on wall-clock time). That leaves the *real* threaded branch
+    # of `create_BatchOp` -- `_resolve_threaded`/`_per_thread_operators` actually choosing
+    # `SimpleBatchOpMultiThreaded`, and its `mul!` running for genuine work -- untested in
+    # CI: every other test's operator domain is a handful of elements, well under the
+    # threshold, so `BatchOp(...; threaded = true)` always resolves to the single-threaded
+    # struct there regardless of the keyword. This test crosses the threshold with a
+    # correctness check only (no timing), so it runs everywhere `Threads.nthreads() > 1`,
+    # CI included.
+    function test_real_multithreaded_construction()
+        n = 1200  # > MIN_BATCH_WORK_FOR_PARALLEL (2^10 = 1024)
+        op = DiagOp(randn(n))
+        batch_op = BatchOp(op, (3,), (:_, :b); threaded = true)
+        @test batch_op isa AbstractOperators.SimpleBatchOpMultiThreaded
+        @test is_threaded(batch_op)
+        x = rand(n, 3)
+        y = zeros(n, 3)
+        z = zeros(n, 3)
+        for i in 1:3
+            mul!(@view(y[:, i]), op, @view(x[:, i]))
+        end
+        for i in 1:3
+            mul!(@view(z[:, i]), op', @view(y[:, i]))
+        end
+        return test_simple_batchop(op, batch_op, x, y, z, true)
+    end
 end
 
 @testitem "SimpleBatchOp shape-keeping non-threaded" tags = [:batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin
@@ -253,6 +281,14 @@ end
     @test diag(eye_mt) == 1.0
     @test diag_AcA(eye_mt) == 1.0
     @test diag_AAc(eye_mt) == 1.0
+end
+
+@testitem "SimpleBatchOp real multi-threaded construction" tags = [:batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin
+    using Random
+    Random.seed!(0)
+    if Threads.nthreads() > 1
+        SimpleBatchOpHelpers.test_real_multithreaded_construction()
+    end
 end
 
 @testitem "SimpleBatchOp benchmark" tags = [:batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin

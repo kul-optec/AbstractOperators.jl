@@ -56,8 +56,10 @@ end
     x = randn(n, m, l)
     r = randn(n, m, l)
     op = Exp(n, m, l)
+    op = Exp((n, m, l))  # tuple-only constructor, no `domain_type`
     op = Exp(Float64, (n, m, l))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Exp(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Sin" tags = [:nonlinearoperator, :Sin] setup = [TestUtils] begin
@@ -68,8 +70,10 @@ end
     x = randn(n, m, l)
     r = randn(n, m, l)
     op = Sin(n, m, l)
+    op = Sin((n, m, l))  # tuple-only constructor, no `domain_type`
     op = Sin(Float64, (n, m, l))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Sin(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Cos" tags = [:nonlinearoperator, :Cos] setup = [TestUtils] begin
@@ -80,8 +84,10 @@ end
     x = randn(n, m, l)
     r = randn(n, m, l)
     op = Cos(n, m, l)
+    op = Cos((n, m, l))  # tuple-only constructor, no `domain_type`
     op = Cos(Float64, (n, m, l))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Cos(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Atan" tags = [:nonlinearoperator, :Atan] setup = [TestUtils] begin
@@ -92,8 +98,10 @@ end
     x = randn(n)
     r = randn(n)
     op = Atan(n)
+    op = Atan((n,))  # tuple-only constructor, no `domain_type`
     op = Atan(Float64, (n,))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Atan(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Tanh" tags = [:nonlinearoperator, :Tanh] setup = [TestUtils] begin
@@ -104,8 +112,10 @@ end
     x = randn(n)
     r = randn(n)
     op = Tanh(n)
+    op = Tanh((n,))  # tuple-only constructor, no `domain_type`
     op = Tanh(Float64, (n,))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Tanh(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Sech" tags = [:nonlinearoperator, :Sech] setup = [TestUtils] begin
@@ -116,8 +126,10 @@ end
     x = randn(n)
     r = randn(n)
     op = Sech(n)
+    op = Sech((n,))  # tuple-only constructor, no `domain_type`
     op = Sech(Float64, (n,))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Sech(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Pow" tags = [:nonlinearoperator, :Pow] setup = [TestUtils] begin

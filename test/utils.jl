@@ -98,6 +98,14 @@
     function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
         verb && (println(), println(A))
 
+        # `show` prints `fun_name(A)`, so this exercises it without depending on the
+        # (unexported) function directly.
+        io = IOBuffer()
+        show(io, A)
+        @test !isempty(String(take!(io)))
+        @test is_thread_safe(A) isa Bool
+        @test supports_threading(A) isa Bool
+
         Ax = A * x
         Ax2 = similar(Ax)
         verb && println("forward preallocated")
