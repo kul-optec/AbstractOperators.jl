@@ -2,6 +2,7 @@
 AbstractOperators = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+ContourletOperators = "71a9f96d-0a22-4096-b570-94ff14b7f929"
 DSPOperators = "d5a72628-6e2f-430e-82f5-561df0bb8116"
 FFTWOperators = "c59a084b-ba08-4f3f-af9e-f4298d6caa94"
 GPUEnv = "78a0b619-6146-4252-b244-0f81c54be577"

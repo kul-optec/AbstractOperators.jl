@@ -33,6 +33,7 @@ const HAS_DSP = _load_local_subpackage(:DSPOperators, "DSPOperators")
 const HAS_FFTW = _load_local_subpackage(:FFTWOperators, "FFTWOperators")
 const HAS_NFFT = _load_local_subpackage(:NFFTOperators, "NFFTOperators")
 const HAS_WAVELET = _load_local_subpackage(:WaveletOperators, "WaveletOperators")
+const HAS_CONTOURLET = _load_local_subpackage(:ContourletOperators, "ContourletOperators")
 
 const SUITE = BenchmarkGroup()
 const BENCH_LINEAR_EYE_N = 1_048_576
@@ -70,6 +71,8 @@ const BENCH_DSP_XCORR_N = 32_768
 const BENCH_DSP_MIMO_SHAPE = (16_384, 2)
 const BENCH_DFT_SHAPE = (128, 128)
 const BENCH_WAVELET_N = 131_072
+const BENCH_CONTOURLET_N = 256
+const BENCH_CONTOURLET_J = 3
 const BENCH_NFFT_IMAGE = (48, 48)
 const BENCH_NFFT_NSAMP = 48
 const BENCH_NFFT_NPROF = 24
@@ -308,6 +311,28 @@ function wavelet_state()
     return (op = op, adj = op', x = x, y = y, z = z)
 end
 
+function _contourlet_params()
+    return ContourletParams(J = BENCH_CONTOURLET_J, L_array = parabolic_levels(BENCH_CONTOURLET_J))
+end
+
+function contourlet_state()
+    rng = make_rng()
+    op = ContourletOp(_contourlet_params(), (BENCH_CONTOURLET_N, BENCH_CONTOURLET_N))
+    x = randn(rng, BENCH_CONTOURLET_N, BENCH_CONTOURLET_N)
+    y = op * x
+    z = zeros(BENCH_CONTOURLET_N, BENCH_CONTOURLET_N)
+    return (op = op, adj = op', x = x, y = y, z = z)
+end
+
+function nsct_state()
+    rng = make_rng()
+    op = NSCTOp(_contourlet_params(), (BENCH_CONTOURLET_N, BENCH_CONTOURLET_N))
+    x = randn(rng, BENCH_CONTOURLET_N, BENCH_CONTOURLET_N)
+    y = op * x
+    z = zeros(BENCH_CONTOURLET_N, BENCH_CONTOURLET_N)
+    return (op = op, adj = op', x = x, y = y, z = z)
+end
+
 function nfft_state()
     rng = make_rng()
     traj = rand(rng, 2, BENCH_NFFT_NSAMP, BENCH_NFFT_NPROF) .- 0.5
@@ -341,6 +366,7 @@ dsp = HAS_DSP ? (SUITE["dspoperators"] = BenchmarkGroup()) : nothing
 fftw = HAS_FFTW ? (SUITE["fftwoperators"] = BenchmarkGroup()) : nothing
 nfft = HAS_NFFT ? (SUITE["nfftoperators"] = BenchmarkGroup()) : nothing
 wavelets = HAS_WAVELET ? (SUITE["waveletoperators"] = BenchmarkGroup()) : nothing
+contourlets = HAS_CONTOURLET ? (SUITE["contourletoperators"] = BenchmarkGroup()) : nothing
 normal = SUITE["normaloperators"] = BenchmarkGroup()
 
 linear["Eye"] = BenchmarkGroup()
@@ -530,6 +556,16 @@ if HAS_WAVELET
     wavelets["WaveletOp"] = BenchmarkGroup()
     wavelets["WaveletOp"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = wavelet_state())
     wavelets["WaveletOp"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = wavelet_state())
+end
+
+if HAS_CONTOURLET
+    contourlets["ContourletOp"] = BenchmarkGroup()
+    contourlets["ContourletOp"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = contourlet_state())
+    contourlets["ContourletOp"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = contourlet_state())
+
+    contourlets["NSCTOp"] = BenchmarkGroup()
+    contourlets["NSCTOp"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = nsct_state())
+    contourlets["NSCTOp"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = nsct_state())
 end
 
 normal["DiagOp"] = BenchmarkGroup()

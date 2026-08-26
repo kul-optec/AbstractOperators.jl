@@ -30,6 +30,8 @@ pkg> add DSPOperators
 pkg> add NFFTOperators
 
 pkg> add WaveletOperators
+
+pkg> add ContourletOperators
 ```
 
 ## Usage
@@ -131,6 +133,7 @@ Subpackage-specific exceptions are:
 
 - `NFFTOperators.jl` supports GPU execution only with CUDA.jl
 - `WaveletOperators.jl` currently works on CPU only
+- `ContourletOperators.jl` currently works on CPU only
 - `DCT` and `IDCT` (in FFTWOperators.jl) use CPU FFTW plans by default, but load `AcceleratedDCTs` to activate GPU support for those operators
 
 ## Credits
