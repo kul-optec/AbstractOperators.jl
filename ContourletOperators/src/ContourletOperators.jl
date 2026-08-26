@@ -42,101 +42,24 @@ function _band_sizes(template)
     return band_sizes
 end
 
-# ── ContourletOp / NSCTOp: shared implementation, distinguished by a Kind trait ──
+# ── ContourletTransform: shared field layout and traits for ContourletOp/NSCTOp ──
 #
 # ContourletOp and NSCTOp wrap the same Contourlets.jl calling convention (preallocated
-# workspace + coefficient buffer, forward!/inverse! into them) and differ only in *which*
-# Contourlets.jl functions they call. That difference is captured by a singleton `Kind`
-# type parameter dispatching to the four `_make_ws`/`_similar_coeffs`/`_forward!`/`_inverse!`
-# methods below, so the struct, constructor, dispatch barrier, `mul!` pair, and traits are
-# implemented once and specialize per kind via `const` type aliases.
+# workspace + coefficient buffer, forward!/inverse! into them) and share an identical field
+# layout, so their traits (size/domain_type/codomain_type/is_invertible/is_thread_safe) are
+# defined once here, mirroring FFTWOperators' DCT/IDCT `CosineTransform` supertype. Each
+# concrete type keeps its own constructor, dispatch barrier, `mul!` pair, and `fun_name`
+# because those call different Contourlets.jl functions (ct_* vs nsct_*).
+abstract type ContourletTransform{T, P <: ContourletParams, W, C, S <: Tuple, CT <: Tuple, TP <: ThreadingPolicy} <: LinearOperator end
 
-abstract type TransformKind end
-struct ContourletKind <: TransformKind end
-struct NSCTKind <: TransformKind end
+size(L::ContourletTransform) = (L.codomain_size, L.dim_in)
 
-_make_ws(::ContourletKind, params, dim_in, T, threading) = make_workspace(params, dim_in; T = T)
-_make_ws(::NSCTKind, params, dim_in, T, threading) = make_nsct_workspace(params, dim_in; T = T, threading = threading)
+domain_type(::ContourletTransform{T}) where {T} = T
+codomain_type(L::ContourletTransform) = L.codomain_types
 
-_similar_coeffs(::ContourletKind, params, dim_in, Td) = similar_coefficients(params, dim_in; Td = Td)
-_similar_coeffs(::NSCTKind, params, dim_in, Td) = similar_nsct_coefficients(params, dim_in; Td = Td)
+is_invertible(::ContourletTransform) = true
 
-_forward!(::ContourletKind, coeffs, x, params; workspace, threading) = ct_forward!(coeffs, x, params; workspace = workspace, threading = threading)
-_forward!(::NSCTKind, coeffs, x, params; workspace, threading) = nsct_forward!(coeffs, x, params; workspace = workspace, threading = threading)
-
-_inverse!(::ContourletKind, y, coeffs, params; workspace, threading) = ct_inverse!(y, coeffs, params; workspace = workspace, threading = threading)
-_inverse!(::NSCTKind, y, coeffs, params; workspace, threading) = nsct_inverse!(y, coeffs, params; workspace = workspace, threading = threading)
-
-_fun_name(::ContourletKind) = "𝒞𝒯"
-_fun_name(::NSCTKind) = "𝒩𝒮𝒞𝒯"
-
-struct ContourletTransformOp{K <: TransformKind, T, P <: ContourletParams, W, C, S <: Tuple, CT <: Tuple, TP <: ThreadingPolicy} <: LinearOperator
-    kind::K
-    params::P
-    dim_in::NTuple{2, Int}
-    band_sizes::Vector{NTuple{2, Int}}
-    workspace::W
-    coeffs::C
-    codomain_size::S   # == Tuple(band_sizes), cached so size(L,1) is allocation-free
-    codomain_types::CT  # == ntuple(_ -> T, length(band_sizes)), cached for codomain_type(L)
-    threading::TP
-end
-
-function _transform_op(kind::K, T::Type, params::ContourletParams, dim_in::NTuple{2, Int}; threaded::Bool = true) where {K <: TransformKind}
-    threading = _threading_policy(threaded)
-    # make_workspace/make_nsct_workspace internally build their buffers at
-    # Td = promote_type(eltype(params), T) (they cannot go below the filter precision).
-    # _similar_coeffs must use that same Td, not the raw requested T, or coeffs/workspace
-    # end up with mismatched element types and forward!/inverse! fail to dispatch at the
-    # first mul! call.
-    Td = promote_type(eltype(params), T)
-    workspace = _make_ws(kind, params, dim_in, Td, threading)
-    return _make_transform_op(kind, Td, params, dim_in, workspace, threading)
-end
-
-# Dispatch barrier: make_workspace's return type depends on a runtime filter-mode
-# check inside Contourlets.jl (ladder vs modulation), so its inferred type at the
-# call site above can be a Union of concrete types. Binding `workspace::W` as a
-# method type parameter here re-concretizes W for whichever branch actually ran,
-# so the ContourletTransformOp{...} inner constructor call resolves statically for JET.
-# TODO(upstream): Contourlets.jl's make_workspace/make_nsct_workspace return type
-# is itself unstable; if that gets fixed upstream this barrier becomes unnecessary.
-@noinline function _make_transform_op(kind::K, T::Type, params::P, dim_in::NTuple{2, Int}, workspace::W, threading::TP) where {K <: TransformKind, P <: ContourletParams, W, TP <: ThreadingPolicy}
-    coeffs = _similar_coeffs(kind, params, dim_in, T)
-    band_sizes = _band_sizes(coeffs)
-    codomain_size = Tuple(band_sizes)
-    codomain_types = ntuple(_ -> T, length(band_sizes))
-    return ContourletTransformOp{K, T, P, W, typeof(coeffs), typeof(codomain_size), typeof(codomain_types), TP}(
-        kind, params, dim_in, band_sizes, workspace, coeffs, codomain_size, codomain_types, threading
-    )
-end
-
-function mul!(y::ArrayPartition, L::ContourletTransformOp{K, T}, x::AbstractMatrix{T}) where {K, T}
-    AbstractOperators.check(y, L, x)
-    _forward!(L.kind, L.coeffs, x, L.params; workspace = L.workspace, threading = L.threading)
-    _flatten!(y, L.coeffs)
-    return y
-end
-
-function mul!(
-        y::AbstractMatrix{T}, L::AdjointOperator{<:ContourletTransformOp{K, T}}, x::ArrayPartition
-    ) where {K, T}
-    AbstractOperators.check(y, L, x)
-    _unflatten!(L.A.coeffs, x)
-    _inverse!(L.A.kind, y, L.A.coeffs, L.A.params; workspace = L.A.workspace, threading = L.A.threading)
-    return y
-end
-
-fun_name(L::ContourletTransformOp) = _fun_name(L.kind)
-
-size(L::ContourletTransformOp) = (L.codomain_size, L.dim_in)
-
-domain_type(::ContourletTransformOp{K, T}) where {K, T} = T
-codomain_type(L::ContourletTransformOp) = L.codomain_types
-
-is_invertible(::ContourletTransformOp) = true
-
-AbstractOperators.is_thread_safe(::ContourletTransformOp) = false
+AbstractOperators.is_thread_safe(::ContourletTransform) = false
 
 # ── ContourletOp ────────────────────────────────────────────────────────────
 
@@ -181,11 +104,64 @@ julia> maximum(abs, x_rec .- ones(64, 64)) < 1.0e-8
 true
 ```
 """
-const ContourletOp{T, P, W, C, S, CT, TP} = ContourletTransformOp{ContourletKind, T, P, W, C, S, CT, TP}
+struct ContourletOp{T, P <: ContourletParams, W, C, S <: Tuple, CT <: Tuple, TP <: ThreadingPolicy} <: ContourletTransform{T, P, W, C, S, CT, TP}
+    params::P
+    dim_in::NTuple{2, Int}
+    band_sizes::Vector{NTuple{2, Int}}
+    workspace::W
+    coeffs::C
+    codomain_size::S   # == Tuple(band_sizes), cached so size(L,1) is allocation-free
+    codomain_types::CT  # == ntuple(_ -> T, length(band_sizes)), cached for codomain_type(L)
+    threading::TP
+end
 
-ContourletOp(T::Type, params::ContourletParams, dim_in::NTuple{2, Int}; kwargs...) = _transform_op(ContourletKind(), T, params, dim_in; kwargs...)
+function ContourletOp(T::Type, params::ContourletParams, dim_in::NTuple{2, Int}; threaded::Bool = true)
+    # make_workspace internally builds its buffers at Td = promote_type(eltype(params), T)
+    # (it cannot go below the filter precision). similar_coefficients must use that same Td,
+    # not the raw requested T, or coeffs/workspace end up with mismatched element types and
+    # ct_forward!/ct_inverse! fail to dispatch at the first mul! call.
+    Td = promote_type(eltype(params), T)
+    workspace = make_workspace(params, dim_in; T = Td)
+    return _make_contourlet_op(Td, params, dim_in, workspace, _threading_policy(threaded))
+end
+
+# Dispatch barrier: make_workspace's return type depends on a runtime filter-mode
+# check inside Contourlets.jl (ladder vs modulation), so its inferred type at the
+# call site above can be a Union of concrete types. Binding `workspace::W` as a
+# method type parameter here re-concretizes W for whichever branch actually ran,
+# so the ContourletOp{...} inner constructor call resolves statically for JET.
+# TODO(upstream): Contourlets.jl's make_workspace/make_nsct_workspace return type
+# is itself unstable; if that gets fixed upstream this barrier becomes unnecessary.
+@noinline function _make_contourlet_op(T::Type, params::P, dim_in::NTuple{2, Int}, workspace::W, threading::TP) where {P <: ContourletParams, W, TP <: ThreadingPolicy}
+    coeffs = similar_coefficients(params, dim_in; Td = T)
+    band_sizes = _band_sizes(coeffs)
+    codomain_size = Tuple(band_sizes)
+    codomain_types = ntuple(_ -> T, length(band_sizes))
+    return ContourletOp{T, P, W, typeof(coeffs), typeof(codomain_size), typeof(codomain_types), TP}(
+        params, dim_in, band_sizes, workspace, coeffs, codomain_size, codomain_types, threading
+    )
+end
+
 ContourletOp(params::ContourletParams, dim_in::NTuple{2, Int}; kwargs...) = ContourletOp(Float64, params, dim_in; kwargs...)
 ContourletOp(A::AbstractMatrix, params::ContourletParams; kwargs...) = ContourletOp(eltype(A), params, size(A); kwargs...)
+
+function mul!(y::ArrayPartition, L::ContourletOp{T}, x::AbstractMatrix{T}) where {T}
+    AbstractOperators.check(y, L, x)
+    ct_forward!(L.coeffs, x, L.params; workspace = L.workspace, threading = L.threading)
+    _flatten!(y, L.coeffs)
+    return y
+end
+
+function mul!(
+        y::AbstractMatrix{T}, L::AdjointOperator{<:ContourletOp{T}}, x::ArrayPartition
+    ) where {T}
+    AbstractOperators.check(y, L, x)
+    _unflatten!(L.A.coeffs, x)
+    ct_inverse!(y, L.A.coeffs, L.A.params; workspace = L.A.workspace, threading = L.A.threading)
+    return y
+end
+
+fun_name(::ContourletOp) = "𝒞𝒯"
 
 # ── NSCTOp ───────────────────────────────────────────────────────────────────
 
@@ -232,10 +208,61 @@ julia> maximum(abs, x_rec .- ones(32, 32)) < 1.0e-8
 true
 ```
 """
-const NSCTOp{T, P, W, C, S, CT, TP} = ContourletTransformOp{NSCTKind, T, P, W, C, S, CT, TP}
+struct NSCTOp{T, P <: ContourletParams, W, C, S <: Tuple, CT <: Tuple, TP <: ThreadingPolicy} <: ContourletTransform{T, P, W, C, S, CT, TP}
+    params::P
+    dim_in::NTuple{2, Int}
+    band_sizes::Vector{NTuple{2, Int}}
+    workspace::W
+    coeffs::C
+    codomain_size::S   # == Tuple(band_sizes), cached so size(L,1) is allocation-free
+    codomain_types::CT  # == ntuple(_ -> T, length(band_sizes)), cached for codomain_type(L)
+    threading::TP
+end
 
-NSCTOp(T::Type, params::ContourletParams, dim_in::NTuple{2, Int}; kwargs...) = _transform_op(NSCTKind(), T, params, dim_in; kwargs...)
+function NSCTOp(T::Type, params::ContourletParams, dim_in::NTuple{2, Int}; threaded::Bool = true)
+    # threading is also passed to make_nsct_workspace: its FFTW plans are threaded at
+    # construction time, and Contourlets.jl warns if a later call's threading kwarg
+    # implies a different thread count than the workspace was built with.
+    threading = _threading_policy(threaded)
+    # make_nsct_workspace internally builds its buffers at Td = promote_type(eltype(params), T)
+    # (it cannot go below the filter precision). similar_nsct_coefficients must use that same
+    # Td, not the raw requested T, or coeffs/workspace end up with mismatched element types and
+    # nsct_forward!/nsct_inverse! fail to dispatch at the first mul! call.
+    Td = promote_type(eltype(params), T)
+    workspace = make_nsct_workspace(params, dim_in; T = Td, threading = threading)
+    return _make_nsct_op(Td, params, dim_in, workspace, threading)
+end
+
+# Dispatch barrier: see the comment on `_make_contourlet_op` above.
+@noinline function _make_nsct_op(T::Type, params::P, dim_in::NTuple{2, Int}, workspace::W, threading::TP) where {P <: ContourletParams, W, TP <: ThreadingPolicy}
+    coeffs = similar_nsct_coefficients(params, dim_in; Td = T)
+    band_sizes = _band_sizes(coeffs)
+    codomain_size = Tuple(band_sizes)
+    codomain_types = ntuple(_ -> T, length(band_sizes))
+    return NSCTOp{T, P, W, typeof(coeffs), typeof(codomain_size), typeof(codomain_types), TP}(
+        params, dim_in, band_sizes, workspace, coeffs, codomain_size, codomain_types, threading
+    )
+end
+
 NSCTOp(params::ContourletParams, dim_in::NTuple{2, Int}; kwargs...) = NSCTOp(Float64, params, dim_in; kwargs...)
 NSCTOp(A::AbstractMatrix, params::ContourletParams; kwargs...) = NSCTOp(eltype(A), params, size(A); kwargs...)
+
+function mul!(y::ArrayPartition, L::NSCTOp{T}, x::AbstractMatrix{T}) where {T}
+    AbstractOperators.check(y, L, x)
+    nsct_forward!(L.coeffs, x, L.params; workspace = L.workspace, threading = L.threading)
+    _flatten!(y, L.coeffs)
+    return y
+end
+
+function mul!(
+        y::AbstractMatrix{T}, L::AdjointOperator{<:NSCTOp{T}}, x::ArrayPartition
+    ) where {T}
+    AbstractOperators.check(y, L, x)
+    _unflatten!(L.A.coeffs, x)
+    nsct_inverse!(y, L.A.coeffs, L.A.params; workspace = L.A.workspace, threading = L.A.threading)
+    return y
+end
+
+fun_name(::NSCTOp) = "𝒩𝒮𝒞𝒯"
 
 end # module
