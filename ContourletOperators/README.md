@@ -21,7 +21,12 @@ pkg> add ContourletOperators
 
 ## GPU Support
 
-ContourletOperators.jl is currently CPU-only. Unlike most of the AbstractOperators.jl ecosystem, its operators do not yet support CUDA.jl, AMDGPU.jl, oneAPI.jl, or OpenCL.jl arrays, even though the underlying Contourlets.jl library ships CUDA and generic GPU extensions.
+`ContourletOp`/`NSCTOp` accept GPU input/output via the `array_type` constructor keyword, e.g.
+`ContourletOp(params, dim_in; array_type = CuArray{Float64})`. The underlying Contourlet Transform
+itself still runs on the CPU (FFTW plans, scalar filter-bank loops) — this package does not yet
+call into Contourlets.jl's own CUDA/generic GPU extensions — so `mul!` stages `x`/`y` through an
+internal CPU buffer (`copyto!` in, run the CPU transform, `copyto!` out) rather than executing the
+transform on-device.
 
 ## Usage Example
 

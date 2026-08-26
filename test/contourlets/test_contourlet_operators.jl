@@ -93,6 +93,36 @@ end
     end
 end
 
+@testitem "ContourletOp / NSCTOp (GPU)" tags = [:gpu, :contourlet, :ContourletOp, :NSCTOp] setup = [
+    TestUtils,
+] begin
+    using Contourlets, ContourletOperators, LinearAlgebra, Random, AbstractOperators, GPUEnv
+
+    for backend in gpu_backends()
+        Random.seed!(0)
+
+        n = 32
+        params = ContourletParams(J = 2, L_array = [1, 2])
+        storage_type = gpu_wrapper(backend, Float64, n, n)
+
+        C = ContourletOp(params, (n, n); array_type = storage_type)
+        N = NSCTOp(params, (n, n); array_type = storage_type)
+        @test domain_array_type(C) <: backend.array_type
+        @test codomain_array_type(C) <: ArrayPartition
+        @test domain_array_type(N) <: backend.array_type
+        @test codomain_array_type(N) <: ArrayPartition
+
+        x1 = gpu_randn(backend, n, n)
+        yC = C * x1
+        yN = N * x1
+        @test yC isa ArrayPartition
+        @test yN isa ArrayPartition
+
+        assert_cpu_approx(C' * yC, x1)
+        assert_cpu_approx(N' * yN, x1)
+    end
+end
+
 @testitem "ContourletOp / NSCTOp check() errors" tags = [:contourlet, :ContourletOp, :NSCTOp] setup = [TestUtils] begin
     using Contourlets, ContourletOperators, AbstractOperators
 

@@ -26,6 +26,12 @@ end
 
     @test_call target_modules = (ContourletOperators,) ContourletOp(Float64, params, (n, n))
     @test_call target_modules = (ContourletOperators,) NSCTOp(Float64, params, (n, n))
+    @test_call target_modules = (ContourletOperators,) ContourletOp(
+        params, (n, n); array_type = Array{Float32}
+    )
+    @test_call target_modules = (ContourletOperators,) NSCTOp(
+        params, (n, n); array_type = Array{Float32}
+    )
 end
 
 # JET package-level analysis for ContourletOperators
