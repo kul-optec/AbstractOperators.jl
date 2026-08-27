@@ -363,6 +363,29 @@ end
     @test y ≈ x
 end
 
+@testitem "BatchOp with a bare mask and no batch size (lines 149, 155)" tags = [
+    :batching, :SpreadingBatchOp,
+] setup = [TestUtils, SpreadingBatchOpHelpers] begin
+    using Random, AbstractOperators
+    Random.seed!(0)
+    # BatchOp(operators, mask::NTuple{M,Symbol}) -- a bare (non-Pair) mask with no
+    # batch_size -- forwards to BatchOp(operators, (), mask; ...) at line 155, which in
+    # turn applies the same mask to both domain and codomain (mask => mask). No test
+    # previously called this exact 2-positional-arg overload.
+    n = 5
+    ops = [Eye(Float64, (n,)) for _ in 1:3]
+    bop = BatchOp(ops, (:_, :s); threaded = false)
+    @test bop isa AbstractOperators.SpreadingBatchOp
+    x = randn(n, 3)
+    y = bop * x
+    @test size(y) == (n, 3)
+    @test y ≈ x
+
+    # Equivalent to the explicit batch_size=() + mask=>mask form it forwards to.
+    bop2 = BatchOp(ops, (), (:_, :s) => (:_, :s); threaded = false)
+    @test bop == bop2
+end
+
 @testitem "BatchOp unsupported threading strategy for non-thread-safe ops (line 404)" tags = [:batching, :SpreadingBatchOp] setup = [TestUtils, SpreadingBatchOpHelpers] begin
     using Random, AbstractOperators
     Random.seed!(0)

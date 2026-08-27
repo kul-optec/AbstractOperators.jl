@@ -139,6 +139,32 @@ end
     @test is_threaded(Scale(2.0, DiagOp(randn(100_000); threaded = false))) == false
 end
 
+@testitem "threading policy: _policy_storage reduces a multi-domain operator to a plain array type" tags = [
+    :misc, :Threading,
+] setup = [TestUtils] begin
+    using AbstractOperators
+    using AbstractOperators: _policy_storage, _storage_eltype_or_float, _should_thread
+    using RecursiveArrayTools: ArrayPartition
+
+    # A single-domain operator's storage is used as-is.
+    @test _policy_storage(Array{Float64}) === Array{Float64}
+
+    # A multi-domain operator reports an `ArrayPartition`, which `_should_thread`'s CPU-storage
+    # check cannot use directly -- `_policy_storage` reduces it to a plain CPU array of the
+    # partition's element type instead.
+    @test _policy_storage(ArrayPartition{Float64, Tuple{Vector{Float64}, Vector{Float64}}}) === Array{Float64}
+    @test _storage_eltype_or_float(ArrayPartition{Float32, Tuple{Vector{Float32}}}) == Float32
+    # An unparameterized/unrelated type falls back to Float64.
+    @test _storage_eltype_or_float(ArrayPartition) == Float64
+
+    # Exercise the real call path: a multi-domain (HCAT) operator's `domain_array_type` is an
+    # `ArrayPartition`, and `_should_thread` (used by batch operators) must still resolve to a
+    # plain Bool rather than erroring on it.
+    op = HCAT(MatrixOp(randn(4, 3)), MatrixOp(randn(4, 5)))
+    @test domain_array_type(op) <: ArrayPartition
+    @test _should_thread(op) isa Bool
+end
+
 @testitem "threading policy: threaded=true is a permission, threaded=false a veto" tags = [
     :misc, :Threading,
 ] setup = [TestUtils] begin
