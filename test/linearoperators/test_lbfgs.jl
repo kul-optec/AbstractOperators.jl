@@ -214,7 +214,7 @@ end
     @test ArrayPartition(ones.(size(HH, 1))) == HH * ArrayPartition(ones.(size(HH, 1))...)
 end
 
-@testitem "L-BFGS (GPU)" tags = [:gpu, :linearoperator, :LBFGS] setup = [TestUtils] begin
+@testitem "L-BFGS (GPU)" tags = [:gpu, :linearoperator, :LBFGS] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

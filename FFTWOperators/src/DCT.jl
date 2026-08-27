@@ -34,6 +34,9 @@ struct DCT{N, C, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, B} <: CosineT
     A::T1
     At::T2
     buf::B
+    # Plan-time FFTW thread count. FFTW threads r2r transforms (measured 2.25x forward,
+    # 1.91x inverse at n=2^22), so this is a real choice, fixed when the plan is built.
+    num_threads::Int
 end
 
 """
@@ -68,33 +71,43 @@ struct IDCT{N, C, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, B} <: Cosine
     A::T1
     At::T2
     buf::B
+    # Plan-time FFTW thread count; see the note on DCT.
+    num_threads::Int
 end
 
 # Constructors
 #standard constructor
-DCT(T::Type, dim_in::NTuple{N, Int}) where {N} = DCT(zeros(T, dim_in))
+function DCT(T::Type, dim_in::NTuple{N, Int}; kwargs...) where {N}
+    return DCT(zeros(T, dim_in); kwargs...)
+end
+DCT(dim_in::NTuple{N, Int}; kwargs...) where {N} = DCT(zeros(dim_in); kwargs...)
+DCT(dim_in::Vararg{Int64}; kwargs...) = DCT(dim_in; kwargs...)
+DCT(T::Type, dim_in::Vararg{Int64}; kwargs...) = DCT(T, dim_in; kwargs...)
 
-DCT(dim_in::NTuple{N, Int}) where {N} = DCT(zeros(dim_in))
-DCT(dim_in::Vararg{Int64}) = DCT(dim_in)
-DCT(T::Type, dim_in::Vararg{Int64}) = DCT(T, dim_in)
-
-function DCT(x::AbstractArray{C, N}) where {N, C}
-    A, At = plan_dct(x), plan_idct(x)
+function DCT(x::AbstractArray{C, N}; num_threads = nothing, threaded::Bool = true) where {N, C}
+    nthr = _fftw_num_threads(:r2r, num_threads, threaded, length(x))
+    A, At = _with_fftw_threads(nthr) do
+        plan_dct(x), plan_idct(x)
+    end
     buf = similar(x)
-    return DCT{N, C, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf)
+    return DCT{N, C, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf, nthr)
 end
 
 #standard constructor
-IDCT(T::Type, dim_in::NTuple{N, Int}) where {N} = IDCT(zeros(T, dim_in))
+function IDCT(T::Type, dim_in::NTuple{N, Int}; kwargs...) where {N}
+    return IDCT(zeros(T, dim_in); kwargs...)
+end
+IDCT(dim_in::NTuple{N, Int}; kwargs...) where {N} = IDCT(zeros(dim_in); kwargs...)
+IDCT(dim_in::Vararg{Int64}; kwargs...) = IDCT(dim_in; kwargs...)
+IDCT(T::Type, dim_in::Vararg{Int64}; kwargs...) = IDCT(T, dim_in; kwargs...)
 
-IDCT(dim_in::NTuple{N, Int}) where {N} = IDCT(zeros(dim_in))
-IDCT(dim_in::Vararg{Int64}) = IDCT(dim_in)
-IDCT(T::Type, dim_in::Vararg{Int64}) = IDCT(T, dim_in)
-
-function IDCT(x::AbstractArray{C, N}) where {N, C}
-    A, At = plan_idct(x), plan_dct(x)
+function IDCT(x::AbstractArray{C, N}; num_threads = nothing, threaded::Bool = true) where {N, C}
+    nthr = _fftw_num_threads(:r2r, num_threads, threaded, length(x))
+    A, At = _with_fftw_threads(nthr) do
+        plan_idct(x), plan_dct(x)
+    end
     buf = similar(x)
-    return IDCT{N, C, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf)
+    return IDCT{N, C, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf, nthr)
 end
 
 # Mappings
@@ -157,3 +170,37 @@ get_normal_op(L::CosineTransform) = Eye(allocate_in_domain(L))
 
 has_fast_opnorm(::CosineTransform) = true
 LinearAlgebra.opnorm(L::CosineTransform) = one(real(domain_type(L)))
+
+# ─── Threading ────────────────────────────────────────────────────────────────
+#
+# FFTW is a counted thread pool and it does thread r2r transforms: measured 2.25x (DCT) and
+# 1.91x (IDCT) at n = 2^22 with 8 threads. The count is baked into the plan, so `threaded`
+# is a construction-time choice that `is_threaded` reads back rather than a switchable loop.
+is_threaded(op::CosineTransform) = op.num_threads > 1
+supports_threading(::CosineTransform) = true
+
+function _copy_operator_impl(
+        op::DCT{N, C}; storage_type = nothing, threaded = nothing
+    ) where {N, C}
+    return _copy_cosine_transform(DCT, op, C, storage_type, threaded)
+end
+
+function _copy_operator_impl(
+        op::IDCT{N, C}; storage_type = nothing, threaded = nothing
+    ) where {N, C}
+    return _copy_cosine_transform(IDCT, op, C, storage_type, threaded)
+end
+
+function _copy_cosine_transform(ctor, op, ::Type{C}, storage_type, threaded) where {C}
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    # `buf` is per-call scratch, so a copy always needs its own -- sharing it is what makes
+    # these operators unsafe to run from two threads. Replanning is only needed when the
+    # storage type or thread count actually changes.
+    if storage_type === nothing && new_threaded == is_threaded(op)
+        return typeof(op)(op.dim_in, op.A, op.At, similar(op.buf), op.num_threads)
+    end
+    # No persistent data to carry over (a cosine transform holds only plans and scratch),
+    # so the prototype can be uninitialized.
+    new_storage = storage_type === nothing ? _array_wrapper_type(typeof(op.buf)) : storage_type
+    return ctor(similar(new_storage{C}, op.dim_in); threaded = new_threaded)
+end

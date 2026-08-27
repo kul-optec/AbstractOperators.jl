@@ -86,3 +86,14 @@ get_normal_op(L::Eye) = L
 has_fast_opnorm(::Eye) = true
 LinearAlgebra.opnorm(L::Eye) = one(real(domain_type(L)))
 AdjointOperator(L::Eye) = L
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::Eye{T, N, S}; storage_type = nothing, threaded = nothing
+    ) where {T, N, S}
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
+    return _make_eye(T, op.dim, new_at)
+end

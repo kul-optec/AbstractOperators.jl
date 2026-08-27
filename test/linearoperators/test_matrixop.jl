@@ -108,7 +108,7 @@ end
     @test opnorm(Qop) ≈ estimate_opnorm(Qop) rtol = 0.02
 end
 
-@testitem "MatrixOp (GPU)" tags = [:gpu, :linearoperator, :MatrixOp] setup = [TestUtils] begin
+@testitem "MatrixOp (GPU)" tags = [:gpu, :linearoperator, :MatrixOp] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

@@ -103,3 +103,14 @@ get_normal_op(L::Zeros) = Zeros(domain_type(L), size(L, 2), domain_type(L), size
 
 has_fast_opnorm(::Zeros) = true
 LinearAlgebra.opnorm(L::Zeros) = zero(real(domain_type(L)))
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::Zeros{C, N, D, M, dS, cS}; storage_type = nothing, threaded = nothing
+    ) where {C, N, D, M, dS, cS}
+    new_at = storage_type === nothing ? _array_wrapper_type(dS) : storage_type
+    return Zeros(D, op.dim_in, C, op.dim_out; array_type = new_at)
+end

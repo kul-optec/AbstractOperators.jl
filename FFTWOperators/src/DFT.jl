@@ -8,9 +8,9 @@ export DFT, IDFT
 end
 
 """
-DFT([domain_type=Float64::Type,] dim_in::Tuple [,dims]; [normalization, flags, timelimit, num_threads])
-DFT(dim_in...; [normalization, flags, timelimit, num_threads])
-DFT(x::AbstractArray [,dims]; [normalization, flags, timelimit, num_threads])
+DFT([domain_type=Float64::Type,] dim_in::Tuple [,dims]; [normalization, flags, timelimit, num_threads, threaded])
+DFT(dim_in...; [normalization, flags, timelimit, num_threads, threaded])
+DFT(x::AbstractArray [,dims]; [normalization, flags, timelimit, num_threads, threaded])
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional Discrete
 Fourier Transform over dimensions `dims` of `x`.
@@ -31,6 +31,9 @@ Arguments:
   If set to a finite value, the plan will be created within that time limit, potentially resulting in a less optimal plan.
 - `num_threads`: The number of threads to use for the FFT. Defaults to the number of threads available in Julia.
   It should be set to 1 for single-threaded execution (e.g., when using within a `@threads` block).
+- `threaded`: The package-wide spelling of the same choice: `true` uses the available Julia
+  threads, `false` uses one. `num_threads` wins if both are given. FFTW is a counted thread
+  pool, so this is fixed when the plan is built and reported back by `is_threaded`.
 
 ```jldoctest
 julia> using FFTW, FFTWOperators
@@ -54,12 +57,20 @@ struct DFT{N, C, D, Dir, S, T1 <: AbstractFFTs.Plan, T2 <: AbstractFFTs.Plan, R}
     At::T2
     normalization::Normalization
     scale::R
+    # The thread count the FFTW plans were built with. FFTW is a *counted* pool: threading
+    # is a property of the plan, decided at construction, not of the `mul!` loop -- so it
+    # is recorded rather than switchable, and `is_threaded` reads it back.
+    num_threads::Int
+    # Recorded so that `_copy_operator_impl`'s replanning path (storage/thread-count change)
+    # reproduces the same plan quality instead of silently falling back to FFTW.ESTIMATE.
+    flags::UInt32
+    timelimit::Float64
 end
 
 """
-IDFT([domain_type=Float64::Type,] dim_in::Tuple [,dims]; [flags, timelimit, num_threads])
-IDFT(dim_in...; [flags, timelimit, num_threads])
-IDFT(x::AbstractArray [,dims]; [flags, timelimit, num_threads])
+IDFT([domain_type=Float64::Type,] dim_in::Tuple [,dims]; [flags, timelimit, num_threads, threaded])
+IDFT(dim_in...; [flags, timelimit, num_threads, threaded])
+IDFT(x::AbstractArray [,dims]; [flags, timelimit, num_threads, threaded])
 
 Creates a `LinearOperator` which, when multiplied with an array `x::AbstractArray{N}`, returns the `N`-dimensional
 Inverse Discrete Fourier Transform over dimensions `dims` of `x`.
@@ -80,6 +91,9 @@ Arguments:
   If set to a finite value, the plan will be created within that time limit, potentially resulting in a less optimal plan.
 - `num_threads`: The number of threads to use for the FFT. Defaults to the number of threads available in Julia.
   It should be set to 1 for single-threaded execution (e.g., when using within a `@threads` block).
+- `threaded`: The package-wide spelling of the same choice: `true` uses the available Julia
+  threads, `false` uses one. `num_threads` wins if both are given. FFTW is a counted thread
+  pool, so this is fixed when the plan is built and reported back by `is_threaded`.
 
 ```jldoctest
 julia> using FFTW, FFTWOperators
@@ -108,9 +122,10 @@ function DFT(
         normalization::Normalization = UNNORMALIZED,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N}
-    return DFT(zeros(dim_in), dims; normalization, flags, timelimit, num_threads)
+    return DFT(zeros(dim_in), dims; normalization, flags, timelimit, num_threads, threaded)
 end
 
 function DFT(
@@ -119,9 +134,11 @@ function DFT(
         normalization::Normalization = UNNORMALIZED,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N, D <: Real}
     x = similar(x, Complex{D})
+    num_threads = _fftw_num_threads(:c2c, num_threads, threaded, length(x))
     prev_fftw_threads = FFTW.get_num_threads()
     FFTW.set_num_threads(num_threads)
     A = plan_fft(x, dims; flags, timelimit)
@@ -131,7 +148,7 @@ function DFT(
     dims = tuple(dims...)
     scaling = _dft_scaling(size(x), dims, normalization)
     return DFT{N, Complex{D}, D, dims, S, typeof(A), typeof(At), Float64}(
-        size(x), A, At, normalization, scaling
+        size(x), A, At, normalization, scaling, num_threads, flags, timelimit
     )
 end
 
@@ -141,11 +158,13 @@ function DFT(
         normalization::Normalization = UNNORMALIZED,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N, D <: Complex}
     if x != FFTW.ESTIMATE
         x = similar(x) # FFTW.MEASURE and FFTW.PATIENT may cause the input array to be modified
     end
+    num_threads = _fftw_num_threads(:c2c, num_threads, threaded, length(x))
     prev_fftw_threads = FFTW.get_num_threads()
     FFTW.set_num_threads(num_threads)
     A = plan_fft(x, dims; flags, timelimit)
@@ -154,7 +173,9 @@ function DFT(
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
     scaling = _dft_scaling(size(x), dims, normalization)
-    return DFT{N, D, D, dims, S, typeof(A), typeof(At), Float64}(size(x), A, At, normalization, scaling)
+    return DFT{N, D, D, dims, S, typeof(A), typeof(At), Float64}(
+        size(x), A, At, normalization, scaling, num_threads, flags, timelimit
+    )
 end
 
 function DFT(
@@ -164,18 +185,20 @@ function DFT(
         normalization::Normalization = UNNORMALIZED,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N}
-    return DFT(zeros(T, dim_in), dims; normalization, flags, timelimit, num_threads)
+    return DFT(zeros(T, dim_in), dims; normalization, flags, timelimit, num_threads, threaded)
 end
 function DFT(
         dim_in::Vararg{Int};
         normalization::Normalization = UNNORMALIZED,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     )
-    return DFT(dim_in; normalization, flags, timelimit, num_threads)
+    return DFT(dim_in; normalization, flags, timelimit, num_threads, threaded)
 end
 function DFT(
         T::Type,
@@ -183,9 +206,10 @@ function DFT(
         normalization::Normalization = UNNORMALIZED,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     )
-    return DFT(T, dim_in; normalization, flags, timelimit, num_threads)
+    return DFT(T, dim_in; normalization, flags, timelimit, num_threads, threaded)
 end
 
 #standard constructor
@@ -196,10 +220,11 @@ function IDFT(
         normalization::Normalization = BACKWARD,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N}
     @assert T <: Complex "Input type for IDFT must be a complex type"
-    return DFT(T, dim_in, dims; normalization, flags, timelimit, num_threads)'
+    return DFT(T, dim_in, dims; normalization, flags, timelimit, num_threads, threaded)'
 end
 
 function IDFT(
@@ -208,10 +233,11 @@ function IDFT(
         normalization::Normalization = BACKWARD,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N, D}
     @assert D <: Complex "Input array for IDFT must have complex element type"
-    return DFT(x, dims; normalization, flags, timelimit, num_threads)'
+    return DFT(x, dims; normalization, flags, timelimit, num_threads, threaded)'
 end
 
 function IDFT(
@@ -220,14 +246,20 @@ function IDFT(
         normalization::Normalization = BACKWARD,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     ) where {N}
-    return DFT(ComplexF64, dim_in, dims; normalization, flags, timelimit, num_threads)'
+    return DFT(ComplexF64, dim_in, dims; normalization, flags, timelimit, num_threads, threaded)'
 end
 function IDFT(
-        dim_in::Vararg{Int}; normalization::Normalization = BACKWARD, flags = FFTW.ESTIMATE, timelimit = Inf, num_threads = Threads.nthreads()
+        dim_in::Vararg{Int};
+        normalization::Normalization = BACKWARD,
+        flags = FFTW.ESTIMATE,
+        timelimit = Inf,
+        num_threads = nothing,
+        threaded::Bool = true,
     )
-    return DFT(ComplexF64, dim_in; normalization, flags, timelimit, num_threads)'
+    return DFT(ComplexF64, dim_in; normalization, flags, timelimit, num_threads, threaded)'
 end
 function IDFT(
         T::Type,
@@ -235,10 +267,11 @@ function IDFT(
         normalization::Normalization = BACKWARD,
         flags = FFTW.ESTIMATE,
         timelimit = Inf,
-        num_threads = Threads.nthreads(),
+        num_threads = nothing,
+        threaded::Bool = true,
     )
     @assert T <: Complex "Input type for IDFT must be a complex type"
-    return DFT(T, dim_in; normalization, flags, timelimit, num_threads)'
+    return DFT(T, dim_in; normalization, flags, timelimit, num_threads, threaded)'
 end
 
 # Mappings
@@ -355,4 +388,33 @@ function scale_output!(y, L::AdjointOperator{<:DFT})
         y ./= L.A.scale
     end
     return y
+end
+
+# ─── Threading ────────────────────────────────────────────────────────────────
+
+is_threaded(op::DFT) = op.num_threads > 1
+supports_threading(::DFT) = true
+
+function _copy_operator_impl(
+        op::DFT{N, C, D, Dir, S, T1, T2, R}; storage_type = nothing, threaded = nothing
+    ) where {N, C, D, Dir, S, T1, T2, R}
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    if storage_type === nothing && new_threaded == is_threaded(op)
+        # Plans are immutable and hold no per-call scratch, so a copy shares them.
+        return DFT{N, C, D, Dir, S, T1, T2, R}(
+            op.dim_in, op.A, op.At, op.normalization, op.scale, op.num_threads, op.flags, op.timelimit
+        )
+    end
+    # Changing the storage type or thread count means replanning. The prototype must use
+    # the *domain* element type -- type parameter `D`, not the codomain `C`: for a
+    # real-input DFT they differ (`C == Complex{D}`), and planning from `C` would silently
+    # produce an operator with a complex domain. There is no persistent data to carry over
+    # (a DFT holds only plans, not an array of values), so the prototype can be
+    # uninitialized -- unlike, say, `Conv`'s `h`.
+    new_storage = storage_type === nothing ? S : storage_type
+    return DFT(
+        similar(new_storage{D}, op.dim_in), Dir;
+        normalization = op.normalization, threaded = new_threaded,
+        flags = op.flags, timelimit = op.timelimit,
+    )
 end

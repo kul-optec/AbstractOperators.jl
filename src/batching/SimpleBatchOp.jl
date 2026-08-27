@@ -21,7 +21,7 @@ end
 		operator::AbstractOperators.AbstractOperator,
 		batch_dims::NTuple{N,Int},
 		batch_dim_mask::Union{NTuple{M,Symbol}, Pair{NTuple{M1,Symbol},NTuple{M2,Symbol}}};
-		threaded::Bool=nthreads() > 1,
+		threaded::Bool=true,
 	)
 
 Creates a "simple" `BatchOp` from an `AbstractOperator`. The `BatchOp` can be used to apply the operator to an array over
@@ -35,7 +35,7 @@ the selected batch dimensions.
    The symbols can be `:b` for batch dimensions or `:_` for dimensions on which the operator acts. If a pair is provided, the first tuple specifies
    the domain mask and the second tuple specifies the codomain mask. When omitted, the batch dimensions are assumed to proceed the operator's
    domain and codomain dimensions.
-- `threaded::Bool`: If `true`, the operator will execute in parallel over the batch dimensions. Default is `nthreads() > 1`.
+- `threaded`: `false` disables batch-level threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
 
 # Examples
 ```jldoctest
@@ -68,7 +68,7 @@ julia> batch_op = BatchOp(op, (2, 6), (:b, :_, :_, :_, :b) => (:b, :_, :b, :_))
 function BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size;
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     )
     batch_size = ensure_batch_size_is_tuple(batch_size)
     N = length(batch_size)
@@ -85,7 +85,7 @@ function BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size,
         batch_dim_mask::NTuple{M, Symbol};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {M}
     batch_size = ensure_batch_size_is_tuple(batch_size)
     N = length(batch_size)
@@ -99,7 +99,7 @@ function BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size,
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {M1, M2}
     batch_size = ensure_batch_size_is_tuple(batch_size)
     N = length(batch_size)
@@ -115,7 +115,7 @@ function create_BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::NTuple{M, Bool};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {N, M}
     @assert ndims(operator, 1) == ndims(operator, 2) "Operator must be square or batch_dim_mask must be a pair of domain and codomain masks"
     return create_BatchOp(operator, batch_size, batch_dim_mask => batch_dim_mask; threaded)
@@ -125,7 +125,7 @@ function create_BatchOp(
         operator::AbstractOperators.AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::Pair{NTuple{M1, Bool}, NTuple{M2, Bool}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {N, M1, M2}
     return create_BatchOp(
         operator, calculate_shapes(operator, batch_size, batch_dim_mask)...; threaded
@@ -138,23 +138,22 @@ function create_BatchOp(
         domain_batch_dim_mask::NTuple{N2, Bool},
         codomain_size::NTuple{M, Int},
         codomain_batch_dim_mask::NTuple{M2, Bool};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
     ) where {N, N2, M, M2}
     @assert M == M2 "Domain size and domain batch dimension mask must have the same length"
     @assert N == N2 "Codomain size and codomain batch dimension mask must have the same length"
     batch_size, dType, cdType = prepare_batch_op(
         operator, domain_size, domain_batch_dim_mask, codomain_size, codomain_batch_dim_mask
     )
-    opType = typeof(operator)
-    threaded = threaded && _should_thread(operator)
-    return if threaded && nthreads() > 1
+    threaded = _resolve_threaded(() -> _should_thread(operator), threaded)
+    return if threaded
         batch_length = prod(batch_size)
         operators = tuple(
-            [
-                i == 1 ? operator : AbstractOperators.copy_operator(operator) for
-                    i in 1:min(nthreads(), batch_length)
-            ]...,
+            _per_thread_operators(operator, min(nthreads(), batch_length))...,
         )
+        # `opType` must come from the *stored* operators, not from the argument: threading
+        # is a type parameter, so switching it off for nesting safety changes the type.
+        opType = typeof(operators[1])
         C = length(operators)
         SimpleBatchOpMultiThreaded{
             dType, cdType, domain_batch_dim_mask, codomain_batch_dim_mask, opType, N, M, C,
@@ -164,7 +163,8 @@ function create_BatchOp(
     else
         B = length(batch_size)
         SimpleBatchOpSingleThreaded{
-            dType, cdType, domain_batch_dim_mask, codomain_batch_dim_mask, opType, N, M, B,
+            dType, cdType, domain_batch_dim_mask, codomain_batch_dim_mask, typeof(operator),
+            N, M, B,
         }(
             operator, domain_size, codomain_size, batch_size
         )
@@ -198,7 +198,7 @@ end
 
 function mul!(out::AbstractArray, op::SimpleBatchOpMultiThreaded, inp::AbstractArray)
     check(out, op, inp)
-    @restrict_threading @threads for j in 1:length(op.operator)
+    @budgeted_threads for j in 1:length(op.operator)
         @inbounds for i in j:length(op.operator):length(op.batch_indices)
             idx = op.batch_indices[i]
             mul!(
@@ -218,7 +218,7 @@ function mul!(
     )
     check(out, op, inp)
     op = op.A
-    @restrict_threading @threads for j in 1:length(op.operator)
+    @budgeted_threads for j in 1:length(op.operator)
         @inbounds for i in j:length(op.operator):length(op.batch_indices)
             idx = op.batch_indices[i]
             mul!(
@@ -232,6 +232,45 @@ function mul!(
 end
 
 # Properties
+
+# `threaded` on a batch operator refers to the *batch loop*, which is encoded via the
+# single/multi struct type rather than a `Th` type parameter.
+is_threaded(::SimpleBatchOpSingleThreaded) = false
+is_threaded(::SimpleBatchOpMultiThreaded) = true
+
+_wrapped_operator(L::SimpleBatchOpSingleThreaded) = L.operator
+_wrapped_operator(L::SimpleBatchOpMultiThreaded) = L.operator[1]
+
+# Structural equality. Without this a copy compares by identity and therefore never equals
+# its original.
+function Base.:(==)(L1::SimpleBatchOp, L2::SimpleBatchOp)
+    return _wrapped_operator(L1) == _wrapped_operator(L2) &&
+        L1.domain_size == L2.domain_size &&
+        L1.codomain_size == L2.codomain_size &&
+        _batch_size(L1) == _batch_size(L2)
+end
+
+_batch_size(L::SimpleBatchOpSingleThreaded) = L.batch_size
+_batch_size(L::SimpleBatchOpMultiThreaded) = size(L.batch_indices)
+
+function _copy_operator_impl(
+        op::SimpleBatchOp; storage_type = nothing, threaded = nothing
+    )
+    inner = _wrapped_operator(op)
+    # The wrapped operator is always copied (never shared) so that scratch buffers are not
+    # aliased between `op` and the returned copy; only the storage request is forwarded, since
+    # threading is decided by `create_BatchOp`, which forces it off for nesting safety.
+    new_inner = copy_operator(inner; storage_type)
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    return create_BatchOp(
+        new_inner,
+        op.domain_size,
+        get_domain_batch_dim_mask(typeof(op)),
+        op.codomain_size,
+        get_codomain_batch_dim_mask(typeof(op));
+        threaded = new_threaded,
+    )
+end
 
 fun_name(L::SimpleBatchOpSingleThreaded) = "⟳" * fun_name(L.operator)
 fun_name(L::SimpleBatchOpMultiThreaded) = "⟳" * fun_name(L.operator[1])
@@ -347,8 +386,11 @@ function get_normal_op(
         L::SimpleBatchOpMultiThreaded{dT, cT, dM, cM, opT, N, M, C}
     ) where {dT, cT, dM, cM, opT, N, M, C}
     new_op = get_normal_op(L.operator[1])
-    new_ops = tuple([i == 1 ? new_op : AbstractOperators.copy_operator(new_op) for i in 1:length(L.operator)]...)
-    return SimpleBatchOpMultiThreaded{dT, cT, dM, dM, typeof(new_op), N, N, C}(
+    new_ops = tuple(_per_thread_operators(new_op, length(L.operator))...)
+    # `opT` must come from the *stored* operators, not `new_op`: `_per_thread_operators`
+    # forces threading off on each of them, which is a different type whenever `new_op`
+    # is threaded (see the matching convention in `create_BatchOp`).
+    return SimpleBatchOpMultiThreaded{dT, cT, dM, dM, typeof(new_ops[1]), N, N, C}(
         new_ops, L.domain_size, L.domain_size, L.batch_indices
     )
 end

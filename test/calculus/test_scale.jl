@@ -317,7 +317,7 @@ end
     @test S * x ≈ α * (A * x)
 end
 
-@testitem "Scale (GPU)" tags = [:gpu, :calculus, :Scale] setup = [TestUtils] begin
+@testitem "Scale (GPU)" tags = [:gpu, :calculus, :Scale] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -353,4 +353,32 @@ end
     result3 = Scale(1.5 + 0.5im, adj_B)
     xc = randn(ComplexF64, n)
     @test result3 * xc ≈ (1.5 + 0.5im) * (adj_B * xc)
+end
+
+@testitem "Scale: threading traits and copy_operator" tags = [:calculus, :Scale] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    using RecursiveArrayTools: ArrayPartition
+    Random.seed!(1)
+
+    n = 4096
+    threaded_leaf = Sin(Float64, (n,); threaded = true)
+    serial_leaf = Cos(Float64, (n,); threaded = false)
+    @test is_threaded(Scale(2.0, threaded_leaf; threaded = false)) == true
+    @test is_threaded(Scale(2.0, serial_leaf; threaded = false)) == false
+    @test supports_threading(Scale(2.0, serial_leaf)) == true
+
+    S = Scale(2.0, serial_leaf)
+    S2 = copy_operator(S; threaded = true)
+    @test S2 isa AbstractOperators.Scale
+    x = randn(n)
+    @test S * x ≈ S2 * x
+
+    # Multi-codomain operator: `codomain_type`/`codomain_array_type` come back as a Tuple /
+    # ArrayPartition, exercised through `codomain_type_for_policy`/`codomain_array_type_for_policy`.
+    m1, m2, k = 3, 5, 2
+    D = DCAT(MatrixOp(randn(m1, k)), MatrixOp(randn(m2, k)))
+    S_multi = Scale(2.0, D)
+    @test supports_threading(S_multi) == true
+    y = ArrayPartition(randn(k), randn(k))
+    @test collect(S_multi * y) ≈ 2.0 .* collect(D * y)
 end

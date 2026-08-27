@@ -30,7 +30,7 @@ k-space and back.
   second dimension must match the shape of the dcf array. The element type of the trajectory must
   match the element type of the dcf array. This argument is optional and defaults to `nothing`.
   If `nothing` is passed, the dcf will be estimated using the sample density compensation method [2].
-- `threaded::Bool=true`: Whether to use threading when applying the operator. Defaults to `true`.
+- `threaded::Bool=true`: `false` disables threading outright; `true` (the default) enables it subject to the threading policy, which also requires more than one Julia thread and CPU storage. Fixed at construction, since the NFFT plan is built for a thread count.
 - `dcf_estimation_iterations::Union{Nothing,Int}=nothing`: The number of iterations to use when
   estimating the dcf. Defaults to `20`. This argument is only used if `dcf` is not provided.
 - `dcf_correction_function::Function=identity`: A correction function to apply to the estimated dcf.
@@ -73,11 +73,14 @@ function NFFTOp(
     ) where {T, D}
     check_traj_and_dcf(trajectory, dcf, D)
     arr_wrapper = _array_wrapper_type(array_type)
-    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded; kwargs...)
+    # Resolved before planning: the plan itself is built for this thread count, so the
+    # policy has to have had its say by now (a `nothing` reaching `create_plan` would not
+    # even dispatch).
+    threaded_flag = _nfft_threaded(threaded, arr_wrapper)
+    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded_flag; kwargs...)
     ksp_shape = size(trajectory)[2:end]
     ksp_buffer = _nfft_adapt(arr_wrapper, zeros(complex(T), ksp_shape...))
     adapted_dcf = _nfft_adapt(arr_wrapper, collect(dcf))
-    threaded_flag = threaded && arr_wrapper === Array
     return NFFTOp{T, D, typeof(plan), typeof(ksp_buffer), typeof(adapted_dcf)}(plan, ksp_buffer, adapted_dcf, threaded_flag)
 end
 
@@ -92,14 +95,68 @@ function NFFTOp(
     ) where {T, D}
     check_traj(trajectory, D)
     arr_wrapper = _array_wrapper_type(array_type)
-    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded; kwargs...)
+    # Resolved before planning: the plan itself is built for this thread count, so the
+    # policy has to have had its say by now (a `nothing` reaching `create_plan` would not
+    # even dispatch).
+    threaded_flag = _nfft_threaded(threaded, arr_wrapper)
+    plan = _nfft_plan(arr_wrapper, trajectory, image_size, threaded_flag; kwargs...)
     ksp_shape = size(trajectory)[2:end]
     ksp_buffer = _nfft_adapt(arr_wrapper, zeros(complex(T), ksp_shape...))
     raw_dcf = NFFTTools.sdc(plan; iters = dcf_estimation_iterations)
     dcf_cpu = dcf_correction_function(reshape(raw_dcf, ksp_shape))
     adapted_dcf = _nfft_adapt(arr_wrapper, collect(dcf_cpu))
-    threaded_flag = threaded && arr_wrapper === Array
     return NFFTOp{T, D, typeof(plan), typeof(ksp_buffer), typeof(adapted_dcf)}(plan, ksp_buffer, adapted_dcf, threaded_flag)
+end
+
+"""
+Minimum Julia thread count before NFFT's threaded path is worth entering.
+
+Unlike every other operator in this package, NFFT's gate is on the *thread count* rather
+than on the workload size, because that is what the measurement says decides it.
+
+PROVENANCE: measured. AMD EPYC 7352 (shared), Julia 1.12.7, ComplexF64, 2D trajectory with
+`nsamp = s`, `nprof = s ÷ 2`, one process per thread count. Ratios are serial/threaded, so
+above 1 means threading wins:
+
+| threads | 48^2 fwd / normal | 96^2 fwd / normal | 192^2 fwd / normal |
+|---|---|---|---|
+| 2 | 0.59 / 0.85 | 0.78 / 0.99 | 0.91 / 0.90 |
+| 3 | 0.87 / 0.81 | 1.03 / 1.07 | 2.29 / 1.41 |
+| 4 | 0.87 / 0.96 | 1.93 / 1.56 | 1.43 / 2.21 |
+
+At two workers threading is a loss at *every* size measured, up to a 5 ms `mul!` -- growing
+the workload does not rescue it, which is why a size threshold is not the lever this needs.
+From three workers up the wins appear and grow with size, so three is the gate.
+
+The 48^2 column stays at or below 1.0 at every thread count and is the obvious candidate for
+an additional size gate. It is deliberately *not* added: a repeat of the four-thread run put
+48^2 at 1.20 / 1.18 instead, so on this shared machine that column is inside the noise and a
+threshold fitted to it would not be measurement, only curve-fitting. The two-thread row, by
+contrast, reproduces. Adjoint ratios are omitted from the table for the same reason -- they
+ranged from 0.57 to 1.10 across repeats of the same configuration.
+
+The threaded path also allocates 4-12 KiB per `mul!` (FFTW's Julia threading backend spawns
+tasks per execution) against 112 B for the serial one, so below the gate it was paying that
+for a slowdown. Leaving the gate at `nthreads() > 1` cost 0.63x on the two-thread
+`normaloperators/NFFTOp/mul` benchmark with an 18x allocation increase.
+"""
+const MIN_THREADS_FOR_NFFT = 3
+
+"""
+	_nfft_threaded(threaded, arr_wrapper) -> Bool
+
+Resolve NFFT's `threaded` keyword under the package-wide rule: `false` vetoes, `true`
+enables subject to policy (see `AbstractOperators._resolve_threaded`).
+
+The policy here is the CPU check plus [`MIN_THREADS_FOR_NFFT`](@ref). There is deliberately
+**no size gate**: the transform is planned for a specific trajectory rather than a plain
+array length, so there is no single element count to threshold on -- and the sweep behind
+`MIN_THREADS_FOR_NFFT` shows size is not what decides it anyway.
+"""
+function _nfft_threaded(threaded::Bool, arr_wrapper)
+    return _resolve_threaded(threaded) do
+        Threads.nthreads() >= MIN_THREADS_FOR_NFFT && arr_wrapper === Array
+    end
 end
 
 # Default (CPU) implementations — overridden by NFFTOperatorsGPUArraysExt for GPU types
@@ -108,30 +165,25 @@ function _nfft_plan(::Type{Array}, trajectory, image_size, threaded; kwargs...)
 end
 _nfft_adapt(::Type{Array}, arr::AbstractArray) = collect(arr)
 
-function set_nfft_threading_expr(threading_state_expr, thread_count_expr, body_expr)
-    return quote
-        local prev_nfft_threading_state = NFFT._use_threads[]
-        NFFT._use_threads[] = $threading_state_expr
-        local res = $(set_thread_counts_expr(thread_count_expr, body_expr))
-        NFFT._use_threads[] = prev_nfft_threading_state
-        res
-    end
-end
+"""
+    with_nfft_threading(f, threaded::Bool)
 
-macro enable_nfft_threading(expr)
-    return set_nfft_threading_expr(true, nthreads(), expr)
-end
+Run `f()` with NFFT's, BLAS's and FFTW's threading turned on or off together.
 
-macro disable_nfft_threading(expr)
-    return set_nfft_threading_expr(false, 1, expr)
-end
+`threaded = true` actively *enables* them rather than merely leaving them alone, because
+`NFFT._use_threads[]` defaults to off and is what the NFFT plan consults. Both directions
+go through `NestedThreading`, so the request is clamped by any outer budget: an operator
+constructed with `threaded = true` that ends up being called from inside a saturated batch
+loop stays single-threaded, and the save/restore bookkeeping is refcounted rather than
+per-call.
+"""
+with_nfft_threading(f::F, threaded::Bool) where {F} =
+    threaded ? with_full_threads(f) : with_restricted_threads(f)
 
 function mul!(ksp::AbstractArray, op::NFFTOp, img::AbstractArray)
     AbstractOperators.check(ksp, op, img)
-    if op.threaded
-        @enable_nfft_threading mul!(vec(ksp), op.plan, img)
-    else
-        @disable_nfft_threading mul!(vec(ksp), op.plan, img)
+    with_nfft_threading(op.threaded) do
+        mul!(vec(ksp), op.plan, img)
     end
     return ksp
 end
@@ -145,10 +197,11 @@ function mul!(
     op = adjop.A
     if op.threaded
         @.. thread = true op.ksp_buffer = ksp * op.dcf
-        @enable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
     else
         @.. op.ksp_buffer = ksp * op.dcf
-        @disable_nfft_threading mul!(img, op.plan', vec(op.ksp_buffer))
+    end
+    with_nfft_threading(op.threaded) do
+        mul!(img, op.plan', vec(op.ksp_buffer))
     end
     return img
 end
@@ -159,8 +212,8 @@ size(L::NFFTOp) = size(L.ksp_buffer), NFFT.size_in(L.plan)
 fun_name(::NFFTOp) = "𝒩"
 domain_type(::NFFTOp{T}) where {T} = complex(T)
 codomain_type(::NFFTOp{T}) where {T} = complex(T)
-domain_array_type(op::NFFTOp) = typeof(op.plan.tmpVec)
-codomain_array_type(op::NFFTOp{T, D, P, K}) where {T, D, P, K} = K
+domain_array_type(op::NFFTOp) = AbstractOperators._array_wrapper_type(typeof(op.plan.tmpVec)){domain_type(op)}
+codomain_array_type(op::NFFTOp{T, D, P, K}) where {T, D, P, K} = AbstractOperators._array_wrapper_type(K){codomain_type(op)}
 
 # Utility
 
@@ -177,10 +230,8 @@ end
 
 function create_plan(trajectory, image_size, threaded; kwargs...)
     traj = reshape(trajectory, size(trajectory, 1), :)
-    return if threaded
-        return @enable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
-    else
-        return @disable_nfft_threading NFFTPlan(traj, image_size; kwargs...)
+    return with_nfft_threading(threaded) do
+        NFFTPlan(traj, image_size; kwargs...)
     end
 end
 
@@ -262,4 +313,38 @@ function NFFTPlan(
         windowTensor,
         B,
     )
+end
+
+# ─── Threading ────────────────────────────────────────────────────────────────
+#
+# NFFT is a *counted* pool in NestedThreading: the plan itself is built for a thread count
+# and `mul!` runs under `with_full_threads`/`with_restricted_threads` (see `_nfft_run`).
+# So `threaded` here selects a plan-time thread count, not a Julia loop, and it cannot be
+# flipped after construction -- switching it rebuilds the plan.
+is_threaded(op::NFFTOp) = op.threaded
+supports_threading(::NFFTOp) = true
+
+# Not thread-safe: `ksp_buffer` is operator-owned scratch written by every `mul!`.
+is_thread_safe(::NFFTOp) = false
+
+function _copy_operator_impl(
+        op::NFFTOp{T, D, P, K, DC}; storage_type = nothing, threaded = nothing
+    ) where {T, D, P, K, DC}
+    new_threaded = threaded === nothing ? op.threaded : threaded
+    # The plan is immutable and thread-count-specific: it can be shared only when neither
+    # the storage backend nor the thread count changes. Otherwise the whole operator has to
+    # be replanned, which requires the trajectory back -- this operator does not retain it
+    # as a separate field, but the plan itself does (`plan.k`, flattened to the 2D form
+    # `create_plan` already reshapes every trajectory into), so it can be recovered from
+    # there rather than genuinely refusing the request.
+    if storage_type === nothing && new_threaded == op.threaded
+        # Same constraints: share the (immutable) plan and dcf, give the copy its own scratch.
+        return NFFTOp{T, D, P, K, DC}(op.plan, similar(op.ksp_buffer), op.dcf, op.threaded)
+    end
+    image_size = NFFT.size_in(op.plan)
+    ksp_shape = size(op.dcf)
+    trajectory = reshape(collect(op.plan.k), D, ksp_shape...)
+    dcf = collect(op.dcf)
+    new_array_type = storage_type === nothing ? _array_wrapper_type(K){T} : storage_type{T}
+    return NFFTOp(image_size, trajectory, dcf; threaded = new_threaded, array_type = new_array_type)
 end

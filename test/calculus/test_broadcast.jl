@@ -159,7 +159,7 @@ end
     end
 end
 
-@testitem "BroadCast (GPU)" tags = [:gpu, :calculus, :BroadCast] setup = [TestUtils] begin
+@testitem "BroadCast (GPU)" tags = [:gpu, :calculus, :BroadCast] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -242,4 +242,59 @@ end
     mul!(y3, opWrapped, x2)
     mul!(y4, opWrapped2, x2)
     @test y3 ≈ y4
+end
+
+@testitem "BroadCast: threading traits" tags = [:calculus, :BroadCast] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(9)
+
+    # NoOperatorBroadCast: `is_threaded` reflects its own `Th` type parameter directly.
+    m = 1000
+    dim_out_big = (m, 300)   # m*300 = 300000 > THRESHOLD_MEMORY_BOUND (2^18)
+    opNo_big = BroadCast(Eye(m), dim_out_big; threaded = true)
+    @test supports_threading(opNo_big) == true
+    if Threads.nthreads() > 1
+        @test is_threaded(opNo_big) == true
+    end
+    opNo_small = BroadCast(Eye(4), (4, 2); threaded = true)
+    @test is_threaded(opNo_small) == false
+
+    # OperatorBroadCast: `is_threaded` is true either from its own `Th` or from a threaded
+    # child, even when the broadcast's own size is below its threshold.
+    n = 2000
+    threaded_child = Sin(Float64, (n,); threaded = true)   # n > transcendental threshold
+    dim_out_small = (n, 2)   # 4000 elements, below THRESHOLD_MEMORY_BOUND
+    opWrapped_child = BroadCast(threaded_child, dim_out_small; threaded = false)
+    @test supports_threading(opWrapped_child) == true
+    if Threads.nthreads() > 1
+        @test is_threaded(opWrapped_child) == true
+    end
+
+    serial_child = Cos(Float64, (n,); threaded = false)
+    opWrapped_serial = BroadCast(serial_child, dim_out_small; threaded = false)
+    @test is_threaded(opWrapped_serial) == false
+end
+
+@testitem "OperatorBroadCast: threaded construction allocates per-thread state" tags = [
+    :calculus, :BroadCast,
+] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(3)
+
+    if Threads.nthreads() > 1
+        # dim_out sized above THRESHOLD_MEMORY_BOUND (2^18) so `threaded = true` is actually
+        # granted, exercising OperatorBroadCast's threaded-construction branch (per-thread
+        # domain buffers and per-thread operator copies), not just the serial one.
+        m, n = 8, 4
+        dim_out = (m, 40000)   # 320000 > 2^18
+        A = MatrixOp(randn(m, n))
+        opR = BroadCast(A, dim_out; threaded = true)
+        @test is_threaded(opR) == true
+        x = randn(n)
+        y = opR * x
+        @test y[:, 1] ≈ A * x
+        y_test = randn(dim_out)
+        x_back = opR' * y_test
+        @test x_back ≈ A' * dropdims(sum(y_test, dims = 2), dims = 2)
+    end
 end

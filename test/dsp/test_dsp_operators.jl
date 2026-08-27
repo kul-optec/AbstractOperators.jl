@@ -233,7 +233,7 @@ end
     @test is_full_column_rank(op) == true
 end
 
-@testitem "Conv (GPU)" tags = [:gpu, :dsp, :Conv] setup = [TestUtils] begin
+@testitem "Conv (GPU)" tags = [:gpu, :dsp, :Conv] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
         Random.seed!(0)
@@ -262,7 +262,7 @@ end
     end
 end
 
-@testitem "Xcorr (GPU)" tags = [:gpu, :dsp, :Xcorr] setup = [TestUtils] begin
+@testitem "Xcorr (GPU)" tags = [:gpu, :dsp, :Xcorr] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
         Random.seed!(0)
@@ -292,7 +292,7 @@ end
     end
 end
 
-@testitem "Filt (GPU, FIR)" tags = [:gpu, :dsp, :Filt] setup = [TestUtils] begin
+@testitem "Filt (GPU, FIR)" tags = [:gpu, :dsp, :Filt] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
         Random.seed!(42)
@@ -320,7 +320,7 @@ end
     end
 end
 
-@testitem "MIMOFilt (GPU, FIR)" tags = [:gpu, :dsp, :MIMOFilt] setup = [TestUtils] begin
+@testitem "MIMOFilt (GPU, FIR)" tags = [:gpu, :dsp, :MIMOFilt] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
         Random.seed!(7)
@@ -361,4 +361,38 @@ end
     z1 = op' * y1
     @test length(z1) == n
     @test z1 ≈ op' * (op * x1)
+end
+
+@testitem "Conv/Xcorr: copy_operator honours storage_type and threaded" tags = [
+    :dsp, :Conv, :Xcorr,
+] setup = [TestUtils] begin
+    using DSPOperators, AbstractOperators, LinearAlgebra, Random
+    Random.seed!(3)
+
+    n, m = 5, 6
+    h = randn(m)
+    x = randn(n)
+
+    conv_op = Conv(Float64, (n,), h)
+    y_conv = conv_op * x
+    conv_copy = copy_operator(conv_op; storage_type = Array{Float64})
+    @test conv_copy isa Conv
+    @test conv_copy.h !== conv_op.h
+    @test conv_copy.h == conv_op.h
+    @test conv_copy * x ≈ y_conv
+
+    # storage_type and threaded together
+    conv_copy2 = copy_operator(conv_op; storage_type = Array{Float64}, threaded = true)
+    @test conv_copy2 * x ≈ y_conv
+
+    xcorr_op = Xcorr(Float64, (n,), h)
+    y_xcorr = xcorr_op * x
+    xcorr_copy = copy_operator(xcorr_op; storage_type = Array{Float64})
+    @test xcorr_copy isa Xcorr
+    @test xcorr_copy.h !== xcorr_op.h
+    @test xcorr_copy.h == xcorr_op.h
+    @test xcorr_copy * x ≈ y_xcorr
+
+    xcorr_copy2 = copy_operator(xcorr_op; storage_type = Array{Float64}, threaded = true)
+    @test xcorr_copy2 * x ≈ y_xcorr
 end

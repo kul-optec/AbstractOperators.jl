@@ -10,19 +10,26 @@ const FILTER_TAGS = map(p -> Symbol(p[2:end]), filter(x -> startswith(x, ":"), F
 const FILTER_NAMES = filter(x -> !startswith(x, ":"), FILTER_PARTS)
 
 const VERB = get(ENV, "ABSTRACTOPERATORS_TEST_VERBOSE", "false") == "true"
-const FILTER = if length(FILTER_PARTS) > 0
-    ti -> begin
-        run_item = any(t -> t in ti.tags, FILTER_TAGS) || any(n -> n == ti.name, FILTER_NAMES)
-        if VERB && run_item
-            println("Running @testitem: ", ti.name)
-        end
-        run_item
-    end
-else
-    ti -> begin
-        VERB && println("Running @testitem: ", ti.name)
+
+# Whether any selected testitem needs the GPU environment. TestItemRunner applies the
+# filter to every discovered testitem before it evaluates the first setup module, so this
+# is fully determined by the time `GpuEnvSetup` (test/gpu_env_setup.jl) reads it.
+# Computing it from the accepted items — rather than from the filter string — is what makes
+# it exact: GPU testitems also carry their category tags, so e.g. a `:linearoperator` run
+# selects `Eye (GPU)` too.
+ENV["ABSTRACTOPERATORS_TEST_GPU"] = "false"
+
+function select_testitem(ti)
+    run_item = if isempty(FILTER_PARTS)
         true
+    else
+        any(t -> t in ti.tags, FILTER_TAGS) || any(n -> n == ti.name, FILTER_NAMES)
     end
+    if run_item
+        :gpu in ti.tags && (ENV["ABSTRACTOPERATORS_TEST_GPU"] = "true")
+        VERB && println("Running @testitem: ", ti.name)
+    end
+    return run_item
 end
 
-@run_package_tests filter = FILTER
+@run_package_tests filter = select_testitem

@@ -219,7 +219,7 @@ end
     @test H_single === A
 end
 
-@testitem "HCAT (GPU)" tags = [:gpu, :calculus, :HCAT] setup = [TestUtils] begin
+@testitem "HCAT (GPU)" tags = [:gpu, :calculus, :HCAT] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -301,4 +301,71 @@ end
     # Verify independence: forward into opH2 alone
     x2 = ArrayPartition(randn(n1), randn(n2))
     @test collect(opH2 * x2) ≈ collect(opH * x2)
+end
+
+@testitem "HCAT: multi-element tuple-idxs mul!/adjoint/permute, serial and threaded" tags = [
+    :calculus, :HCAT,
+] setup = [TestUtils] begin
+    using Random, AbstractOperators, RecursiveArrayTools
+    Random.seed!(6)
+
+    # Build an HCAT whose sub-operators are a mix of single-domain and a genuinely
+    # multi-domain (non-HCAT) operator, so one entry of `H.idxs` is a tuple rather than an
+    # Integer -- the `Pi <: Integer` false branch in every generated function below.
+    # `Compose(cheap_op, HCAT(...))` keeps the inner HCAT from being auto-flattened by the
+    # outer constructor while staying cheap (no dense matrices) so the size can be pushed
+    # above HCAT's block-threading threshold without blowing up memory. The wrapper must be
+    # non-diagonal: `Compose(DiagOp, HCAT(...))` gets simplified straight back into a flat
+    # HCAT by the package's combination rules ("diagonal * HCAT always simplifies to HCAT").
+    # `GetIndex` with a same-length index range is not a usable alternative here either --
+    # its constructor detects `dim_out == dim_in` and silently returns `Eye` regardless of
+    # index order, which is diagonal too. FiniteDiff is cheap and genuinely non-diagonal, at
+    # the cost of shrinking the domain by one element, hence the mixed slot sizes below.
+    function build_hcat(n)
+        inner = HCAT(DiagOp(randn(n)), DiagOp(randn(n)))
+        multi = Compose(FiniteDiff(Float64, (n,)), inner)   # domain (n,n), codomain (n-1,)
+        return HCAT(DiagOp(randn(n - 1)), DiagOp(randn(n - 1)), DiagOp(randn(n - 1)), multi)
+    end
+
+    # Small, serial case. `test_op` checks in-place-vs-allocating consistency and the
+    # forward/adjoint dot-product identity, so it is a real correctness check, not just a
+    # smoke test.
+    n = 5
+    H = build_hcat(n)
+    @test H.idxs == (1, 2, 3, (4, 5))   # confirms the tuple-idxs (natural) branch is in play
+    io = IOBuffer(); show(io, H); s = String(take!(io))
+    @test occursin("HCAT", s)   # fun_name's N != 2 branch
+
+    x = ArrayPartition(randn(n - 1), randn(n - 1), randn(n - 1), randn(n), randn(n))
+    r = randn(n - 1)
+    test_op(H, x, r, false)
+
+    # `permute` reindexes over the *flattened* domain slots (length 5 here: 3 singles + the
+    # 2-slot tuple entry), not over the 4 top-level sub-operators -- a length-4 permutation
+    # vector raises a `DimensionMismatch` from `invpermute!` rather than being accepted.
+    # Swapping only the two slots *within* the tuple entry keeps every slot's size matched
+    # to its new position (both are size `n`) while still making the resulting `idxs`
+    # non-natural, exercising the indexed branch.
+    p = [1, 2, 3, 5, 4]
+    H_perm = AbstractOperators.permute(H, p)
+    @test !AbstractOperators._hcat_has_natural_idxs(H_perm)
+    test_op(H_perm, x, r, false)
+
+    if Threads.nthreads() > 1
+        # Above HCAT's per-block threshold (2^17) with >= MIN_BLOCKS_FOR_PARALLEL (4) blocks,
+        # so the threaded adjoint (`_hcat_block_adj!`) actually runs, in both its natural and
+        # indexed multi-element forms.
+        big_n = 1 << 17
+        H_big = build_hcat(big_n)
+        H_big = AbstractOperators.adapt_operator(H_big; threaded = true)
+        @test AbstractOperators.is_block_threaded(H_big) == true
+        xb = ArrayPartition(randn(big_n - 1), randn(big_n - 1), randn(big_n - 1), randn(big_n), randn(big_n))
+        rb = randn(big_n - 1)
+        test_op(H_big, xb, rb, false)
+
+        H_big_perm = AbstractOperators.permute(H_big, p)
+        @test AbstractOperators.is_block_threaded(H_big_perm) == true
+        @test !AbstractOperators._hcat_has_natural_idxs(H_big_perm)
+        test_op(H_big_perm, xb, rb, false)
+    end
 end

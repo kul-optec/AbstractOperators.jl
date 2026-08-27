@@ -31,8 +31,8 @@ function DiagOp(
     ) where {N, T <: AbstractArray}
     size(d) != domain_dim && error("dimension of d must coincide with domain_dim")
     C = promote_type(eltype(d), D)
-    threaded = threaded && _should_thread(d)
-    B = threaded ? FastBroadcast.True() : FastBroadcast.False()
+    dS0 = _normalize_array_type(array_type, D)
+    B = _fbthread(_elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0))
     dS = _normalize_array_type(array_type, D)
     cS = _normalize_array_type(array_type, C)
     return DiagOp{B, D, C, N, dS, cS, T}(domain_dim, d)
@@ -44,8 +44,9 @@ function DiagOp(
         threaded::Bool = true, array_type::Type = Array{D},
     ) where {N, T <: Number}
     C = promote_type(eltype(d), D)
-    threaded = threaded && _should_thread(d)
-    B = threaded ? FastBroadcast.True() : FastBroadcast.False()
+    dS0 = _normalize_array_type(array_type, D)
+    # Scalar diagonal: the work still scales with the *domain*, not with `d`.
+    B = _fbthread(_elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0))
     dS = _normalize_array_type(array_type, D)
     cS = _normalize_array_type(array_type, C)
     return DiagOp{B, D, C, N, dS, cS, T}(domain_dim, d)
@@ -57,8 +58,8 @@ function DiagOp(
         threaded::Bool = true, array_type::Type = _array_wrapper(d),
     ) where {N, T <: Number}
     C = eltype(d)
-    threaded = threaded && _should_thread(d)
-    B = threaded ? FastBroadcast.True() : FastBroadcast.False()
+    S0 = _normalize_array_type(array_type, T)
+    B = _fbthread(_elementwise_threaded(DiagOp, threaded, T, size(d), S0))
     S = _normalize_array_type(array_type, T)
     return DiagOp{B, eltype(d), C, N, S, S, typeof(d)}(size(d), d)
 end
@@ -113,9 +114,19 @@ is_thread_safe(::DiagOp) = true
 
 function _copy_operator_impl(op::DiagOp{B}; storage_type = nothing, threaded = nothing) where {B}
     new_threaded = threaded === nothing ? (B == FastBroadcast.True()) : threaded
-    new_d = storage_type === nothing ? op.d : _convert_buffer(op.d, storage_type)
+    # `d` is the operator's actual diagonal data, not a scratch buffer: a storage-type
+    # switch must carry its values over, so this goes through `copyto!` rather than
+    # `_convert_buffer` (which allocates uninitialized memory for buffers that `mul!`
+    # overwrites on the next call anyway).
+    new_d = _copy_diag(op.d, storage_type)
     new_at = storage_type === nothing ? _array_wrapper(op.d) : storage_type
     return DiagOp(domain_type(op), op.dim_in, new_d; threaded = new_threaded, array_type = new_at)
+end
+
+_copy_diag(d::Number, ::Any) = d
+_copy_diag(d::AbstractArray, ::Nothing) = d
+function _copy_diag(d::AbstractArray, storage_type::Type{<:AbstractArray})
+    return copyto!(similar(storage_type{eltype(d)}, size(d)), d)
 end
 
 size(L::DiagOp) = (L.dim_in, L.dim_in)
@@ -141,3 +152,10 @@ end
 
 has_fast_opnorm(::DiagOp) = true
 LinearAlgebra.opnorm(L::DiagOp) = maximum(abs, L.d)
+
+# DiagOp stores FastBroadcast's singleton flag rather than a Bool; bridge it to the trait.
+is_threaded(::DiagOp{B}) where {B} = _fbbool(B)
+# PROVENANCE: measured per-operator, benchmark/operator_thresholds.jl.
+# Crossover of this operator's real `mul!`: Float64 2^17, Float32 2^16.
+threading_threshold(::Type{<:DiagOp}) = 2^17
+supports_threading(::DiagOp) = true

@@ -37,6 +37,34 @@ end
     end
 end
 
+@testitem "WaveletOp: copy_operator" tags = [:wavelet, :WaveletOp] setup = [TestUtils] begin
+    using Wavelets, LinearAlgebra, Random, AbstractOperators, WaveletOperators
+    Random.seed!(6)
+
+    n = 8
+    op = WaveletOp(Float64, wavelet(WT.db4), (n,))
+
+    # No constraint: reproduces the operator exactly.
+    op2 = copy_operator(op)
+    @test op2 isa WaveletOp
+    @test typeof(op2) === typeof(op)
+    x = randn(n)
+    y1, y2 = zeros(n), zeros(n)
+    mul!(y1, op, x)
+    mul!(y2, op2, x)
+    @test y1 ≈ y2
+
+    # `threaded` is accepted (vacuously, since WaveletOp never has a threaded path).
+    op3 = copy_operator(op; threaded = false)
+    @test domain_array_type(op3) <: Array{Float64}
+
+    # `storage_type` rebuilds the storage-tracking type parameter.
+    op4 = copy_operator(op; storage_type = Array{Float64})
+    @test op4 isa WaveletOp
+    @test domain_array_type(op4) <: Array{Float64}
+    @test codomain_array_type(op4) <: Array{Float64}
+end
+
 @testitem "WaveletOp constructor errors" tags = [:wavelet, :WaveletOp] setup = [TestUtils] begin
     using Wavelets, WaveletOperators
     wt = wavelet(WT.db4)

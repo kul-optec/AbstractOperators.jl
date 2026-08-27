@@ -1,0 +1,494 @@
+export is_threaded, adapt_operator, supports_threading
+
+# ─── Thresholds ───────────────────────────────────────────────────────────────
+#
+# There is deliberately no single global constant: the size at which threading starts to
+# pay depends on how much work each element costs.
+#
+# The thresholds come in two layers:
+#
+#   1. The cost-class constants below (`THRESHOLD_*`). These are the *defaults* and the
+#      documentation of each class's shape. An operator that has not been swept
+#      individually falls back to one of them.
+#   2. Per-operator `threading_threshold(::Type{Op})` methods, each a transcription of that
+#      operator's own crossover from `benchmark/operator_thresholds.jl`.
+#
+# Layer 2 is what governs in practice, and it is not cosmetic: measuring each operator's
+# real `mul!` showed the cost classes are too coarse. Within the "transcendental" class the
+# measured crossovers span 2^8 (SoftPlus) to 2^11 (integer Pow) -- an 8x spread. `Pow` even
+# splits internally, since a fractional exponent lowers to `exp(p*log(x))` and crosses over
+# three powers of two earlier than an integer one. Sharing one constant across a class would
+# leave most of its members either threading too early or not early enough.
+#
+# Each constant carries a PROVENANCE line stating where its value came from. Values marked
+# `measured` are transcriptions of a `benchmark/threading_sweep.jl` run whose machine and
+# thread count are named; values marked `provisional` are order-of-magnitude starting
+# points that the sweep has not yet confirmed. Never promote provisional -> measured
+# without re-running the sweep and pasting its crossover.
+#
+# Measurement context for the `measured` values below:
+#   AMD EPYC 7352 24-Core (96 logical), 8 Julia threads, OPENBLAS_NUM_THREADS=1, 2026-08-15
+#   Julia 1.12.6 (see Manifest.toml's `julia_version`)
+#   `OPENBLAS_NUM_THREADS=1 julia --project=benchmark -t 8 benchmark/threading_sweep.jl`
+# Each threshold takes the *more conservative* of the Float64 and Float32 crossovers, so a
+# threshold is never below the point where the narrower element type still pays.
+#
+# The sweep also settled the kernel choice per class, and it did not match the starting
+# hypothesis everywhere -- see `THRESHOLD_MEMORY_BOUND`.
+
+"""
+Transcendental elementwise kernels (`Sin`, `Cos`, `Exp`, `Atan`, `Tanh`, `Sech`, `Sigmoid`,
+`SoftPlus`, `Pow` with non-integer exponent). Each element costs tens of ns, so the thread
+launch overhead is amortized early. Kernel: FastBroadcast `@..` with `thread = true`.
+
+PROVENANCE: measured. `transcendental` sweep, `@..` crossover n = 1024 (Float64) and
+n = 512 (Float32); taking the conservative Float64 value. At n = 2^20 threading is ~6x.
+"""
+const THRESHOLD_ELEMENTWISE_TRANSCENDENTAL = 2^10
+
+"""
+Cheap arithmetic elementwise kernels (`AffineAdd`, `HadamardProd`, `FiniteDiff`,
+`Variation`, integer `Pow`). A few flops per element, so the crossover sits well above the
+transcendental one but still below the pure-copy case. Kernel: FastBroadcast `@..` with
+`thread = true`.
+
+PROVENANCE: measured. `arithmetic` sweep, `@..` crossover n = 32768 for both Float64 and
+Float32; the `finitediff` sweep independently lands on the same n = 32768, which is why
+these two kernel shapes share one constant.
+"""
+const THRESHOLD_ELEMENTWISE_ARITHMETIC = 2^15
+
+"""
+Pure data movement (`Eye`, `ZeroPad`, `GetIndex`, `Zeros`, broadcasting). These are
+memory-bandwidth-bound, so the win arrives late and is bandwidth- rather than core-limited.
+Kernel: Polyester `@batch` -- **not** FastBroadcast.
+
+PROVENANCE: measured. `memorybound` sweep. The result contradicted the starting hypothesis
+that FastBroadcast wins or ties everywhere: for a plain `y = x` copy, `@..  thread = true`
+is *time-identical to serial at every swept size* (FastBroadcast does not thread a pure
+copy), first "winning" only at n = 2^22 where the difference is noise. `@batch` genuinely
+threads it, crossing over at n = 32768 (Float64) and n = 262144 (Float32); this constant
+takes the conservative Float32 value. `@budgeted_threads` never wins at Float64.
+"""
+const THRESHOLD_MEMORY_BOUND = 2^18
+
+"""
+Default per-block work at which block-level threading starts to pay. Block-parallel
+operators override [`block_threading_threshold`](@ref) with their own measured value.
+
+Kernel: `@budgeted_threads` (the loop body is a whole child `mul!`, not element access).
+
+PROVENANCE: measured, as the DCAT value; see `block_threading_threshold`.
+"""
+const THRESHOLD_BLOCK_PARALLEL = 2^16
+
+"""
+Minimum number of blocks before block-level threading is considered, independent of total
+size.
+
+PROVENANCE: measured, and this constant exists *because* of the measurement: per-block work
+alone is not a sufficient predictor. At 2 blocks of 2^18 elements each block is far over
+`block_threading_threshold`, yet the DCAT speedup is 1.02x -- two blocks cap the achievable
+gain at 2x and the threading overhead eats it. The same work split across 8 blocks gives
+2.2x.
+"""
+const MIN_BLOCKS_FOR_PARALLEL = 4
+
+"""
+Minimum per-item work before a *batch* operator threads its batch loop.
+
+Batch operators differ from the block-parallel calculus operators in that the number of
+items is typically large and known only at call time, so the gate is on the work of a single
+wrapped `mul!`.
+
+PROVENANCE: provisional. Set deliberately low relative to the block thresholds because a
+batch loop usually has far more items than a DCAT has blocks, so the per-item overhead is
+amortised much better -- but this specific value has not been swept. Its purpose is to
+guarantee a size component exists at all, so that batches of four-element operators are not
+threaded.
+"""
+const MIN_BATCH_WORK_FOR_PARALLEL = 2^10
+
+# ─── Storage classification ───────────────────────────────────────────────────
+
+"""
+	_is_cpu_storage(::Type{<:AbstractArray})
+
+Whether Julia-level threading is meaningful for this storage type. GPU arrays are already
+parallel at the kernel level, so wrapping their broadcasts in `@batch`/`@threads` adds
+launch overhead and contention without adding parallelism.
+
+Defaults to `false` for unknown array types — conservative, since the cost of wrongly
+threading a device array is much higher than the cost of missing a thread-level win.
+"""
+_is_cpu_storage(::Type{<:AbstractArray}) = false
+_is_cpu_storage(::Type{<:Array}) = true
+
+# ─── Per-operator policy ──────────────────────────────────────────────────────
+
+"""
+	threading_threshold(::Type{<:AbstractOperator})
+
+Number of elements at or above which threading is expected to pay for this operator type.
+Defaults to `THRESHOLD_MEMORY_BOUND`, the most conservative choice.
+"""
+threading_threshold(::Type{<:AbstractOperator}) = THRESHOLD_MEMORY_BOUND
+
+"""
+	default_threaded(::Type{Op}, ::Type{T}, dims, ::Type{S}) -> Bool
+
+Per-operator threading policy: whether an operator of type `Op` over element type `T`,
+domain size `dims` and storage `S` should thread by default.
+
+`dims` may be a plain dimension tuple or a tuple of tuples (multi-domain operators); both
+are reduced to a total element count.
+
+Operators specialize this when their policy is not purely size-driven; most only need to
+specialize [`threading_threshold`](@ref).
+"""
+function default_threaded(
+        ::Type{Op}, ::Type{T}, dims, ::Type{S}
+    ) where {Op <: AbstractOperator, T, S <: AbstractArray}
+    return _default_threaded(threading_threshold(Op), T, _total_elements(dims), S)
+end
+
+# Typed positional helper: keeps the decision statically resolvable for JET's `@test_opt`,
+# which flags unparameterized `::Type` keywords as dynamic dispatch.
+function _default_threaded(
+        threshold::Int, ::Type{T}, n::Int, ::Type{S}
+    ) where {T, S <: AbstractArray}
+    return Threads.nthreads() > 1 && _is_cpu_storage(S) && n >= threshold
+end
+
+"""
+	_elementwise_threaded(Op, threaded, T, dims, S) -> Bool
+
+Resolve a constructor's `threaded` keyword for an elementwise operator.
+
+See `_resolve_threaded` for the meaning of the two values; in short, `false` vetoes
+and `true` defers to the per-operator policy.
+
+Returns a plain `Bool` so it can be spliced straight into a `Th` type parameter.
+"""
+function _elementwise_threaded(
+        ::Type{Op}, threaded::Bool, ::Type{T}, dims, ::Type{S}
+    ) where {Op <: AbstractOperator, T, S <: AbstractArray}
+    return _resolve_threaded(threaded) do
+        default_threaded(Op, T, dims, S)
+    end
+end
+
+"""
+	block_threading_threshold(::Type{<:AbstractOperator})
+
+Mean per-block element count at which this operator's block loop should thread.
+
+**Per-block, not aggregate.** The first version of this policy tested total work across all
+blocks, and measurement showed that is the wrong predictor: at a fixed 2^18 aggregate,
+VCAT-forward measures 1.32x with 4 blocks of 2^16 but 0.85x with 16 blocks of 2^14. What
+actually decides it is how much work each block carries against the per-block dispatch
+overhead, so the threshold is on the mean block size and the block *count* is handled
+separately by [`MIN_BLOCKS_FOR_PARALLEL`](@ref).
+
+The value differs per operator because the per-block overhead does — see the `HCAT` method.
+"""
+block_threading_threshold(::Type{<:AbstractOperator}) = THRESHOLD_BLOCK_PARALLEL
+
+"""
+	default_block_threaded(Op, blocks) -> Bool
+
+Whether a block-parallel calculus operator of type `Op` over `blocks` should thread its
+block loop. Requires enough blocks *and* enough work per block; see
+[`MIN_BLOCKS_FOR_PARALLEL`](@ref) and [`block_threading_threshold`](@ref) for why one
+condition alone is not sufficient.
+"""
+function default_block_threaded(::Type{Op}, blocks) where {Op <: AbstractOperator}
+    Threads.nthreads() > 1 || return false
+    length(blocks) >= MIN_BLOCKS_FOR_PARALLEL || return false
+    _is_cpu_storage(_array_wrapper_type(domain_array_type(first(blocks)))) || return false
+    total = sum(b -> _total_elements(size(b, 2)), blocks; init = 0)
+    # Mean rather than minimum: with heterogeneous blocks the runtime is set by the total
+    # work spread over the loop, and a single small block should not veto the whole thing.
+    mean_block = total ÷ length(blocks)
+    return mean_block >= block_threading_threshold(Op)
+end
+
+# Multi-domain operators report an ArrayPartition, which the size policy cannot use
+# directly; fall back to a plain CPU array of the promoted element type.
+_policy_storage(S::Type{<:AbstractArray}) = S
+_policy_storage(S::Type{<:ArrayPartition}) = Array{_storage_eltype_or_float(S)}
+_storage_eltype_or_float(::Type{<:ArrayPartition{T}}) where {T} = T
+_storage_eltype_or_float(::Type) = Float64
+
+_total_elements(dims::Tuple{Vararg{Integer}}) = prod(dims; init = 1)
+_total_elements(dims::Tuple) = sum(_total_elements, dims; init = 0)
+_total_elements(n::Integer) = Int(n)
+
+# ─── The `is_threaded` trait ──────────────────────────────────────────────────
+
+"""
+	is_threaded(L::AbstractOperator) -> Bool
+
+Whether `L` executes its `mul!` (and adjoint `mul!`) using multiple Julia threads.
+
+This reports what the operator will **actually do**, not what was asked for. Constructing
+with `threaded = true` below the operator's `threading_threshold`, on GPU storage,
+or in a single-threaded session all yield `is_threaded(L) == false`, because in each case
+threading would not happen (or would be a pessimisation). See `_resolve_threaded`
+for the full rule.
+
+Consequently `is_threaded(copy_operator(L; threaded = true))` is **not** guaranteed to be
+`true`; `is_threaded(copy_operator(L; threaded = false))` *is* guaranteed to be `false`,
+which is the direction nesting safety depends on.
+
+Defaults to `false`.
+"""
+is_threaded(::AbstractOperator) = false
+
+"""
+	_resolve_threaded(policy, threaded::Bool) -> Bool
+
+The single place the `threaded` keyword is interpreted, so that every operator in the
+package answers it the same way.
+
+The keyword is a `Bool` — there is no third state:
+
+| value | meaning |
+|---|---|
+| `false` | **veto.** Never thread. This is the only hard directive, and it has to be, because nesting safety depends on it: a threaded batch/block loop switches its children off with `threaded = false` and must be able to rely on that. |
+| `true` (default) | **permission.** Threading is enabled *if the policy also agrees*. It does not force threading on. |
+
+`true` being a permission rather than a command is what lets the policy keep the final say
+for correctness reasons (a kernel that is only valid for certain shapes; GPU storage, where
+Julia-level threading only adds overhead; a single-threaded session) and for performance
+reasons (below the operator's measured crossover, threading is a slowdown). It also keeps
+`is_threaded` honest: it reports what the operator will actually do, never what was merely
+asked for.
+
+To force threading on regardless of size — for a benchmark, say — call the constructor with
+a size above the operator's `threading_threshold`, or lower that threshold; there is
+deliberately no override that makes `is_threaded` disagree with the executed path.
+
+!!! note
+    `copy_operator` and `adapt_operator` also take a `threaded` keyword, and there it *does*
+    accept `nothing`. That is a different axis: those are **constraint** arguments, where
+    `nothing` means "no constraint on threading, preserve what the operator has", exactly as
+    `storage_type = nothing` means "no constraint on storage". Without it, a plain
+    `copy_operator(op)` could not preserve an explicitly serial operator.
+"""
+@inline function _resolve_threaded(policy::F, threaded::Bool) where {F}
+    threaded || return false
+    return policy()::Bool
+end
+
+"""
+	_children(L::AbstractOperator) -> Tuple
+
+The wrapped operators of a forwarding (calculus) operator, or `()` for a leaf.
+
+Forwarders get `is_threaded` for free from this, which matters for more than tidiness:
+`adapt_operator(op; threaded = false)` decides whether to copy by asking `is_threaded`, so
+a forwarder that inherited the `false` default would report "constraint already satisfied"
+and hand back an operator whose children are still threaded. That is a silent nesting bug,
+not a missing optimization.
+"""
+_children(::AbstractOperator) = ()
+
+# A forwarder is threaded if any child is: that is the property callers actually care
+# about ("will running this spawn Julia threads?").
+_is_threaded_from_children(L::AbstractOperator) = any(is_threaded, _children(L))
+
+"""
+	supports_threading(L::AbstractOperator) -> Bool
+
+Whether `L` has a threaded execution path at all, i.e. whether `threaded` can change
+anything about it.
+
+This distinguishes the two ways `is_threaded(L) == false` can arise: "this operator can
+thread and is currently not" versus "this operator has no threaded path". They need
+different handling, because `threaded = true` is a **permission** ("thread where you can")
+while `threaded = false` is a **demand** ("do not spawn threads", required for nesting
+safety). Without the distinction, passing `threaded = true` down a `Compose` to a
+memory-bound `Eye` would copy the `Eye` forever without ever satisfying the constraint.
+
+Defaults to `false`; leaf operators that gained a `Th` parameter override it, forwarders
+derive it from their children.
+"""
+supports_threading(::AbstractOperator) = false
+_supports_threading_from_children(L::AbstractOperator) = any(supports_threading, _children(L))
+
+# ─── FastBroadcast bridge ─────────────────────────────────────────────────────
+#
+# `DiagOp` and `Scale` keep FastBroadcast's singleton thread flag as their type parameter.
+# These convert between that encoding and the plain `Bool` used everywhere else.
+
+@inline _fbthread(b::Bool) = b ? FastBroadcast.True() : FastBroadcast.False()
+
+@inline _fbbool(::FastBroadcast.True) = true
+@inline _fbbool(::FastBroadcast.False) = false
+@inline _fbbool(::Type{FastBroadcast.True}) = true
+@inline _fbbool(::Type{FastBroadcast.False}) = false
+
+# ─── BLAS bridge ───────────────────────────────────────────────────────────────
+#
+# Unlike FFTW/NFFT, BLAS has no plan: its thread count is a live, process-global setting
+# that `gemv!`/`gemm!` reads on every call, exactly like the elementwise kernels above.
+# `MatrixOp`/`LMatrixOp` therefore scope it per call rather than baking a count in at
+# construction.
+#
+# BLAS is the one pool here that is *not* a Julia thread pool: it owns its own workers and
+# already applies its own internal size heuristic (OpenBLAS' `GEMM_MULTITHREAD_THRESHOLD`
+# and friends) to decide whether a given `gemv`/`gemm` is worth splitting. That has two
+# consequences the elementwise policy above does not share, and getting either wrong costs
+# roughly a factor of two on a plain `MatrixOp` `mul!`:
+#
+#   1. There is no `Threads.nthreads() > 1` precondition. A session started with `-t 1`
+#      still has a fully threaded BLAS, and pinning it to one thread there is a pure loss
+#      (measured: a 192x192 `gemm` takes 352 us at one BLAS thread against 187 us at four).
+#   2. There is no element-count threshold of our own. Adding one only duplicates -- badly,
+#      since we see `length(A)` rather than the actual `m*n*k` FLOP count -- a decision BLAS
+#      already makes per call.
+#
+# So `threaded = true` means "leave BLAS at its own budget" and costs nothing at all, while
+# `threaded = false` is the veto that nesting safety depends on and is the only case that
+# opens a scope. The veto goes through NestedThreading's refcounted budget scope
+# (`with_restricted_threads`), not a raw `BLAS.set_num_threads` save/restore: a `mul!` can
+# run concurrently with other `mul!`s (e.g. several `MatrixOp` blocks inside a threaded
+# `HCAT`/`VCAT` block loop), and a naive save/restore of a process-global from concurrent
+# callers is exactly the interleaving bug NestedThreading exists to prevent.
+
+"""
+	_with_blas_threading(f, threaded::Bool)
+
+Run `f()` with BLAS restricted to a single thread when `threaded` is `false`, or with BLAS
+left at whatever budget is in force when it is `true`.
+
+The permitted branch deliberately opens **no** scope. Any outer `NestedThreading`
+restriction is process-global and already applied by the time it is reached, so re-asserting
+it would only add a lock and a round trip through every registered pool's setter to each
+`mul!` -- measured at ~5.5 us per scope, which is not a rounding error for an operator whose
+whole job may be a few microseconds of `gemv`: `calculus/Ax_mul_Bx/forward` wraps two
+`MatrixOp`s and paid 28.6 -> 34.1 us for exactly those two scopes.
+
+A `with_full_threads` here would additionally *raise* BLAS past a count the caller had
+deliberately set, which the `with_thread_budget` docstring calls out as the one thing a
+full-throttle scope does that a plain call does not.
+
+!!! note "What BLAS's own budget actually is"
+    `LinearAlgebra.__init__` sets it to `max(1, jl_effective_threads() ÷ 2)` — driven by the
+    machine and by CPU affinity, and **never** by Julia's `-t`. A `-t 1` session still gets a
+    multi-threaded BLAS, which is exactly why gating on `Threads.nthreads()` was wrong.
+
+    Two situations leave it at 1 through no fault of this package, and `threaded = true` then
+    stays at 1 rather than raising it:
+
+    - fewer than four effective CPUs (`jl_effective_threads() ÷ 2 == 1`);
+    - a `Distributed` worker, where `Distributed` calls `Base.disable_library_threading()`,
+      whose registered hook is `BLAS.set_num_threads(1)`.
+
+    Both are deliberate policy from outside this package — the second especially, since a
+    worker process is expected not to oversubscribe the node — so it is not this function's
+    business to override them. A caller who wants otherwise sets `BLAS.set_num_threads`
+    themselves; setting `OPENBLAS_NUM_THREADS` also works, but note it makes LinearAlgebra
+    skip its default entirely.
+"""
+_with_blas_threading(f::F, threaded::Bool) where {F} = threaded ? f() : with_restricted_threads(f)
+
+"""
+	_blas_threaded(threaded, ::Type{S}) -> Bool
+
+Resolve a BLAS-backed operator's `threaded` keyword: `false` vetoes, `true` permits, and the
+policy's only say is that BLAS threading is meaningless for non-CPU storage, where the
+`gemm` runs on the device instead. A GPU-backed operator therefore reports
+`is_threaded == false` and runs its `mul!` inside the restricted scope, which costs it
+nothing it would otherwise have used.
+
+Deliberately *not* routed through [`default_threaded`](@ref): see the section comment above
+for why the Julia thread count and an element-count threshold are both the wrong questions
+to ask of a library with its own thread pool and its own size heuristic.
+"""
+function _blas_threaded(threaded::Bool, ::Type{S}) where {S <: AbstractArray}
+    return _resolve_threaded(threaded) do
+        _is_cpu_storage(S)
+    end
+end
+
+# ─── adapt_operator ───────────────────────────────────────────────────────────
+
+"""
+	adapt_operator(op; storage_type=nothing, threaded=nothing, require_thread_safe=false)
+
+Return an operator equivalent to `op` that satisfies the requested constraints, **without
+copying when `op` already satisfies them**.
+
+This is the counterpart to [`copy_operator`](@ref), which always produces a new object:
+
+- `adapt_operator` returns `op` itself (`===`) when every requested constraint already
+  holds, and delegates to `copy_operator` otherwise.
+- `threaded = false` is a constraint that can always be met. `threaded = true` is a
+  *permission* (see `_resolve_threaded`), so a copy made for it may still come back
+  serial if the policy declines — asking twice will not change that.
+- Use `adapt_operator` when you need *an* operator meeting a constraint (the common case
+  when wrapping child operators); use `copy_operator` when you need a *distinct* object,
+  e.g. one private copy per thread.
+
+`require_thread_safe` demands `is_thread_safe(op)` before `op` may be returned as-is.
+
+!!! warning
+    `require_thread_safe` can only ever *withhold* the sharing fast path — it cannot
+    manufacture thread safety. Thread safety is a property of an operator's type (does its
+    `mul!` write into operator-owned buffers?), and copying an operator that keeps internal
+    scratch buffers yields another operator that keeps internal scratch buffers. So when
+    `is_thread_safe(op)` is `false`, this returns a **copy that is still not thread-safe**.
+
+    Callers that need to run an operator concurrently must therefore branch on
+    `is_thread_safe` themselves: share one instance when it is `true`, and allocate one
+    private copy per thread when it is `false`. See `create_BatchOp` for that pattern.
+
+```jldoctest
+julia> op = MatrixOp(rand(4, 4));
+
+julia> adapt_operator(op) === op   # already satisfies the (empty) constraints
+true
+
+julia> is_threaded(adapt_operator(FiniteDiff((4,)); threaded = false))
+false
+```
+"""
+function adapt_operator(
+        op::AbstractOperator;
+        storage_type = nothing,
+        threaded = nothing,
+        require_thread_safe::Bool = false,
+    )
+    if _satisfies_constraints(op, storage_type, threaded, require_thread_safe)
+        return op
+    end
+    return copy_operator(op; storage_type, threaded)
+end
+
+function _satisfies_constraints(
+        op::AbstractOperator, storage_type, threaded, require_thread_safe::Bool
+    )
+    require_thread_safe && !is_thread_safe(op) && return false
+    # An operator with no threaded path satisfies any `threaded` request vacuously: there
+    # is nothing a copy could change. See `supports_threading`.
+    threaded !== nothing && supports_threading(op) && is_threaded(op) != threaded && return false
+    storage_type !== nothing && !_storage_matches(op, storage_type) && return false
+    return true
+end
+
+# An operator matches a requested storage type when both its domain and codomain already
+# live in that array family. Compared on the *wrapper* (`Array`, `CuArray`, …) because the
+# element type is fixed by the operator, not by the request.
+function _storage_matches(op::AbstractOperator, storage_type::Type{<:AbstractArray})
+    wrapper = _array_wrapper_type(storage_type)
+    return _wrapper_of(domain_array_type(op)) === wrapper &&
+        _wrapper_of(codomain_array_type(op)) === wrapper
+end
+_storage_matches(::AbstractOperator, ::Any) = false
+
+_wrapper_of(::Type{A}) where {A <: AbstractArray} = _array_wrapper_type(A)
+# Multi-domain operators report an ArrayPartition; its element storages are what matter,
+# and they are not directly comparable to a single requested wrapper.
+_wrapper_of(::Type{<:ArrayPartition}) = nothing

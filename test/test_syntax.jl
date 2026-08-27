@@ -529,4 +529,5 @@ end
     @test op_copy isa MatrixOp
     x = randn(n)
     @test op_copy * x ≈ op * x
+
 end

@@ -80,7 +80,7 @@ end
     @test norm(A * x + opB * x - y) < 1.0e-8
 end
 
-@testitem "Sum (GPU)" tags = [:gpu, :calculus, :Sum] setup = [TestUtils] begin
+@testitem "Sum (GPU)" tags = [:gpu, :calculus, :Sum] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -126,4 +126,16 @@ end
     mul!(y1, opS, x)
     mul!(y2, opS2, x)
     @test y1 ≈ y2
+end
+
+@testitem "Sum: threading traits" tags = [:calculus, :Sum] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n = 2000
+    threaded_leaf = Sin(Float64, (n,); threaded = true)
+    serial_leaf = Cos(Float64, (n,); threaded = false)
+    @test is_threaded(Sum(threaded_leaf, serial_leaf)) == true
+    @test is_threaded(Sum(serial_leaf, serial_leaf)) == false
+    @test supports_threading(Sum(serial_leaf, serial_leaf)) == true
 end

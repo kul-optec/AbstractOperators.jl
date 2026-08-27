@@ -232,7 +232,7 @@ end
     @test (c5 * X) ≈ ((dft2 * sh2) * X)
 end
 
-@testitem "FFTShift/IFFTShift (GPU)" tags = [:gpu, :fftw, :FFTShift] setup = [TestUtils] begin
+@testitem "FFTShift/IFFTShift (GPU)" tags = [:gpu, :fftw, :FFTShift] setup = [TestUtils, GpuEnvSetup] begin
     using FFTWOperators, GPUEnv, LinearAlgebra
 
     for backend in gpu_backends()
@@ -251,7 +251,7 @@ end
     end
 end
 
-@testitem "SignAlternation (GPU)" tags = [:gpu, :fftw, :SignAlternation] setup = [TestUtils] begin
+@testitem "SignAlternation (GPU)" tags = [:gpu, :fftw, :SignAlternation] setup = [TestUtils, GpuEnvSetup] begin
     using FFTWOperators, GPUEnv, LinearAlgebra
 
     for backend in gpu_backends()

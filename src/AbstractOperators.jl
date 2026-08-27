@@ -2,7 +2,8 @@ module AbstractOperators
 
 using LinearAlgebra, Random
 using Base.Cartesian: @ncall, @ntuple, @nloops, @nref
-using Polyester: @batch, disable_polyester_threads
+using NestedThreading: @budgeted_threads, with_restricted_threads
+using Polyester: @batch
 using FastBroadcast: FastBroadcast, @..
 using RecursiveArrayTools: ArrayPartition
 
@@ -13,7 +14,7 @@ abstract type NonLinearOperator <: AbstractOperator end
 
 import LinearAlgebra: mul!
 import Base: size, ndims, @lock
-import Base.Threads: @spawn, @threads, nthreads
+import Base.Threads: @spawn, nthreads
 
 import OperatorCore:
     is_linear,
@@ -41,6 +42,7 @@ const DEBUG_COMPOSE = Ref{Bool}(false)
 
 include("utils.jl")
 include("properties.jl")
+include("threading_policy.jl")
 include("calculus/AdjointOperator.jl")
 include("calculus/Scale.jl")
 

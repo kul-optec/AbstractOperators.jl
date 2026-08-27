@@ -135,7 +135,7 @@ end
     @test remove_displacement(Prd) == Prd
 end
 
-@testitem "HadamardProd (GPU)" tags = [:gpu, :calculus, :HadamardProd] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "HadamardProd (GPU)" tags = [:gpu, :calculus, :HadamardProd] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -207,4 +207,23 @@ end
     g1 = J' * y
     g2 = J2' * y
     @test g1 ≈ g2
+end
+
+@testitem "HadamardProd: threading traits" tags = [:calculus, :HadamardProd] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(1)
+
+    n = 2000
+    threaded_leaf = Sin(Float64, (n,); threaded = true)
+    serial_leaf = Cos(Float64, (n,); threaded = false)
+    @test is_threaded(HadamardProd(threaded_leaf, serial_leaf)) == true
+    @test is_threaded(HadamardProd(serial_leaf, serial_leaf)) == false
+    @test supports_threading(HadamardProd(serial_leaf, serial_leaf)) == true
+
+    P = HadamardProd(serial_leaf, serial_leaf)
+    x = randn(n)
+    P * x  # populate buffers for Jacobian
+    J = Jacobian(P, x)
+    @test is_threaded(J) == false
+    @test supports_threading(J) == true
 end

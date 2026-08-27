@@ -241,7 +241,7 @@ end
     @test norm(Y - y) < 1.0e-8
 end
 
-@testitem "Reshape (GPU)" tags = [:gpu, :calculus, :Reshape] setup = [TestUtils] begin
+@testitem "Reshape (GPU)" tags = [:gpu, :calculus, :Reshape] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

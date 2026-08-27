@@ -19,12 +19,8 @@
         Pkg.develop(path = normpath(joinpath(@__DIR__, "..", "WaveletOperators"))) # WaveletOperators
     end
 
-    using GPUEnv
-    GPUEnv.activate(; persist = true)
-
-    if VERSION >= v"1.11" && Base.find_package("AcceleratedDCTs") === nothing
-        Pkg.add(name = "AcceleratedDCTs", version = "0.4")
-    end
+    # GPU environment activation lives in the `GpuEnvSetup` setup module
+    # (`test/gpu_env_setup.jl`) so that non-GPU runs never pay for it.
 
     const verb = get(ENV, "ABSTRACTOPERATORS_TEST_VERBOSE", "false") == "true"
 
@@ -101,6 +97,14 @@
     ########### Test for NonLinearOperators
     function test_NLop(A::AbstractOperator, x, y, verb::Bool = false)
         verb && (println(), println(A))
+
+        # `show` prints `fun_name(A)`, so this exercises it without depending on the
+        # (unexported) function directly.
+        io = IOBuffer()
+        show(io, A)
+        @test !isempty(String(take!(io)))
+        @test is_thread_safe(A) isa Bool
+        @test supports_threading(A) isa Bool
 
         Ax = A * x
         Ax2 = similar(Ax)
