@@ -213,12 +213,11 @@ function jacobian_state(op; positive = false)
     return (jac = jac, adj = jac', b = b, y = y)
 end
 
-function nfft_state(threaded = false)
+function nfft_state()
     rng = make_rng()
     traj = rand(rng, 2, BENCH_NFFT_NSAMP, BENCH_NFFT_NPROF) .- 0.5
     dcf = ones(eltype(traj), BENCH_NFFT_NSAMP, BENCH_NFFT_NPROF)
-    op = threaded ? check_threaded(NFFTOp(BENCH_NFFT_IMAGE, traj, dcf; threaded = true)) :
-        NFFTOp(BENCH_NFFT_IMAGE, traj, dcf; threaded = false)
+    op = NFFTOp(BENCH_NFFT_IMAGE, traj, dcf)
     x = randn(rng, ComplexF64, BENCH_NFFT_IMAGE...)
     y = zeros(ComplexF64, BENCH_NFFT_NSAMP, BENCH_NFFT_NPROF)
     z = zeros(ComplexF64, BENCH_NFFT_IMAGE...)
