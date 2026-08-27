@@ -41,17 +41,6 @@ jobs:
             for pkg in ("DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators")
                 Pkg.develop(path = joinpath(pwd(), pkg))
             end
-            # test/Project.toml pins GPUEnv away from the broken 0.2.1 and tries to test
-            # the unreleased fix (hakkelt/GPUEnv.jl#6) via a `[sources]` entry -- but
-            # `[sources]` needs Pkg >= 1.11, and this is the Julia 1.10 (LTS) job, the
-            # only matrix leg that actually hits the bug (reproduced locally: pinning
-            # GPUEnv exactly to 0.2.1 fails `using DSPOperators` after
-            # `GPUEnv.activate(; persist = true)` on Julia 1.10, but not on 1.12).
-            # `[sources]` silently no-ops there instead of erroring, so the pin would
-            # otherwise go untested on the one job it matters for. `Pkg.add(url=, rev=)`
-            # is old, stable API that works on every supported Julia version, so
-            # duplicate that pin here imperatively for this job specifically.
-            Pkg.add(Pkg.PackageSpec(name = "GPUEnv", url = "https://github.com/hakkelt/GPUEnv.jl.git", rev = "fix-instantiate-skip-after-develop"))
             Pkg.instantiate()
             Pkg.build()
             Pkg.precompile()
