@@ -56,15 +56,25 @@ jobs:
       # ------------------------------------------------------------------
       - name: Run benchmark comparison
         shell: bash
-        env:
-          JULIA_NUM_THREADS: 2
+        # No JULIA_NUM_THREADS here: it would only affect this driver process, not the
+        # subprocesses it spawns -- see `run_suite`'s docstring in compare.jl for how those
+        # get pinned instead (`-t`, once per count in `--threads`).
+        #
+        # No OPENBLAS_NUM_THREADS either: BLAS-backed operators (MatrixOp, LMatrixOp, ...)
+        # scope BLAS's thread count themselves via NestedThreading's `with_full_threads`/
+        # `with_restricted_threads` (see `threading_policy.jl`), which clamps it to the
+        # process's own `Threads.nthreads()` for every `mul!`. Oversubscription at `-t 2` is
+        # therefore avoided by the library's own design, not by an external env var --
+        # setting one here would only affect the (irrelevant) idle-BLAS baseline outside any
+        # operator call.
         run: |
           julia --project=head/benchmark head/benchmark/compare.jl \
             --base-dir  "${{ github.workspace }}/base" \
             --head-dir  "${{ github.workspace }}/head" \
             --output-dir artifact \
             --pr        "${{ github.event.pull_request.number }}" \
-            --julia-version "$(julia -e 'print(VERSION)')"
+            --julia-version "$(julia -e 'print(VERSION)')" \
+            --threads 1,2
 
       # ------------------------------------------------------------------
       # Upload artifact for stage-2 comment posting

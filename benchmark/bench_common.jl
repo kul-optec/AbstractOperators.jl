@@ -57,24 +57,25 @@ const SUITE = BenchmarkGroup()
 
 Whether to register the multithreaded variants of the benchmarks.
 
-Threaded timings are not comparable across CI runs. Hosted runners hand out 2-4 shared
-vCPUs whose count and contention vary from job to job, so a threaded measurement tracks the
-runner rather than the code, and AirspeedVelocity reports that noise as a regression or an
-improvement. The multithreaded variants are therefore skipped whenever `CI` is set.
+Follows `Threads.nthreads() > 1`: skipped at one thread, where every operator's policy
+vetoes threading and a "threaded" entry would merely re-measure the serial path under a
+misleading name. `compare.jl` pins the worker's thread count explicitly with `-t` for each
+pass (see `run_suite`), running the suite once per thread count in `--threads` and
+reporting each as its own comparison section -- so "how many threads were live" is a
+controlled axis of the measurement, not incidental runner state, and single- and
+multithreaded numbers are never mixed into one ambiguous run.
 
-They are also skipped when Julia was started with a single thread, where every operator's
-policy vetoes threading and a "threaded" entry would merely re-measure the serial path
-under a misleading name.
+A shared CI runner's execution-time jitter still affects the threaded numbers, same as it
+already does the serial ones; accepted as a known source of noise in exchange for
+measuring both regimes at all.
 
-Override with `ABSTRACTOPERATORS_BENCH_THREADED=true|false` -- set it to `true` on a
-dedicated runner with a pinned core count, where threaded comparisons are meaningful.
+Override with `ABSTRACTOPERATORS_BENCH_THREADED=true|false` to force a value regardless of
+`Threads.nthreads()` -- e.g. to register the threaded entries while smoke-testing at `-t 1`.
 """
 const BENCH_THREADED = let
     forced = get(ENV, "ABSTRACTOPERATORS_BENCH_THREADED", nothing)
     if forced !== nothing
         lowercase(strip(forced)) in ("1", "true", "yes")
-    elseif haskey(ENV, "CI")
-        false
     else
         Threads.nthreads() > 1
     end
@@ -281,15 +282,38 @@ baselines stay comparable across this change.
 const BENCH_THREADED_EVALS = 50
 
 """
+	_bench_seconds()
+
+Per-leaf `seconds` cap: `1.0` in the single-thread regime, `0.5` in the multithreaded one
+(reuses the `BENCH_THREADED` split rather than re-testing `Threads.nthreads()`). The
+single-thread pass is the primary regression signal and gets the larger budget (more
+samples); the multithreaded pass is comparative/confirmatory and gets less.
+
+`compare.jl` runs the full suite once per thread count in `--threads`, and once each for
+base and head, so a naive `leaves * seconds` estimate undercounts the real CI cost badly:
+several suites (`fftwoperators`, `waveletoperators`, `normaloperators`, `nfftoperators`)
+are dominated by per-sample setup cost (FFTW `MEASURE` planning, NFFT/wavelet init) that a
+lower `seconds` cannot shrink -- a single sample there can already exceed the cap. If CI
+timing drifts, re-measure end to end with:
+`compare.jl --base-dir X --head-dir X --threads 1,2` timed with the same checkout as both
+base and head (or, per-thread-count only:
+`julia -t N --project=benchmark -e 'using BenchmarkTools; include("benchmark/benchmarks.jl"); @time BenchmarkTools.run(SUITE; verbose=true)'`).
+"""
+function _bench_seconds()
+    return BENCH_THREADED ? 0.5 : 1.0
+end
+
+"""
 	finalize_suite!(suite)
 
 Apply the sampling parameters. Called once by `benchmarks.jl`, and by
 `run_suite_if_standalone` when a suite file is executed directly.
 """
 function finalize_suite!(suite)
-    # Cap run time so CI / ASV comparisons complete in reasonable time
+    # Cap run time so CI / ASV comparisons complete in reasonable time -- see `_bench_seconds`.
+    seconds = _bench_seconds()
     for (_, b) in BenchmarkTools.leaves(suite)
-        b.params.seconds = 5
+        b.params.seconds = seconds
         b.params.samples = 10000
         b.params.evals = 1
     end

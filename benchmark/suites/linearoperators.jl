@@ -47,36 +47,30 @@ linear["Eye"] = BenchmarkGroup()
 linear["Eye"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(Eye(Float64, (BENCH_LINEAR_EYE_N,))))
 
 linear["DiagOp"] = BenchmarkGroup()
-linear["DiagOp"]["forward-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(DiagOp(randn(rng, BENCH_LINEAR_DIAG_N); threaded = false)))
-linear["DiagOp"]["adjoint-single"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(DiagOp(randn(rng, BENCH_LINEAR_DIAG_N); threaded = false)))
-if BENCH_THREADED
-    linear["DiagOp"]["forward-threaded"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(check_threaded(DiagOp(randn(rng, BENCH_LINEAR_DIAG_N); threaded = true))))
-    linear["DiagOp"]["adjoint-threaded"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(check_threaded(DiagOp(randn(rng, BENCH_LINEAR_DIAG_N); threaded = true))))
-end
+# `threaded` left at its default: the per-thread-count run already covers serial and
+# threaded (see `BENCH_THREADED`), so no -single/-threaded split is needed here.
+linear["DiagOp"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(DiagOp(randn(rng, BENCH_LINEAR_DIAG_N))))
+linear["DiagOp"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(DiagOp(randn(rng, BENCH_LINEAR_DIAG_N))))
 
 linear["MatrixOp"] = BenchmarkGroup()
 linear["MatrixOp"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(MatrixOp(randn(rng, BENCH_LINEAR_MATRIX_SHAPE...), BENCH_LINEAR_MATRIX_DOMAIN)))
 linear["MatrixOp"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(MatrixOp(randn(rng, BENCH_LINEAR_MATRIX_SHAPE...), BENCH_LINEAR_MATRIX_DOMAIN)))
 
 linear["FiniteDiff"] = BenchmarkGroup()
-linear["FiniteDiff"]["forward-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(FiniteDiff(Float64, (BENCH_LINEAR_FD_N,), 1; threaded = false)))
-linear["FiniteDiff"]["adjoint-single"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(FiniteDiff(Float64, (BENCH_LINEAR_FD_N,), 1; threaded = false)))
-if BENCH_THREADED
-    linear["FiniteDiff"]["forward-threaded"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(check_threaded(FiniteDiff(Float64, (BENCH_LINEAR_FD_N,), 1; threaded = true))))
-    linear["FiniteDiff"]["adjoint-threaded"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(check_threaded(FiniteDiff(Float64, (BENCH_LINEAR_FD_N,), 1; threaded = true))))
-end
+# See the `DiagOp` comment above: `threaded` default + per-thread-count runs already cover
+# serial and threaded, so no separate -single/-threaded split is needed here.
+linear["FiniteDiff"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(FiniteDiff(Float64, (BENCH_LINEAR_FD_N,), 1)))
+linear["FiniteDiff"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(FiniteDiff(Float64, (BENCH_LINEAR_FD_N,), 1)))
 
 linear["GetIndex"] = BenchmarkGroup()
 linear["GetIndex"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(GetIndex(Float64, BENCH_LINEAR_GETINDEX_DIM, (25:1400, 10:800))))
 linear["GetIndex"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(GetIndex(Float64, BENCH_LINEAR_GETINDEX_DIM, (25:1400, 10:800))))
 
 linear["Variation"] = BenchmarkGroup()
-linear["Variation"]["forward-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(Variation(Float64, BENCH_LINEAR_VARIATION_DIM; threaded = false)))
-linear["Variation"]["adjoint-single"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(Variation(Float64, BENCH_LINEAR_VARIATION_DIM; threaded = false)))
-if BENCH_THREADED
-    linear["Variation"]["forward-threaded"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(Variation(Float64, BENCH_LINEAR_VARIATION_DIM; threaded = true)))
-    linear["Variation"]["adjoint-threaded"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(Variation(Float64, BENCH_LINEAR_VARIATION_DIM; threaded = true)))
-end
+# See the `DiagOp` comment above: `threaded` default + per-thread-count runs already cover
+# serial and threaded, so no separate -single/-threaded split is needed here.
+linear["Variation"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(Variation(Float64, BENCH_LINEAR_VARIATION_DIM)))
+linear["Variation"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = linear_state(Variation(Float64, BENCH_LINEAR_VARIATION_DIM)))
 
 linear["ZeroPad"] = BenchmarkGroup()
 linear["ZeroPad"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(ZeroPad(Float64, BENCH_LINEAR_ZEROPAD_DIM, (0, 256))))

@@ -25,13 +25,16 @@ function spreading_batch_state(threaded; strategy = nothing)
 end
 
 batching["SimpleBatchOp"] = BenchmarkGroup()
-batching["SimpleBatchOp"]["forward-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = simple_batch_state(false))
-batching["SimpleBatchOp"]["adjoint-single"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = simple_batch_state(false))
-if BENCH_THREADED
-    batching["SimpleBatchOp"]["forward-threaded"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = simple_batch_state(true))
-    batching["SimpleBatchOp"]["adjoint-threaded"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = simple_batch_state(true))
-end
+# `threaded = true` (a permission, not a command) left as the only variant: the
+# per-thread-count run already covers serial and threaded (see `BENCH_THREADED`), so no
+# -single/-threaded split is needed here.
+batching["SimpleBatchOp"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = simple_batch_state(true))
+batching["SimpleBatchOp"]["adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = simple_batch_state(true))
 
+# Unlike SimpleBatchOp above, this one keeps its explicit -single/threading-strategy split:
+# there is no single "default" `threaded = true` construction to fall back on, since the
+# threaded path itself branches over three distinct strategies (COPYING/LOCKING/
+# FIXED_OPERATOR) that are each worth comparing, not just an on/off veto.
 batching["SpreadingBatchOp"] = BenchmarkGroup()
 batching["SpreadingBatchOp"]["forward-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = spreading_batch_state(false))
 batching["SpreadingBatchOp"]["adjoint-single"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (state = spreading_batch_state(false))
