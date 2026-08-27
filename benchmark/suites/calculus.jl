@@ -184,16 +184,24 @@ if BENCH_THREADED
 end
 
 calculus["BroadCast"] = BenchmarkGroup()
-calculus["BroadCast"]["identity-single"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(BroadCast(Eye(Float64, (BENCH_CALC_N,)), (BENCH_CALC_N, 8); threaded = false)))
-if BENCH_THREADED
-    calculus["BroadCast"]["identity-threaded"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(BroadCast(Eye(Float64, (BENCH_CALC_N,)), (BENCH_CALC_N, 8); threaded = true)))
-end
-calculus["BroadCast"]["operator-single-forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(BroadCast(DiagOp(randn(rng, 256)), (256, 8); threaded = false)))
-calculus["BroadCast"]["operator-single-adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(BroadCast(DiagOp(randn(rng, 256)), (256, 8); threaded = false)))
-if BENCH_THREADED
-    calculus["BroadCast"]["operator-threaded-forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(BroadCast(DiagOp(randn(rng, 256)), (256, 8); threaded = true)))
-    calculus["BroadCast"]["operator-threaded-adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(BroadCast(DiagOp(randn(rng, 256)), (256, 8); threaded = true)))
-end
+# See the `DiagOp` comment in suites/linearoperators.jl: `threaded` left at its default,
+# since the per-thread-count run already covers serial and threaded. `BENCH_CALC_N * 8` is
+# exactly THRESHOLD_MEMORY_BOUND, so the policy declines at `-t 1` and grants from `-t 2` --
+# which is precisely what the -single/-threaded pair used to spell out by hand.
+calculus["BroadCast"]["identity"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = linear_state(BroadCast(Eye(Float64, (BENCH_CALC_N,)), (BENCH_CALC_N, 8))))
+
+# No threaded counterpart, deliberately: 256 * 8 = 2048 elements is three orders of
+# magnitude below THRESHOLD_MEMORY_BOUND, so the policy vetoes threading at *every* thread
+# count. The `operator-threaded-*` entries this replaces asked for `threaded = true`, were
+# declined, and measured the serial path under a threaded name -- 261 ns against
+# `operator-single-forward`'s 270 ns in the run that prompted this cleanup. They carried no
+# `check_threaded` guard, which is the failure that guard exists to make loud.
+#
+# Kept small on purpose: this pair measures per-child dispatch overhead in a broadcast over
+# a small wrapped operator, which is a different cost shape from `identity` above. Sizing it
+# up to reach the threshold would measure the same memory-bound kernel twice instead.
+calculus["BroadCast"]["operator-forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (rng = make_rng(); state = linear_state(BroadCast(DiagOp(randn(rng, 256)), (256, 8))))
+calculus["BroadCast"]["operator-adjoint"] = @benchmarkable mul!(state.z, state.adj, state.y) setup = (rng = make_rng(); state = linear_state(BroadCast(DiagOp(randn(rng, 256)), (256, 8))))
 
 calculus["AffineAdd"] = BenchmarkGroup()
 calculus["AffineAdd"]["forward"] = @benchmarkable mul!(state.y, state.op, state.x) setup = (state = affineadd_state())
