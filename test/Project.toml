@@ -28,6 +28,22 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 WaveletOperators = "f3582904-6f60-4bbd-985d-55eab799bc9d"
 Wavelets = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
 
+# Testing the unreleased fix for the GPUEnv 0.2.1 regression (see the GPUEnv compat
+# comment below) before it's registered: hakkelt/GPUEnv.jl#6 bumps to 0.2.2 and corrects
+# the Pkg.instantiate() skip condition. Drop this [sources] entry (and relax the compat
+# bound to admit registered 0.2.2+) once #6 merges and 0.2.2 is registered.
+#
+# NOTE: only takes effect on Julia >= 1.11 -- Pkg on 1.10 (the "lts" CI matrix leg, the
+# only one that actually hits the bug: reproduced locally, pinning GPUEnv exactly to
+# 0.2.1 breaks `using DSPOperators` after `GPUEnv.activate(; persist = true)` on 1.10 but
+# not on 1.12) silently ignores `[sources]` regardless of table syntax (tried both the
+# inline-table form below and the `[sources.GPUEnv]` dotted form Pkg itself rewrites it
+# to -- neither is read on 1.10). The LTS job therefore duplicates this pin imperatively
+# via `Pkg.add(url=, rev=)` in `.github/workflows/tests.yml`'s "Prepare LTS test
+# environment" step instead, which is the piece that actually verifies the fix in CI.
+[sources]
+GPUEnv = { url = "https://github.com/hakkelt/GPUEnv.jl.git", rev = "fix-instantiate-skip-after-develop" }
+
 [compat]
 Aqua = "0.8"
 BenchmarkTools = "1"
