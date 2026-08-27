@@ -109,19 +109,53 @@ function NFFTOp(
 end
 
 """
+Minimum Julia thread count before NFFT's threaded path is worth entering.
+
+Unlike every other operator in this package, NFFT's gate is on the *thread count* rather
+than on the workload size, because that is what the measurement says decides it.
+
+PROVENANCE: measured. AMD EPYC 7352 (shared), Julia 1.12.7, ComplexF64, 2D trajectory with
+`nsamp = s`, `nprof = s ÷ 2`, one process per thread count. Ratios are serial/threaded, so
+above 1 means threading wins:
+
+| threads | 48^2 fwd / normal | 96^2 fwd / normal | 192^2 fwd / normal |
+|---|---|---|---|
+| 2 | 0.59 / 0.85 | 0.78 / 0.99 | 0.91 / 0.90 |
+| 3 | 0.87 / 0.81 | 1.03 / 1.07 | 2.29 / 1.41 |
+| 4 | 0.87 / 0.96 | 1.93 / 1.56 | 1.43 / 2.21 |
+
+At two workers threading is a loss at *every* size measured, up to a 5 ms `mul!` -- growing
+the workload does not rescue it, which is why a size threshold is not the lever this needs.
+From three workers up the wins appear and grow with size, so three is the gate.
+
+The 48^2 column stays at or below 1.0 at every thread count and is the obvious candidate for
+an additional size gate. It is deliberately *not* added: a repeat of the four-thread run put
+48^2 at 1.20 / 1.18 instead, so on this shared machine that column is inside the noise and a
+threshold fitted to it would not be measurement, only curve-fitting. The two-thread row, by
+contrast, reproduces. Adjoint ratios are omitted from the table for the same reason -- they
+ranged from 0.57 to 1.10 across repeats of the same configuration.
+
+The threaded path also allocates 4-12 KiB per `mul!` (FFTW's Julia threading backend spawns
+tasks per execution) against 112 B for the serial one, so below the gate it was paying that
+for a slowdown. Leaving the gate at `nthreads() > 1` cost 0.63x on the two-thread
+`normaloperators/NFFTOp/mul` benchmark with an 18x allocation increase.
+"""
+const MIN_THREADS_FOR_NFFT = 3
+
+"""
 	_nfft_threaded(threaded, arr_wrapper) -> Bool
 
 Resolve NFFT's `threaded` keyword under the package-wide rule: `false` vetoes, `true`
 enables subject to policy (see `AbstractOperators._resolve_threaded`).
 
-The policy here is the CPU/thread-count check only. NFFT has **no measured size gate**: the
-transform is planned for a specific trajectory rather than a plain array length, so there is
-no single element count to threshold on, and unlike FFTW it is not cheap to sweep. If a size
-gate is wanted later it belongs here.
+The policy here is the CPU check plus [`MIN_THREADS_FOR_NFFT`](@ref). There is deliberately
+**no size gate**: the transform is planned for a specific trajectory rather than a plain
+array length, so there is no single element count to threshold on -- and the sweep behind
+`MIN_THREADS_FOR_NFFT` shows size is not what decides it anyway.
 """
 function _nfft_threaded(threaded::Bool, arr_wrapper)
     return _resolve_threaded(threaded) do
-        Threads.nthreads() > 1 && arr_wrapper === Array
+        Threads.nthreads() >= MIN_THREADS_FOR_NFFT && arr_wrapper === Array
     end
 end
 

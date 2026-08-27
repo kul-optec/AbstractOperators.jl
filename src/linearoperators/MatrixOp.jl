@@ -10,10 +10,16 @@ Creates a `LinearOperator` which, when multiplied with a vector `x::AbstractVect
 The input `x` can be also a matrix: the number of columns must be given either in the second entry of `dim_in::Tuple` or using the constructor `MatrixOp(A::AbstractMatrix, n_colons)`.
 
 - `threaded`: `false` forces `mul!` to run with BLAS restricted to a single thread; `true`
-  (default) lets BLAS use its full available thread budget subject to the size policy and
-  any outer `NestedThreading` restriction. BLAS reads its thread count live on every call
-  (there is no plan to bake it into), so this is a per-call scope rather than a
-  construction-time choice.
+  (default) leaves BLAS at whatever thread budget is in force, including any outer
+  `NestedThreading` restriction. BLAS reads its thread count live on every call (there is
+  no plan to bake it into), so this is a per-call scope rather than a construction-time
+  choice.
+
+  There is deliberately no size threshold on the `true` branch: BLAS owns its own thread
+  pool and already applies its own per-call size heuristic, so a threshold here would only
+  second-guess it from less information (`length(A)` rather than the real `m*n*k`). It
+  follows that `is_threaded` reports the *permission* -- "BLAS may use its own budget" --
+  and not a promise that any particular `gemv`/`gemm` was actually split.
 
 ```jldoctest
 julia> MatrixOp(Float64,(10,),randn(20,10))
@@ -47,7 +53,7 @@ function MatrixOp(
     codomainT = domain_type <: Real && T <: Complex ? T : domain_type
     dS = _normalize_array_type(array_type, domain_type)
     cS = _normalize_array_type(array_type, codomainT)
-    th = _blas_threaded(threaded, T, length(A), dS)
+    th = _blas_threaded(threaded, dS)
     return if N == 1
         MatrixOp{domain_type, T, M, 1, dS, cS}(A, th)
     else

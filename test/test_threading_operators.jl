@@ -407,6 +407,22 @@ end
     # `Conv`/`Xcorr` plan their own FFTW transforms (DSPOperators does not depend on
     # DSP.jl), so they follow the same counted-thread-pool contract as DFT above: below
     # the size policy's threshold `threaded = true` is declined, above it it is granted.
+    #
+    # The above-threshold half of that contract is checked on `_dsp_fftw_num_threads`
+    # itself rather than on a constructed operator. `THRESHOLD_C2C` is 2^19 (measured; see
+    # its docstring), and these operators plan with `FFTW.MEASURE`, so building one at that
+    # size costs about a minute -- far too much for a contract test. The operator-level
+    # checks below therefore stay small and cover the *granted* path through `num_threads`,
+    # which bypasses the size policy by design.
+    let n_below = DSPOperators.THRESHOLD_C2C - 1, n_above = DSPOperators.THRESHOLD_C2C
+        @test DSPOperators._dsp_fftw_num_threads(nothing, true, n_below) == 1
+        @test DSPOperators._dsp_fftw_num_threads(nothing, true, n_above) ==
+            (Threads.nthreads() > 1 ? Threads.nthreads() : 1)
+        # `false` still vetoes above the threshold, and `num_threads` still wins over both.
+        @test DSPOperators._dsp_fftw_num_threads(nothing, false, n_above) == 1
+        @test DSPOperators._dsp_fftw_num_threads(2, false, n_below) == 2
+    end
+
     for ctor in (
             (dim, h; kw...) -> Conv(Float64, dim, h; kw...),
             (dim, h; kw...) -> Xcorr(Float64, dim, h; kw...),
@@ -418,16 +434,16 @@ end
         @test is_threaded(small_serial) == false
         @test is_threaded(small_threaded) == false   # below threshold: declined
 
-        local h_big = randn(4)
-        local big_serial = ctor((1 << 14,), h_big; threaded = false)
-        local big_threaded = ctor((1 << 14,), h_big; threaded = true)
-        @test is_threaded(big_threaded) == (Threads.nthreads() > 1)
-        local xb = randn(1 << 14)
-        @test big_serial * xb ≈ big_threaded * xb
+        # `num_threads` is FFTW's own spelling and an explicit command, so it is granted
+        # regardless of size -- the only cheap way to build a genuinely threaded plan here.
+        local xs = randn(16)
+        local forced = ctor((16,), h_small; num_threads = 2)
+        @test is_threaded(forced) == true
+        @test forced * xs ≈ small_serial * xs
 
-        local replanned = copy_operator(big_serial; threaded = true)
-        @test is_threaded(replanned) == (Threads.nthreads() > 1)
-        @test replanned * xb ≈ big_serial * xb
+        local replanned = copy_operator(forced; threaded = false)
+        @test is_threaded(replanned) == false
+        @test replanned * xs ≈ small_serial * xs
     end
 end
 
@@ -456,8 +472,12 @@ end
     # The plan is built for a fixed thread count and backend, so a request for either means
     # replanning -- recovering the trajectory from the existing plan (`plan.k`) and dcf
     # rather than refusing, since both are still available.
+    # `threaded = true` is a permission: NFFT grants it only from
+    # `MIN_THREADS_FOR_NFFT` workers up, because below that its threaded path is slower at
+    # every workload size measured (see that constant's provenance table).
     threaded_copy = copy_operator(op; threaded = true)
-    @test is_threaded(threaded_copy) == (Threads.nthreads() > 1)
+    @test is_threaded(threaded_copy) ==
+        (Threads.nthreads() >= NFFTOperators.MIN_THREADS_FOR_NFFT)
     @test threaded_copy * x ≈ op * x
 
     storage_copy = copy_operator(op; storage_type = Array)

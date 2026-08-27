@@ -334,31 +334,82 @@ _supports_threading_from_children(L::AbstractOperator) = any(supports_threading,
 # Unlike FFTW/NFFT, BLAS has no plan: its thread count is a live, process-global setting
 # that `gemv!`/`gemm!` reads on every call, exactly like the elementwise kernels above.
 # `MatrixOp`/`LMatrixOp` therefore scope it per call rather than baking a count in at
-# construction. This must go through NestedThreading's refcounted budget scope
-# (`with_full_threads`/`with_restricted_threads`), not a raw `BLAS.set_num_threads`
-# save/restore: a `mul!` can run concurrently with other `mul!`s (e.g. several `MatrixOp`
-# blocks inside a threaded `HCAT`/`VCAT` block loop), and a naive save/restore of a
-# process-global from concurrent callers is exactly the interleaving bug NestedThreading
-# exists to prevent.
+# construction.
+#
+# BLAS is the one pool here that is *not* a Julia thread pool: it owns its own workers and
+# already applies its own internal size heuristic (OpenBLAS' `GEMM_MULTITHREAD_THRESHOLD`
+# and friends) to decide whether a given `gemv`/`gemm` is worth splitting. That has two
+# consequences the elementwise policy above does not share, and getting either wrong costs
+# roughly a factor of two on a plain `MatrixOp` `mul!`:
+#
+#   1. There is no `Threads.nthreads() > 1` precondition. A session started with `-t 1`
+#      still has a fully threaded BLAS, and pinning it to one thread there is a pure loss
+#      (measured: a 192x192 `gemm` takes 352 us at one BLAS thread against 187 us at four).
+#   2. There is no element-count threshold of our own. Adding one only duplicates -- badly,
+#      since we see `length(A)` rather than the actual `m*n*k` FLOP count -- a decision BLAS
+#      already makes per call.
+#
+# So `threaded = true` means "leave BLAS at its own budget" and costs nothing at all, while
+# `threaded = false` is the veto that nesting safety depends on and is the only case that
+# opens a scope. The veto goes through NestedThreading's refcounted budget scope
+# (`with_restricted_threads`), not a raw `BLAS.set_num_threads` save/restore: a `mul!` can
+# run concurrently with other `mul!`s (e.g. several `MatrixOp` blocks inside a threaded
+# `HCAT`/`VCAT` block loop), and a naive save/restore of a process-global from concurrent
+# callers is exactly the interleaving bug NestedThreading exists to prevent.
 
 """
 	_with_blas_threading(f, threaded::Bool)
 
-Run `f()` with BLAS's thread count set to the full available budget (subject to any outer
-`NestedThreading` restriction) when `threaded`, or restricted to a single thread otherwise.
+Run `f()` with BLAS restricted to a single thread when `threaded` is `false`, or with BLAS
+left at whatever budget is in force when it is `true`.
+
+The permitted branch deliberately opens **no** scope. Any outer `NestedThreading`
+restriction is process-global and already applied by the time it is reached, so re-asserting
+it would only add a lock and a round trip through every registered pool's setter to each
+`mul!` -- measured at ~5.5 us per scope, which is not a rounding error for an operator whose
+whole job may be a few microseconds of `gemv`: `calculus/Ax_mul_Bx/forward` wraps two
+`MatrixOp`s and paid 28.6 -> 34.1 us for exactly those two scopes.
+
+A `with_full_threads` here would additionally *raise* BLAS past a count the caller had
+deliberately set, which the `with_thread_budget` docstring calls out as the one thing a
+full-throttle scope does that a plain call does not.
+
+!!! note "What BLAS's own budget actually is"
+    `LinearAlgebra.__init__` sets it to `max(1, jl_effective_threads() ÷ 2)` — driven by the
+    machine and by CPU affinity, and **never** by Julia's `-t`. A `-t 1` session still gets a
+    multi-threaded BLAS, which is exactly why gating on `Threads.nthreads()` was wrong.
+
+    Two situations leave it at 1 through no fault of this package, and `threaded = true` then
+    stays at 1 rather than raising it:
+
+    - fewer than four effective CPUs (`jl_effective_threads() ÷ 2 == 1`);
+    - a `Distributed` worker, where `Distributed` calls `Base.disable_library_threading()`,
+      whose registered hook is `BLAS.set_num_threads(1)`.
+
+    Both are deliberate policy from outside this package — the second especially, since a
+    worker process is expected not to oversubscribe the node — so it is not this function's
+    business to override them. A caller who wants otherwise sets `BLAS.set_num_threads`
+    themselves; setting `OPENBLAS_NUM_THREADS` also works, but note it makes LinearAlgebra
+    skip its default entirely.
 """
-_with_blas_threading(f::F, threaded::Bool) where {F} = threaded ? with_full_threads(f) : with_restricted_threads(f)
+_with_blas_threading(f::F, threaded::Bool) where {F} = threaded ? f() : with_restricted_threads(f)
 
 """
-	_blas_threaded(threaded, ::Type{T}, n, ::Type{S}) -> Bool
+	_blas_threaded(threaded, ::Type{S}) -> Bool
 
-Resolve a BLAS-backed operator's `threaded` keyword through the shared per-operator policy,
-using `n` (typically the backing matrix's element count, roughly proportional to a
-`gemv`/`gemm` call's FLOP count) as the size measure.
+Resolve a BLAS-backed operator's `threaded` keyword: `false` vetoes, `true` permits, and the
+policy's only say is that BLAS threading is meaningless for non-CPU storage, where the
+`gemm` runs on the device instead. A GPU-backed operator therefore reports
+`is_threaded == false` and runs its `mul!` inside the restricted scope, which costs it
+nothing it would otherwise have used.
+
+Deliberately *not* routed through [`default_threaded`](@ref): see the section comment above
+for why the Julia thread count and an element-count threshold are both the wrong questions
+to ask of a library with its own thread pool and its own size heuristic.
 """
-function _blas_threaded(threaded::Bool, ::Type{T}, n::Int, ::Type{S}) where {T, S <: AbstractArray}
+function _blas_threaded(threaded::Bool, ::Type{S}) where {S <: AbstractArray}
     return _resolve_threaded(threaded) do
-        _default_threaded(threading_threshold(MatrixOp), T, n, S)
+        _is_cpu_storage(S)
     end
 end
 

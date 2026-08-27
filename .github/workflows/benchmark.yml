@@ -60,13 +60,23 @@ jobs:
         # subprocesses it spawns -- see `run_suite`'s docstring in compare.jl for how those
         # get pinned instead (`-t`, once per count in `--threads`).
         #
-        # No OPENBLAS_NUM_THREADS either: BLAS-backed operators (MatrixOp, LMatrixOp, ...)
-        # scope BLAS's thread count themselves via NestedThreading's `with_full_threads`/
-        # `with_restricted_threads` (see `threading_policy.jl`), which clamps it to the
-        # process's own `Threads.nthreads()` for every `mul!`. Oversubscription at `-t 2` is
-        # therefore avoided by the library's own design, not by an external env var --
-        # setting one here would only affect the (irrelevant) idle-BLAS baseline outside any
-        # operator call.
+        # No OPENBLAS_NUM_THREADS either, and this is load-bearing rather than an omission.
+        # Setting any of OPENBLAS_NUM_THREADS / GOTO_NUM_THREADS / OMP_NUM_THREADS makes
+        # LinearAlgebra's `__init__` skip its own `BLAS.set_num_threads` entirely, so one set
+        # here would pin BLAS for the whole run and make `MatrixOp`/`LMatrixOp` measure
+        # something other than what a user gets.
+        #
+        # What they do get: BLAS is initialised to `max(1, jl_effective_threads() ÷ 2)`,
+        # which follows the *machine* (and CPU affinity), never Julia's `-t`. On the 4-vCPU
+        # ubuntu-latest runner that is 2 BLAS threads at both `-t 1` and `-t 2`, which is why
+        # these two rows are comparable for the BLAS-backed operators. A `mul!` on those
+        # operators leaves that setting alone unless it was constructed `threaded = false`,
+        # in which case it runs inside `with_restricted_threads` (see the BLAS bridge section
+        # of `threading_policy.jl` for why the permitted branch opens no scope at all).
+        #
+        # Oversubscription at `-t 2` is therefore bounded by the runner having 4 vCPUs, not
+        # by the library clamping BLAS. On a many-core machine running Julia-threaded
+        # operators alongside BLAS ones, prefer OPENBLAS_NUM_THREADS=1 (see AGENTS.md).
         run: |
           julia --project=head/benchmark head/benchmark/compare.jl \
             --base-dir  "${{ github.workspace }}/base" \

@@ -35,7 +35,7 @@ import AbstractOperators:
 # -- their `is_threaded`/`supports_threading = false` declarations are right after their
 # `include`s below.
 
-const THRESHOLD_C2C = 2^13
+const THRESHOLD_C2C = 2^19
 
 """
 	_dsp_fftw_num_threads(num_threads, threaded, n) -> Int
@@ -45,10 +45,21 @@ Resolve the plan-time FFTW thread count for `Conv`/`Xcorr`, mirroring
 command (wins outright if given); `threaded` is the package-wide keyword and follows the
 package-wide rule (`false` vetoes, `true` enables subject to the size policy).
 
-PROVENANCE: provisional. `THRESHOLD_C2C` is borrowed from FFTWOperators'
-`fftw_threading_threshold(:c2c) == 2^13` rather than independently measured -- both
-operators plan and execute a `c2c`/`r2c` FFT of the padded convolution length internally,
-so the same cost class applies, but this package has no benchmark sweep of its own yet.
+`n` is the *padded* transform length (`fftlen`), not the input length: that is what the
+planned FFT actually costs, and for a short kernel the two differ by a factor of two.
+
+PROVENANCE: measured. `Xcorr` `mul!` sweep over the padded length, Float64, AMD EPYC 7352,
+1 vs 4 FFTW threads: fftlen 2^15 -> 0.89x, 2^17 -> 0.96x, 2^19 -> 1.12x, 2^21 -> 1.30x.
+Threading is a *loss* below 2^19, so the threshold is the first swept length that actually
+wins rather than a round number near it.
+
+The earlier value, 2^13, was borrowed from FFTWOperators' `fftw_threading_threshold(:c2c)`
+on the theory that a padded convolution is the same cost class as a bare transform. The
+sweep says otherwise, which is why this constant is measured here rather than shared: a
+`Conv`/`Xcorr` `mul!` is two transforms plus a pointwise product over an array that FFTW's
+threaded plan must synchronize on twice, so its crossover sits several powers of two above
+a single `plan_fft` of the same length. Borrowing it cost ~18% on the 2-thread `Xcorr`
+forward benchmark, plus a per-call allocation that the serial plan does not make.
 """
 function _dsp_fftw_num_threads(num_threads, threaded::Bool, n::Int)
     num_threads !== nothing && return Int(num_threads)

@@ -44,7 +44,7 @@ function LMatrixOp(
     bt = b'
     dS = _normalize_array_type(array_type, domain_type)
     cS = _normalize_array_type(array_type, domain_type)
-    th = _blas_threaded(threaded, domain_type, length(b), dS)
+    th = _blas_threaded(threaded, dS)
     return LMatrixOp{domain_type, A, typeof(bt), dS, cS}(b, bt, DomainDim[1], th)
 end
 
