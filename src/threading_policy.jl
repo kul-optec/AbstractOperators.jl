@@ -326,8 +326,6 @@ _supports_threading_from_children(L::AbstractOperator) = any(supports_threading,
 
 @inline _fbbool(::FastBroadcast.True) = true
 @inline _fbbool(::FastBroadcast.False) = false
-@inline _fbbool(::Type{FastBroadcast.True}) = true
-@inline _fbbool(::Type{FastBroadcast.False}) = false
 
 # ─── BLAS bridge ───────────────────────────────────────────────────────────────
 #

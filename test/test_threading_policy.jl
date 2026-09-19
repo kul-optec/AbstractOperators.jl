@@ -48,8 +48,18 @@ end
     @test _fbthread(false) === FastBroadcast.False()
     @test _fbbool(_fbthread(true)) == true
     @test _fbbool(_fbthread(false)) == false
-    @test _fbbool(FastBroadcast.True) == true
-    @test _fbbool(FastBroadcast.False) == false
+
+    # Operators must store the singleton instance, not the type: `@.. thread = Th` calls
+    # `Th()` and a bare `DataType` fails there with `MethodError: no method matching
+    # DataType()`, while the `is_threaded` trait would still read as correct.
+    for Th in (
+            typeof(Sin((512,))).parameters[4],
+            typeof(DiagOp(randn(512))).parameters[1],
+            typeof(Scale(2.0, Eye(512))).parameters[1],
+        )
+        @test Th isa Union{FastBroadcast.True, FastBroadcast.False}
+        @test _fbbool(Th) isa Bool
+    end
 end
 
 @testitem "adapt_operator: shares when constraints hold, copies otherwise" tags = [:misc, :Threading] setup = [TestUtils] begin
