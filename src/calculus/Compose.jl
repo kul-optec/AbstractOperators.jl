@@ -160,7 +160,7 @@ Compose(::Eye, L2::AbstractOperator) = L2
 Compose(L1::AbstractOperator, ::Eye) = L1
 Compose(L1::Eye, ::Eye) = L1
 
-function Scale(coeff, L::Compose; threaded = default_should_thread(L))
+function Scale(coeff, L::Compose; threaded::Bool = true)
     if coeff == 1
         return L
     end
@@ -308,3 +308,7 @@ function _copy_operator_impl(op::Compose; storage_type = nothing, threaded = not
     new_ops = tuple([copy_operator(a; storage_type, threaded) for a in op.A]...)
     return Compose(new_ops, new_bufs)
 end
+
+_children(L::Compose) = L.A
+is_threaded(L::Compose) = _is_threaded_from_children(L)
+supports_threading(L::Compose) = _supports_threading_from_children(L)

@@ -168,6 +168,9 @@ julia> size(FiniteDiff((10,20), 1),2)
 """
 size(L::AbstractOperator, i::Int) = size(L)[i]
 
+# `map` over the size tuple rather than `count_dims(size(L, i))`: for operators with
+# heterogeneous codomain/domain shapes the two entries have different types, so a
+# non-literal index widens the result to a `Union` and makes `count_dims` a runtime dispatch.
 """
 	ndims(A::AbstractOperator, [dom,])
 
@@ -187,12 +190,12 @@ julia> ndims(V,2)
 3
 ```
 """
-ndims(L::AbstractOperator) = count_dims(size(L, 1)), count_dims(size(L, 2))
+ndims(L::AbstractOperator) = map(count_dims, size(L))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
 count_dims(::Tuple{}) = 0
 count_dims(::NTuple{N, <:Integer}) where {N} = N
-count_dims(dims::Tuple) = count_dims.(dims)
+count_dims(dims::Tuple) = map(count_dims, dims)
 
 """
 	ndoms(L::AbstractOperator, [dom::Int]) -> (number of codomains, number of domains)
@@ -213,7 +216,14 @@ julia> ndoms(DCAT(Eye(10,10),Eye(10,10)))
 (2, 2)
 ```
 """
-ndoms(L::AbstractOperator) = length.(ndims(L))
+function ndoms(L::AbstractOperator)
+    # Recompute from `size(L)` instead of `length.(ndims(L))`: for operators whose codomain
+    # and domain shapes have different types, JET widens `ndims(L)`'s tuple across the call
+    # boundary into `Tuple{Union{...}, Union{...}}` and reports the elementwise `length` as
+    # runtime dispatch. Indexing the size tuple here keeps both entries concrete.
+    sz = size(L)
+    return length(count_dims(sz[1])), length(count_dims(sz[2]))
+end
 ndoms(L::AbstractOperator, i::Int) = ndoms(L)[i]
 
 is_linear(L::LinearOperator) = true
@@ -401,7 +411,7 @@ The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
 Parameters of power iteration:
 - Maximum number of iterations: 100
 - Tolerance for convergence: 1e-6
-These parameters can be adjusted in the [estimate_opnorm](@ref) function.
+These parameters can be adjusted in the `estimate_opnorm` function.
 """
 function LinearAlgebra.opnorm(A::AbstractOperator)
     return powerit(A)
@@ -487,28 +497,63 @@ end
 """
     copy_operator(op::AbstractOperator; storage_type=nothing, threaded=nothing)
 
-Create a copy of `op` suitable for parallel use.
+Create a copy of `op` suitable for parallel use. **Always returns a new object**; use
+[`adapt_operator`](@ref) when sharing `op` is acceptable provided it meets the constraints.
 
 - Immutable fields (operator arrays, type params) are **shared** (no copy).
 - Mutable buffer fields are **deep-copied**.
 - `storage_type`: if provided (e.g., `CuArray`), convert buffer arrays to that storage.
-- `threaded`: if provided (`true`/`false`), toggle threading for operators that support it.
+- `threaded`: if provided (`true`/`false`), request that threading state for operators that
+  support it; `nothing` (the default) preserves whatever the operator already has.
 
-When `storage_type` is `nothing` and `threaded` is `nothing`, equivalent to the old `copy_op`
-but more efficient (shares immutable data).
+Note these two are **constraint** arguments, which is why they accept `nothing` while the
+operator *constructors* take a plain `threaded::Bool`. `nothing` here means "no constraint
+on this axis", exactly as it does for `storage_type` — without it a plain `copy_operator(op)`
+could not preserve an explicitly serial operator, since it would re-derive threading from
+the policy. As everywhere else, a `threaded = true` request is a permission the policy may
+still decline; `threaded = false` is honoured absolutely.
+
+The "return `op` itself when it is already thread-safe" short-circuit that used to live
+here now lives in `adapt_operator`, so that the two functions have crisp contracts: one
+always copies, the other never copies needlessly.
 """
 function copy_operator(op::AbstractOperator; storage_type = nothing, threaded = nothing)
-    if is_thread_safe(op) && threaded === nothing && storage_type === nothing
-        return op  # safe to share
-    end
-    return _copy_operator_impl(op; storage_type, threaded)
+    return _copy_operator_impl(op; storage_type = _normalize_storage_request(storage_type), threaded)
 end
 
-# Default implementation: just deepcopy (fallback)
+# `_copy_operator_impl` methods uniformly build parameterized types as `storage_type{T}`,
+# so the request must arrive as a bare wrapper (`Array`, `CuArray`). Callers naturally
+# write either form, and `Array{Float64}{Float64}` is a confusing `MethodError` rather than
+# a helpful one -- so normalize here, once, instead of in every impl.
+_normalize_storage_request(::Nothing) = nothing
+_normalize_storage_request(S::Type{<:AbstractArray}) = _array_wrapper_type(S)
+
+# Fallback. `deepcopy` reproduces the operator exactly as it is, so it can only answer a
+# request it does not have to change anything for. Two cases qualify:
+#
+#   * `storage_type === nothing` — nothing to convert.
+#   * `threaded` given but `supports_threading(op) == false` — the operator has no threaded
+#     path, so the request is vacuous. This is the same rule `_satisfies_constraints` uses,
+#     and it is what lets a threaded batch operator wrap an FFTW/DSP operator: those are
+#     never threaded themselves, so `threaded = false` asks nothing of them.
+#
+# Anything else would return an operator that does not meet the caller's constraints, so
+# refuse instead, naming the type that needs a `_copy_operator_impl` method.
 function _copy_operator_impl(
         op::T; storage_type = nothing, threaded = nothing
     ) where {T <: AbstractOperator}
-    return deepcopy(op)
+    if storage_type === nothing && (threaded === nothing || !supports_threading(op))
+        return deepcopy(op)
+    end
+    unmet = storage_type === nothing ? "threaded" : "storage_type"
+    return throw(
+        ArgumentError(
+            "copy_operator cannot honour `$(unmet)` for $(T): no _copy_operator_impl " *
+                "method is defined for it, and the deepcopy fallback would silently " *
+                "ignore the request. Define " *
+                "AbstractOperators._copy_operator_impl(::$(T); storage_type, threaded)."
+        ),
+    )
 end
 
 # Helper: convert a buffer array to the target storage type
@@ -520,6 +565,25 @@ function _convert_buffer(buf::AbstractArray{T}, storage_type::Type) where {T}
 end
 
 _should_thread(::Number) = false
-_should_thread(d::AbstractArray) = length(d) > 2^16 && Threads.nthreads() > 1
-_should_thread(::Type{<:AbstractArray}) = Threads.nthreads() > 1
-_should_thread(op::AbstractOperator) = _should_thread(domain_array_type(op))
+_should_thread(d::AbstractArray) = length(d) >= THRESHOLD_MEMORY_BOUND && Threads.nthreads() > 1
+_should_thread(S::Type{<:AbstractArray}) = Threads.nthreads() > 1 && _is_cpu_storage(S)
+
+"""
+	_should_thread(op::AbstractOperator)
+
+Whether a *batch* loop over `op` should thread.
+
+Requires more than one Julia thread, CPU storage, and the wrapped operator to carry at
+least `MIN_BATCH_WORK_FOR_PARALLEL` elements per call -- otherwise a batch operator would
+thread at any size, including a four-element one, paying the full `@budgeted_threads`
+setup to parallelise microseconds of work.
+
+The batch *count* is not known here (it is decided by the caller), so this is deliberately
+only the per-item half of the condition.
+"""
+function _should_thread(op::AbstractOperator)
+    S = _policy_storage(domain_array_type(op))
+    Threads.nthreads() > 1 || return false
+    _is_cpu_storage(S) || return false
+    return _total_elements(size(op, 2)) >= MIN_BATCH_WORK_FOR_PARALLEL
+end

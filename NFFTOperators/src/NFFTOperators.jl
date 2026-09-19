@@ -5,13 +5,12 @@ export NFFTOp
 using LinearAlgebra
 using AbstractOperators
 using FastBroadcast
-using Polyester: disable_polyester_threads
+using NestedThreading: with_full_threads, with_restricted_threads
 import LinearAlgebra: mul!
 import Base: size
 import NFFT: NFFT
 import NFFTTools: NFFTTools
 import AbstractOperators:
-    set_thread_counts_expr,
     domain_type,
     codomain_type,
     fun_name,
@@ -21,8 +20,12 @@ import AbstractOperators:
     domain_array_type,
     codomain_array_type,
     _array_wrapper_type,
+    is_threaded,
+    supports_threading,
+    _resolve_threaded,
+    is_thread_safe,
+    _copy_operator_impl,
     AdjointOperator
-import Base.Threads: nthreads
 
 import FFTW: FFTW
 

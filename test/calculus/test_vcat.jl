@@ -149,7 +149,7 @@ end
     @test VCAT(Aeq1, Aeq2) != VCAT(Aeq2, Aeq1)
 end
 
-@testitem "VCAT (GPU)" tags = [:gpu, :calculus, :VCAT] setup = [TestUtils] begin
+@testitem "VCAT (GPU)" tags = [:gpu, :calculus, :VCAT] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

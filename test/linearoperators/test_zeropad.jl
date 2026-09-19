@@ -98,7 +98,7 @@ end  # @testmodule ZeroPadTestHelper
     @test occursin("[I;0]", s)
 end
 
-@testitem "ZeroPad (GPU)" tags = [:gpu, :linearoperator, :ZeroPad] setup = [TestUtils, ZeroPadTestHelper] begin
+@testitem "ZeroPad (GPU)" tags = [:gpu, :linearoperator, :ZeroPad] setup = [TestUtils, ZeroPadTestHelper, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

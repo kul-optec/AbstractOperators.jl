@@ -85,7 +85,7 @@ end
     @test_throws ErrorException diag(op)
 end
 
-@testitem "MyLinOp (GPU)" tags = [:gpu, :linearoperator, :MyLinOp] setup = [TestUtils] begin
+@testitem "MyLinOp (GPU)" tags = [:gpu, :linearoperator, :MyLinOp] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -101,4 +101,21 @@ end
         test_op(op, x, y, false)
         @test domain_array_type(op) <: AT
     end
+end
+
+@testitem "MyLinOp: copy_operator" tags = [:linearoperator, :MyLinOp] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(2)
+
+    n, m = 5, 4
+    A = randn(n, m)
+    op = MyLinOp(Float64, (m,), (n,), (y, x) -> mul!(y, A, x), (y, x) -> mul!(y, A', x))
+    op2 = copy_operator(op)
+    @test op2 isa MyLinOp
+    x = randn(m)
+    @test op * x ≈ op2 * x
+
+    op3 = copy_operator(op; storage_type = Array{Float64})
+    @test domain_array_type(op3) <: Array
+    @test op3 * x ≈ op * x
 end

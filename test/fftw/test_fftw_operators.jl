@@ -360,7 +360,7 @@ end
     @test is_full_column_rank(op) == false
 end
 
-@testitem "DCT/IDCT (GPU)" tags = [:gpu, :fftw, :DCT, :IDCT] setup = [TestUtils] begin
+@testitem "DCT/IDCT (GPU)" tags = [:gpu, :fftw, :DCT, :IDCT] setup = [TestUtils, GpuEnvSetup] begin
     using AbstractOperators, FFTW, FFTWOperators, GPUEnv, Random
     has_accelerated_dcts = Base.find_package("AcceleratedDCTs") !== nothing
 
@@ -391,7 +391,7 @@ end
     end
 end
 
-@testitem "DFT/RDFT/IRDFT (GPU)" tags = [:gpu, :fftw, :DFT, :RDFT, :IRDFT] setup = [TestUtils] begin
+@testitem "DFT/RDFT/IRDFT (GPU)" tags = [:gpu, :fftw, :DFT, :RDFT, :IRDFT] setup = [TestUtils, GpuEnvSetup] begin
     using FFTW, FFTWOperators, GPUEnv, LinearAlgebra, Random, AbstractOperators
 
     for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)

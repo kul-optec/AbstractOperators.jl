@@ -438,7 +438,7 @@ end
     @test length(out3.A) == 2
 end
 
-@testitem "Compose (GPU)" tags = [:gpu, :calculus, :Compose] setup = [TestUtils] begin
+@testitem "Compose (GPU)" tags = [:gpu, :calculus, :Compose] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

@@ -7,12 +7,16 @@ struct NoOperatorBroadCast{T, N, M, Threaded, S} <: AbstractBroadCast{T, N, M, T
     reshaped_dim_in::NTuple{M, Int}
     dim_out::NTuple{M, Int}
     function NoOperatorBroadCast(
-            T::Type, S, dim_in::NTuple{N, Int}, reshaped_dim_in::NTuple{M, Int}, dim_out::NTuple{M, Int}; threaded::Bool = true
+            T::Type, S, dim_in::NTuple{N, Int}, reshaped_dim_in::NTuple{M, Int},
+            dim_out::NTuple{M, Int}; threaded::Bool = true
         ) where {N, M}
         Base.Broadcast.check_broadcast_shape(dim_out, reshaped_dim_in)
         compact = all(reshaped_dim_in[d] == dim_out[d] for d in 1:N)
-        threaded = threaded && _should_thread(S) && Threads.nthreads() > 1 && compact && prod(dim_in) * sizeof(T) > 2^16
-        return new{T, N, M, threaded, S}(dim_in, reshaped_dim_in, dim_out)
+        # `compact` is a hard prerequisite, not a size heuristic: the threaded kernel
+        # (`tbroadcast!`) is only correct when the broadcast dimensions are trailing. The
+        # size question then goes through the shared policy, which is expressed in elements.
+        th = compact && _elementwise_threaded(NoOperatorBroadCast, threaded, T, dim_out, S)
+        return new{T, N, M, th, S}(dim_in, reshaped_dim_in, dim_out)
     end
 end
 
@@ -26,7 +30,10 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
             A, dim_out::NTuple{M, Int}; threaded::Bool = true
         ) where {M}
         Base.Broadcast.check_broadcast_shape(dim_out, size(A, 1))
-        threaded = threaded && _should_thread(A) && Threads.nthreads() > 1
+        threaded = _elementwise_threaded(
+            OperatorBroadCast, threaded, codomain_type(A), dim_out,
+            _policy_storage(codomain_array_type(A)),
+        )
         N = ndims(A, 1)
         T = codomain_type(A)
         dim_in = size(A, 1)
@@ -37,7 +44,10 @@ struct OperatorBroadCast{T, N, M, Threaded, Compact, Imask, L, C, D, K} <: Abstr
         bufC = allocate_in_codomain(A)
         if threaded
             bufD = [allocate_in_domain(A) for _ in 1:Threads.nthreads()]
-            A = [i == 1 ? A : AbstractOperators.copy_operator(A) for i in 1:Threads.nthreads()]
+            # Nesting safety: the adjoint loop below threads over `idxs` and calls the
+            # wrapped operator inside it, so every per-thread instance -- including the
+            # first -- must be non-threaded.
+            A = _per_thread_operators(A, Threads.nthreads())
         else
             bufD = allocate_in_domain(A)
         end
@@ -160,7 +170,9 @@ function mul!(y, A::AdjointOperator{<:OperatorBroadCast{T, N, M, true}}, b) wher
     lock = ReentrantLock()
     thread_count = min(Threads.nthreads(), length(R.idxs))
     batch_size = length(R.idxs) / thread_count
-    @threads for t in 1:thread_count
+    # Budgeted: the body calls `mul!` on arbitrary sub-operators, which may themselves use
+    # BLAS/FFTW, so without budgeting this loop is a genuine oversubscription source.
+    @budgeted_threads for t in 1:thread_count
         idx_start = max(1, floor(Int, (t - 1) * batch_size + 1))
         idx_end = min(length(R.idxs), floor(Int, t * batch_size))
         for i in idx_start:idx_end
@@ -247,7 +259,7 @@ function _copy_operator_impl(
         op::NoOperatorBroadCast{T, N, M, Th, S}; storage_type = nothing, threaded = nothing
     ) where {T, N, M, Th, S}
     new_threaded = threaded === nothing ? Th : threaded
-    new_S = storage_type === nothing ? S : storage_type
+    new_S = storage_type === nothing ? S : storage_type{T}
     return NoOperatorBroadCast(T, new_S, op.dim_in, op.reshaped_dim_in, op.dim_out; threaded = new_threaded)
 end
 
@@ -267,3 +279,17 @@ end
         @ncall($M, view, b, d -> Imask[d] ? Colon() : idx[d])
     end
 end
+
+# Broadcasting is pure data movement, so both flavours sit at the memory-bound threshold.
+threading_threshold(::Type{<:AbstractBroadCast}) = THRESHOLD_MEMORY_BOUND
+supports_threading(::AbstractBroadCast) = true
+
+# The `Threaded` type parameter was already there; without these methods the trait fell
+# through to the `false` default and contradicted the operator's own dispatch.
+is_threaded(::NoOperatorBroadCast{T, N, M, Th}) where {T, N, M, Th} = Th
+# For the operator flavour the wrapped operator can thread independently of the broadcast.
+is_threaded(R::OperatorBroadCast{T, N, M, Th}) where {T, N, M, Th} =
+    Th || any(is_threaded, _broadcast_children(R))
+_broadcast_children(R::OperatorBroadCast{T, N, M, false}) where {T, N, M} = (R.A,)
+_broadcast_children(R::OperatorBroadCast{T, N, M, true}) where {T, N, M} = R.A
+_children(R::OperatorBroadCast) = _broadcast_children(R)

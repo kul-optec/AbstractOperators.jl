@@ -2,63 +2,6 @@
 # Specializations for HCAT/VCAT/DCAT are added in their respective files.
 _ndoms_from_type(::Type{<:AbstractOperator}, dim::Int) = 1
 
-const thread_count_functions = Ref{Vector{Pair{Function, Function}}}(
-    Pair{Function, Function}[
-        BLAS.get_num_threads => BLAS.set_num_threads,
-    ]
-)
-
-# Non-inlined helpers so that the abstract Function dispatch is contained in
-# AbstractOperators and not inlined into the calling module (which would cause
-# JET @test_opt findings when target_modules excludes AbstractOperators).
-@noinline function _save_thread_counts()
-    return [pair.first() for pair in thread_count_functions[]]
-end
-
-@noinline function _apply_thread_counts(n::Int)
-    for pair in thread_count_functions[]
-        pair.second(n)
-    end
-    return
-end
-
-@noinline function _restore_thread_counts(prev::Vector)
-    for (i, pair) in enumerate(thread_count_functions[])
-        pair.second(prev[i])
-    end
-    return
-end
-
-function set_thread_counts_expr(thread_count_expr, body_expr)
-    return quote
-        local prev_thread_counts = AbstractOperators._save_thread_counts()
-        AbstractOperators._apply_thread_counts($thread_count_expr)
-        local res
-        try
-            if $thread_count_expr == 1
-                res = disable_polyester_threads() do
-                    $(esc(body_expr))
-                end
-            else
-                # Full threading enabled
-                res = $(esc(body_expr))
-            end
-        finally
-            # Restore previous thread counts
-            AbstractOperators._restore_thread_counts(prev_thread_counts)
-        end
-        res
-    end
-end
-
-macro enable_full_threading(expr)
-    return set_thread_counts_expr(nthreads(), expr)
-end
-
-macro restrict_threading(expr)
-    return set_thread_counts_expr(1, expr)
-end
-
 _storage_parent(a) = a
 _storage_parent(a::SubArray) = _storage_parent(parent(a))
 _storage_parent(a::Base.ReshapedArray) = _storage_parent(parent(a))
@@ -104,6 +47,10 @@ end
 function check(codomain_array, op, domain_array)
     _check_domain_storage(domain_array, op)
     _check_codomain_storage(codomain_array, op)
+    # Destructure once with literal indices: `size(op, i)` returns a `Union` for operators
+    # whose codomain and domain shapes have different types, which would make every
+    # comparison below a runtime dispatch.
+    codomain_size, domain_size = size(op)
     if (ndoms(op, 2) > 1) != (domain_array isa ArrayPartition)
         throw(ArgumentError("Input must be an ArrayPartition if and only if operator has multiple input domains"))
     end
@@ -121,10 +68,10 @@ function check(codomain_array, op, domain_array)
         )
     end
     dim_in = domain_array isa ArrayPartition ? size.(domain_array.x) : size(domain_array)
-    if !isequal(dim_in, size(op, 2))
+    if !isequal(dim_in, domain_size)
         throw(
             DimensionMismatch(
-                "Input size $(dim_in) does not match operator input size $(size(op, 2))",
+                "Input size $(dim_in) does not match operator input size $(domain_size)",
             ),
         )
     end
@@ -148,10 +95,10 @@ function check(codomain_array, op, domain_array)
         )
     end
     dim_out = codomain_array isa ArrayPartition ? size.(codomain_array.x) : size(codomain_array)
-    if !isequal(dim_out, size(op, 1))
+    if !isequal(dim_out, codomain_size)
         throw(
             DimensionMismatch(
-                "Output size $(dim_out) does not match operator output size $(size(op, 1))",
+                "Output size $(dim_out) does not match operator output size $(codomain_size)",
             ),
         )
     end

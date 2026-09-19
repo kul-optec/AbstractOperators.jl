@@ -63,3 +63,11 @@ estimate_opnorm
 ```@docs
 copy_operator
 ```
+
+## Threading
+
+```@docs
+is_threaded
+supports_threading
+adapt_operator
+```
