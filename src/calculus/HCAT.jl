@@ -323,7 +323,7 @@ end
 # Properties
 Base.:(==)(H1::HCAT{N, L1, P1}, H2::HCAT{N, L2, P2}) where {N, L1, L2, P1, P2} = H1.A == H2.A && H1.idxs == H2.idxs
 
-@generated function size(H::HCAT{N, L, P}) where {N, L, P}
+@generated function size(H::HCAT{N, L, P, C, DS, Th, LP}) where {N, L, P, C, DS, Th, LP}
     exprs = []
     for i in 1:N
         Pi = fieldtype(P, i)
