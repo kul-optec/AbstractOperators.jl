@@ -160,3 +160,17 @@ function remove_displacement(P::Axt_mul_Bx)
         remove_displacement(P.A), remove_displacement(P.B), P.bufA, P.bufB, P.bufC, P.bufD
     )
 end
+
+_children(L::Axt_mul_Bx) = (L.A, L.B)
+is_threaded(L::Axt_mul_Bx) = _is_threaded_from_children(L)
+supports_threading(L::Axt_mul_Bx) = _supports_threading_from_children(L)
+
+function _copy_operator_impl(op::Axt_mul_Bx; storage_type = nothing, threaded = nothing)
+    new_bufA = _convert_buffer(op.bufA, storage_type)
+    new_bufB = _convert_buffer(op.bufB, storage_type)
+    new_bufC = _convert_buffer(op.bufC, storage_type)
+    new_bufD = _convert_buffer(op.bufD, storage_type)
+    new_A = copy_operator(op.A; storage_type, threaded)
+    new_B = copy_operator(op.B; storage_type, threaded)
+    return Axt_mul_Bx(new_A, new_B, new_bufA, new_bufB, new_bufC, new_bufD)
+end

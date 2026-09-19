@@ -9,6 +9,29 @@ codomain_type(::BatchOp{dT, cT}) where {dT, cT} = cT
 
 # Utility
 
+"""
+	_per_thread_operators(operator, count) -> Vector
+
+Build the per-thread operator instances used by a threaded batch operator.
+
+Two things happen here, and both are required for nesting safety:
+
+1. **Threading is switched off in the wrapped operator.** The batch loop is already the
+   parallel layer; leaving the inner operator threaded would nest Julia threads inside
+   every batch iteration. This must apply to *every* instance including the first — using
+   the caller's operator instance directly for slot 1 (rather than adapting it too) would
+   leave that instance threaded, letting the nesting slip through.
+2. **Each thread gets a private instance unless sharing is provably safe.** Operators that
+   own scratch buffers cannot be shared; `is_thread_safe` is what distinguishes them, and
+   copying does not change that answer (see `adapt_operator`), so the branch has to happen
+   here rather than being delegated to `require_thread_safe`.
+"""
+function _per_thread_operators(operator::AbstractOperators.AbstractOperator, count::Int)
+    base = AbstractOperators.adapt_operator(operator; threaded = false)
+    AbstractOperators.is_thread_safe(base) && return fill(base, count)
+    return [i == 1 ? base : AbstractOperators.copy_operator(base; threaded = false) for i in 1:count]
+end
+
 function ensure_batch_size_is_tuple(batch_size::Int)
     return (batch_size,)
 end

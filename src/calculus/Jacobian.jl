@@ -111,3 +111,15 @@ domain_type(L::Jacobian) = domain_type(L.A)
 codomain_type(L::Jacobian) = codomain_type(L.A)
 domain_array_type(L::Jacobian) = domain_array_type(L.A)
 codomain_array_type(L::Jacobian) = codomain_array_type(L.A)
+
+_children(L::Jacobian) = (L.A,)
+is_threaded(L::Jacobian) = _is_threaded_from_children(L)
+supports_threading(L::Jacobian) = _supports_threading_from_children(L)
+
+function _copy_operator_impl(J::Jacobian; storage_type = nothing, threaded = nothing)
+    # `x` is the linearization point: its *value* is part of the operator's meaning, so it
+    # is copied rather than merely reallocated when the storage backend changes.
+    new_x = storage_type === nothing ? J.x :
+        copyto!(similar(storage_type{eltype(J.x)}, size(J.x)), J.x)
+    return Jacobian(copy_operator(J.A; storage_type, threaded), new_x)
+end

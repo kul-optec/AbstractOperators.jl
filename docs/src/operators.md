@@ -106,3 +106,13 @@ NFFTOp
 ```@docs
 WaveletOp
 ```
+
+## Contourlet
+
+!!! note
+    Add package `ContourletOperators` to access the following operators.
+
+```@docs
+ContourletOp
+NSCTOp
+```

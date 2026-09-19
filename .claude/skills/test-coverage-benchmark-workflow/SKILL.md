@@ -96,11 +96,15 @@ a fork-safe two-stage approach:
 - **`post_benchmark_comment.yml`** — privileged `workflow_run` job that downloads the artifact
   and creates or updates the PR comment.
 
-The comparison table mirrors AirspeedVelocity output with separate Time and Memory sections,
-base/head columns, a ratio column, and emoji indicators:
+The comment body has one section per thread count in `--threads` (default `1,2`), each with
+its own Time/Memory tables, base/head columns, a ratio column, and emoji indicators:
 
 - 🚀 significant speedup: `ratio − ratio_err > 1.2` (time) or `ratio < 0.5` (memory)
 - 🐢 significant slowdown: `ratio + ratio_err < 0.8` (time) or `ratio > 1.5` (memory)
+
+`compare.jl` runs the whole suite once per count in `--threads`, pinning the worker with
+`-t` for each pass (not just once at whatever the driving process happened to start with),
+so single- and multithreaded behavior are both measured instead of one ambiguous default.
 
 To run the comparison locally with the same script used by CI:
 
@@ -112,7 +116,11 @@ julia --project=benchmark benchmark/compare.jl \
   --head-dir  . \
   --output-dir .temp/bench-compare \
   --pr        0 \
-  --julia-version "$(julia -e 'print(VERSION)')"
+  --julia-version "$(julia -e 'print(VERSION)')" \
+  --threads 1,2
 
 cat .temp/bench-compare/body.md
 ```
+
+Pass `--threads` a single count (e.g. `--threads 2`) to isolate one regime -- useful when
+chasing a discrepancy that only shows up threaded, without paying for the serial pass too.

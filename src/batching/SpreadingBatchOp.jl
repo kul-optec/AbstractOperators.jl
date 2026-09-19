@@ -62,7 +62,7 @@ end
 		operators::Array{<:AbstractOperators.AbstractOperator},
 		batch_size::NTuple{N,Int},
 		batch_dim_mask::Union{NTuple{M,Symbol}, Pair{NTuple{M1,Symbol},NTuple{M2,Symbol}};
-		threaded::Bool=nthreads() > 1,
+		threaded::Bool=true,
 		threading_strategy::Symbol=ThreadingStrategy.AUTO,
 	)
 
@@ -77,7 +77,7 @@ repeat the operator application over the batch dimensions.
 dimensions. The symbols can be `:b` for batch dimensions, `:s` for spreading dimensions or `:_` for dimensions on which the operator acts.
 If the mask is a pair, the first element specifies the domain batch dimensions and the second element specifies the codomain batch dimensions.
 If no mask is provided, the following order is assumed: (operator dims..., spreading dims..., batch dims...)
-- `threaded::Bool`: If `true`, the operator will execute in parallel over the batch dimensions. Default is `nthreads() > 1`.
+- `threaded`: `false` disables batch-level threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
 - `threading_strategy::Symbol`: The threading strategy to use. Default is `ThreadingStrategy.AUTO`, which will automatically choose the
 best strategy based on the size of the operators and the input arrays.
 
@@ -106,7 +106,7 @@ julia> batch_op = BatchOp(ops, 6, (:s, :_, :_, :_, :b) => (:s, :_, :b, :_))
 """
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     )
     op_domain_dims = ndims(operators[1], 2)
@@ -125,7 +125,7 @@ end
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_size;
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     )
     op_domain_dims = ndims(operators[1], 2)
@@ -149,7 +149,7 @@ end
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_dim_mask::NTuple{M, Symbol};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M}
     return BatchOp(
@@ -165,7 +165,7 @@ function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_size,
         batch_dim_mask::NTuple{M, Symbol};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M}
     return BatchOp(
@@ -180,7 +180,7 @@ end
 function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M1, M2}
     return BatchOp(
@@ -196,7 +196,7 @@ function BatchOp(
         operators::Array{<:AbstractOperators.AbstractOperator},
         batch_size,
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M1, M2}
     batch_dims = [m for m in batch_dim_mask.first if m == :s || m == :b]
@@ -241,7 +241,7 @@ function create_BatchOp(
         codomain_size::NTuple{M, Int},
         codomain_batch_dim_mask::NTuple{M, Bool},
         spreading_dims::NTuple{K, Int};
-        threaded::Bool = nthreads() > 1,
+        threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     ) where {M, N, K, opT <: AbstractOperators.AbstractOperator}
     batch_size, dType, cdType, opType = prepare_SpreadingBatchOp(
@@ -252,8 +252,15 @@ function create_BatchOp(
         codomain_batch_dim_mask,
         spreading_dims,
     )
-    threaded = threaded && _should_thread(operators[1])
-    if threaded && nthreads() > 1
+    threaded = _resolve_threaded(() -> _should_thread(operators[1]), threaded)
+    if threaded
+        # Nesting safety, applied before `opType` is used: the batch loop is the parallel
+        # layer, so the wrapped operators must not thread themselves. Threading is a type
+        # parameter, so this changes `opType` -- hence it happens here rather than inside
+        # `create_threaded_SpreadingBatchOp`, whose THREAD_SAFE and LOCKING strategies
+        # store the operators without ever reaching a copy.
+        operators = map(op -> AbstractOperators.adapt_operator(op; threaded = false), operators)
+        opType = eltype(operators)
         type_args = (
             dType,
             cdType,
@@ -366,8 +373,9 @@ function create_threaded_SpreadingBatchOp(
         end
         if threading_strategy == ThreadingStrategy.COPYING
             operators = [
-                i == 1 ? operators : [AbstractOperators.copy_operator(op) for op in operators] for
-                    i in 1:min(nthreads(), prod(batch_size))
+                i == 1 ? operators :
+                    [AbstractOperators.copy_operator(op; threaded = false) for op in operators]
+                    for i in 1:min(nthreads(), prod(batch_size))
             ]
             return SpreadingBatchOpCopying{type_args...}(
                 operators, sizes..., CartesianIndices(batch_size)
@@ -476,7 +484,7 @@ macro threaded_mul_body(is_adj, get_operators_expr)
     return esc(
         quote
             num_threads = min(nthreads(), length(op.batch_indices))
-            @restrict_threading @threads for j in 1:num_threads
+            @budgeted_threads for j in 1:num_threads
                 @inbounds for i in j:num_threads:length(op.batch_indices)
                     idx = op.batch_indices[i]
                     mul!(
@@ -521,18 +529,22 @@ end
 
 function mul!(out::AbstractArray, op::SpreadingBatchOpLocking, inp::AbstractArray)
     check(out, op, inp)
-    @restrict_threading @sync for idx in op.batch_indices
-        op_lock = get_lock(op, idx)
-        @spawn begin
-            lock(op_lock)
-            try
-                @inbounds mul!(
-                    get_codomain_view(out, op, idx),
-                    get_threadsafe_spreading_operator(op, idx),
-                    get_domain_view(inp, op, idx),
-                )
-            finally
-                unlock(op_lock)
+    # Not a plain `for` loop shape, so this uses the function form rather than
+    # `@budgeted_threads`; the budget scope covers the whole `@sync` block.
+    with_restricted_threads() do
+        @sync for idx in op.batch_indices
+            op_lock = get_lock(op, idx)
+            @spawn begin
+                lock(op_lock)
+                try
+                    @inbounds mul!(
+                        get_codomain_view(out, op, idx),
+                        get_threadsafe_spreading_operator(op, idx),
+                        get_domain_view(inp, op, idx),
+                    )
+                finally
+                    unlock(op_lock)
+                end
             end
         end
     end
@@ -544,18 +556,20 @@ function mul!(
     )
     check(out, op, inp)
     op = op.A
-    @restrict_threading @sync for idx in op.batch_indices
-        op_lock = get_lock(op, idx)
-        @spawn begin
-            lock(op_lock)
-            try
-                @inbounds mul!(
-                    get_domain_view(out, op, idx),
-                    get_threadsafe_adj_spreading_operator(op, idx),
-                    get_codomain_view(inp, op, idx),
-                )
-            finally
-                unlock(op_lock)
+    with_restricted_threads() do
+        @sync for idx in op.batch_indices
+            op_lock = get_lock(op, idx)
+            @spawn begin
+                lock(op_lock)
+                try
+                    @inbounds mul!(
+                        get_domain_view(out, op, idx),
+                        get_threadsafe_adj_spreading_operator(op, idx),
+                        get_codomain_view(inp, op, idx),
+                    )
+                finally
+                    unlock(op_lock)
+                end
             end
         end
     end
@@ -564,7 +578,7 @@ end
 
 function mul!(out::AbstractArray, op::SpreadingBatchOpFixedOperator, inp::AbstractArray)
     check(out, op, inp)
-    @restrict_threading @threads for op_idx in op.operator_indices
+    @budgeted_threads for op_idx in op.operator_indices
         current_op = op.operators[op_idx]
         @inbounds for batch_idx in op.batch_indices
             idx = merge_indices(op_idx, batch_idx)
@@ -581,7 +595,7 @@ function mul!(
     )
     check(out, op, inp)
     op = op.A
-    @restrict_threading @threads for op_idx in op.operator_indices
+    @budgeted_threads for op_idx in op.operator_indices
         current_op = op.operators[op_idx]
         @inbounds for batch_idx in op.batch_indices
             idx = merge_indices(op_idx, batch_idx)
@@ -641,6 +655,56 @@ is_invertible(L::SpreadingBatchOp) = is_invertible(L.operators[1])
 is_invertible(L::SpreadingBatchOpCopying) = is_invertible(L.operators[1][1])
 is_orthogonal(L::SpreadingBatchOp) = is_orthogonal(L.operators[1])
 is_orthogonal(L::SpreadingBatchOpCopying) = is_orthogonal(L.operators[1][1])
+
+# The five SpreadingBatchOp structs differ in how they hold their operators; this is the
+# one place that difference is normalised, so equality, copying and the `is_threaded` trait
+# do not each have to re-derive it.
+_spreading_operators(L::SpreadingBatchOp) = L.operators
+_spreading_operators(L::SpreadingBatchOpCopying) = L.operators[1]
+
+_batch_size(L::SpreadingBatchOpSingleThreaded) = L.batch_size
+_batch_size(L::SpreadingBatchOp) = size(L.batch_indices)
+
+is_threaded(::SpreadingBatchOp) = true
+is_threaded(::SpreadingBatchOpSingleThreaded) = false
+
+function Base.:(==)(L1::SpreadingBatchOp, L2::SpreadingBatchOp)
+    return _spreading_operators(L1) == _spreading_operators(L2) &&
+        L1.domain_size == L2.domain_size &&
+        L1.codomain_size == L2.codomain_size &&
+        _batch_size(L1) == _batch_size(L2)
+end
+
+# `SingleThreaded`/`ThreadSafe` never consult `threading_strategy` in `create_BatchOp`
+# (the former forces `threaded=false`, the latter is picked purely from `is_thread_safe`),
+# so `AUTO` is a correct no-op for them, not a guess. Any future leaf type must add its own
+# case here rather than falling through, since falling through would silently mis-replay it.
+_threading_strategy_of(::SpreadingBatchOpSingleThreaded) = ThreadingStrategy.AUTO
+_threading_strategy_of(::SpreadingBatchOpThreadSafe) = ThreadingStrategy.AUTO
+_threading_strategy_of(::SpreadingBatchOpCopying) = ThreadingStrategy.COPYING
+_threading_strategy_of(::SpreadingBatchOpLocking) = ThreadingStrategy.LOCKING
+_threading_strategy_of(::SpreadingBatchOpFixedOperator) = ThreadingStrategy.FIXED_OPERATOR
+
+function _copy_operator_impl(
+        op::SpreadingBatchOp; storage_type = nothing, threaded = nothing
+    )
+    ops = _spreading_operators(op)
+    # The wrapped operators are always copied (never shared) so that scratch buffers are not
+    # aliased between `op` and the returned copy; their threading is forced off by
+    # `create_BatchOp` for nesting safety regardless of the storage request.
+    new_ops = map(o -> copy_operator(o; storage_type), ops)
+    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    return create_BatchOp(
+        collect(new_ops),
+        op.domain_size,
+        get_domain_batch_dim_mask(typeof(op)),
+        op.codomain_size,
+        get_codomain_batch_dim_mask(typeof(op)),
+        get_spreading_dims(typeof(op));
+        threaded = new_threaded,
+        threading_strategy = _threading_strategy_of(op),
+    )
+end
 
 function extend_single_diags(single_diags, L::BatchOp{T1, T2, dM, cM}) where {T1, T2, dM, cM}
     input_size = L.domain_size

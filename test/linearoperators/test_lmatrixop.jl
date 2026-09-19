@@ -142,7 +142,7 @@ end
     @test occursin("(⋅)b", s)
 end
 
-@testitem "LMatrixOp (GPU)" tags = [:linearoperator, :LMatrixOp, :gpu] setup = [TestUtils] begin
+@testitem "LMatrixOp (GPU)" tags = [:linearoperator, :LMatrixOp, :gpu] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
     for backend in gpu_backends()
         Random.seed!(0)
@@ -151,4 +151,22 @@ end
         op = LMatrixOp(Float64, (n, m), b)
         test_op(op, gpu_randn(backend, n, m), gpu_randn(backend, n), false)
     end
+end
+
+@testitem "LMatrixOp: copy_operator" tags = [:linearoperator, :LMatrixOp] setup = [TestUtils] begin
+    using Random, AbstractOperators
+    Random.seed!(2)
+
+    n, m = 5, 6
+    b = randn(m)
+    op = LMatrixOp(Float64, (n, m), b)
+    op2 = copy_operator(op)
+    @test op2 isa LMatrixOp
+    x = randn(n, m)
+    @test op * x ≈ op2 * x
+
+    op3 = copy_operator(op; storage_type = Array{Float64})
+    @test op3.b !== op.b
+    @test op3.b == op.b
+    @test op3 * x ≈ op * x
 end

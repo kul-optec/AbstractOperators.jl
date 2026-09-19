@@ -107,7 +107,7 @@ end
     @test occursin("↓", String(take!(io)))
 end
 
-@testitem "GetIndex (GPU)" tags = [:linearoperator, :GetIndex, :gpu] setup = [TestUtils] begin
+@testitem "GetIndex (GPU)" tags = [:linearoperator, :GetIndex, :gpu] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

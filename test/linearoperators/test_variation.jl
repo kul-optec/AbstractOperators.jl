@@ -134,6 +134,88 @@ end
     end
 end
 
+@testitem "Variation: adjoint matches dense transpose for every dimension size" tags = [
+    :linearoperator, :Variation,
+] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
+    verb && println(" --- Testing Variation: adjoint vs dense transpose --- ")
+
+    # Regression for a `BoundsError` in the adjoint whenever *any* dimension had size
+    # exactly 2 (`Variation(Float64, (8, 2))'`): the `i == 2` branch was tested before the
+    # `i == size(y, d)` branch, so the last column of a length-2 dimension took the interior
+    # formula and read one element past the end. Shapes below deliberately place the 2 in
+    # leading, trailing, and interior positions, and include the all-2s case.
+    shapes = [
+        (2, 2), (2, 3), (3, 2), (8, 2), (2, 8), (8, 3), (4, 4), (5, 7),
+        (2, 2, 2), (8, 2, 3), (8, 3, 2), (2, 3, 4), (3, 2, 2), (4, 4, 4),
+        (2, 2, 2, 2), (3, 2, 4, 2),
+    ]
+    for dims in shapes, T in (Float64, Float32), threaded in (false, true)
+        op = Variation(T, dims; threaded)
+        n, N = prod(dims), length(dims)
+
+        # Dense forward matrix, built column by column from the images of the basis vectors.
+        # The adjoint must equal its exact transpose -- a stronger check than the dot-product
+        # identity alone, which can hide compensating sign errors.
+        M = zeros(T, n * N, n)
+        for j in 1:n
+            e = zeros(T, dims)
+            e[j] = one(T)
+            M[:, j] = vec(op * e)
+        end
+
+        b = randn(T, n, N)
+        z = zeros(T, dims)
+        mul!(z, op', b)
+        @test z ≈ reshape(M' * vec(b), dims)
+
+        # <Vx, b> == <x, V'b>
+        x = randn(T, dims)
+        @test isapprox(
+            dot(vec(op * x), vec(b)), dot(vec(x), vec(z)); rtol = sqrt(eps(T))
+        )
+    end
+end
+
+@testitem "Variation: adjoint allocates nothing" tags = [
+    :linearoperator, :Variation,
+] setup = [TestUtils] begin
+    using Random, LinearAlgebra, AbstractOperators
+    Random.seed!(0)
+
+    # Guards a regression that correctness tests cannot see. Sharing the adjoint body between
+    # the threaded and serial methods is only safe if the shared function stays statically
+    # dispatched: passing the dimension count as `Val(N)` made Polyester's `@batch` closure
+    # build the `Val` from a runtime value, so every element dispatched dynamically and
+    # allocated -- 293 MB at n = 2^22, turning a 4.5x speedup into 0.25x. Timings are too
+    # noisy to assert on directly; the allocation count is not.
+    for threaded in (false, true), dims in ((4096, 4), (64, 4), (8, 2, 3))
+        op = Variation(Float64, dims; threaded)
+        b = randn(prod(dims), length(dims))
+        z = zeros(dims)
+        adj = op'
+        mul!(z, adj, b)  # warm up: first call compiles
+        mul!(z, adj, b)
+        @test minimum(@allocated(mul!(z, adj, b)) for _ in 1:5) == 0
+    end
+end
+
+@testitem "Variation: rejects singleton dimensions" tags = [
+    :linearoperator, :Variation,
+] setup = [TestUtils] begin
+    using AbstractOperators
+    # A size-1 dimension has no finite difference to take, so every constructor must reject
+    # it, the array-based one included (it delegates rather than building the struct
+    # directly).
+    for dims in [(4, 1), (1, 4), (1, 1), (3, 1, 3)]
+        @test_throws ArgumentError Variation(Float64, dims)
+        @test_throws ArgumentError Variation(zeros(Float64, dims))
+    end
+    @test_throws ArgumentError Variation(4, 1)
+    @test_throws ArgumentError Variation((4, 1))
+end
+
 @testitem "Variation: copy_operator" tags = [:linearoperator, :Variation] setup = [TestUtils] begin
     using Random, AbstractOperators
     Random.seed!(6)
@@ -150,7 +232,7 @@ end
     @test y1 ≈ y2
 end
 
-@testitem "Variation (GPU)" tags = [:gpu, :linearoperator, :Variation] setup = [TestUtils] begin
+@testitem "Variation (GPU)" tags = [:gpu, :linearoperator, :Variation] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

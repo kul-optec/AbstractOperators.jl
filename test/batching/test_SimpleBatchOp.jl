@@ -2,11 +2,16 @@
     using Random, BenchmarkTools, LinearAlgebra, AbstractOperators, JLArrays, Test
 
     function test_simple_batchop(op, batch_op, x, y, z, threaded)
-        if threaded && Threads.nthreads() > 1
-            @test batch_op.operator[1] == op
-        else
-            @test batch_op.operator == op
-        end
+        # Read the wrapped operator through the accessor rather than assuming which struct
+        # `threaded = true` produced. `threaded` is a permission, not a command: below the
+        # batch policy's size gate a threaded request yields a SingleThreaded batch op,
+        # whose `.operator` is the operator itself -- so `.operator[1]` would silently index
+        # *into* it (slicing a DiagOp) instead of failing usefully.
+        @test AbstractOperators._wrapped_operator(batch_op) == op
+        @test is_threaded(batch_op) == (
+            threaded && Threads.nthreads() > 1 &&
+                AbstractOperators._should_thread(op)
+        )
         @test size(batch_op, 1) == size(y)
         @test size(batch_op, 2) == size(x)
         y2 = batch_op * x
@@ -42,12 +47,27 @@
         return test_simple_batchop(op, batch_op, x, y, z, threaded)
     end
 
-    function benchmark_threading(threaded)
-        n = 10000
+    # This test asserts that batch-level threading beats the serial batch loop. Two things
+    # keep that assertion honest rather than lucky:
+    #
+    # 1. Minimum across repetitions. A single `@belapsed` of this workload has ~30% spread
+    #    on the serial arm, enough to flip a bare `t_multi < t_single`.
+    # 2. Enough work per batch item (n) that the parallel gain dominates dispatch overhead.
+    #    Going the other way -- smaller items, more of them -- was *measured* to hurt:
+    #    at n=2000/20x20 and n=1000/30x30 the threaded arm came out slower than serial.
+    #
+    # The margin needed widening when FiniteDiff stopped allocating: that made the serial
+    # baseline ~3x faster, so the honest speedup shrank from ~2.5x to ~1.7x even though
+    # both arms got faster in absolute terms.
+    function benchmark_threading(threaded; repeats = 3)
+        n = 40000
         op = Compose(DiagOp(randn(n - 1)), FiniteDiff((n,), 1))
         batch_op = BatchOp(op, (10, 10), (:_, :b, :b); threaded)
         y = zeros(n - 1, 10, 10)
-        return @belapsed(mul!($y, $batch_op, x), setup = ($y .= 0; x = rand($n, 10, 10)))
+        return minimum(
+            @belapsed(mul!($y, $batch_op, x), setup = ($y .= 0; x = rand($n, 10, 10)))
+                for _ in 1:repeats
+        )
     end
 
     function test_shape_changing_simple_batch_op(threaded)
@@ -112,6 +132,34 @@
         @test diag_AcA(eye_batch) == 1.0
         @test diag_AAc(eye_batch) == 1.0
         return
+    end
+
+    # `benchmark_threading` is the only place in the test suite where the wrapped operator
+    # is large enough to cross `MIN_BATCH_WORK_FOR_PARALLEL`, and it is skipped whenever
+    # `CI == "true"` (it asserts on wall-clock time). That leaves the *real* threaded branch
+    # of `create_BatchOp` -- `_resolve_threaded`/`_per_thread_operators` actually choosing
+    # `SimpleBatchOpMultiThreaded`, and its `mul!` running for genuine work -- untested in
+    # CI: every other test's operator domain is a handful of elements, well under the
+    # threshold, so `BatchOp(...; threaded = true)` always resolves to the single-threaded
+    # struct there regardless of the keyword. This test crosses the threshold with a
+    # correctness check only (no timing), so it runs everywhere `Threads.nthreads() > 1`,
+    # CI included.
+    function test_real_multithreaded_construction()
+        n = 1200  # > MIN_BATCH_WORK_FOR_PARALLEL (2^10 = 1024)
+        op = DiagOp(randn(n))
+        batch_op = BatchOp(op, (3,), (:_, :b); threaded = true)
+        @test batch_op isa AbstractOperators.SimpleBatchOpMultiThreaded
+        @test is_threaded(batch_op)
+        x = rand(n, 3)
+        y = zeros(n, 3)
+        z = zeros(n, 3)
+        for i in 1:3
+            mul!(@view(y[:, i]), op, @view(x[:, i]))
+        end
+        for i in 1:3
+            mul!(@view(z[:, i]), op', @view(y[:, i]))
+        end
+        return test_simple_batchop(op, batch_op, x, y, z, true)
     end
 end
 
@@ -200,6 +248,24 @@ end
     @test AbstractOperators.has_optimized_normalop(mt) == AbstractOperators.has_optimized_normalop(st)
     @test opnorm(mt) == opnorm(st)
     @test estimate_opnorm(mt) == estimate_opnorm(st)
+
+    # MultiThreaded-specific trait/equality/copy_operator paths, exercised without needing
+    # a workload large enough to actually cross the batch threshold.
+    @test is_threaded(mt) == true
+    @test is_threaded(st) == false
+    @test AbstractOperators._wrapped_operator(mt) == op
+    @test mt == mt
+    # `==` compares structure, not execution strategy, so a hand-built MultiThreaded and a
+    # SingleThreaded batch op over the same operator/shape do compare equal.
+    @test mt == st
+
+    # `copy_operator` always re-derives the threaded flag from the size policy, not from
+    # `is_threaded(mt)` directly (`threaded = true` is a permission, not a command) -- this
+    # tiny `op` is far below the batch threshold, so the copy comes back SingleThreaded even
+    # though `mt` itself was hand-built as MultiThreaded. Numerical behaviour is unaffected.
+    mt_copy = copy_operator(mt)
+    x = rand(2, 2)
+    @test mt_copy * x ≈ mt * x
     # Eye operator: scalar diag paths
     eye_op = Eye(Float64, (2,))
     eye_st = BatchOp(eye_op, (2,); threaded = false)
@@ -217,6 +283,14 @@ end
     @test diag_AAc(eye_mt) == 1.0
 end
 
+@testitem "SimpleBatchOp real multi-threaded construction" tags = [:batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin
+    using Random
+    Random.seed!(0)
+    if Threads.nthreads() > 1
+        SimpleBatchOpHelpers.test_real_multithreaded_construction()
+    end
+end
+
 @testitem "SimpleBatchOp benchmark" tags = [:batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin
     using Random
     Random.seed!(0)
@@ -227,7 +301,7 @@ end
     end
 end
 
-@testitem "SimpleBatchOp (GPU)" tags = [:gpu, :batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers] begin
+@testitem "SimpleBatchOp (GPU)" tags = [:gpu, :batching, :SimpleBatchOp] setup = [TestUtils, SimpleBatchOpHelpers, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

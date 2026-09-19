@@ -81,7 +81,7 @@
     @test occursin("0", s)
 end
 
-@testitem "Zeros (GPU)" tags = [:gpu, :linearoperator, :Zeros] setup = [TestUtils] begin
+@testitem "Zeros (GPU)" tags = [:gpu, :linearoperator, :Zeros] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

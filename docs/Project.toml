@@ -1,5 +1,7 @@
 [deps]
 AbstractOperators = "d9c5613a-d543-52d8-9afd-8f241a8c3f1c"
+Contourlets = "4d443f37-8914-48d3-9d0d-9e555eaf7273"
+ContourletOperators = "71a9f96d-0a22-4096-b570-94ff14b7f929"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 DSPOperators = "d5a72628-6e2f-430e-82f5-561df0bb8116"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
@@ -12,4 +14,5 @@ RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 WaveletOperators = "f3582904-6f60-4bbd-985d-55eab799bc9d"
 
 [compat]
+Contourlets = "0.1"
 Documenter = "1.8"
