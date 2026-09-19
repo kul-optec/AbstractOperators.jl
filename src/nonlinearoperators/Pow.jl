@@ -16,8 +16,9 @@ function Pow(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N, I <: Real}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Pow{T, N, I}, threaded, T, DomainDim, S))
-    return Pow{T, N, I, S, Th}(DomainDim, p)
+    return _elementwise_threaded(Pow{T, N, I}, threaded, T, DomainDim, S) ?
+           Pow{T, N, I, S, FastBroadcast.True}(DomainDim, p) :
+           Pow{T, N, I, S, FastBroadcast.False}(DomainDim, p)
 end
 
 function Pow(
@@ -33,8 +34,9 @@ function Pow(
     ) where {T, I <: Real}
     S = _normalize_array_type(array_type, T)
     N = ndims(x)
-    Th = _fbthread(_elementwise_threaded(Pow{T, N, I}, threaded, T, size(x), S))
-    return Pow{T, N, I, S, Th}(size(x), p)
+    return _elementwise_threaded(Pow{T, N, I}, threaded, T, size(x), S) ?
+           Pow{T, N, I, S, FastBroadcast.True}(size(x), p) :
+           Pow{T, N, I, S, FastBroadcast.False}(size(x), p)
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

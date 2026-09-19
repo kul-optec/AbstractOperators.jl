@@ -22,8 +22,9 @@ function Sigmoid(
         threaded::Bool = true,
     ) where {T, N, G <: Real}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Sigmoid, threaded, T, DomainDim, S))
-    return Sigmoid{T, N, G, S, Th}(DomainDim, gamma)
+    return _elementwise_threaded(Sigmoid, threaded, T, DomainDim, S) ?
+           Sigmoid{T, N, G, S, FastBroadcast.True}(DomainDim, gamma) :
+           Sigmoid{T, N, G, S, FastBroadcast.False}(DomainDim, gamma)
 end
 
 function Sigmoid(
@@ -38,8 +39,9 @@ function Sigmoid(
         gamma::G = 1.0, array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T, G <: Real}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Sigmoid, threaded, T, size(x), S))
-    return Sigmoid{T, ndims(x), G, S, Th}(size(x), gamma)
+    return _elementwise_threaded(Sigmoid, threaded, T, size(x), S) ?
+           Sigmoid{T, ndims(x), G, S, FastBroadcast.True}(size(x), gamma) :
+           Sigmoid{T, ndims(x), G, S, FastBroadcast.False}(size(x), gamma)
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

@@ -29,9 +29,8 @@ end
 
 # Constructors
 #default constructor
-function Variation(
-        domain_type::Type{T}, dim_in::NTuple{N, Int};
-        threaded::Bool = true, array_type::Type = Array{T}
+function _variation_impl(
+        domain_type::Type{T}, dim_in::NTuple{N, Int}, threaded::Bool, array_type::Type{<:AbstractArray},
     ) where {T, N}
     N == 1 && error("use FiniteDiff instead!")
     # A singleton dimension has no finite difference to take: the forward kernel's
@@ -45,29 +44,40 @@ function Variation(
         )
     )
     S = _normalize_array_type(array_type, domain_type)
-    th = _elementwise_threaded(Variation, threaded, domain_type, dim_in, S)
-    return Variation{domain_type, N, th, S}(dim_in)
+    return _elementwise_threaded(Variation, threaded, domain_type, dim_in, S) ?
+           Variation{domain_type, N, true, S}(dim_in) :
+           Variation{domain_type, N, false, S}(dim_in)
 end
 
 function Variation(
-        domain_type::Type{T}, dim_in::Vararg{Int}; threaded::Bool = true, array_type::Type = Array{T}
+        domain_type::Type{T}, dim_in::NTuple{N, Int};
+        threaded::Bool = true, array_type::Type{<:AbstractArray} = Array{T}
+    ) where {T, N}
+    return _variation_impl(domain_type, dim_in, threaded, array_type)
+end
+
+function Variation(
+        domain_type::Type{T}, dim_in::Vararg{Int};
+        threaded::Bool = true, array_type::Type{<:AbstractArray} = Array{T}
     ) where {T}
-    return Variation(domain_type, dim_in; threaded, array_type)
+    return _variation_impl(domain_type, dim_in, threaded, array_type)
 end
 function Variation(
-        dim_in::NTuple{N, Int}; threaded::Bool = true, array_type::Type = Array{Float64}
+        dim_in::NTuple{N, Int}; threaded::Bool = true, array_type::Type{<:AbstractArray} = Array{Float64}
     ) where {N}
-    return Variation(Float64, dim_in; threaded, array_type)
+    return _variation_impl(Float64, dim_in, threaded, array_type)
 end
-function Variation(dim_in::Vararg{Int}; threaded::Bool = true, array_type::Type = Array{Float64})
-    return Variation(dim_in; threaded, array_type)
+function Variation(
+        dim_in::Vararg{Int}; threaded::Bool = true, array_type::Type{<:AbstractArray} = Array{Float64}
+    )
+    return _variation_impl(Float64, dim_in, threaded, array_type)
 end
 function Variation(x::AbstractArray; threaded::Bool = true)
     # Delegates to the dimension-tuple constructor rather than building the struct directly,
     # so the threading policy and the dimension validation are stated in exactly one place --
     # otherwise `Variation(zeros(100,100))` and `Variation(Float64,(100,100))` could end up
     # thresholding threading differently (element count vs. byte size) for identical inputs.
-    return Variation(eltype(x), size(x); threaded, array_type = _array_wrapper(x){eltype(x)})
+    return _variation_impl(eltype(x), size(x), threaded, _array_wrapper(x){eltype(x)})
 end
 
 # Mappings

@@ -32,10 +32,11 @@ function DiagOp(
     size(d) != domain_dim && error("dimension of d must coincide with domain_dim")
     C = promote_type(eltype(d), D)
     dS0 = _normalize_array_type(array_type, D)
-    B = _fbthread(_elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0))
     dS = _normalize_array_type(array_type, D)
     cS = _normalize_array_type(array_type, C)
-    return DiagOp{B, D, C, N, dS, cS, T}(domain_dim, d)
+    return _elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0) ?
+           DiagOp{FastBroadcast.True, D, C, N, dS, cS, T}(domain_dim, d) :
+           DiagOp{FastBroadcast.False, D, C, N, dS, cS, T}(domain_dim, d)
 end
 
 ###standard constructor with Scalar
@@ -46,10 +47,11 @@ function DiagOp(
     C = promote_type(eltype(d), D)
     dS0 = _normalize_array_type(array_type, D)
     # Scalar diagonal: the work still scales with the *domain*, not with `d`.
-    B = _fbthread(_elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0))
     dS = _normalize_array_type(array_type, D)
     cS = _normalize_array_type(array_type, C)
-    return DiagOp{B, D, C, N, dS, cS, T}(domain_dim, d)
+    return _elementwise_threaded(DiagOp, threaded, D, domain_dim, dS0) ?
+           DiagOp{FastBroadcast.True, D, C, N, dS, cS, T}(domain_dim, d) :
+           DiagOp{FastBroadcast.False, D, C, N, dS, cS, T}(domain_dim, d)
 end
 
 # other constructors
@@ -59,9 +61,10 @@ function DiagOp(
     ) where {N, T <: Number}
     C = eltype(d)
     S0 = _normalize_array_type(array_type, T)
-    B = _fbthread(_elementwise_threaded(DiagOp, threaded, T, size(d), S0))
     S = _normalize_array_type(array_type, T)
-    return DiagOp{B, eltype(d), C, N, S, S, typeof(d)}(size(d), d)
+    return _elementwise_threaded(DiagOp, threaded, T, size(d), S0) ?
+           DiagOp{FastBroadcast.True, eltype(d), C, N, S, S, typeof(d)}(size(d), d) :
+           DiagOp{FastBroadcast.False, eltype(d), C, N, S, S, typeof(d)}(size(d), d)
 end
 function DiagOp(
         domain_dim::NTuple{N, Int}, d::A; threaded::Bool = true, array_type::Type = Array{Float64}

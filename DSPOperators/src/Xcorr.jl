@@ -136,7 +136,7 @@ Xcorr(x::H, h::H; kwargs...) where {H} = Xcorr(eltype(x), size(x), h; kwargs...)
 
 # Mappings
 
-function mul!(y, A::Xcorr{T}, b) where {T}
+function mul!(y, A::Xcorr{T, H, Hc, P1, P2, P3, P4}, b) where {T, H, Hc, P1, P2, P3, P4}
     check(y, A, b)
     n = length(b)
     # Forward: xcorr(b, h; padmode=:longest)
@@ -144,7 +144,7 @@ function mul!(y, A::Xcorr{T}, b) where {T}
     fill!(A.buf_fwd, zero(T))
     copyto!(view(A.buf_fwd, 1:n), b)
     mul!(A.buf_fwd_c, A.R_fwd, A.buf_fwd)
-    A.buf_fwd_c .*= A.h_fft_conj
+    map!(*, A.buf_fwd_c, A.buf_fwd_c, A.h_fft_conj)
     mul!(A.buf_fwd, A.I_fwd, A.buf_fwd_c)
     # Gather: DSP.xcorr format = [neg lags ascending, non-neg lags ascending]
     # neg lags -(padlen-1) to -1 are at positions fftlen-padlen+2 to fftlen
@@ -173,7 +173,7 @@ function mul!(y, L::AdjointOperator{<:Xcorr{T}}, b) where {T}
     fill!(A.buf_adj, zero(T))
     copyto!(view(A.buf_adj, 1:outlen), b)
     mul!(A.buf_adj_c, A.R_adj, A.buf_adj)
-    A.buf_adj_c .*= A.h_fft_adj
+    map!(*, A.buf_adj_c, A.buf_adj_c, A.h_fft_adj)
     mul!(A.buf_adj, A.I_adj, A.buf_adj_c)
     padlen = A.padlen
     y .= @view(A.buf_adj[padlen:(padlen + n - 1)])

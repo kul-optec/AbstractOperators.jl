@@ -18,8 +18,9 @@ function SoftPlus(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(SoftPlus, threaded, T, DomainDim, S))
-    return SoftPlus{T, N, S, Th}(DomainDim)
+    return _elementwise_threaded(SoftPlus, threaded, T, DomainDim, S) ?
+           SoftPlus{T, N, S, FastBroadcast.True}(DomainDim) :
+           SoftPlus{T, N, S, FastBroadcast.False}(DomainDim)
 end
 
 function SoftPlus(
@@ -32,8 +33,9 @@ function SoftPlus(
         x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(SoftPlus, threaded, T, size(x), S))
-    return SoftPlus{T, ndims(x), S, Th}(size(x))
+    return _elementwise_threaded(SoftPlus, threaded, T, size(x), S) ?
+           SoftPlus{T, ndims(x), S, FastBroadcast.True}(size(x)) :
+           SoftPlus{T, ndims(x), S, FastBroadcast.False}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

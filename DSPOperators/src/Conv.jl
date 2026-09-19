@@ -83,8 +83,8 @@ Conv(x::H, h::H; kwargs...) where {H <: AbstractArray} = Conv(eltype(x), size(x)
 
 # Mappings
 function mul!(
-        y::AbstractArray{T, N}, A::AbstractConv{T, N}, b::AbstractArray{T, N}
-    ) where {T, N}
+        y::AbstractArray{T, N}, A::Conv{T, N, H, Hc, P1, P2}, b::AbstractArray{T, N}
+    ) where {T, N, H, Hc, P1, P2}
     check(y, A, b)
     fill!(A.buf, zero(T))
     view(A.buf, axes(A.h)...) .= A.h
@@ -92,13 +92,13 @@ function mul!(
     fill!(A.buf, zero(T))
     view(A.buf, axes(b)...) .= b
     mul!(A.buf_c2, A.R, A.buf)
-    A.buf_c2 .*= A.buf_c1
+    map!(*, A.buf_c2, A.buf_c2, A.buf_c1)
     return mul!(y, A.I, A.buf_c2)
 end
 
 function mul!(
-        y::AbstractArray{T, N}, L::AdjointOperator{C}, b::AbstractArray{T, N}
-    ) where {T, N, C <: AbstractConv{T, N}}
+        y::AbstractArray{T, N}, L::AdjointOperator{Conv{T, N, H, Hc, P1, P2}}, b::AbstractArray{T, N}
+    ) where {T, N, H, Hc, P1, P2}
     check(y, L, b)
     fill!(L.A.buf, zero(T))
     view(L.A.buf, axes(L.A.h)...) .= L.A.h
@@ -106,7 +106,7 @@ function mul!(
     fill!(L.A.buf, zero(T))
     view(L.A.buf, axes(b)...) .= b
     mul!(L.A.buf_c2, L.A.R, L.A.buf)
-    L.A.buf_c2 .*= conj.(L.A.buf_c1)
+    map!((c2, c1) -> c2 * conj(c1), L.A.buf_c2, L.A.buf_c2, L.A.buf_c1)
     mul!(L.A.buf, L.A.I, L.A.buf_c2)
     y .= view(L.A.buf, axes(y)...)
     return y

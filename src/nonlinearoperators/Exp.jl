@@ -18,8 +18,9 @@ function Exp(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Exp, threaded, T, DomainDim, S))
-    return Exp{T, N, S, Th}(DomainDim)
+    return _elementwise_threaded(Exp, threaded, T, DomainDim, S) ?
+           Exp{T, N, S, FastBroadcast.True}(DomainDim) :
+           Exp{T, N, S, FastBroadcast.False}(DomainDim)
 end
 
 function Exp(
@@ -35,8 +36,9 @@ function Exp(
         x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Exp, threaded, T, size(x), S))
-    return Exp{T, ndims(x), S, Th}(size(x))
+    return _elementwise_threaded(Exp, threaded, T, size(x), S) ?
+           Exp{T, ndims(x), S, FastBroadcast.True}(size(x)) :
+           Exp{T, ndims(x), S, FastBroadcast.False}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

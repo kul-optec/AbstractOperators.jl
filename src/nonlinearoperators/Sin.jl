@@ -18,8 +18,9 @@ function Sin(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Sin, threaded, T, DomainDim, S))
-    return Sin{T, N, S, Th}(DomainDim)
+    return _elementwise_threaded(Sin, threaded, T, DomainDim, S) ?
+           Sin{T, N, S, FastBroadcast.True}(DomainDim) :
+           Sin{T, N, S, FastBroadcast.False}(DomainDim)
 end
 
 function Sin(
@@ -35,8 +36,9 @@ function Sin(
         x::AbstractArray{T}; array_type::Type = _array_wrapper(x), threaded::Bool = true
     ) where {T}
     S = _normalize_array_type(array_type, T)
-    Th = _fbthread(_elementwise_threaded(Sin, threaded, T, size(x), S))
-    return Sin{T, ndims(x), S, Th}(size(x))
+    return _elementwise_threaded(Sin, threaded, T, size(x), S) ?
+           Sin{T, ndims(x), S, FastBroadcast.True}(size(x)) :
+           Sin{T, ndims(x), S, FastBroadcast.False}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

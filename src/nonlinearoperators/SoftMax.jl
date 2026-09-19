@@ -24,8 +24,9 @@ function SoftMax(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     buf = similar(S, size(x))
-    th = _elementwise_threaded(SoftMax, threaded, T, size(x), S)
-    return SoftMax{T, N, typeof(buf), th}(size(x), buf)
+    return _elementwise_threaded(SoftMax, threaded, T, size(x), S) ?
+           SoftMax{T, N, typeof(buf), true}(size(x), buf) :
+           SoftMax{T, N, typeof(buf), false}(size(x), buf)
 end
 
 function SoftMax(
@@ -35,8 +36,9 @@ function SoftMax(
     S = _normalize_array_type(array_type, T)
     buf = similar(S, DomainDim)
     fill!(buf, zero(T))
-    th = _elementwise_threaded(SoftMax, threaded, T, DomainDim, S)
-    return SoftMax{T, N, typeof(buf), th}(DomainDim, buf)
+    return _elementwise_threaded(SoftMax, threaded, T, DomainDim, S) ?
+           SoftMax{T, N, typeof(buf), true}(DomainDim, buf) :
+           SoftMax{T, N, typeof(buf), false}(DomainDim, buf)
 end
 
 function SoftMax(

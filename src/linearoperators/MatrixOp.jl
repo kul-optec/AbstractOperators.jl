@@ -44,9 +44,9 @@ end
 # Constructors
 
 ###standard constructor Operator{N}(domain_type::Type, DomainDim::NTuple{N,Int})
-function MatrixOp(
-        domain_type::Type, DomainDim::NTuple{N, Int}, A::M
-        ; array_type::Type = _array_wrapper_type(M), threaded::Bool = true,
+function _matrixop_impl(
+        domain_type::Type, DomainDim::NTuple{N, Int}, A::M,
+        array_type::Type{<:AbstractArray}, threaded::Bool,
     ) where {N, T, M <: AbstractMatrix{T}}
     N > 2 && error("cannot multiply a Matrix by a n-dimensional Variable with n > 2")
     size(A, 2) != DomainDim[1] && error("wrong input dimensions")
@@ -60,23 +60,30 @@ function MatrixOp(
         MatrixOp{domain_type, T, M, DomainDim[2], dS, cS}(A, th)
     end
 end
+
+function MatrixOp(
+        domain_type::Type, DomainDim::NTuple{N, Int}, A::M
+        ; array_type::Type{<:AbstractArray} = _array_wrapper_type(M), threaded::Bool = true,
+    ) where {N, M <: AbstractMatrix}
+    return _matrixop_impl(domain_type, DomainDim, A, array_type, threaded)
+end
 ###
 
 function MatrixOp(
-        A::M; array_type::Type = _array_wrapper_type(M), threaded::Bool = true
+        A::M; array_type::Type{<:AbstractArray} = _array_wrapper_type(M), threaded::Bool = true
     ) where {M <: AbstractMatrix}
-    return MatrixOp(eltype(A), (size(A, 2),), A; array_type, threaded)
+    return _matrixop_impl(eltype(A), (size(A, 2),), A, array_type, threaded)
 end
 function MatrixOp(
-        D::Type, A::M; array_type::Type = _array_wrapper_type(M), threaded::Bool = true
+        D::Type, A::M; array_type::Type{<:AbstractArray} = _array_wrapper_type(M), threaded::Bool = true
     ) where {M <: AbstractMatrix}
-    return MatrixOp(D, (size(A, 2),), A; array_type, threaded)
+    return _matrixop_impl(D, (size(A, 2),), A, array_type, threaded)
 end
 function MatrixOp(A::M, n::Integer; threaded::Bool = true) where {M <: AbstractMatrix}
-    return MatrixOp(eltype(A), (size(A, 2), n), A; array_type = _array_wrapper_type(M), threaded)
+    return _matrixop_impl(eltype(A), (size(A, 2), n), A, _array_wrapper_type(M), threaded)
 end
 function MatrixOp(D::Type, A::M, n::Integer; threaded::Bool = true) where {M <: AbstractMatrix}
-    return MatrixOp(D, (size(A, 2), n), A; array_type = _array_wrapper_type(M), threaded)
+    return _matrixop_impl(D, (size(A, 2), n), A, _array_wrapper_type(M), threaded)
 end
 
 function Scale(coeff::Number, A::MatrixOp{D, T, M, NC, dS, cS}) where {D, T, M, NC, dS, cS}

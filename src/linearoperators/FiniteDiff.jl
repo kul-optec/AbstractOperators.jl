@@ -42,7 +42,9 @@ function FiniteDiff(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N, D}
     S = _normalize_array_type(array_type, T)
-    return FiniteDiff{N, D, T, S, _finitediff_threaded(threaded, T, dim_in, S)}(dim_in)
+    return _finitediff_threaded(threaded, T, dim_in, S) ?
+           FiniteDiff{N, D, T, S, true}(dim_in) :
+           FiniteDiff{N, D, T, S, false}(dim_in)
 end
 
 # Specialized no-direction constructor: D=1 is a compile-time literal — fully type-stable
@@ -50,7 +52,9 @@ function FiniteDiff(
         dim_in::NTuple{N, Int}; array_type::Type = Array{Float64}, threaded::Bool = true
     ) where {N}
     S = _normalize_array_type(array_type, Float64)
-    return FiniteDiff{N, 1, Float64, S, _finitediff_threaded(threaded, Float64, dim_in, S)}(dim_in)
+    return _finitediff_threaded(threaded, Float64, dim_in, S) ?
+           FiniteDiff{N, 1, Float64, S, true}(dim_in) :
+           FiniteDiff{N, 1, Float64, S, false}(dim_in)
 end
 
 # Specialized no-direction constructor: D=1 is a compile-time literal, so this stays fully
@@ -61,7 +65,9 @@ function FiniteDiff(
         array_type::Type = Array{T}, threaded::Bool = true
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
-    return FiniteDiff{N, 1, T, S, _finitediff_threaded(threaded, T, dim_in, S)}(dim_in)
+    return _finitediff_threaded(threaded, T, dim_in, S) ?
+           FiniteDiff{N, 1, T, S, true}(dim_in) :
+           FiniteDiff{N, 1, T, S, false}(dim_in)
 end
 
 # Direction as a runtime Int — necessarily delegates through `Val`, so this path is

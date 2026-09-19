@@ -33,8 +33,9 @@ struct Scale{Th, T <: Number, L <: AbstractOperator} <: AbstractOperator
                 "Cannot Scale AbstractOperator with real codomain with complex scalar. Use `DiagOp` instead.",
             )
         end
-        Th = _fbthread(_scale_threaded(threaded, L))
-        return new{Th, typeof(coeff), typeof(L)}(coeff, coeff_conj, L)
+        return _scale_threaded(threaded, L) ?
+               new{FastBroadcast.True, typeof(coeff), typeof(L)}(coeff, coeff_conj, L) :
+               new{FastBroadcast.False, typeof(coeff), typeof(L)}(coeff, coeff_conj, L)
     end
 end
 
