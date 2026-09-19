@@ -401,7 +401,7 @@ The operator norm is defined as: `‖A‖ = sup_{x != 0} ‖A*x‖ / ‖x‖`.
 Parameters of power iteration:
 - Maximum number of iterations: 100
 - Tolerance for convergence: 1e-6
-These parameters can be adjusted in the [estimate_opnorm](@ref) function.
+These parameters can be adjusted in the `estimate_opnorm` function.
 """
 function LinearAlgebra.opnorm(A::AbstractOperator)
     return powerit(A)
