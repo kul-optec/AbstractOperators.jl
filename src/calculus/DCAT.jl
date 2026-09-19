@@ -244,7 +244,7 @@ end
 # Properties
 Base.:(==)(H1::DCAT{N, L1, P1, P2}, H2::DCAT{N, L2, P1, P2}) where {N, L1, L2, P1, P2} = H1.A == H2.A && H1.idxD == H2.idxD && H1.idxC == H2.idxC
 
-@generated function size(H::DCAT{N, L, P1, P2, DS, CS, Th}) where {N, L, P1, P2, DS, CS, Th}
+@generated function size(H::DCAT{N, L, P1, P2}) where {N, L, P1, P2}
     cod_exprs = []
     for i in 1:N
         Pi = fieldtype(P2, i)
