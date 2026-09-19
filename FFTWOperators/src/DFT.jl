@@ -139,11 +139,9 @@ function DFT(
     ) where {N, D <: Real}
     x = similar(x, Complex{D})
     num_threads = _fftw_num_threads(:c2c, num_threads, threaded, length(x))
-    prev_fftw_threads = FFTW.get_num_threads()
-    FFTW.set_num_threads(num_threads)
-    A = plan_fft(x, dims; flags, timelimit)
-    At = plan_bfft(x, dims; flags, timelimit)
-    FFTW.set_num_threads(prev_fftw_threads)
+    A, At = _with_fftw_threads(num_threads) do
+        plan_fft(x, dims; flags, timelimit), plan_bfft(x, dims; flags, timelimit)
+    end
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
     scaling = _dft_scaling(size(x), dims, normalization)
@@ -165,11 +163,9 @@ function DFT(
         x = similar(x) # FFTW.MEASURE and FFTW.PATIENT may cause the input array to be modified
     end
     num_threads = _fftw_num_threads(:c2c, num_threads, threaded, length(x))
-    prev_fftw_threads = FFTW.get_num_threads()
-    FFTW.set_num_threads(num_threads)
-    A = plan_fft(x, dims; flags, timelimit)
-    At = plan_bfft(x, dims; flags, timelimit)
-    FFTW.set_num_threads(prev_fftw_threads)
+    A, At = _with_fftw_threads(num_threads) do
+        plan_fft(x, dims; flags, timelimit), plan_bfft(x, dims; flags, timelimit)
+    end
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims = tuple(dims...)
     scaling = _dft_scaling(size(x), dims, normalization)

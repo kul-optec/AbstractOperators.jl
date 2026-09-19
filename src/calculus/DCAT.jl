@@ -360,10 +360,10 @@ function permute(H::DCAT{N, L, P1, P2}, p::AbstractVector{Int}) where {N, L, P1,
         cnt += z
     end
 
-    return DCAT(H.A, new_part, H.idxC)
+    return DCAT(H.A, new_part, H.idxC; threaded = is_block_threaded(H))
 end
 
-remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC)
+remove_displacement(D::DCAT) = DCAT(remove_displacement.(D.A), D.idxD, D.idxC; threaded = is_block_threaded(D))
 
 # special cases
 # Eye constructor

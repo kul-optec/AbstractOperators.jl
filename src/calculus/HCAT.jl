@@ -394,7 +394,7 @@ function get_slicing_expr(L::HCAT)
     end
 end
 get_slicing_mask(L::HCAT) = get_slicing_mask.(L[i] for i in eachindex(L.A))
-remove_slicing(L::HCAT) = HCAT(remove_slicing.(Tuple(A for A in L.A)), L.idxs, L.buf)
+remove_slicing(L::HCAT) = HCAT(remove_slicing.(Tuple(A for A in L.A)), L.idxs, L.buf; threaded = is_block_threaded(L))
 
 diag_AAc(L::HCAT) = (+).(diag_AAc.(L[i] for i in eachindex(L.A))...)
 
