@@ -187,12 +187,15 @@ julia> ndims(V,2)
 3
 ```
 """
-ndims(L::AbstractOperator) = count_dims(size(L, 1)), count_dims(size(L, 2))
+# `map` over the size tuple rather than `count_dims(size(L, i))`: for operators with
+# heterogeneous codomain/domain shapes the two entries have different types, so a
+# non-literal index widens the result to a `Union` and makes `count_dims` a runtime dispatch.
+ndims(L::AbstractOperator) = map(count_dims, size(L))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
 count_dims(::Tuple{}) = 0
 count_dims(::NTuple{N, <:Integer}) where {N} = N
-count_dims(dims::Tuple) = count_dims.(dims)
+count_dims(dims::Tuple) = map(count_dims, dims)
 
 """
 	ndoms(L::AbstractOperator, [dom::Int]) -> (number of codomains, number of domains)
@@ -213,7 +216,14 @@ julia> ndoms(DCAT(Eye(10,10),Eye(10,10)))
 (2, 2)
 ```
 """
-ndoms(L::AbstractOperator) = length.(ndims(L))
+function ndoms(L::AbstractOperator)
+    # Recompute from `size(L)` instead of `length.(ndims(L))`: for operators whose codomain
+    # and domain shapes have different types, JET widens `ndims(L)`'s tuple across the call
+    # boundary into `Tuple{Union{...}, Union{...}}` and reports the elementwise `length` as
+    # runtime dispatch. Indexing the size tuple here keeps both entries concrete.
+    sz = size(L)
+    return length(count_dims(sz[1])), length(count_dims(sz[2]))
+end
 ndoms(L::AbstractOperator, i::Int) = ndoms(L)[i]
 
 is_linear(L::LinearOperator) = true

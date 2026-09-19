@@ -47,6 +47,10 @@ end
 function check(codomain_array, op, domain_array)
     _check_domain_storage(domain_array, op)
     _check_codomain_storage(codomain_array, op)
+    # Destructure once with literal indices: `size(op, i)` returns a `Union` for operators
+    # whose codomain and domain shapes have different types, which would make every
+    # comparison below a runtime dispatch.
+    codomain_size, domain_size = size(op)
     if (ndoms(op, 2) > 1) != (domain_array isa ArrayPartition)
         throw(ArgumentError("Input must be an ArrayPartition if and only if operator has multiple input domains"))
     end
@@ -64,10 +68,10 @@ function check(codomain_array, op, domain_array)
         )
     end
     dim_in = domain_array isa ArrayPartition ? size.(domain_array.x) : size(domain_array)
-    if !isequal(dim_in, size(op, 2))
+    if !isequal(dim_in, domain_size)
         throw(
             DimensionMismatch(
-                "Input size $(dim_in) does not match operator input size $(size(op, 2))",
+                "Input size $(dim_in) does not match operator input size $(domain_size)",
             ),
         )
     end
@@ -91,10 +95,10 @@ function check(codomain_array, op, domain_array)
         )
     end
     dim_out = codomain_array isa ArrayPartition ? size.(codomain_array.x) : size(codomain_array)
-    if !isequal(dim_out, size(op, 1))
+    if !isequal(dim_out, codomain_size)
         throw(
             DimensionMismatch(
-                "Output size $(dim_out) does not match operator output size $(size(op, 1))",
+                "Output size $(dim_out) does not match operator output size $(codomain_size)",
             ),
         )
     end
