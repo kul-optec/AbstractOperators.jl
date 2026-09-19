@@ -19,8 +19,8 @@ function Cos(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Cos, threaded, T, DomainDim, S) ?
-           Cos{T, N, S, FastBroadcast.True}(DomainDim) :
-           Cos{T, N, S, FastBroadcast.False}(DomainDim)
+           Cos{T, N, S, FastBroadcast.True()}(DomainDim) :
+           Cos{T, N, S, FastBroadcast.False()}(DomainDim)
 end
 
 function Cos(
@@ -37,8 +37,8 @@ function Cos(
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Cos, threaded, T, size(x), S) ?
-           Cos{T, ndims(x), S, FastBroadcast.True}(size(x)) :
-           Cos{T, ndims(x), S, FastBroadcast.False}(size(x))
+           Cos{T, ndims(x), S, FastBroadcast.True()}(size(x)) :
+           Cos{T, ndims(x), S, FastBroadcast.False()}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

@@ -19,8 +19,8 @@ function Atan(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Atan, threaded, T, DomainDim, S) ?
-           Atan{T, N, S, FastBroadcast.True}(DomainDim) :
-           Atan{T, N, S, FastBroadcast.False}(DomainDim)
+           Atan{T, N, S, FastBroadcast.True()}(DomainDim) :
+           Atan{T, N, S, FastBroadcast.False()}(DomainDim)
 end
 
 function Atan(
@@ -37,8 +37,8 @@ function Atan(
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Atan, threaded, T, size(x), S) ?
-           Atan{T, ndims(x), S, FastBroadcast.True}(size(x)) :
-           Atan{T, ndims(x), S, FastBroadcast.False}(size(x))
+           Atan{T, ndims(x), S, FastBroadcast.True()}(size(x)) :
+           Atan{T, ndims(x), S, FastBroadcast.False()}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

@@ -19,8 +19,8 @@ function SoftPlus(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(SoftPlus, threaded, T, DomainDim, S) ?
-           SoftPlus{T, N, S, FastBroadcast.True}(DomainDim) :
-           SoftPlus{T, N, S, FastBroadcast.False}(DomainDim)
+           SoftPlus{T, N, S, FastBroadcast.True()}(DomainDim) :
+           SoftPlus{T, N, S, FastBroadcast.False()}(DomainDim)
 end
 
 function SoftPlus(
@@ -34,8 +34,8 @@ function SoftPlus(
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(SoftPlus, threaded, T, size(x), S) ?
-           SoftPlus{T, ndims(x), S, FastBroadcast.True}(size(x)) :
-           SoftPlus{T, ndims(x), S, FastBroadcast.False}(size(x))
+           SoftPlus{T, ndims(x), S, FastBroadcast.True()}(size(x)) :
+           SoftPlus{T, ndims(x), S, FastBroadcast.False()}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

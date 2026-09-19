@@ -19,8 +19,8 @@ function Tanh(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Tanh, threaded, T, DomainDim, S) ?
-           Tanh{T, N, S, FastBroadcast.True}(DomainDim) :
-           Tanh{T, N, S, FastBroadcast.False}(DomainDim)
+           Tanh{T, N, S, FastBroadcast.True()}(DomainDim) :
+           Tanh{T, N, S, FastBroadcast.False()}(DomainDim)
 end
 
 function Tanh(
@@ -37,8 +37,8 @@ function Tanh(
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Tanh, threaded, T, size(x), S) ?
-           Tanh{T, ndims(x), S, FastBroadcast.True}(size(x)) :
-           Tanh{T, ndims(x), S, FastBroadcast.False}(size(x))
+           Tanh{T, ndims(x), S, FastBroadcast.True()}(size(x)) :
+           Tanh{T, ndims(x), S, FastBroadcast.False()}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

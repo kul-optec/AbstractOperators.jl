@@ -19,8 +19,8 @@ function Exp(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Exp, threaded, T, DomainDim, S) ?
-           Exp{T, N, S, FastBroadcast.True}(DomainDim) :
-           Exp{T, N, S, FastBroadcast.False}(DomainDim)
+           Exp{T, N, S, FastBroadcast.True()}(DomainDim) :
+           Exp{T, N, S, FastBroadcast.False()}(DomainDim)
 end
 
 function Exp(
@@ -37,8 +37,8 @@ function Exp(
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Exp, threaded, T, size(x), S) ?
-           Exp{T, ndims(x), S, FastBroadcast.True}(size(x)) :
-           Exp{T, ndims(x), S, FastBroadcast.False}(size(x))
+           Exp{T, ndims(x), S, FastBroadcast.True()}(size(x)) :
+           Exp{T, ndims(x), S, FastBroadcast.False()}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:

@@ -34,8 +34,8 @@ struct Scale{Th, T <: Number, L <: AbstractOperator} <: AbstractOperator
             )
         end
         return _scale_threaded(threaded, L) ?
-               new{FastBroadcast.True, typeof(coeff), typeof(L)}(coeff, coeff_conj, L) :
-               new{FastBroadcast.False, typeof(coeff), typeof(L)}(coeff, coeff_conj, L)
+               new{FastBroadcast.True(), typeof(coeff), typeof(L)}(coeff, coeff_conj, L) :
+               new{FastBroadcast.False(), typeof(coeff), typeof(L)}(coeff, coeff_conj, L)
     end
 end
 

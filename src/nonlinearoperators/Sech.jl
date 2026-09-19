@@ -19,8 +19,8 @@ function Sech(
     ) where {T, N}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Sech, threaded, T, DomainDim, S) ?
-           Sech{T, N, S, FastBroadcast.True}(DomainDim) :
-           Sech{T, N, S, FastBroadcast.False}(DomainDim)
+           Sech{T, N, S, FastBroadcast.True()}(DomainDim) :
+           Sech{T, N, S, FastBroadcast.False()}(DomainDim)
 end
 
 function Sech(
@@ -37,8 +37,8 @@ function Sech(
     ) where {T}
     S = _normalize_array_type(array_type, T)
     return _elementwise_threaded(Sech, threaded, T, size(x), S) ?
-           Sech{T, ndims(x), S, FastBroadcast.True}(size(x)) :
-           Sech{T, ndims(x), S, FastBroadcast.False}(size(x))
+           Sech{T, ndims(x), S, FastBroadcast.True()}(size(x)) :
+           Sech{T, ndims(x), S, FastBroadcast.False()}(size(x))
 end
 
 # One method per direction, parameterized by `Th`, rather than a `false`/`true` pair:
