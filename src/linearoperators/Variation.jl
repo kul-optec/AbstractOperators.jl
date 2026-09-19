@@ -89,28 +89,36 @@ end
     @assert firstindex(b) == 1 "Only support 1-based arrays"
     @assert firstindex(y) == 1 "Only support 1-based arrays"
 
+    # Index `y` linearly (column `d` starts at `(d - 1) * n`) instead of as `y[range, d]`.
+    # A mixed `(range, Int)` index tuple makes the resulting `SubArray`'s index type
+    # non-concrete under JET's abstract interpretation, which turns every broadcast below
+    # into a reported runtime dispatch; a single-range index tuple stays concrete.
+    n = length(b)
+
     # First dimension -- special case
     batch_length = size(b, 1)
-    @.. y[2:end, 1] = b[2:end] - b[1:(end - 1)] # finite difference along the first dimension, but incorrect for boundaries
-    @.. y[1:batch_length:end, 1] = b[2:batch_length:end] - b[1:batch_length:end] # correct boundaries with mirrored boundary conditions
+    @.. y[2:n] = b[2:n] - b[1:(n - 1)] # finite difference along the first dimension, but incorrect for boundaries
+    @.. y[1:batch_length:n] = b[2:batch_length:n] - b[1:batch_length:n] # correct boundaries with mirrored boundary conditions
 
     # Other dimensions
     batch_count = length(b) ÷ batch_length
     for d in 2:N
+        offset = (d - 1) * n
         for k in 0:(batch_count - 1)
             slice_start = k * batch_length + 1
             slice_end = (k + 1) * batch_length
             slicing = slice_start:slice_end
+            out_slicing = (offset + slice_start):(offset + slice_end)
             if k % size(b, d) == 0
                 next_slice_start = (k + 1) * batch_length + 1
                 next_slice_end = (k + 2) * batch_length
                 next_slicing = next_slice_start:next_slice_end
-                @views y[slicing, d] .= b[next_slicing] .- b[slicing]
+                @views y[out_slicing] .= b[next_slicing] .- b[slicing]
             else
                 prev_slice_start = (k - 1) * batch_length + 1
                 prev_slice_end = k * batch_length
                 prev_slicing = prev_slice_start:prev_slice_end
-                @views y[slicing, d] .= b[slicing] .- b[prev_slicing]
+                @views y[out_slicing] .= b[slicing] .- b[prev_slicing]
             end
         end
         batch_count ÷= size(b, d)
@@ -126,28 +134,33 @@ end
     @assert firstindex(b) == 1 "Only support 1-based arrays"
     @assert firstindex(y) == 1 "Only support 1-based arrays"
 
+    # See the non-threaded method for why `y` is indexed linearly rather than as `y[range, d]`.
+    n = length(b)
+
     # First dimension -- special case
     batch_length = size(b, 1)
-    @.. thread = true y[2:end, 1] = b[2:end] - b[1:(end - 1)] # finite difference along the first dimension, but incorrect for boundaries
-    @.. thread = true y[1:batch_length:end, 1] = b[2:batch_length:end] - b[1:batch_length:end] # correct boundaries with mirrored boundary conditions
+    @.. thread = true y[2:n] = b[2:n] - b[1:(n - 1)] # finite difference along the first dimension, but incorrect for boundaries
+    @.. thread = true y[1:batch_length:n] = b[2:batch_length:n] - b[1:batch_length:n] # correct boundaries with mirrored boundary conditions
 
     # Other dimensions
     batch_count = length(b) ÷ batch_length
     for d in 2:N
+        offset = (d - 1) * n
         @batch for k in 0:(batch_count - 1)
             slice_start = k * batch_length + 1
             slice_end = (k + 1) * batch_length
             slicing = slice_start:slice_end
+            out_slicing = (offset + slice_start):(offset + slice_end)
             if k % size(b, d) == 0
                 next_slice_start = (k + 1) * batch_length + 1
                 next_slice_end = (k + 2) * batch_length
                 next_slicing = next_slice_start:next_slice_end
-                @views y[slicing, d] .= b[next_slicing] .- b[slicing]
+                @views y[out_slicing] .= b[next_slicing] .- b[slicing]
             else
                 prev_slice_start = (k - 1) * batch_length + 1
                 prev_slice_end = k * batch_length
                 prev_slicing = prev_slice_start:prev_slice_end
-                @views y[slicing, d] .= b[slicing] .- b[prev_slicing]
+                @views y[out_slicing] .= b[slicing] .- b[prev_slicing]
             end
         end
         batch_count ÷= size(b, d)
