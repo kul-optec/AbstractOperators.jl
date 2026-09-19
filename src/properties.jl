@@ -168,6 +168,9 @@ julia> size(FiniteDiff((10,20), 1),2)
 """
 size(L::AbstractOperator, i::Int) = size(L)[i]
 
+# `map` over the size tuple rather than `count_dims(size(L, i))`: for operators with
+# heterogeneous codomain/domain shapes the two entries have different types, so a
+# non-literal index widens the result to a `Union` and makes `count_dims` a runtime dispatch.
 """
 	ndims(A::AbstractOperator, [dom,])
 
@@ -187,9 +190,6 @@ julia> ndims(V,2)
 3
 ```
 """
-# `map` over the size tuple rather than `count_dims(size(L, i))`: for operators with
-# heterogeneous codomain/domain shapes the two entries have different types, so a
-# non-literal index widens the result to a `Union` and makes `count_dims` a runtime dispatch.
 ndims(L::AbstractOperator) = map(count_dims, size(L))
 ndims(L::AbstractOperator, i::Int) = ndims(L)[i]
 
