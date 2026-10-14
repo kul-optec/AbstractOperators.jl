@@ -364,7 +364,7 @@ end
     using AbstractOperators, FFTW, FFTWOperators, GPUEnv, Random
     has_accelerated_dcts = Base.find_package("AcceleratedDCTs") !== nothing
 
-    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+    for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(0)
 
         has_accelerated_dcts || continue
@@ -394,7 +394,7 @@ end
 @testitem "DFT/RDFT/IRDFT (GPU)" tags = [:gpu, :fftw, :DFT, :RDFT, :IRDFT] setup = [TestUtils] begin
     using FFTW, FFTWOperators, GPUEnv, LinearAlgebra, Random, AbstractOperators
 
-    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+    for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(0)
         n, m = 8, 6
 
