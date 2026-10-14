@@ -363,8 +363,11 @@ end
 @testitem "DCT/IDCT (GPU)" tags = [:gpu, :fftw, :DCT, :IDCT] setup = [TestUtils] begin
     using AbstractOperators, FFTW, FFTWOperators, GPUEnv, Random
     has_accelerated_dcts = Base.find_package("AcceleratedDCTs") !== nothing
+    # TestUtils installs AcceleratedDCTs on Julia 1.11+; without it the loop below would skip every backend.
+    VERSION >= v"1.11" && @test has_accelerated_dcts
 
-    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+    # AcceleratedDCTs plans do not support JLArrays.
+    for backend in gpu_backends(; include_cpu_backends = false, supports_fftw = true)
         Random.seed!(0)
 
         has_accelerated_dcts || continue
@@ -394,7 +397,7 @@ end
 @testitem "DFT/RDFT/IRDFT (GPU)" tags = [:gpu, :fftw, :DFT, :RDFT, :IRDFT] setup = [TestUtils] begin
     using FFTW, FFTWOperators, GPUEnv, LinearAlgebra, Random, AbstractOperators
 
-    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+    for backend in gpu_backends(; supports_fftw = true)
         Random.seed!(0)
         n, m = 8, 6
 
