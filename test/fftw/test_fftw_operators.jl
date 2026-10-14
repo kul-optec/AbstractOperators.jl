@@ -364,7 +364,8 @@ end
     using AbstractOperators, FFTW, FFTWOperators, GPUEnv, Random
     has_accelerated_dcts = Base.find_package("AcceleratedDCTs") !== nothing
 
-    for backend in gpu_backends(; supports_fftw = true)
+    # AcceleratedDCTs plans do not support JLArrays.
+    for backend in gpu_backends(; include_cpu_backends = false, supports_fftw = true)
         Random.seed!(0)
 
         has_accelerated_dcts || continue
