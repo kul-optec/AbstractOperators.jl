@@ -6,7 +6,7 @@ if VERSION < v"1.11"
     exit(0)
 end
 
-GPUEnv.activate(persist = true, include_jlarrays = false, only_first = true, supports_fftw = true)
+GPUEnv.activate(persist = true, include_cpu_backends = false, only_first = true, supports_fftw = true)
 
 using AbstractOperators
 using BenchmarkTools
