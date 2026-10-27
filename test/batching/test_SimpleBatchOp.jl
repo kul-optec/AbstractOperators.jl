@@ -318,3 +318,17 @@ end
         @test Array(y_gpu2) ≈ Array(y_gpu)
     end
 end
+
+@testitem "SimpleBatchOp: == compares the batch dimensions" tags = [:batching, :SimpleBatchOp] setup = [TestUtils] begin
+    using AbstractOperators, Random
+    Random.seed!(0)
+
+    # Same operator, same sizes, different batch axis: different operators.
+    op = DiagOp(randn(4))
+    B1 = BatchOp(op, (4,), (:_, :b))
+    B2 = BatchOp(op, (4,), (:b, :_))
+    x = randn(4, 4)
+    @test B1 * x != B2 * x
+    @test B1 != B2
+    @test B1 == BatchOp(op, (4,), (:_, :b))
+end

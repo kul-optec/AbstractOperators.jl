@@ -439,3 +439,18 @@ end
         @test bop_threaded_copy * big_x ≈ bop_threaded * big_x
     end
 end
+
+@testitem "SpreadingBatchOp: == compares the batch dimensions" tags = [:batching, :SpreadingBatchOp] setup = [TestUtils] begin
+    using AbstractOperators, Random
+    Random.seed!(0)
+
+    # Same operators, same sizes, batch and plain axes swapped: different operators.
+    ops = [DiagOp(randn(4)) for _ in 1:3]
+    S1 = BatchOp(ops, 4, (:_, :s, :b))
+    S2 = BatchOp(ops, 4, (:b, :s, :_))
+    @test size(S1) == size(S2)
+    x = randn(4, 3, 4)
+    @test S1 * x != S2 * x
+    @test S1 != S2
+    @test S1 == BatchOp(ops, 4, (:_, :s, :b))
+end

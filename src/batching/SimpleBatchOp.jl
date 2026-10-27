@@ -245,6 +245,7 @@ _wrapped_operator(L::SimpleBatchOpMultiThreaded) = L.operator[1]
 # its original.
 function Base.:(==)(L1::SimpleBatchOp, L2::SimpleBatchOp)
     return _wrapped_operator(L1) == _wrapped_operator(L2) &&
+        _batch_masks(L1) == _batch_masks(L2) &&
         L1.domain_size == L2.domain_size &&
         L1.codomain_size == L2.codomain_size &&
         _batch_size(L1) == _batch_size(L2)

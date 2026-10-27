@@ -670,6 +670,7 @@ is_threaded(::SpreadingBatchOpSingleThreaded) = false
 
 function Base.:(==)(L1::SpreadingBatchOp, L2::SpreadingBatchOp)
     return _spreading_operators(L1) == _spreading_operators(L2) &&
+        _batch_masks(L1) == _batch_masks(L2) &&
         L1.domain_size == L2.domain_size &&
         L1.codomain_size == L2.codomain_size &&
         _batch_size(L1) == _batch_size(L2)
