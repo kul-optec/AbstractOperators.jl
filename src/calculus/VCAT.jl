@@ -43,6 +43,7 @@ struct VCAT{
     buf::C   # buffer memory
     A_par::LP  # `A` with every block forced `threaded = false`; used only by the threaded
     # forward block loop, to avoid nesting each block's own threading inside that loop.
+    # Blocks that are not thread-safe are copied, so shared ones do not share scratch.
     # Aliases `A` (LP === L, no extra copy) whenever the forward loop itself is not threaded.
     function VCAT(
             A::L, idxs::P, buf::C; threaded::Bool = true
@@ -61,7 +62,7 @@ struct VCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(VCAT, A)
         end
-        A_par = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        A_par = th ? map(_block_loop_operator, A) : A
         return new{N, L, P, C, CS, th, typeof(A_par)}(A, idxs, buf, A_par)
     end
 end
@@ -96,15 +97,19 @@ function VCAT(A::Vararg{AbstractOperator})
     return VCAT(AA, buf)
 end
 
-@generated function VCAT(AA::NTuple{N, AbstractOperator}, buf) where {N}
+function VCAT(AA::NTuple{N, AbstractOperator}, buf; threaded::Bool = true) where {N}
+    return _vcat_impl(AA, buf, threaded)
+end
+
+@generated function _vcat_impl(AA::NTuple{N, AbstractOperator}, buf, threaded) where {N}
     if N isa Int
         N == 1 && return :(AA[1])
         # Build idxs at compile time: inner VCATs are always flattened, so all elements have nd=1
         idxs_literal = Expr(:tuple, (1:N)...)
-        return :(VCAT(AA, $idxs_literal, buf))
+        return :(VCAT(AA, $idxs_literal, buf; threaded))
     else
         # N is not statically known (e.g. built up in a loop); fall back to runtime length
-        return :(VCAT(AA, ntuple(identity, length(AA)), buf))
+        return :(VCAT(AA, ntuple(identity, length(AA)), buf; threaded))
     end
 end
 
@@ -208,7 +213,7 @@ end
 function remove_slicing(L::VCAT)
     new_ops = collect(map(remove_slicing, L.A))
     if !any(a -> a isa HCAT, new_ops) && all(i -> i isa Int, L.idxs)
-        return DCAT(new_ops[collect(L.idxs)]...)
+        return DCAT(new_ops[collect(L.idxs)]...; threaded = is_block_threaded(L))
     elseif all(a -> a isa HCAT, L.A) && any(a -> any(is_null, a.A), L.A) && any(op -> size(op, 2) != size(new_ops[1], 2), new_ops)
         expected_hcat_domain_size = Vector{Any}(nothing, length(new_ops))
         for hcat_op in new_ops

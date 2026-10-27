@@ -60,6 +60,7 @@ struct HCAT{
     buf::C   # buffer memory
     A_par::LP  # `A` with every block forced `threaded = false`; used only by the threaded
     # adjoint block loop, to avoid nesting each block's own threading inside that loop.
+    # Blocks that are not thread-safe are copied, so shared ones do not share scratch.
     # Aliases `A` (LP === L, no extra copy) whenever the adjoint loop itself is not threaded.
     function HCAT(A::L, idxs::P, buf::C; threaded::Bool = true) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C}
         if any([size(A[1], 1) != size(a, 1) for a in A])
@@ -77,7 +78,7 @@ struct HCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(HCAT, A)
         end
-        A_par = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        A_par = th ? map(_block_loop_operator, A) : A
         return new{N, L, P, C, DS, th, typeof(A_par)}(A, idxs, buf, A_par)
     end
 end
@@ -130,7 +131,11 @@ end
 _ndoms_from_type(::Type{<:HCAT{N, L, P}}, dim::Int) where {N, L, P} =
     dim == 2 ? _count_hcat_ndoms(P) : 1
 
-@generated function HCAT(AA::NTuple{N, AbstractOperator}, buf::C) where {N, C}
+function HCAT(AA::NTuple{N, AbstractOperator}, buf; threaded::Bool = true) where {N}
+    return _hcat_impl(AA, buf, threaded)
+end
+
+@generated function _hcat_impl(AA::NTuple{N, AbstractOperator}, buf::C, threaded) where {N, C}
     N == 1 && return :(AA[1])
     # Build idxs at compile time using operator element types
     K = 0
@@ -147,18 +152,25 @@ _ndoms_from_type(::Type{<:HCAT{N, L, P}}, dim::Int) where {N, L, P} =
         end
     end
     idxs_literal = Expr(:tuple, idx_exprs...)
-    return :(HCAT(AA, $idxs_literal, buf))
+    return :(HCAT(AA, $idxs_literal, buf; threaded))
 end
 
 HCAT(A::AbstractOperator) = A
 
 # Mappings
+# The `Tuple` methods are checked like the `ArrayPartition` ones -- wrapping a `Tuple` in
+# an `ArrayPartition` only stores it -- and both share the unchecked kernels below.
 function mul!(y::AbstractArray, H::HCAT, b::ArrayPartition)
     check(y, H, b)
-    return mul!(y, H, b.x)
+    return _hcat_mul!(y, H, b.x)
 end
 
 function mul!(y::AbstractArray, H::HCAT, b::Tuple)
+    check(y, H, ArrayPartition(b...))
+    return _hcat_mul!(y, H, b)
+end
+
+function _hcat_mul!(y, H::HCAT, b::Tuple)
     if _hcat_has_natural_idxs(H)
         return _mul_hcat_natural!(y, H, b)
     end
@@ -167,11 +179,16 @@ end
 
 function mul!(y::ArrayPartition, A::AdjointOperator{<:HCAT}, b::AbstractArray)
     check(y, A, b)
-    mul!(y.x, A, b)
+    _hcat_adj_mul!(y.x, A, b)
     return y
 end
 
-@generated function mul!(
+function mul!(y::Tuple, A::AdjointOperator{<:HCAT}, b::AbstractArray)
+    check(ArrayPartition(y...), A, b)
+    return _hcat_adj_mul!(y, A, b)
+end
+
+@generated function _hcat_adj_mul!(
         y::Tuple, A::AdjointOperator{<:HCAT{N, L, P, C, DS, false}}, b::AbstractArray
     ) where {N, L, P, C, DS}
     K = 0
@@ -244,7 +261,7 @@ end
     return :(mul!($target, H.A_par[$I]', b))
 end
 
-function mul!(
+function _hcat_adj_mul!(
         y::Tuple, A::AdjointOperator{<:HCAT{N, L, P, C, DS, true}}, b::AbstractArray
     ) where {N, L, P, C, DS}
     H = A.A

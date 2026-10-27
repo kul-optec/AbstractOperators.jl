@@ -42,7 +42,7 @@ function Jacobian(H::DCAT, b::AbstractArray)
             A = (A..., jacobian(H.A[k], xx))
         end
     end
-    return DCAT(A, H.idxD, H.idxC)
+    return DCAT(A, H.idxD, H.idxC; threaded = is_block_threaded(H))
 end
 #Jacobian of HCAT
 function Jacobian(H::HCAT, b::ArrayPartition)
@@ -58,12 +58,12 @@ function Jacobian(H::HCAT, x::Tuple)
             A = (A..., jacobian(H.A[k], xx))
         end
     end
-    return HCAT(A, H.idxs, H.buf)
+    return HCAT(A, H.idxs, H.buf; threaded = is_block_threaded(H))
 end
 #Jacobian of VCAT
 function Jacobian(V::VCAT, x::AbstractArray)
     JJ = ([Jacobian(a, x) for a in V.A]...,)
-    return VCAT(JJ, V.idxs, V.buf)
+    return VCAT(JJ, V.idxs, V.buf; threaded = is_block_threaded(V))
 end
 #Jacobian of Compose
 function Jacobian(L::Compose, x::AbstractArray)

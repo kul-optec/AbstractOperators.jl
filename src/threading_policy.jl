@@ -205,12 +205,36 @@ condition alone is not sufficient.
 function default_block_threaded(::Type{Op}, blocks) where {Op <: AbstractOperator}
     Threads.nthreads() > 1 || return false
     length(blocks) >= MIN_BLOCKS_FOR_PARALLEL || return false
-    _is_cpu_storage(_array_wrapper_type(domain_array_type(first(blocks)))) || return false
+    # Every block, not just the first: blocks may mix storage types, and a device `mul!`
+    # must not be launched from several host tasks at once.
+    all(b -> _is_cpu_domain(domain_array_type(b)), blocks) || return false
     total = sum(b -> _total_elements(size(b, 2)), blocks; init = 0)
     # Mean rather than minimum: with heterogeneous blocks the runtime is set by the total
     # work spread over the loop, and a single small block should not veto the whole thing.
     mean_block = total ÷ length(blocks)
     return mean_block >= block_threading_threshold(Op)
+end
+
+# A block's domain is on the CPU when its storage is, or -- for a multi-domain block, whose
+# domain is an `ArrayPartition` -- when every component's storage is.
+_is_cpu_domain(::Type{S}) where {S <: AbstractArray} = _is_cpu_storage(_array_wrapper_type(S))
+function _is_cpu_domain(::Type{<:ArrayPartition{T, S}}) where {T, S <: Tuple}
+    return all(_is_cpu_domain, fieldtypes(S))
+end
+
+"""
+	_block_loop_operator(block) -> AbstractOperator
+
+The copy of `block` that a threaded block loop calls. Always serial (`threaded = false`),
+since the loop itself is the parallel layer. A block that is not thread-safe is always
+copied, even when it is already serial: the same operator, or an operator it wraps, may
+fill several blocks (`DCAT(C, C)`, `DCAT(C, 2 * C)`), and concurrent `mul!` calls would
+then share its scratch buffers. `copy_operator` duplicates those buffers and shares the
+read-only data, so each block gets its own workspace.
+"""
+function _block_loop_operator(block::AbstractOperator)
+    is_thread_safe(block) && return adapt_operator(block; threaded = false)
+    return copy_operator(block; threaded = false)
 end
 
 # Multi-domain operators report an ArrayPartition, which the size policy cannot use

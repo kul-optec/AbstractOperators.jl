@@ -629,3 +629,104 @@ end
         @test AO.is_block_threaded(DCAT([fd(1 << 18) for _ in 1:2]...)) == false
     end
 end
+
+@testitem "Threading contract: block loops give shared blocks their own scratch" tags = [
+    :calculus, :threading, :DCAT, :VCAT, :HCAT, :dsp, :Conv,
+] setup = [TestUtils] begin
+    using AbstractOperators, DSPOperators, LinearAlgebra, Random
+    using RecursiveArrayTools: ArrayPartition
+    const AO = AbstractOperators
+    Random.seed!(0)
+
+    # `Conv` keeps scratch buffers and is not thread-safe. Filling several blocks with the
+    # same instance -- directly, or wrapped in `Scale` -- used to run concurrent `mul!`s
+    # on those shared buffers and corrupt the output on every call.
+    n = 1 << 17
+    C = Conv(Float64, (n,), randn(16))
+    @test is_thread_safe(C) == false
+    x = ArrayPartition([randn(n) for _ in 1:4]...)
+    xv = randn(n)
+    y = randn(size(C, 1)...)
+
+    D = DCAT(C, C, C, C)
+    Dn = DCAT(C, 2 * C, 3 * C, 4 * C)
+    V = VCAT(C, C, C, C)
+    H = HCAT(C, C, C, C)
+    if Threads.nthreads() > 1
+        @test all(AO.is_block_threaded, (D, Dn, V, H))
+    end
+    # A threaded block loop works on its own copies of the non-thread-safe blocks.
+    if AO.is_block_threaded(D)
+        @test allunique(map(objectid, D.A))
+        @test allunique(map(objectid, V.A_par))
+        @test allunique(map(objectid, H.A_par))
+    end
+
+    Cx = [C * x.x[i] for i in 1:4]
+    for _ in 1:5
+        @test D * x == ArrayPartition(Cx...)
+        @test Dn * x ≈ ArrayPartition([i .* Cx[i] for i in 1:4]...)
+        @test all(==(C * xv), (V * xv).x)
+        @test all(==(C' * y), (H' * y).x)
+    end
+end
+
+@testitem "Threading contract: block loops thread only when every block is on the CPU" tags = [
+    :calculus, :threading, :VCAT,
+] setup = [TestUtils] begin
+    using AbstractOperators, JLArrays
+    const AO = AbstractOperators
+
+    n = 1 << 17
+    cpu = DiagOp(randn(n))
+    dev = DiagOp(JLArray(randn(n)))
+    # Whatever position the device block takes, the host must not launch its `mul!` from
+    # several tasks at once.
+    @test AO.is_block_threaded(VCAT(cpu, dev, dev, dev)) == false
+    @test AO.is_block_threaded(VCAT(dev, cpu, cpu, cpu)) == false
+    @test AO.is_block_threaded(VCAT(cpu, cpu, cpu, cpu)) == (Threads.nthreads() > 1)
+end
+
+@testitem "Threading contract: block operators keep the block-loop flag when rebuilt" tags = [
+    :calculus, :threading, :DCAT, :VCAT, :HCAT, :fftw, :DFT,
+] setup = [TestUtils] begin
+    using AbstractOperators, FFTWOperators, Random
+    using RecursiveArrayTools: ArrayPartition
+    const AO = AbstractOperators
+    Random.seed!(0)
+
+    # `threaded = true` on a copy is a permission. Two blocks are too few for the DCAT
+    # block loop, so the threading has to stay inside the blocks.
+    d = DCAT(DFT(ComplexF64, (1 << 15,)), DFT(ComplexF64, (1 << 15,)))
+    @test is_threaded(copy_operator(d; threaded = true)) == is_threaded(d)
+    @test is_threaded(d) == (Threads.nthreads() > 1)
+
+    # A serial block loop stays serial through every operation that rebuilds the operator.
+    n = 1 << 17
+    diags() = [DiagOp(randn(n)) for _ in 1:8]
+    D = copy_operator(DCAT(diags()...); threaded = false)
+    @test AO.is_block_threaded(D) == false
+    @test AO.is_block_threaded(AO.get_normal_op(D)) == false
+    @test AO.is_block_threaded(AO.combine(D, D)) == false
+    S = copy_operator(DCAT([Sigmoid(Float64, (n,), 2.0) for _ in 1:8]...); threaded = false)
+    xs = ArrayPartition([randn(n) for _ in 1:8]...)
+    @test AO.is_block_threaded(Jacobian(S, xs)) == false
+
+    H = copy_operator(HCAT(diags()...); threaded = false)
+    @test AO.is_block_threaded(H) == false
+    @test AO.is_block_threaded(H[1:5]) == false
+    V = copy_operator(VCAT(diags()...); threaded = false)
+    @test AO.is_block_threaded(V) == false
+    @test AO.is_block_threaded(V[1:5]) == false
+
+    sl(i) = DiagOp(randn(n)) * GetIndex((2n,), (isodd(i) ? (1:n) : ((n + 1):(2n))))
+    Vsl = VCAT([sl(i) for i in 1:4]...)
+    @test AO.is_block_threaded(AO.remove_slicing(copy_operator(Vsl; threaded = false))) == false
+    # ...while a threaded one stays threaded.
+    if Threads.nthreads() > 1
+        @test AO.is_block_threaded(Vsl) == true
+        @test AO.is_block_threaded(AO.remove_slicing(Vsl)) == true
+        @test AO.is_block_threaded(AO.get_normal_op(DCAT(diags()...))) == true
+        @test AO.is_block_threaded(HCAT(diags()...)[1:5]) == true
+    end
+end

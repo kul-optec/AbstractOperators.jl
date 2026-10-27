@@ -43,8 +43,9 @@ struct DCAT{
             default_block_threaded(DCAT, A)
         end
         # The block loop is the parallel layer, so the blocks themselves must not thread --
-        # same nesting rule as the batch operators.
-        blocks = th ? map(a -> adapt_operator(a; threaded = false), A) : A
+        # same nesting rule as the batch operators -- and a block that is not thread-safe
+        # gets its own copy, since it may be shared with another block.
+        blocks = th ? map(_block_loop_operator, A) : A
         return new{length(blocks), typeof(blocks), P1, P2, DS, CS, th}(blocks, idxD, idxC)
     end
 end
@@ -230,7 +231,10 @@ end
 has_optimized_normalop(L::DCAT) = any(has_optimized_normalop.(L.A))
 function get_normal_op(H::DCAT)
     idxs = tuple((1:length(H.A))...)
-    return DCAT(tuple([get_normal_op(H.A[i]) for i in eachindex(H.A)]...), idxs, idxs)
+    return DCAT(
+        tuple([get_normal_op(H.A[i]) for i in eachindex(H.A)]...), idxs, idxs;
+        threaded = is_block_threaded(H),
+    )
 end
 
 # Apply inverse permutation encoded in idxs to natural, using only tuple
@@ -394,8 +398,10 @@ function _copy_operator_impl(
         op::DCAT{N, L, P1, P2, DS, CS, Th}; storage_type = nothing, threaded = nothing
     ) where {N, L, P1, P2, DS, CS, Th}
     new_threaded = threaded === nothing ? Th : threaded
-    # When the block loop threads, the blocks are forced serial by the constructor, so only
-    # the storage request is forwarded to them here.
-    new_ops = map(a -> copy_operator(a; storage_type, threaded = new_threaded ? false : threaded), op.A)
+    # The request goes to the blocks unchanged. `threaded = true` only permits the block
+    # loop, and the constructor may still leave it serial (too few blocks, too little work);
+    # forcing the blocks serial here would then leave nothing threaded at all. When the loop
+    # does thread, the constructor makes the blocks serial itself.
+    new_ops = map(a -> copy_operator(a; storage_type, threaded), op.A)
     return DCAT(new_ops, op.idxD, op.idxC; threaded = new_threaded)
 end
