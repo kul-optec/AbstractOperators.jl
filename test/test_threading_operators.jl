@@ -1,5 +1,5 @@
 @testitem "Threading contract: transcendental nonlinear operators" tags = [
-    :nonlinearoperator, :Threading, :Sin, :Cos, :Exp, :Atan, :Tanh, :Sech, :SoftPlus,
+    :nonlinearoperator, :threading, :Sin, :Cos, :Exp, :Atan, :Tanh, :Sech, :SoftPlus,
 ] setup = [TestUtils, ThreadingContract] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -21,7 +21,7 @@
 end
 
 @testitem "Threading contract: Pow and Sigmoid" tags = [
-    :nonlinearoperator, :Threading, :Pow, :Sigmoid,
+    :nonlinearoperator, :threading, :Pow, :Sigmoid,
 ] setup = [TestUtils, ThreadingContract] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -47,7 +47,7 @@ end
 end
 
 @testitem "Threading contract: SoftMax" tags = [
-    :nonlinearoperator, :Threading, :SoftMax,
+    :nonlinearoperator, :threading, :SoftMax,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -88,7 +88,7 @@ end
     @test is_thread_safe(serial) == false
 end
 
-@testitem "Threading contract: FiniteDiff" tags = [:linearoperator, :Threading, :FiniteDiff] setup = [
+@testitem "Threading contract: FiniteDiff" tags = [:linearoperator, :threading, :FiniteDiff] setup = [
     TestUtils, ThreadingContract,
 ] begin
     using AbstractOperators, LinearAlgebra, Random
@@ -122,7 +122,7 @@ end
 end
 
 @testitem "Threading contract: forwarders report and forward threading" tags = [
-    :calculus, :Threading, :Compose, :Sum, :Scale,
+    :calculus, :threading, :Compose, :Sum, :Scale,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -156,7 +156,7 @@ end
 end
 
 @testitem "Threading contract: leaf operators without a threaded path" tags = [
-    :linearoperator, :Threading, :Eye, :GetIndex, :ZeroPad, :Zeros,
+    :linearoperator, :threading, :Eye, :GetIndex, :ZeroPad, :Zeros,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -185,7 +185,7 @@ end
 end
 
 @testitem "Threading contract: MatrixOp/LMatrixOp real BLAS threading" tags = [
-    :linearoperator, :Threading, :MatrixOp, :LMatrixOp,
+    :linearoperator, :threading, :MatrixOp, :LMatrixOp,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -231,7 +231,7 @@ end
 end
 
 @testitem "Threading contract: batch operators disable threading in wrapped operators" tags = [
-    :batching, :Threading, :SimpleBatchOp, :SpreadingBatchOp,
+    :batching, :threading, :SimpleBatchOp, :SpreadingBatchOp,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
@@ -259,7 +259,7 @@ end
     end
 end
 
-@testitem "Threading contract: DCAT block-parallel loop" tags = [:calculus, :Threading, :DCAT] setup = [
+@testitem "Threading contract: DCAT block-parallel loop" tags = [:calculus, :threading, :DCAT] setup = [
     TestUtils,
 ] begin
     using AbstractOperators, LinearAlgebra, Random
@@ -294,7 +294,7 @@ end
 end
 
 @testitem "Threading contract: DCAT default policy tracks the benchmark" tags = [
-    :calculus, :Threading, :DCAT,
+    :calculus, :threading, :DCAT,
 ] begin
     using AbstractOperators
 
@@ -314,7 +314,7 @@ end
 end
 
 @testitem "Threading contract: batching an operator that has no threaded path" tags = [
-    :batching, :Threading, :fftw, :dsp,
+    :batching, :threading, :fftw, :dsp,
 ] setup = [TestUtils] begin
     using AbstractOperators, FFTWOperators, DSPOperators, LinearAlgebra, Random
     Random.seed!(0)
@@ -370,7 +370,7 @@ end
 end
 
 @testitem "Threading contract: subpackage operators declare their threading" tags = [
-    :Threading, :fftw, :dsp, :nfft, :wavelets,
+    :threading, :fftw, :dsp, :nfft, :wavelets,
 ] setup = [TestUtils] begin
     using AbstractOperators, FFTWOperators, DSPOperators, NFFTOperators, WaveletOperators
     using LinearAlgebra, Random
@@ -448,7 +448,7 @@ end
 end
 
 @testitem "Threading contract: NFFTOp reports its plan-time threading" tags = [
-    :Threading, :nfft,
+    :threading, :nfft,
 ] setup = [TestUtils] begin
     using AbstractOperators, NFFTOperators, LinearAlgebra, Random
     Random.seed!(0)
@@ -486,7 +486,7 @@ end
 end
 
 @testitem "Threading contract: FFTW r2r/r2c transforms thread their plans" tags = [
-    :Threading, :fftw, :DCT, :IDCT, :RDFT, :IRDFT,
+    :threading, :fftw, :DCT, :IDCT, :RDFT, :IRDFT,
 ] setup = [TestUtils] begin
     using AbstractOperators, FFTWOperators, Random
     Random.seed!(0)
@@ -535,7 +535,7 @@ end
 end
 
 @testitem "Threading contract: VCAT-forward and HCAT-adjoint block loops" tags = [
-    :calculus, :Threading, :VCAT, :HCAT,
+    :calculus, :threading, :VCAT, :HCAT,
 ] setup = [TestUtils] begin
     using AbstractOperators, LinearAlgebra, Random
     using RecursiveArrayTools: ArrayPartition
@@ -601,7 +601,7 @@ end
 end
 
 @testitem "Threading contract: block thresholds are per-operator and measured" tags = [
-    :calculus, :Threading, :VCAT, :HCAT, :DCAT,
+    :calculus, :threading, :VCAT, :HCAT, :DCAT,
 ] begin
     using AbstractOperators
     const AO = AbstractOperators

@@ -1,4 +1,4 @@
-@testitem "threading policy: default_threaded thresholds" tags = [:misc, :Threading] setup = [TestUtils] begin
+@testitem "threading policy: default_threaded thresholds" tags = [:misc, :threading] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators:
         default_threaded,
@@ -37,7 +37,7 @@
     @test _total_elements(()) == 1
 end
 
-@testitem "threading policy: FastBroadcast bridge round-trips" tags = [:misc, :Threading] setup = [TestUtils] begin
+@testitem "threading policy: FastBroadcast bridge round-trips" tags = [:misc, :threading] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: _fbthread, _fbbool
     import FastBroadcast
@@ -62,7 +62,7 @@ end
     end
 end
 
-@testitem "adapt_operator: shares when constraints hold, copies otherwise" tags = [:misc, :Threading] setup = [TestUtils] begin
+@testitem "adapt_operator: shares when constraints hold, copies otherwise" tags = [:misc, :threading] setup = [TestUtils] begin
     using AbstractOperators, Random
     Random.seed!(0)
 
@@ -93,7 +93,7 @@ end
     @test adapt_operator(op; require_thread_safe = true) === op
 end
 
-@testitem "threading policy: thresholds are per-operator, not per-cost-class" tags = [:misc, :Threading] setup = [TestUtils] begin
+@testitem "threading policy: thresholds are per-operator, not per-cost-class" tags = [:misc, :threading] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: threading_threshold
 
@@ -124,7 +124,7 @@ end
 end
 
 @testitem "threading policy: consistent thresholds across constructors and operators" tags = [
-    :misc, :Threading,
+    :misc, :threading,
 ] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: _should_thread, MIN_BATCH_WORK_FOR_PARALLEL
@@ -150,7 +150,7 @@ end
 end
 
 @testitem "threading policy: _policy_storage reduces a multi-domain operator to a plain array type" tags = [
-    :misc, :Threading,
+    :misc, :threading,
 ] setup = [TestUtils] begin
     using AbstractOperators
     using AbstractOperators: _policy_storage, _storage_eltype_or_float, _should_thread
@@ -176,7 +176,7 @@ end
 end
 
 @testitem "threading policy: threaded=true is a permission, threaded=false a veto" tags = [
-    :misc, :Threading,
+    :misc, :threading,
 ] setup = [TestUtils] begin
     using AbstractOperators, FFTWOperators, NFFTOperators, Random
     Random.seed!(0)
@@ -227,7 +227,7 @@ end
     @test is_threaded(DFT(Float64, (256,); num_threads = 8)) == (Threads.nthreads() >= 1)
 end
 
-@testitem "threading policy: `threaded` is Bool-only in constructors" tags = [:misc, :Threading] setup = [TestUtils] begin
+@testitem "threading policy: `threaded` is Bool-only in constructors" tags = [:misc, :threading] setup = [TestUtils] begin
     using AbstractOperators
 
     # `nothing` is not part of the constructor API -- the keyword is `Bool` with `true` as
@@ -246,7 +246,7 @@ end
 end
 
 @testitem "adapt_operator: require_thread_safe and storage_type mismatch trigger a copy" tags = [
-    :misc, :Threading,
+    :misc, :threading,
 ] setup = [TestUtils] begin
     using AbstractOperators, Random, JLArrays
     Random.seed!(0)

@@ -4,7 +4,7 @@
 # all three modes (@test_opt, @test_call, and the package-level check in test_package.jl)
 # because the policy functions take type arguments, which is exactly where unparameterized
 # `::Type` keywords would silently introduce runtime dispatch.
-@testitem "@test_opt threading policy" tags = [:jet, :Threading] begin
+@testitem "@test_opt threading policy" tags = [:jet, :threading] begin
     using JET, AbstractOperators
     const AO = AbstractOperators
     n = 8
@@ -32,7 +32,7 @@
     @test_opt target_modules = (AO,) is_threaded(Compose(Eye(n), DiagOp(randn(n))))
 end
 
-@testitem "@test_call threading policy" tags = [:jet, :Threading] begin
+@testitem "@test_call threading policy" tags = [:jet, :threading] begin
     using JET, AbstractOperators, LinearAlgebra
     const AO = AbstractOperators
     n = 1 << 13
