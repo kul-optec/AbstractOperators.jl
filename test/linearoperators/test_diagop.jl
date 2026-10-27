@@ -135,6 +135,27 @@ end
     op_scalar2 = copy_operator(op_scalar; storage_type = Array{Float64})
     @test op_scalar2.d == op_scalar.d
     @test op_scalar2 * x ≈ op_scalar * x
+
+    # Without `storage_type`, a scalar diagonal takes the operator's own storage (it used
+    # to throw a `MethodError` from `_array_wrapper(::Float64)`).
+    op_scalar3 = copy_operator(op_scalar)
+    @test op_scalar3.d == op_scalar.d
+    @test domain_array_type(op_scalar3) == domain_array_type(op_scalar)
+    @test op_scalar3 * x == op_scalar * x
+    @test is_threaded(copy_operator(op_scalar; threaded = false)) == false
+end
+
+@testitem "DiagOp: copy_operator keeps a scalar diagonal's device storage" tags = [
+    :linearoperator, :DiagOp,
+] setup = [TestUtils] begin
+    using AbstractOperators, JLArrays
+
+    op = DiagOp(Float64, (8,), 2.0; array_type = JLArray)
+    op2 = copy_operator(op)
+    @test domain_array_type(op2) == domain_array_type(op)
+    @test codomain_array_type(op2) == codomain_array_type(op)
+    x = JLArray(randn(8))
+    @test collect(op2 * x) == collect(op * x)
 end
 
 @testitem "DiagOp (GPU)" tags = [:gpu, :linearoperator, :DiagOp] setup = [TestUtils, DiagOpTestHelper, GpuEnvSetup] begin

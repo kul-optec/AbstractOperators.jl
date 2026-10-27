@@ -140,9 +140,10 @@ size(A::LBFGS) = (size(A.s), size(A.s))
 fun_name(A::LBFGS) = "LBFGS"
 
 # LBFGS is stateful: `s`, `y`, the history buffers and the scalars are all mutated by
-# `update!`/`mul!`. A copy therefore gets *fresh* buffers rather than sharing them -- two
+# `update!`/`mul!`. A copy therefore gets its own buffers rather than sharing them -- two
 # operators sharing history would corrupt each other's curvature pairs -- which is also why
-# it is not thread-safe and has no threaded path.
+# it is not thread-safe and has no threaded path. The curvature history is the operator's
+# state, not scratch, so the copy starts from the same history.
 is_threaded(::LBFGS) = false
 
 function _copy_operator_impl(
@@ -151,6 +152,12 @@ function _copy_operator_impl(
     # LBFGS has no threaded path at all (`supports_threading(::LBFGS) == false`), so a
     # `threaded` request -- true or false -- is vacuous here, exactly as the generic
     # fallback treats it for any operator that doesn't support threading; see `properties.jl`.
-    proto = storage_type === nothing ? op.s : similar(storage_type{eltype(op.s)}, size(op.s))
-    return LBFGS(proto, M)
+    move(a) = storage_type === nothing ? copy(a) :
+        copyto!(similar(storage_type{eltype(a)}, size(a)), a)
+    s = move(op.s)
+    # `ys_M` and `alphas` stay on the CPU: they are only used with scalar indexing.
+    return LBFGS{R, typeof(s), M, I}(
+        op.currmem, op.curridx, s, move(op.y), map(move, op.s_M), map(move, op.y_M),
+        copy(op.ys_M), copy(op.alphas), op.H,
+    )
 end
