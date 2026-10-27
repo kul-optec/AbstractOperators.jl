@@ -19,7 +19,7 @@
     @test all(norm.(y1 .- y2) .<= 1.0e-12)
 end
 
-@testitem "WaveletOp (GPU)" tags = [:gpu, :wavelet, :WaveletOp] setup = [TestUtils] begin
+@testitem "WaveletOp (GPU)" tags = [:gpu, :wavelet, :WaveletOp] setup = [TestUtils, GpuEnvSetup] begin
     using Wavelets, LinearAlgebra, Random, AbstractOperators, WaveletOperators, GPUEnv
 
     for backend in gpu_backends()
