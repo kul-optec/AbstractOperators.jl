@@ -124,6 +124,15 @@ threading a device array is much higher than the cost of missing a thread-level 
 _is_cpu_storage(::Type{<:AbstractArray}) = false
 _is_cpu_storage(::Type{<:Array}) = true
 
+"""
+	_is_cpu_array(x::AbstractArray) -> Bool
+
+[`_is_cpu_storage`](@ref) for an array value, looking through wrappers such as views and
+reshapes to the array that owns the memory.
+"""
+_is_cpu_array(x::AbstractArray) = _is_cpu_storage(typeof(_storage_owner(x)))
+_storage_owner(x::AbstractArray) = (p = parent(x)) === x ? x : _storage_owner(p)
+
 # ─── Per-operator policy ──────────────────────────────────────────────────────
 
 """
@@ -380,10 +389,14 @@ _supports_threading_from_children(L::AbstractOperator) = any(supports_threading,
 # callers is exactly the interleaving bug NestedThreading exists to prevent.
 
 """
-	_with_blas_threading(f, threaded::Bool)
+	_with_blas_threading(f, threaded::Bool, ::Type{S})
 
 Run `f()` with BLAS restricted to a single thread when `threaded` is `false`, or with BLAS
-left at whatever budget is in force when it is `true`.
+left at whatever budget is in force when it is `true`. For non-CPU storage `S` it always
+runs `f()` directly: a device `gemm` uses none of the pools the scope restricts, so the
+scope would only add its lock and setter round trip to every call (measured on a 2x2
+`JLArray` `MatrixOp`: 5.4 us against 0.06 us for the bare `mul!`), and make device
+operators called from several tasks contend on that lock.
 
 The permitted branch deliberately opens **no** scope. Any outer `NestedThreading`
 restriction is process-global and already applied by the time it is reached, so re-asserting
@@ -414,7 +427,9 @@ full-throttle scope does that a plain call does not.
     themselves; setting `OPENBLAS_NUM_THREADS` also works, but note it makes LinearAlgebra
     skip its default entirely.
 """
-_with_blas_threading(f::F, threaded::Bool) where {F} = threaded ? f() : with_restricted_threads(f)
+function _with_blas_threading(f::F, threaded::Bool, ::Type{S}) where {F, S <: AbstractArray}
+    return threaded || !_is_cpu_storage(S) ? f() : with_restricted_threads(f)
+end
 
 """
 	_blas_threaded(threaded, ::Type{S}) -> Bool
@@ -422,8 +437,8 @@ _with_blas_threading(f::F, threaded::Bool) where {F} = threaded ? f() : with_res
 Resolve a BLAS-backed operator's `threaded` keyword: `false` vetoes, `true` permits, and the
 policy's only say is that BLAS threading is meaningless for non-CPU storage, where the
 `gemm` runs on the device instead. A GPU-backed operator therefore reports
-`is_threaded == false` and runs its `mul!` inside the restricted scope, which costs it
-nothing it would otherwise have used.
+`is_threaded == false`, and [`_with_blas_threading`](@ref) skips the restricted scope for
+it, since that scope restricts nothing a device `gemm` uses.
 
 Deliberately *not* routed through [`default_threaded`](@ref): see the section comment above
 for why the Julia thread count and an element-count threshold are both the wrong questions

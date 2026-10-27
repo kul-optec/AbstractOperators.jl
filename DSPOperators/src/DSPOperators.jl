@@ -21,6 +21,7 @@ import AbstractOperators:
     supports_threading,
     is_threaded,
     _resolve_threaded,
+    _is_cpu_array,
     _copy_operator_impl
 
 # ─── Threading ────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ import AbstractOperators:
 const THRESHOLD_C2C = 2^19
 
 """
-	_dsp_fftw_num_threads(num_threads, threaded, n) -> Int
+	_dsp_fftw_num_threads(num_threads, threaded, n, ref) -> Int
 
 Resolve the plan-time FFTW thread count for `Conv`/`Xcorr`, mirroring
 `FFTWOperators._fftw_num_threads`: `num_threads` is FFTW's own vocabulary and an explicit
@@ -47,6 +48,8 @@ package-wide rule (`false` vetoes, `true` enables subject to the size policy).
 
 `n` is the *padded* transform length (`fftlen`), not the input length: that is what the
 planned FFT actually costs, and for a short kernel the two differ by a factor of two.
+`ref` is an array in the operator's storage: on a device the count is always 1, because the
+plan comes from the GPU FFT library and `is_threaded` must report `false`.
 
 PROVENANCE: measured. `Xcorr` `mul!` sweep over the padded length, Float64, AMD EPYC 7352,
 1 vs 4 FFTW threads: fftlen 2^15 -> 0.89x, 2^17 -> 0.96x, 2^19 -> 1.12x, 2^21 -> 1.30x.
@@ -61,7 +64,8 @@ threaded plan must synchronize on twice, so its crossover sits several powers of
 a single `plan_fft` of the same length. Borrowing it cost ~18% on the 2-thread `Xcorr`
 forward benchmark, plus a per-call allocation that the serial plan does not make.
 """
-function _dsp_fftw_num_threads(num_threads, threaded::Bool, n::Int)
+function _dsp_fftw_num_threads(num_threads, threaded::Bool, n::Int, ref::AbstractArray)
+    _is_cpu_array(ref) || return 1
     num_threads !== nothing && return Int(num_threads)
     use = _resolve_threaded(threaded) do
         Threads.nthreads() > 1 && n >= THRESHOLD_C2C

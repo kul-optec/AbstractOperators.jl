@@ -415,12 +415,12 @@ end
     # checks below therefore stay small and cover the *granted* path through `num_threads`,
     # which bypasses the size policy by design.
     let n_below = DSPOperators.THRESHOLD_C2C - 1, n_above = DSPOperators.THRESHOLD_C2C
-        @test DSPOperators._dsp_fftw_num_threads(nothing, true, n_below) == 1
-        @test DSPOperators._dsp_fftw_num_threads(nothing, true, n_above) ==
+        @test DSPOperators._dsp_fftw_num_threads(nothing, true, n_below, zeros(1)) == 1
+        @test DSPOperators._dsp_fftw_num_threads(nothing, true, n_above, zeros(1)) ==
             (Threads.nthreads() > 1 ? Threads.nthreads() : 1)
         # `false` still vetoes above the threshold, and `num_threads` still wins over both.
-        @test DSPOperators._dsp_fftw_num_threads(nothing, false, n_above) == 1
-        @test DSPOperators._dsp_fftw_num_threads(2, false, n_below) == 2
+        @test DSPOperators._dsp_fftw_num_threads(nothing, false, n_above, zeros(1)) == 1
+        @test DSPOperators._dsp_fftw_num_threads(2, false, n_below, zeros(1)) == 2
     end
 
     for ctor in (
@@ -730,3 +730,52 @@ end
         @test AO.is_block_threaded(HCAT(diags()...)[1:5]) == true
     end
 end
+
+@testitem "Threading contract: FFTW thread counts are 1 for device storage" tags = [
+    :threading, :fftw, :dsp,
+] setup = [TestUtils] begin
+    using AbstractOperators, FFTWOperators, DSPOperators, JLArrays
+
+    n = 1 << 20
+    dev = JLArray(zeros(ComplexF32, n))
+    host = zeros(ComplexF32, n)
+    @test FFTWOperators._fftw_num_threads(:c2c, nothing, true, dev) == 1
+    @test FFTWOperators._fftw_num_threads(:c2c, 4, true, dev) == 1
+    @test DSPOperators._dsp_fftw_num_threads(nothing, true, n, dev) == 1
+    @test DSPOperators._dsp_fftw_num_threads(4, true, n, dev) == 1
+    # Views of host memory are host storage.
+    @test FFTWOperators._fftw_num_threads(:c2c, nothing, true, view(host, :)) ==
+        FFTWOperators._fftw_num_threads(:c2c, nothing, true, host) ==
+        (Threads.nthreads() > 1 ? Threads.nthreads() : 1)
+    @test FFTWOperators._fftw_num_threads(:c2c, 4, true, host) == 4
+end
+
+@testitem "Threading contract: device MatrixOp/LMatrixOp skip the BLAS scope" tags = [
+    :linearoperator, :threading, :MatrixOp, :LMatrixOp,
+] setup = [TestUtils] begin
+    using AbstractOperators, LinearAlgebra, JLArrays
+    const AO = AbstractOperators
+
+    # The serial (`threaded = false`) CPU path pins BLAS to one thread for the call; a
+    # device path has nothing to pin, so it runs at whatever count is in force.
+    outer = BLAS.get_num_threads()
+    inside(S) = AO._with_blas_threading(() -> BLAS.get_num_threads(), false, S)
+    @test inside(JLArray{Float32, 1}) == outer
+    @test inside(Vector{Float32}) == 1
+    @test AO._with_blas_threading(() -> BLAS.get_num_threads(), true, Vector{Float32}) == outer
+
+    M = MatrixOp(JLArray(randn(Float32, 2, 2)))
+    @test is_threaded(M) == false
+    x = JLArray(randn(Float32, 2))
+    y = similar(x)
+    # Measured inside a function: `@allocated` at testitem top level counts the global
+    # variable boxing too.
+    allocs(y, M, x) = @allocated mul!(y, M, x)
+    allocs(y, M, x)
+    @test allocs(y, M, x) == 0
+    @test collect(y) ≈ collect(M.A) * collect(x)
+    L = LMatrixOp(JLArray(randn(Float32, 3)), 2)
+    X = JLArray(randn(Float32, 2, 3))
+    @test collect(L * X) ≈ collect(X) * collect(L.b)
+end
+

@@ -431,3 +431,22 @@ end
         @test Array(out_gpu) ≈ x_cpu rtol = 1.0e-12
     end
 end
+
+@testitem "DFT/RDFT/IRDFT (GPU): never report CPU threads" tags = [
+    :gpu, :fftw, :threading, :DFT, :RDFT, :IRDFT,
+] setup = [TestUtils, GpuEnvSetup] begin
+    using FFTWOperators, GPUEnv, AbstractOperators
+
+    # Sizes above the CPU thread gates: on the CPU these plans would thread. A device plan
+    # comes from the GPU FFT library, which has no CPU thread count, so `is_threaded` is
+    # false even when threads are asked for explicitly.
+    n = 1 << 16
+    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+        x = to_gpu(backend, zeros(Float32, n))
+        xc = to_gpu(backend, zeros(ComplexF32, n ÷ 2 + 1))
+        @test is_threaded(DFT(x)) == false
+        @test is_threaded(RDFT(x)) == false
+        @test is_threaded(RDFT(x; num_threads = 4)) == false
+        @test is_threaded(IRDFT(xc, n)) == false
+    end
+end

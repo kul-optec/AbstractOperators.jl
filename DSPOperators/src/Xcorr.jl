@@ -75,7 +75,7 @@ function Xcorr(
 
     fftlen_fwd = nextpow(2, outlen)
     fftlen_adj = fftlen_fwd
-    nthr = _dsp_fftw_num_threads(num_threads, threaded, fftlen_fwd)
+    nthr = _dsp_fftw_num_threads(num_threads, threaded, fftlen_fwd, h)
 
     # Only the `plan_*` calls themselves consult FFTW's global thread count, so only they
     # need to run inside `_dsp_with_fftw_threads` -- keeping the closures to that (rather

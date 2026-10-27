@@ -262,6 +262,21 @@ end
     end
 end
 
+@testitem "Conv/Xcorr (GPU): never report CPU threads" tags = [
+    :gpu, :dsp, :threading, :Conv, :Xcorr,
+] setup = [TestUtils, GpuEnvSetup] begin
+    using DSPOperators, GPUEnv, AbstractOperators
+
+    # Above the CPU thread gate (a 2^19 padded transform), so on the CPU these would
+    # thread; a device plan has no CPU thread count.
+    n = 1 << 19
+    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+        h = to_gpu(backend, randn(Float32, 16))
+        @test is_threaded(Conv(Float32, (n,), h)) == false
+        @test is_threaded(Xcorr(Float32, (n,), h)) == false
+    end
+end
+
 @testitem "Xcorr (GPU)" tags = [:gpu, :dsp, :Xcorr] setup = [TestUtils, GpuEnvSetup] begin
     using DSPOperators, DSP, GPUEnv, LinearAlgebra, Random
     for backend in gpu_backends(; supports_fftw = true)

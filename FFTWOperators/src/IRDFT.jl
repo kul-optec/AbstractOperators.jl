@@ -35,7 +35,7 @@ function IRDFT(
         x::AbstractArray{Complex{T}, N}, d::Int, dims::Int = 1;
         num_threads = nothing, threaded::Bool = true
     ) where {T <: Number, N}
-    nthr = _fftw_num_threads(:r2c, num_threads, threaded, length(x))
+    nthr = _fftw_num_threads(:r2c, num_threads, threaded, x)
     A = _with_fftw_threads(() -> plan_irfft(x, d, dims), nthr)
     dim_in = size(x)
     dim_out = ()

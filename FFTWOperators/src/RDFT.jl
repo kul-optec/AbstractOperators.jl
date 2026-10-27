@@ -38,7 +38,7 @@ end
 function RDFT(
         x::AbstractArray{T, N}, dims::Int = 1; num_threads = nothing, threaded::Bool = true
     ) where {T <: Real, N}
-    nthr = _fftw_num_threads(:r2c, num_threads, threaded, length(x))
+    nthr = _fftw_num_threads(:r2c, num_threads, threaded, x)
     b2 = similar(x, complex(T), size(x))
     y2 = similar(x, complex(T), size(x))
     A, At = _with_fftw_threads(nthr) do

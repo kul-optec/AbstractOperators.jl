@@ -34,6 +34,7 @@ import AbstractOperators:
     is_threaded,
     supports_threading,
     _resolve_threaded,
+    _is_cpu_array,
     _elementwise_threaded,
     threading_threshold,
     THRESHOLD_MEMORY_BOUND,
@@ -60,17 +61,22 @@ FFTW's planner to sort it out.
 fftw_threading_threshold(kind::Symbol) = kind === :c2c ? 2^13 : 2^15
 
 """
-	_fftw_num_threads(kind, num_threads, threaded, n) -> Int
+	_fftw_num_threads(kind, num_threads, threaded, x) -> Int
 
-Resolve the plan-time FFTW thread count.
+Resolve the plan-time FFTW thread count for a transform of `x`.
 
 `num_threads` is FFTW's own vocabulary and is an explicit **command**: given, it wins
 outright, which keeps an escape hatch for callers who know what they want. `threaded` is the
 package-wide keyword and follows the package-wide rule -- `false` vetoes, `true`/`nothing`
 enable subject to the policy above. See `AbstractOperators._resolve_threaded`.
+
+A device array always gets 1, whatever was asked: its plan comes from the GPU FFT library,
+which has no CPU thread count, so `is_threaded` must report `false`.
 """
-function _fftw_num_threads(kind::Symbol, num_threads, threaded::Bool, n::Int)
+function _fftw_num_threads(kind::Symbol, num_threads, threaded::Bool, x::AbstractArray)
+    _is_cpu_array(x) || return 1
     num_threads !== nothing && return Int(num_threads)
+    n = length(x)
     use = _resolve_threaded(threaded) do
         Threads.nthreads() > 1 && n >= fftw_threading_threshold(kind)
     end

@@ -53,7 +53,7 @@ function Conv(
     eltype(h) != domain_type && error("eltype(h) is $(eltype(h)), should be $(domain_type)")
 
     buf = similar(h, domain_type, dim_in .+ size(h) .- 1)
-    nthr = _dsp_fftw_num_threads(num_threads, threaded, length(buf))
+    nthr = _dsp_fftw_num_threads(num_threads, threaded, length(buf), buf)
     # Only the `plan_*` calls themselves consult FFTW's global thread count, so only they
     # need to run inside `_dsp_with_fftw_threads` -- keeping the closure to that (rather
     # than the surrounding buffer allocation and branching) matches every other FFTW-based
