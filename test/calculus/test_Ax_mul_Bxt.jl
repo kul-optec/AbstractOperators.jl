@@ -144,7 +144,7 @@ end
     n = 2000
     threaded_leaf = Sin(Float64, (n,); threaded = true)
     serial_leaf = Cos(Float64, (n,); threaded = false)
-    @test is_threaded(Ax_mul_Bxt(threaded_leaf, serial_leaf)) == true
+    @test is_threaded(Ax_mul_Bxt(threaded_leaf, serial_leaf)) == (Threads.nthreads() > 1)
     @test is_threaded(Ax_mul_Bxt(serial_leaf, serial_leaf)) == false
     @test supports_threading(Ax_mul_Bxt(serial_leaf, serial_leaf)) == true
 

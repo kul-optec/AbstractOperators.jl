@@ -174,7 +174,7 @@ end
     threaded_leaf = FiniteDiff(Float64, (1 << 16,); threaded = true)
     serial_leaf = FiniteDiff(Float64, (1 << 16,); threaded = false)
     d1 = randn((1 << 16) - 1)
-    @test is_threaded(AffineAdd(threaded_leaf, d1)) == true
+    @test is_threaded(AffineAdd(threaded_leaf, d1)) == (Threads.nthreads() > 1)
     @test is_threaded(AffineAdd(serial_leaf, d1)) == false
     @test supports_threading(AffineAdd(serial_leaf, d1)) == true
 

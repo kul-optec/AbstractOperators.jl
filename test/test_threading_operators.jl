@@ -60,7 +60,7 @@ end
     serial = SoftMax(Float64, (n,); threaded = false)
     threaded = SoftMax(Float64, (n,); threaded = true)
     @test is_threaded(serial) == false
-    @test is_threaded(threaded) == true
+    @test is_threaded(threaded) == (Threads.nthreads() > 1)
     @test supports_threading(serial) == true
     @test supports_threading(threaded) == true
 
@@ -71,13 +71,13 @@ end
     @test Jacobian(serial, x)' * r ≈ Jacobian(threaded, x)' * r
 
     # copy_operator round-trips the flag in both directions.
-    @test is_threaded(copy_operator(serial; threaded = true)) == true
+    @test is_threaded(copy_operator(serial; threaded = true)) == (Threads.nthreads() > 1)
     @test is_threaded(copy_operator(threaded; threaded = false)) == false
 
     # adapt_operator: share when satisfied, copy when not.
     @test adapt_operator(serial; threaded = false) === serial
     adapted = adapt_operator(serial; threaded = true)
-    @test is_threaded(adapted) == true
+    @test is_threaded(adapted) == (Threads.nthreads() > 1)
     @test is_threaded(serial) == false   # original untouched
 
     # A copy gets its own scratch buffer -- sharing it is what makes SoftMax unsafe to
@@ -139,7 +139,7 @@ end
     # asserts the *forwarding rule*, and should not start failing because DiagOp's measured
     # threshold moved.
     diag = DiagOp(randn(n - 1); threaded = false)
-    @test is_threaded(Compose(diag, threaded_leaf)) == true
+    @test is_threaded(Compose(diag, threaded_leaf)) == (Threads.nthreads() > 1)
     @test is_threaded(Compose(diag, serial_leaf)) == false
     @test supports_threading(Compose(diag, serial_leaf)) == true
 
@@ -148,7 +148,7 @@ end
     adapted = adapt_operator(op; threaded = false)
     @test is_threaded(adapted) == false
     @test all(!is_threaded, adapted.A)
-    @test is_threaded(op) == true   # original untouched
+    @test is_threaded(op) == (Threads.nthreads() > 1)   # original untouched
 
     # Numerically unchanged by the adaptation.
     x = randn(n)
@@ -272,7 +272,7 @@ end
     serial = DCAT(blocks...; threaded = false)
     threaded = DCAT(blocks...; threaded = true)
     @test is_threaded(serial) == false
-    @test is_threaded(threaded) == true
+    @test is_threaded(threaded) == (Threads.nthreads() > 1)
     @test supports_threading(serial) == true
 
     # Inputs captured once and shared by both operators.
@@ -285,7 +285,7 @@ end
     @test serial' * r == threaded' * r
 
     # copy_operator round-trips the block-loop flag.
-    @test is_threaded(copy_operator(serial; threaded = true)) == true
+    @test is_threaded(copy_operator(serial; threaded = true)) == (Threads.nthreads() > 1)
     @test is_threaded(copy_operator(threaded; threaded = false)) == false
 
     # Nesting safety: when the block loop threads, the blocks themselves must not.
@@ -551,9 +551,9 @@ end
     vs = AO._copy_operator_impl(V; threaded = false)
     vt = AO._copy_operator_impl(V; threaded = true)
     @test AO.is_block_threaded(vs) == false
-    @test AO.is_block_threaded(vt) == true
+    @test AO.is_block_threaded(vt) == (Threads.nthreads() > 1)
     @test is_threaded(vs) == false
-    @test is_threaded(vt) == true
+    @test is_threaded(vt) == (Threads.nthreads() > 1)
     @test supports_threading(vs) == true
 
     x = randn(bs)
@@ -574,7 +574,7 @@ end
     big_bs = 1 << 17
     big_blocks = [FiniteDiff(Float64, (big_bs,); threaded = false) for _ in 1:4]
     H_big = AO._copy_operator_impl(HCAT(big_blocks...); threaded = true)
-    @test AO.is_block_threaded(H_big) == true
+    @test AO.is_block_threaded(H_big) == (Threads.nthreads() > 1)
     H_big_serial = AO._copy_operator_impl(H_big; threaded = false)
     xhb = ArrayPartition([randn(big_bs) for _ in 1:4]...)
     rhb = randn(big_bs - 1)
@@ -584,7 +584,7 @@ end
     # (non-natural) index HCAT.
     p = [2, 1, 4, 3]
     H_big_permuted = AO.permute(H_big, p)
-    @test AO.is_block_threaded(H_big_permuted) == true
+    @test AO.is_block_threaded(H_big_permuted) == (Threads.nthreads() > 1)
     expected = (H_big_serial' * rhb).x[p]
     @test collect(H_big_permuted' * rhb) == collect(ArrayPartition(expected...))
 
@@ -596,7 +596,7 @@ end
     nested = AO._copy_operator_impl(
         VCAT([FiniteDiff(Float64, (bs,); threaded = true) for _ in 1:nb]...); threaded = true
     )
-    @test all(is_threaded, nested.A)
+    @test all(is_threaded, nested.A) == (Threads.nthreads() > 1)
     @test all(!is_threaded, nested.A_par)
 end
 

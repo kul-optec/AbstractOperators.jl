@@ -363,7 +363,7 @@ end
     n = 4096
     threaded_leaf = Sin(Float64, (n,); threaded = true)
     serial_leaf = Cos(Float64, (n,); threaded = false)
-    @test is_threaded(Scale(2.0, threaded_leaf; threaded = false)) == true
+    @test is_threaded(Scale(2.0, threaded_leaf; threaded = false)) == (Threads.nthreads() > 1)
     @test is_threaded(Scale(2.0, serial_leaf; threaded = false)) == false
     @test supports_threading(Scale(2.0, serial_leaf)) == true
 

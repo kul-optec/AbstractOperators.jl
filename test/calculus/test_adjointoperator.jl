@@ -114,7 +114,7 @@ end
     n = 1 << 16   # FiniteDiff's threshold is the "arithmetic" class (2^15)
     threaded_leaf = FiniteDiff(Float64, (n,); threaded = true)
     serial_leaf = FiniteDiff(Float64, (n,); threaded = false)
-    @test is_threaded(AdjointOperator(threaded_leaf)) == true
+    @test is_threaded(AdjointOperator(threaded_leaf)) == (Threads.nthreads() > 1)
     @test is_threaded(AdjointOperator(serial_leaf)) == false
     @test supports_threading(AdjointOperator(serial_leaf)) == true
 
