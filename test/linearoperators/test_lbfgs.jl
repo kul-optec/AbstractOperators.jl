@@ -287,7 +287,6 @@ end
     update!(Lc, s, zero(s), A * s, zero(s))
     @test L * g == Lg
 
-    # A storage change carries the history over too.
     Lj = copy_operator(L; storage_type = JLArray)
     @test domain_array_type(Lj) <: JLArray
     @test collect(Lj * JLArray(g)) ≈ Lg

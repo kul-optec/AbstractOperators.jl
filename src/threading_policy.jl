@@ -219,8 +219,8 @@ end
 function _default_block_threaded(::Type{Op}, blocks, storage_type) where {Op <: AbstractOperator}
     Threads.nthreads() > 1 || return false
     length(blocks) >= MIN_BLOCKS_FOR_PARALLEL || return false
-    # Every block, not just the first: blocks may mix storage types, and a device `mul!`
-    # must not be launched from several host tasks at once.
+    # Blocks may mix storage types, and a device `mul!` must not run from several host
+    # tasks at once.
     if storage_type === nothing
         all(b -> _is_cpu_domain(domain_array_type(b)), blocks) || return false
     else
@@ -233,8 +233,6 @@ function _default_block_threaded(::Type{Op}, blocks, storage_type) where {Op <: 
     return mean_block >= block_threading_threshold(Op)
 end
 
-# A block's domain is on the CPU when its storage is, or -- for a multi-domain block, whose
-# domain is an `ArrayPartition` -- when every component's storage is.
 _is_cpu_domain(::Type{S}) where {S <: AbstractArray} = _is_cpu_storage(_array_wrapper_type(S))
 function _is_cpu_domain(::Type{<:ArrayPartition{T, S}}) where {T, S <: Tuple}
     return all(_is_cpu_domain, fieldtypes(S))
@@ -243,12 +241,9 @@ end
 """
 	_block_loop_operator(block) -> AbstractOperator
 
-The copy of `block` that a threaded block loop calls. Always serial (`threaded = false`),
-since the loop itself is the parallel layer. A block that is not thread-safe is always
-copied, even when it is already serial: the same operator, or an operator it wraps, may
-fill several blocks (`DCAT(C, C)`, `DCAT(C, 2 * C)`), and concurrent `mul!` calls would
-then share its scratch buffers. `copy_operator` duplicates those buffers and shares the
-read-only data, so each block gets its own workspace.
+The form of `block` that a threaded block loop calls: serial, since the loop is the
+parallel layer, and copied when it is not thread-safe, since the same operator may fill
+several blocks (`DCAT(C, C)`, `DCAT(C, 2 * C)`).
 """
 function _block_loop_operator(block::AbstractOperator)
     is_thread_safe(block) && return adapt_operator(block; threaded = false)
@@ -401,11 +396,9 @@ _supports_threading_from_children(L::AbstractOperator) = any(supports_threading,
 	_with_blas_threading(f, threaded::Bool, ::Type{S})
 
 Run `f()` with BLAS restricted to a single thread when `threaded` is `false`, or with BLAS
-left at whatever budget is in force when it is `true`. For non-CPU storage `S` it always
-runs `f()` directly: a device `gemm` uses none of the pools the scope restricts, so the
-scope would only add its lock and setter round trip to every call (measured on a 2x2
-`JLArray` `MatrixOp`: 5.4 us against 0.06 us for the bare `mul!`), and make device
-operators called from several tasks contend on that lock.
+left at whatever budget is in force when it is `true`. For non-CPU storage `S` it runs
+`f()` directly: the scope restricts nothing a device `gemm` uses and would only add its
+lock to every call (5.4 us against 0.06 us for a 2x2 `JLArray` `MatrixOp`).
 
 The permitted branch deliberately opens **no** scope. Any outer `NestedThreading`
 restriction is process-global and already applied by the time it is reached, so re-asserting

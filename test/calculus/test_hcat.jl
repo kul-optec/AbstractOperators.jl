@@ -376,9 +376,8 @@ end
     const AO = AbstractOperators
     Random.seed!(0)
 
-    # Every effective `mul!` path calls `check`, so a wrong size is the same
-    # `DimensionMismatch` whether the call goes through an `ArrayPartition` or a `Tuple`,
-    # and whether the adjoint block loop threads or not.
+    # A wrong size is a `DimensionMismatch` on every path: `ArrayPartition` or `Tuple`,
+    # threaded or not.
     n = 1 << 17
     H = HCAT([DiagOp(randn(n)) for _ in 1:4]...)
     for op in (H, copy_operator(H; threaded = false))
@@ -388,7 +387,6 @@ end
         @test_throws DimensionMismatch mul!(ntuple(_ -> zeros(n + 1), 4), op', randn(n))
         @test_throws DimensionMismatch mul!(zeros(n + 1), op, ntuple(_ -> randn(n), 4))
 
-        # The checked Tuple paths still compute the same as the ArrayPartition ones.
         x = ntuple(_ -> randn(n), 4)
         r = randn(n)
         @test mul!(zeros(n), op, x) == op * ArrayPartition(x...)

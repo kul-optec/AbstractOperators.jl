@@ -62,8 +62,7 @@
         serial = build(; threaded = false)
         threaded = build(; threaded = true)
 
-        # `threaded = true` only permits threading: a single-threaded session resolves it
-        # to serial, so every "threaded" expectation below is conditional on having threads.
+        # A single-threaded session resolves `threaded = true` to serial.
         can_thread = Threads.nthreads() > 1
         @test is_threaded(serial) == false
         @test is_threaded(threaded) == can_thread

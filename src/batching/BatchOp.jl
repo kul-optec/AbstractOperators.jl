@@ -2,8 +2,7 @@ export BatchOp, ThreadingStrategy
 
 abstract type BatchOp{dT, cT, dM, cM} <: AbstractOperators.AbstractOperator end
 
-# The domain and codomain batch-dimension masks: which axes are batched. Two batch
-# operators that wrap the same operator but batch along different axes are different.
+# Which axes are batched, in the domain and in the codomain.
 _batch_masks(::BatchOp{dT, cT, dM, cM}) where {dT, cT, dM, cM} = (dM, cM)
 
 # Properties

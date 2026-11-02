@@ -692,9 +692,8 @@ end
     const AO = AbstractOperators
     Random.seed!(0)
 
-    # `Conv` keeps scratch buffers and is not thread-safe. Filling several blocks with the
-    # same instance -- directly, or wrapped in `Scale` -- used to run concurrent `mul!`s
-    # on those shared buffers and corrupt the output on every call.
+    # `Conv` keeps scratch buffers and is not thread-safe; one instance fills several
+    # blocks, directly or wrapped in `Scale`.
     n = 1 << 17
     C = Conv(Float64, (n,), randn(16))
     @test is_thread_safe(C) == false

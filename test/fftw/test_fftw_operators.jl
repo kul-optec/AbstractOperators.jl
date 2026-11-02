@@ -437,9 +437,7 @@ end
 ] setup = [TestUtils, GpuEnvSetup] begin
     using FFTWOperators, GPUEnv, AbstractOperators
 
-    # Sizes above the CPU thread gates: on the CPU these plans would thread. A device plan
-    # comes from the GPU FFT library, which has no CPU thread count, so `is_threaded` is
-    # false even when threads are asked for explicitly.
+    # Above the CPU thread gates; a device plan has no CPU thread count.
     n = 1 << 16
     for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
         x = to_gpu(backend, zeros(Float32, n))

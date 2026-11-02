@@ -139,11 +139,8 @@ size(A::LBFGS) = (size(A.s), size(A.s))
 
 fun_name(A::LBFGS) = "LBFGS"
 
-# LBFGS is stateful: `s`, `y`, the history buffers and the scalars are all mutated by
-# `update!`/`mul!`. A copy therefore gets its own buffers rather than sharing them -- two
-# operators sharing history would corrupt each other's curvature pairs -- which is also why
-# it is not thread-safe and has no threaded path. The curvature history is the operator's
-# state, not scratch, so the copy starts from the same history.
+# `update!` and `mul!` mutate `s`, `y`, the history and the scalars, so LBFGS is not
+# thread-safe and has no threaded path. A copy gets its own buffers, holding the same history.
 is_threaded(::LBFGS) = false
 
 function _copy_operator_impl(

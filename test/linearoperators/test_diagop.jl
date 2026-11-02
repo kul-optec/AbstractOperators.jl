@@ -136,8 +136,7 @@ end
     @test op_scalar2.d == op_scalar.d
     @test op_scalar2 * x ≈ op_scalar * x
 
-    # Without `storage_type`, a scalar diagonal takes the operator's own storage (it used
-    # to throw a `MethodError` from `_array_wrapper(::Float64)`).
+    # Without `storage_type`, a scalar diagonal keeps the operator's storage.
     op_scalar3 = copy_operator(op_scalar)
     @test op_scalar3.d == op_scalar.d
     @test domain_array_type(op_scalar3) == domain_array_type(op_scalar)

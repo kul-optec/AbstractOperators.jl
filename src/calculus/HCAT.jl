@@ -158,8 +158,7 @@ end
 HCAT(A::AbstractOperator) = A
 
 # Mappings
-# The `Tuple` methods are checked like the `ArrayPartition` ones -- wrapping a `Tuple` in
-# an `ArrayPartition` only stores it -- and both share the unchecked kernels below.
+# `ArrayPartition(b...)` only wraps the tuple, so checking through it copies nothing.
 function mul!(y::AbstractArray, H::HCAT, b::ArrayPartition)
     check(y, H, b)
     return _hcat_mul!(y, H, b.x)
