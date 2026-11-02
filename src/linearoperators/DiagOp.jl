@@ -122,13 +122,9 @@ function _copy_operator_impl(op::DiagOp{B}; storage_type = nothing, threaded = n
     # `_convert_buffer` (which allocates uninitialized memory for buffers that `mul!`
     # overwrites on the next call anyway).
     new_d = _copy_diag(op.d, storage_type)
-    new_at = storage_type === nothing ? _diag_array_type(op.d, op) : storage_type
+    new_at = storage_type === nothing ? _array_wrapper_type(domain_array_type(op)) : storage_type
     return DiagOp(domain_type(op), op.dim_in, new_d; threaded = new_threaded, array_type = new_at)
 end
-
-# A scalar diagonal carries no storage of its own, so it keeps the operator's.
-_diag_array_type(d::AbstractArray, ::DiagOp) = _array_wrapper(d)
-_diag_array_type(::Number, op::DiagOp) = _array_wrapper_type(domain_array_type(op))
 
 _copy_diag(d::Number, ::Any) = d
 _copy_diag(d::AbstractArray, ::Nothing) = d
