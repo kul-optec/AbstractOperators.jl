@@ -823,10 +823,10 @@ end
     x = JLArray(randn(Float32, 2))
     y = similar(x)
     # Measured inside a function: `@allocated` at testitem top level counts the global
-    # variable boxing too.
-    allocs(y, M, x) = @allocated mul!(y, M, x)
-    allocs(y, M, x)
-    @test allocs(y, M, x) == 0
+    # variable boxing too. The JLArray `gemm` allocates by itself; the scope would add more.
+    allocs(y, A, x) = @allocated mul!(y, A, x)
+    allocs(y, M, x), allocs(y, M.A, x)
+    @test allocs(y, M, x) == allocs(y, M.A, x)
     @test collect(y) ≈ collect(M.A) * collect(x)
     L = LMatrixOp(JLArray(randn(Float32, 3)), 2)
     X = JLArray(randn(Float32, 2, 3))
