@@ -212,11 +212,20 @@ block loop. Requires enough blocks *and* enough work per block; see
 condition alone is not sufficient.
 """
 function default_block_threaded(::Type{Op}, blocks) where {Op <: AbstractOperator}
+    return _default_block_threaded(Op, blocks, nothing)
+end
+
+# The decision for copies of `blocks` moved to `storage_type` (`nothing`: unchanged).
+function _default_block_threaded(::Type{Op}, blocks, storage_type) where {Op <: AbstractOperator}
     Threads.nthreads() > 1 || return false
     length(blocks) >= MIN_BLOCKS_FOR_PARALLEL || return false
     # Every block, not just the first: blocks may mix storage types, and a device `mul!`
     # must not be launched from several host tasks at once.
-    all(b -> _is_cpu_domain(domain_array_type(b)), blocks) || return false
+    if storage_type === nothing
+        all(b -> _is_cpu_domain(domain_array_type(b)), blocks) || return false
+    else
+        _is_cpu_domain(storage_type) || return false
+    end
     total = sum(b -> _total_elements(size(b, 2)), blocks; init = 0)
     # Mean rather than minimum: with heterogeneous blocks the runtime is set by the total
     # work spread over the loop, and a single small block should not veto the whole thing.

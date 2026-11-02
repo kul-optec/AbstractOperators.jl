@@ -293,6 +293,60 @@ end
     @test all(!is_threaded, nested.A)
 end
 
+@testitem "Threading contract: rebuilding a block-threaded DCAT copies each block at most once" tags = [
+    :calculus, :threading, :DCAT, :Compose,
+] setup = [TestUtils] begin
+    using AbstractOperators, JLArrays, LinearAlgebra, Random
+    using RecursiveArrayTools: ArrayPartition
+    const AO = AbstractOperators
+    Random.seed!(0)
+
+    # `Compose` keeps a scratch buffer and is not thread-safe, so a threaded block loop
+    # holds its own copy of each block.
+    n = 1 << 17
+    blk() = FiniteDiff((n,)) * DiagOp(randn(n))
+    D = DCAT(blk(), blk(), blk(), blk())
+    @test is_thread_safe(D.A[1]) == false
+    @test AO.is_block_threaded(D) == (Threads.nthreads() > 1)
+    x = ArrayPartition([randn(n) for _ in 1:4]...)
+    y = D * x
+
+    for kw in ((;), (; threaded = true))
+        Dc = copy_operator(D; kw...)
+        @test AO.is_block_threaded(Dc) == AO.is_block_threaded(D)
+        @test Dc * x == y
+        @test !any(i -> Dc.A[i] === D.A[i], 1:4)
+        if AO.is_block_threaded(Dc)
+            @test all(!is_threaded, Dc.A)
+            @test allunique(map(objectid, Dc.A))
+            # One serial copy per block, not two.
+            copy_operator(D; kw...), copy_operator(D.A[1]; threaded = false)
+            one_copy = 4 * (@allocated copy_operator(D.A[1]; threaded = false))
+            @test (@allocated copy_operator(D; kw...)) < 1.5 * one_copy
+        end
+    end
+
+    Dj = copy_operator(D; storage_type = JLArray)
+    @test AO.is_block_threaded(Dj) == false
+    @test AO.is_block_threaded(Dj) == AO.is_block_threaded(DCAT(Dj.A...))
+    yj = Dj * ArrayPartition(JLArray.(x.x)...)
+    @test all(i -> collect(yj.x[i]) ≈ y.x[i], 1:4)
+
+    @test AO.is_block_threaded(copy_operator(D; threaded = false)) == false
+
+    # Operators derived one per block need no copies of their own either.
+    @test AO.permute(D, [2, 1, 3, 4]).A === D.A
+    @test AO.remove_displacement(D).A === D.A
+    N = AO.get_normal_op(D)
+    @test AO.is_block_threaded(N) == AO.is_block_threaded(D)
+    @test N * x ≈ D' * (D * x)
+    if AO.is_block_threaded(D)
+        AO.get_normal_op(D.A[1])
+        one_normal = 4 * (@allocated AO.get_normal_op(D.A[1]))
+        @test (@allocated AO.get_normal_op(D)) < 1.5 * one_normal
+    end
+end
+
 @testitem "Threading contract: DCAT default policy tracks the benchmark" tags = [
     :calculus, :threading, :DCAT,
 ] begin

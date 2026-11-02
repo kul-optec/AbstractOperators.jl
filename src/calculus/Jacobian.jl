@@ -42,7 +42,7 @@ function Jacobian(H::DCAT, b::AbstractArray)
             A = (A..., jacobian(H.A[k], xx))
         end
     end
-    return DCAT(A, H.idxD, H.idxC; threaded = is_block_threaded(H))
+    return _dcat_unshared(A, H.idxD, H.idxC, is_block_threaded(H))
 end
 #Jacobian of HCAT
 function Jacobian(H::HCAT, b::ArrayPartition)
