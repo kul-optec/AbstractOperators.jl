@@ -439,7 +439,7 @@ end
 
     # Above the CPU thread gates; a device plan has no CPU thread count.
     n = 1 << 16
-    for backend in gpu_backends(; include_jlarrays = false, supports_fftw = true)
+    for backend in gpu_backends(; supports_fftw = true)
         x = to_gpu(backend, zeros(Float32, n))
         xc = to_gpu(backend, zeros(ComplexF32, n ÷ 2 + 1))
         @test is_threaded(DFT(x)) == false
