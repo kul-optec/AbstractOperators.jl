@@ -247,7 +247,7 @@ another block (`DCAT(C, C)`, `DCAT(C, 2 * C)`). Other blocks stay the caller's o
 state the caller updates (e.g. `update!` on an `LBFGS`) still reaches them.
 """
 function _block_loop_operators(blocks::Tuple)
-    nodes = map(b -> _thread_unsafe_nodes!(IdSet{Any}(), b), blocks)
+    nodes = map(b -> _thread_unsafe_nodes!(Base.IdSet{Any}(), b), blocks)
     counts = IdDict{Any, Int}()
     for ns in nodes, o in ns
         counts[o] = get(counts, o, 0) + 1
@@ -262,7 +262,7 @@ function _block_loop_operators(blocks::Tuple)
 end
 
 # The operators in the tree of `op` that are not thread-safe.
-function _thread_unsafe_nodes!(nodes::IdSet{Any}, op::AbstractOperator)
+function _thread_unsafe_nodes!(nodes::Base.IdSet{Any}, op::AbstractOperator)
     is_thread_safe(op) || push!(nodes, op)
     for c in _children(op)
         _thread_unsafe_nodes!(nodes, c)
