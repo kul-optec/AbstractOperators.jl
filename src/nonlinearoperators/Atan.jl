@@ -54,8 +54,10 @@ function mul!(
     ) where {T, N, S, Th}
     check(y, J, b)
     L = J.A
-    return @.. thread = Th y = conj(1.0 / (1.0 + L.x^2)) * b
+    return @.. thread = Th y = _atan_jac_adj(L.x, b)
 end
+# A function rather than a literal `^2` in the broadcast; see `_tanh_jac_adj`.
+@inline _atan_jac_adj(x, b) = conj(1.0 / (1.0 + x * x)) * b
 
 fun_name(L::Atan) = "atan"
 

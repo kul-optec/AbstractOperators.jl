@@ -50,19 +50,13 @@ end
 function mul!(y::AbstractArray, L::Sigmoid{T, N, G, S, Th}, x::AbstractArray) where {T, N, G, S, Th}
     check(y, L, x)
     gamma = L.gamma
-    return @.. thread = Th y = (1 + exp(-gamma * x))^(-1)
+    # `inv` rather than `^(-1)`: a literal power in a broadcast passes `^` and `Val(-1)` in
+    # `Ref`s, which the threaded path heap-allocates on every call.
+    return @.. thread = Th y = inv(1 + exp(-gamma * x))
 end
 
-# The per-element body of the Jacobian-adjoint, as a function rather than spelled out in the
-# broadcast: `exp(-gamma * x)` appears twice in the derivative, and a broadcast expression
-# evaluates each occurrence separately. Writing it inline cost a second `exp` per element --
-# measured at ~2.1x on the `Jacobian/sigmoid-adjoint` benchmark, which is the whole kernel,
-# since `exp` dominates it. Binding it to a local here keeps the single fused pass over the
-# arrays while evaluating the transcendental once.
-@inline function _sigmoid_jac_adj(gamma, x, b)
-    e = exp(-gamma * x)
-    return conj(gamma * (e / (1 + e)^2)) * b
-end
+# The rest of the Jacobian-adjoint once `y` holds `e = exp(-gamma * x)`.
+@inline _sigmoid_jac_adj(gamma, e, b) = conj(gamma * (e / ((1 + e) * (1 + e)))) * b
 
 function mul!(
         y::AbstractArray, J::AdjointOperator{<:Jacobian{<:Sigmoid{T, N, G, S, Th}}}, b::AbstractArray
@@ -71,10 +65,11 @@ function mul!(
     L = J.A
     gamma = L.A.gamma
     Lx = L.x
-    # Single fused expression rather than a multi-statement in-place sequence: `@..` fuses
-    # it anyway, and this keeps the serial and threaded bodies identical but for the
-    # `thread` flag.
-    return @.. thread = Th y = _sigmoid_jac_adj(gamma, Lx, b)
+    # Two passes, `exp` first: fusing `exp` with the division into one pass measured ~1.4x
+    # slower (32768 elements, serial and 2 threads), and binding `exp` once avoids
+    # evaluating it twice per element.
+    @.. thread = Th y = exp(-gamma * Lx)
+    return @.. thread = Th y = _sigmoid_jac_adj(gamma, y, b)
 end
 
 fun_name(L::Sigmoid) = "σ"

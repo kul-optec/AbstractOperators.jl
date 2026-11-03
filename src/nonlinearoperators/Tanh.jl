@@ -54,8 +54,11 @@ function mul!(
     ) where {T, N, S, Th}
     check(y, J, b)
     L = J.A
-    return @.. thread = Th y = conj(sech(L.x)^2) * b
+    return @.. thread = Th y = _tanh_jac_adj(L.x, b)
 end
+# A function rather than a literal `^2` in the broadcast, which would pass `^` and `Val(2)`
+# in `Ref`s that the threaded path heap-allocates on every call.
+@inline _tanh_jac_adj(x, b) = (s = sech(x); conj(s * s) * b)
 
 fun_name(L::Tanh) = "tanh"
 
