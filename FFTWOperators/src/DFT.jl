@@ -397,9 +397,7 @@ function _copy_operator_impl(
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
     if storage_type === nothing && new_threaded == is_threaded(op)
         # Plans are immutable and hold no per-call scratch, so a copy shares them.
-        return DFT{N, C, D, Dir, S, T1, T2, R}(
-            op.dim_in, op.A, op.At, op.normalization, op.scale, op.num_threads, op.flags, op.timelimit
-        )
+        return op
     end
     # Changing the storage type or thread count means replanning. The prototype must use
     # the *domain* element type -- type parameter `D`, not the codomain `C`: for a

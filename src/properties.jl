@@ -581,10 +581,8 @@ setup to parallelise microseconds of work.
 The batch *count* is not known here (it is decided by the caller), so this is deliberately
 only the per-item half of the condition.
 """
-_should_thread(op::AbstractOperator) = _should_thread(op, nothing)
-
-# The decision for a copy of `op` moved to `storage_type` (`nothing`: unchanged).
-function _should_thread(op::AbstractOperator, storage_type)
+# `storage_type`: the decision for a copy of `op` moved there (`nothing`: unchanged).
+function _should_thread(op::AbstractOperator, storage_type = nothing)
     Threads.nthreads() > 1 || return false
     if storage_type === nothing
         _is_cpu_storage(_policy_storage(domain_array_type(op))) || return false

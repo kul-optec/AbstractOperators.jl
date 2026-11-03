@@ -115,9 +115,7 @@ function _copy_operator_impl(
     # No per-call scratch fields, so an unchanged storage type and thread count means the
     # plans can be shared.
     if storage_type === nothing && new_threaded == is_threaded(op)
-        return IRDFT{T, N, D, T1, T2, T3, S}(
-            op.dim_in, op.dim_out, op.A, op.At, op.idx, op.num_threads
-        )
+        return op
     end
     # No persistent data to carry over (IRDFT holds only plans), so the prototype can be
     # uninitialized.

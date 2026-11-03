@@ -119,8 +119,6 @@ function remove_displacement(P::Ax_mul_Bx)
 end
 
 _children(L::Ax_mul_Bx) = (L.A, L.B)
-is_threaded(L::Ax_mul_Bx) = _is_threaded_from_children(L)
-supports_threading(L::Ax_mul_Bx) = _supports_threading_from_children(L)
 
 function _copy_operator_impl(op::Ax_mul_Bx; storage_type = nothing, threaded = nothing)
     new_bufA = _convert_buffer(op.bufA, storage_type)

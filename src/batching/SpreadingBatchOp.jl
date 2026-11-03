@@ -77,7 +77,7 @@ repeat the operator application over the batch dimensions.
 dimensions. The symbols can be `:b` for batch dimensions, `:s` for spreading dimensions or `:_` for dimensions on which the operator acts.
 If the mask is a pair, the first element specifies the domain batch dimensions and the second element specifies the codomain batch dimensions.
 If no mask is provided, the following order is assumed: (operator dims..., spreading dims..., batch dims...)
-- `threaded`: `false` disables batch-level threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
+- `threaded`: `false` disables batch-level threading outright; `true` (the default) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
 - `threading_strategy::Symbol`: The threading strategy to use. Default is `ThreadingStrategy.AUTO`, which will automatically choose the
 best strategy based on the size of the operators and the input arrays.
 
@@ -666,10 +666,11 @@ _batch_size(L::SpreadingBatchOpSingleThreaded) = L.batch_size
 _batch_size(L::SpreadingBatchOp) = size(L.batch_indices)
 
 is_threaded(::SpreadingBatchOp) = true
-is_threaded(L::SpreadingBatchOpSingleThreaded) = any(is_threaded, L.operators)
+# The serial variant is threaded only through its operators.
+is_threaded(L::SpreadingBatchOpSingleThreaded) = _is_threaded_from_children(L)
 supports_threading(::SpreadingBatchOp) = true
 _children(L::SpreadingBatchOp) = L.operators
-_children(L::SpreadingBatchOpCopying) = reduce(vcat, L.operators)
+_children(L::SpreadingBatchOpCopying) = Iterators.flatten(L.operators)
 _loop_threaded(::SpreadingBatchOp) = true
 _loop_threaded(::SpreadingBatchOpSingleThreaded) = false
 

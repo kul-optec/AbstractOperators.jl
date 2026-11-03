@@ -310,5 +310,3 @@ function _copy_operator_impl(op::Compose; storage_type = nothing, threaded = not
 end
 
 _children(L::Compose) = L.A
-is_threaded(L::Compose) = _is_threaded_from_children(L)
-supports_threading(L::Compose) = _supports_threading_from_children(L)

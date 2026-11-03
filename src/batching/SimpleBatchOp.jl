@@ -35,7 +35,7 @@ the selected batch dimensions.
    The symbols can be `:b` for batch dimensions or `:_` for dimensions on which the operator acts. If a pair is provided, the first tuple specifies
    the domain mask and the second tuple specifies the codomain mask. When omitted, the batch dimensions are assumed to proceed the operator's
    domain and codomain dimensions.
-- `threaded`: `false` disables batch-level threading outright; `true` (or the default `nothing`) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
+- `threaded`: `false` disables batch-level threading outright; `true` (the default) enables it subject to the threading policy, which also requires more than one Julia thread, CPU storage, and enough work per batch item.
 
 # Examples
 ```jldoctest
@@ -235,7 +235,6 @@ end
 
 # The batch loop's threading (`_loop_threaded`) is encoded in the struct type; `is_threaded`
 # also counts the wrapped operator.
-is_threaded(L::SimpleBatchOpSingleThreaded) = is_threaded(L.operator)
 is_threaded(::SimpleBatchOpMultiThreaded) = true
 supports_threading(::SimpleBatchOp) = true
 _children(L::SimpleBatchOpSingleThreaded) = (L.operator,)

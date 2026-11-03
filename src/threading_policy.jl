@@ -247,15 +247,17 @@ another block (`DCAT(C, C)`, `DCAT(C, 2 * C)`). Other blocks stay the caller's o
 state the caller updates (e.g. `update!` on an `LBFGS`) still reaches them.
 """
 function _block_loop_operators(blocks::Tuple)
+    nodes = map(b -> _thread_unsafe_nodes!(IdSet{Any}(), b), blocks)
     counts = IdDict{Any, Int}()
-    for b in blocks
-        for o in _thread_unsafe_nodes!(IdSet{Any}(), b)
-            counts[o] = get(counts, o, 0) + 1
-        end
+    for ns in nodes, o in ns
+        counts[o] = get(counts, o, 0) + 1
     end
-    shared(b) = any(o -> counts[o] > 1, _thread_unsafe_nodes!(IdSet{Any}(), b))
-    return map(blocks) do b
-        shared(b) ? copy_operator(b; threaded = false) : adapt_operator(b; threaded = false)
+    return map(blocks, nodes) do b, ns
+        if any(o -> counts[o] > 1, ns)
+            copy_operator(b; threaded = false)
+        else
+            adapt_operator(b; threaded = false)
+        end
     end
 end
 
@@ -296,9 +298,9 @@ Consequently `is_threaded(copy_operator(L; threaded = true))` is **not** guarant
 `true`; `is_threaded(copy_operator(L; threaded = false))` *is* guaranteed to be `false`,
 which is the direction nesting safety depends on.
 
-Defaults to `false`.
+Defaults to whether any of [`_children`](@ref) is threaded, so `false` for a leaf.
 """
-is_threaded(::AbstractOperator) = false
+is_threaded(L::AbstractOperator) = _is_threaded_from_children(L)
 
 """
 	_resolve_threaded(policy, threaded::Bool) -> Bool
@@ -366,10 +368,10 @@ while `threaded = false` is a **demand** ("do not spawn threads", required for n
 safety). Without the distinction, passing `threaded = true` down a `Compose` to a
 memory-bound `Eye` would copy the `Eye` forever without ever satisfying the constraint.
 
-Defaults to `false`; leaf operators that gained a `Th` parameter override it, forwarders
-derive it from their children.
+Defaults to whether any of [`_children`](@ref) supports threading, so `false` for a leaf;
+leaf operators with a threaded path override it.
 """
-supports_threading(::AbstractOperator) = false
+supports_threading(L::AbstractOperator) = _supports_threading_from_children(L)
 _supports_threading_from_children(L::AbstractOperator) = any(supports_threading, _children(L))
 
 # ─── FastBroadcast bridge ─────────────────────────────────────────────────────

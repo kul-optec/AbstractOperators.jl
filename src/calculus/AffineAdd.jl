@@ -131,8 +131,6 @@ displacement(A::AffineAdd{L, D, false}) where {L, D} = -A.d .+ displacement(A.A)
 remove_displacement(A::AffineAdd) = remove_displacement(A.A)
 
 _children(L::AffineAdd) = (L.A,)
-is_threaded(L::AffineAdd) = _is_threaded_from_children(L)
-supports_threading(L::AffineAdd) = _supports_threading_from_children(L)
 
 function _copy_operator_impl(
         L::AffineAdd{Op, D, S}; storage_type = nothing, threaded = nothing
