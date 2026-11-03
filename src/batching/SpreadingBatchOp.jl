@@ -666,7 +666,12 @@ _batch_size(L::SpreadingBatchOpSingleThreaded) = L.batch_size
 _batch_size(L::SpreadingBatchOp) = size(L.batch_indices)
 
 is_threaded(::SpreadingBatchOp) = true
-is_threaded(::SpreadingBatchOpSingleThreaded) = false
+is_threaded(L::SpreadingBatchOpSingleThreaded) = any(is_threaded, L.operators)
+supports_threading(::SpreadingBatchOp) = true
+_children(L::SpreadingBatchOp) = L.operators
+_children(L::SpreadingBatchOpCopying) = reduce(vcat, L.operators)
+_loop_threaded(::SpreadingBatchOp) = true
+_loop_threaded(::SpreadingBatchOpSingleThreaded) = false
 
 function Base.:(==)(L1::SpreadingBatchOp, L2::SpreadingBatchOp)
     return _spreading_operators(L1) == _spreading_operators(L2) &&
@@ -690,11 +695,11 @@ function _copy_operator_impl(
         op::SpreadingBatchOp; storage_type = nothing, threaded = nothing
     )
     ops = _spreading_operators(op)
-    # The wrapped operators are always copied (never shared) so that scratch buffers are not
-    # aliased between `op` and the returned copy; their threading is forced off by
-    # `create_BatchOp` for nesting safety regardless of the storage request.
-    new_ops = map(o -> copy_operator(o; storage_type), ops)
-    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    loop = threaded === nothing ? _loop_threaded(op) : threaded
+    th = _resolve_threaded(() -> _should_thread(ops[1], storage_type), loop)
+    # A threaded loop needs serial inner operators, so copy them that way directly.
+    inner_threaded = th ? false : threaded
+    new_ops = map(o -> copy_operator(o; storage_type, threaded = inner_threaded), ops)
     return create_BatchOp(
         collect(new_ops),
         op.domain_size,
@@ -702,7 +707,7 @@ function _copy_operator_impl(
         op.codomain_size,
         get_codomain_batch_dim_mask(typeof(op)),
         get_spreading_dims(typeof(op));
-        threaded = new_threaded,
+        threaded = th,
         threading_strategy = _threading_strategy_of(op),
     )
 end

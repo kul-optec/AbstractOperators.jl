@@ -256,6 +256,29 @@ end
         serial_batch = BatchOp(FiniteDiff(Float64, (n,); threaded = false), (4,); threaded = false)
         x = randn(n, 4)
         @test bop * x == serial_batch * x
+
+        # A serial batch loop around a threaded operator is still threaded, and
+        # `threaded = false` reaches the wrapped operator.
+        sb = BatchOp(FiniteDiff(Float64, (n,); threaded = true), (4,); threaded = false)
+        @test is_threaded(sb) == true
+        for s in (
+                adapt_operator(bop; threaded = false),
+                adapt_operator(sb; threaded = false),
+                copy_operator(sb; threaded = false),
+            )
+            @test is_threaded(s) == false
+            @test is_threaded(AbstractOperators._wrapped_operator(s)) == false
+        end
+        @test copy_operator(sb) isa AbstractOperators.SimpleBatchOpSingleThreaded
+        @test is_threaded(copy_operator(sb).operator) == true
+
+        sbs = BatchOp([FiniteDiff(Float64, (n,); threaded = true) for _ in 1:3], 2; threaded = false)
+        @test is_threaded(sbs) == true
+        for s in (adapt_operator(sbs; threaded = false), copy_operator(sbs; threaded = false))
+            @test is_threaded(s) == false
+            @test all(!is_threaded, AbstractOperators._spreading_operators(s))
+        end
+        @test copy_operator(sbs) isa AbstractOperators.SpreadingBatchOpSingleThreaded
     end
 end
 

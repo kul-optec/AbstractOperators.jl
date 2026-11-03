@@ -233,10 +233,15 @@ end
 
 # Properties
 
-# `threaded` on a batch operator refers to the *batch loop*, which is encoded via the
-# single/multi struct type rather than a `Th` type parameter.
-is_threaded(::SimpleBatchOpSingleThreaded) = false
+# The batch loop's threading (`_loop_threaded`) is encoded in the struct type; `is_threaded`
+# also counts the wrapped operator.
+is_threaded(L::SimpleBatchOpSingleThreaded) = is_threaded(L.operator)
 is_threaded(::SimpleBatchOpMultiThreaded) = true
+supports_threading(::SimpleBatchOp) = true
+_children(L::SimpleBatchOpSingleThreaded) = (L.operator,)
+_children(L::SimpleBatchOpMultiThreaded) = L.operator
+_loop_threaded(::SimpleBatchOpSingleThreaded) = false
+_loop_threaded(::SimpleBatchOpMultiThreaded) = true
 
 _wrapped_operator(L::SimpleBatchOpSingleThreaded) = L.operator
 _wrapped_operator(L::SimpleBatchOpMultiThreaded) = L.operator[1]
@@ -258,18 +263,17 @@ function _copy_operator_impl(
         op::SimpleBatchOp; storage_type = nothing, threaded = nothing
     )
     inner = _wrapped_operator(op)
-    # The wrapped operator is always copied (never shared) so that scratch buffers are not
-    # aliased between `op` and the returned copy; only the storage request is forwarded, since
-    # threading is decided by `create_BatchOp`, which forces it off for nesting safety.
-    new_inner = copy_operator(inner; storage_type)
-    new_threaded = threaded === nothing ? is_threaded(op) : threaded
+    loop = threaded === nothing ? _loop_threaded(op) : threaded
+    th = _resolve_threaded(() -> _should_thread(inner, storage_type), loop)
+    # A threaded loop needs a serial inner operator, so copy it that way directly.
+    new_inner = copy_operator(inner; storage_type, threaded = th ? false : threaded)
     return create_BatchOp(
         new_inner,
         op.domain_size,
         get_domain_batch_dim_mask(typeof(op)),
         op.codomain_size,
         get_codomain_batch_dim_mask(typeof(op));
-        threaded = new_threaded,
+        threaded = th,
     )
 end
 

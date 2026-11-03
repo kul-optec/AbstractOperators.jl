@@ -581,9 +581,15 @@ setup to parallelise microseconds of work.
 The batch *count* is not known here (it is decided by the caller), so this is deliberately
 only the per-item half of the condition.
 """
-function _should_thread(op::AbstractOperator)
-    S = _policy_storage(domain_array_type(op))
+_should_thread(op::AbstractOperator) = _should_thread(op, nothing)
+
+# The decision for a copy of `op` moved to `storage_type` (`nothing`: unchanged).
+function _should_thread(op::AbstractOperator, storage_type)
     Threads.nthreads() > 1 || return false
-    _is_cpu_storage(S) || return false
+    if storage_type === nothing
+        _is_cpu_storage(_policy_storage(domain_array_type(op))) || return false
+    else
+        _is_cpu_domain(storage_type) || return false
+    end
     return _total_elements(size(op, 2)) >= MIN_BATCH_WORK_FOR_PARALLEL
 end
