@@ -774,12 +774,17 @@ end
     AO.is_block_threaded(V) && @test all(i -> V.A_par[i] === Ls[i], 1:4)
     AO.is_block_threaded(H) && @test all(i -> H.A_par[i] === Ls[i], 1:4)
 
-    x, x_old, g, g_old = randn(n), zeros(n), randn(n), zeros(n)
-    update!(Ls[1], x, x_old, g, g_old)
+    # `g = 2x` keeps the curvature `s'y` positive, so `update!` really stores a pair.
+    x, x_old, g_old = randn(n), zeros(n), zeros(n)
+    update!(Ls[1], x, x_old, 2 .* x, g_old)
     xs = ArrayPartition([randn(n) for _ in 1:4]...)
-    @test (D * xs).x[1] == Ls[1] * xs.x[1]
-    @test (V * xs.x[1]).x[1] == Ls[1] * xs.x[1]
-    @test (H' * xs.x[1]).x[1] == Ls[1]' * xs.x[1]
+    # `≈`, not `==`: inside the block loop BLAS runs single-threaded, so the LBFGS dot
+    # products may round differently from the direct call. The point is that the update
+    # reached the loop's block, which a stale copy (still the identity map) would miss.
+    @test (D * xs).x[1] ≈ Ls[1] * xs.x[1]
+    @test (V * xs.x[1]).x[1] ≈ Ls[1] * xs.x[1]
+    @test (H' * xs.x[1]).x[1] ≈ Ls[1]' * xs.x[1]
+    @test !(Ls[1] * xs.x[1] ≈ xs.x[1])
 end
 
 @testitem "Threading contract: block loops thread only when every block is on the CPU" tags = [
