@@ -194,3 +194,5 @@ function _copy_operator_impl(op::Sum; storage_type = nothing, threaded = nothing
     L = typeof(new_ops)
     return Sum{K, typeof(new_bufC), typeof(new_bufD), L}(new_ops, new_bufC, new_bufD)
 end
+
+_children(L::Sum) = L.A

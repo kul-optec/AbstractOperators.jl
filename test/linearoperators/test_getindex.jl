@@ -107,7 +107,7 @@ end
     @test occursin("↓", String(take!(io)))
 end
 
-@testitem "GetIndex (GPU)" tags = [:linearoperator, :GetIndex, :gpu] setup = [TestUtils] begin
+@testitem "GetIndex (GPU)" tags = [:linearoperator, :GetIndex, :gpu] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -267,7 +267,7 @@ end
     using Random, AbstractOperators
     Random.seed!(0)
     N = AbstractOperators.NormalGetIndex(Float64, Array{Float64}, (5,), 2:3)
-    @test AbstractOperators.AdjointOperator(N) === N
+    @test AdjointOperator(N) === N
     @test AbstractOperators.codomain_array_type(N) == Array{Float64}
 end
 

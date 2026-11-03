@@ -410,7 +410,7 @@ end
 @testitem "Syntax: mul! fallback throws MethodError" tags = [:misc, :Syntax] setup = [TestUtils] begin
     using AbstractOperators
     # Custom operator with no mul! defined so the fallback in syntax.jl fires
-    struct _NoMulOp <: AbstractOperators.LinearOperator end
+    struct _NoMulOp <: LinearOperator end
     AbstractOperators.size(::_NoMulOp) = ((3,), (3,))
     AbstractOperators.domain_type(::_NoMulOp) = Float64
     AbstractOperators.codomain_type(::_NoMulOp) = Float64
@@ -425,7 +425,7 @@ end
     # Custom operator that relies on the generic AbstractOperator fallback for
     # domain_array_type/codomain_array_type (no override), with a Tuple-valued
     # domain_type/codomain_type — exercises _storage_type_for_elem(::Tuple).
-    struct _TupleDomainOp <: AbstractOperators.LinearOperator end
+    struct _TupleDomainOp <: LinearOperator end
     AbstractOperators.size(::_TupleDomainOp) = (((3,), (3,)), ((3,), (3,)))
     AbstractOperators.domain_type(::_TupleDomainOp) = (Float64, Float64)
     AbstractOperators.codomain_type(::_TupleDomainOp) = (Float64, Float64)
@@ -529,4 +529,5 @@ end
     @test op_copy isa MatrixOp
     x = randn(n)
     @test op_copy * x ≈ op * x
+
 end

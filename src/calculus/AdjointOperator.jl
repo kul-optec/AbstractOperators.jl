@@ -64,3 +64,9 @@ is_full_column_rank(L::AdjointOperator) = is_full_row_rank(L.A)
 diag(L::AdjointOperator) = diag(L.A)
 diag_AcA(L::AdjointOperator) = diag_AAc(L.A)
 diag_AAc(L::AdjointOperator) = diag_AcA(L.A)
+
+_children(L::AdjointOperator) = (L.A,)
+
+function _copy_operator_impl(L::AdjointOperator; storage_type = nothing, threaded = nothing)
+    return AdjointOperator(copy_operator(L.A; storage_type, threaded))
+end

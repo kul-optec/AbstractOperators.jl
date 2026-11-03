@@ -33,57 +33,91 @@ function parse_args_local(args)
     s = ArgParseSettings()
     @add_arg_table! s begin
         "--base-dir"
-            help    = "Absolute path to base revision checkout"
-            arg_type = String
-            required = true
+        help = "Absolute path to base revision checkout"
+        arg_type = String
+        required = true
         "--head-dir"
-            help    = "Absolute path to head revision checkout"
-            arg_type = String
-            required = true
+        help = "Absolute path to head revision checkout"
+        arg_type = String
+        required = true
         "--output-dir"
-            help    = "Directory where body.md and metadata are written"
-            arg_type = String
-            default  = "."
+        help = "Directory where body.md and metadata are written"
+        arg_type = String
+        default = "."
         "--pr"
-            help    = "Pull-request number"
-            arg_type = String
-            default  = ""
+        help = "Pull-request number"
+        arg_type = String
+        default = ""
         "--julia-version"
-            help    = "Julia version string for the comment header"
-            arg_type = String
-            default  = string(VERSION)
+        help = "Julia version string for the comment header"
+        arg_type = String
+        default = string(VERSION)
+        "--threads"
+        help = "Comma-separated worker thread counts to benchmark at, e.g. \"1,2\". The " *
+            "suite runs once per count, per revision -- each count gets its own comparison " *
+            "section in the comment body."
+        arg_type = String
+        default = "1,2"
     end
     return parse_args(args, s)
 end
+
+parse_thread_counts(s::AbstractString) = [parse(Int, strip(t)) for t in split(s, ',') if !isempty(strip(t))]
 
 # ---------------------------------------------------------------------------
 # Benchmark execution
 # ---------------------------------------------------------------------------
 
 """
-Run benchmark/benchmarks.jl inside `repo_dir` in a clean subprocess and return
-the serialised BenchmarkGroup results path.  The subprocess activates the
-benchmark sub-project so all workspace/subproject resolution happens via the
-standard local manifest.
+Instantiate `repo_dir`'s benchmark sub-project once, in its own subprocess.
+
+`run_suite` is called once per thread count in `--threads` for the same `repo_dir` (base or
+head), and each call is a fresh subprocess -- required, since `-t` can only be set at
+process launch -- but the manifest it resolves against doesn't change between those calls.
+Without this, every one of those subprocesses would redundantly re-resolve/re-instantiate
+an already-satisfied manifest; call this once per revision, before the thread-count loop,
+instead.
 """
-function run_suite(repo_dir::AbstractString, result_path::AbstractString)
+function ensure_instantiated!(repo_dir::AbstractString)
     bench_project = joinpath(repo_dir, "benchmark")
-    bench_script  = joinpath(repo_dir, "benchmark", "benchmarks.jl")
+    cmd = `$(Base.julia_cmd()) --startup-file=no --project=$(bench_project) -e "using Pkg; Pkg.instantiate(; io = devnull)"`
+    @info "Instantiating benchmark project at $repo_dir"
+    run(cmd)
+    return nothing
+end
+
+"""
+Run benchmark/benchmarks.jl inside `repo_dir`, in a clean subprocess pinned to `threads`
+worker threads via `-t`, and return the serialised BenchmarkGroup results path.
+
+`-t` (not the `JULIA_NUM_THREADS` env var) is what pins the count: it always wins when both
+are present, so this is reliable regardless of what the calling job's environment sets. This
+is the mechanism `BENCH_THREADED` (see `bench_common.jl`) relies on to make the single- vs
+multi-threaded comparison a controlled axis rather than runner noise -- `threads == 1` runs
+only the serial entries (every operator's policy vetoes threading at one thread), `threads >
+1` also runs the threaded entries.
+
+The subprocess activates the benchmark sub-project (assumed already instantiated -- see
+`ensure_instantiated!`, called once per `repo_dir` before the thread-count loop) so all
+workspace/subproject resolution happens via the standard local manifest.
+"""
+function run_suite(repo_dir::AbstractString, result_path::AbstractString, threads::Int)
+    bench_project = joinpath(repo_dir, "benchmark")
+    bench_script = joinpath(repo_dir, "benchmark", "benchmarks.jl")
 
     # The runner script activates the benchmark project, includes benchmarks.jl,
     # tunes and runs SUITE, then serialises results.
     runner = """
     using Pkg
     Pkg.activate($(repr(bench_project)); io = devnull)
-    Pkg.instantiate(; io = devnull)
     include($(repr(bench_script)))
     results = BenchmarkTools.run(SUITE; verbose = true)
     using Serialization
     Serialization.serialize($(repr(result_path)), results)
     """
 
-    cmd = `$(Base.julia_cmd()) --startup-file=no --project=$(bench_project) -e $(runner)`
-    @info "Running benchmarks at $repo_dir"
+    cmd = `$(Base.julia_cmd()) --startup-file=no --project=$(bench_project) -t $(threads) -e $(runner)`
+    @info "Running benchmarks at $repo_dir (threads = $threads)"
     run(cmd)
     return result_path
 end
@@ -92,12 +126,15 @@ end
 # Comparison helpers  (logic mirrors AirspeedVelocity TableUtils / PR #140)
 # ---------------------------------------------------------------------------
 
+# One thread count's base/head comparison: (threads, base_flat, head_flat).
+const ThreadSection = Tuple{Int, Dict{String, BenchmarkTools.Trial}, Dict{String, BenchmarkTools.Trial}}
+
 """
 Flatten a possibly nested BenchmarkGroup into a Dict{String,BenchmarkTools.Trial}
 using "/" as the key separator.
 """
 function flatten_group(group::BenchmarkGroup, prefix = "")
-    out = Dict{String,BenchmarkTools.Trial}()
+    out = Dict{String, BenchmarkTools.Trial}()
     for (k, v) in group
         key = isempty(prefix) ? string(k) : "$prefix/$k"
         if v isa BenchmarkGroup
@@ -111,7 +148,7 @@ end
 
 # ---- time formatting -------------------------------------------------------
 
-const TIME_UNITS = [(:ns, 1e0), (Symbol("μs"), 1e3), (:ms, 1e6), (:s, 1e9)]
+const TIME_UNITS = [(:ns, 1.0e0), (Symbol("μs"), 1.0e3), (:ms, 1.0e6), (:s, 1.0e9)]
 
 function auto_time_unit(t_ns::Float64)
     for (unit, scale) in reverse(TIME_UNITS)
@@ -122,10 +159,10 @@ end
 
 function format_time(t::BenchmarkTools.Trial)
     med = Statistics.median(t.times)   # nanoseconds
-    lo  = Statistics.quantile(t.times, 0.25)
-    hi  = Statistics.quantile(t.times, 0.75)
+    lo = Statistics.quantile(t.times, 0.25)
+    hi = Statistics.quantile(t.times, 0.75)
     unit, scale = auto_time_unit(med)
-    v    = med / scale
+    v = med / scale
     verr = max(0.0, (hi - lo) / 2) / scale
     unit_str = string(unit)
     if isfinite(verr) && verr > 0
@@ -139,7 +176,7 @@ end
 
 function format_memory(t::BenchmarkTools.Trial)
     allocs = round(Int, Statistics.median(t.allocs))
-    bytes  = round(Int, Statistics.median(t.memory))
+    bytes = round(Int, Statistics.median(t.memory))
     if bytes == 0
         return "0 allocs (0 bytes)"
     elseif bytes < 1024
@@ -224,7 +261,7 @@ function markdown_table(; header::AbstractVector, data::AbstractMatrix)
     println(io)
     print(io, "|:$(repeat('-', cw[1]))|")
     for i in 2:length(header)
-        print(io, ":$(repeat('-', cw[i]-1)):|")
+        print(io, ":$(repeat('-', cw[i] - 1)):|")
     end
     println(io)
     for row in eachrow(data)
@@ -244,12 +281,12 @@ Build one markdown table (either :time or :memory) comparing `base_flat` and
 the missing column.
 """
 function build_table(
-    base_flat::Dict{String,BenchmarkTools.Trial},
-    head_flat::Dict{String,BenchmarkTools.Trial},
-    mode::Symbol,
-    base_label::String,
-    head_label::String,
-)
+        base_flat::Dict{String, BenchmarkTools.Trial},
+        head_flat::Dict{String, BenchmarkTools.Trial},
+        mode::Symbol,
+        base_label::String,
+        head_label::String,
+    )
     all_keys = sort(collect(union(keys(base_flat), keys(head_flat))))
     header = ["Benchmark", base_label, head_label, "Ratio (base/head)"]
 
@@ -277,27 +314,27 @@ end
 # ---------------------------------------------------------------------------
 
 function build_summary(
-    base_flat::Dict{String,BenchmarkTools.Trial},
-    head_flat::Dict{String,BenchmarkTools.Trial},
-)
+        base_flat::Dict{String, BenchmarkTools.Trial},
+        head_flat::Dict{String, BenchmarkTools.Trial},
+    )
     common = intersect(keys(base_flat), keys(head_flat))
 
-    time_speedups   = 0
+    time_speedups = 0
     time_regressions = 0
     mem_improvements = 0
-    mem_regressions  = 0
+    mem_regressions = 0
 
     for k in common
         r_t, re_t = compute_ratio(base_flat[k], head_flat[k], :time)
         if isfinite(r_t)
-            r_t - re_t > 1.2 && (time_speedups    += 1)
+            r_t - re_t > 1.2 && (time_speedups += 1)
             r_t + re_t < 0.8 && (time_regressions += 1)
         end
 
         r_m, _ = compute_ratio(base_flat[k], head_flat[k], :memory)
         if isfinite(r_m)
             r_m > 1.5 && (mem_improvements += 1)
-            r_m < 0.5 && (mem_regressions  += 1)
+            r_m < 0.5 && (mem_regressions += 1)
         end
     end
 
@@ -330,37 +367,71 @@ end
 # Comment body assembly
 # ---------------------------------------------------------------------------
 
-function build_body(
-    base_flat::Dict{String,BenchmarkTools.Trial},
-    head_flat::Dict{String,BenchmarkTools.Trial},
-    base_label::String,
-    head_label::String,
-    julia_version::String,
-)
-    time_table   = build_table(base_flat, head_flat, :time,   base_label, head_label)
+"""
+One thread-count's comparison: a summary line plus its two `<details>` tables. `threads == 1`
+carries only the always-serial entries (every operator's policy vetoes threading there); a
+higher count also carries the `-threaded` entries and any operator whose own size-based
+policy picks the threaded path unprompted (e.g. `MatrixOp`, `Xcorr`) -- see `BENCH_THREADED`.
+"""
+function build_section(
+        base_flat::Dict{String, BenchmarkTools.Trial},
+        head_flat::Dict{String, BenchmarkTools.Trial},
+        base_label::String,
+        head_label::String,
+        threads::Int,
+    )
+    time_table = build_table(base_flat, head_flat, :time, base_label, head_label)
     memory_table = build_table(base_flat, head_flat, :memory, base_label, head_label)
-    summary      = build_summary(base_flat, head_flat)
+    summary = build_summary(base_flat, head_flat)
 
     return """
-## Benchmark Results (Julia v$(julia_version))
+    ### $(threads) thread$(threads == 1 ? "" : "s")
 
-$(summary)
+    $(summary)
 
-<details>
-<summary>Time benchmarks</summary>
+    <details>
+    <summary>Time benchmarks</summary>
 
-$(time_table)
-</details>
+    $(time_table)
+    </details>
 
-<details>
-<summary>Memory benchmarks</summary>
+    <details>
+    <summary>Memory benchmarks</summary>
 
-$(memory_table)
-</details>
+    $(memory_table)
+    </details>
+    """
+end
 
-> **Ratio interpretation:** values > 1 mean the PR is faster; values < 1 mean slower.
-> 🚀 significant speedup · 🐢 significant slowdown
 """
+Assemble the full comment body from one comparison per thread count. `sections` is a vector
+of `(threads, base_flat, head_flat)`, in the order they should appear (ascending thread
+count, matching `--threads`).
+"""
+function build_body(
+        sections::Vector{<:ThreadSection},
+        base_label::String,
+        head_label::String,
+        julia_version::String,
+    )
+    rendered = [
+        build_section(base_flat, head_flat, base_label, head_label, threads)
+            for (threads, base_flat, head_flat) in sections
+    ]
+
+    return """
+    ## Benchmark Results (Julia v$(julia_version))
+
+    Run once per thread count (`-t 1`, `-t 2`, ...) so single- and multi-threaded paths are
+    each measured under a controlled, pinned thread count rather than mixed into one
+    ambiguous run -- see each operator's own size-based threading policy for why a "default"
+    run at more than one thread cannot otherwise be assumed serial or parallel.
+
+    $(join(rendered, "\n"))
+
+    > **Ratio interpretation:** values > 1 mean the PR is faster; values < 1 mean slower.
+    > 🚀 significant speedup · 🐢 significant slowdown
+    """
 end
 
 # ---------------------------------------------------------------------------
@@ -369,38 +440,45 @@ end
 
 function main(argv = ARGS)
     opts = parse_args_local(argv)
-    base_dir     = opts["base-dir"]
-    head_dir     = opts["head-dir"]
-    output_dir   = opts["output-dir"]
-    pr_number    = opts["pr"]
+    base_dir = opts["base-dir"]
+    head_dir = opts["head-dir"]
+    output_dir = opts["output-dir"]
+    pr_number = opts["pr"]
     julia_version = opts["julia-version"]
+    thread_counts = parse_thread_counts(opts["threads"])
 
     mkpath(output_dir)
-
-    base_result_path = joinpath(output_dir, "results_base.jls")
-    head_result_path = joinpath(output_dir, "results_head.jls")
-
-    run_suite(base_dir, base_result_path)
-    run_suite(head_dir, head_result_path)
-
-    @info "Loading results …"
-    base_results = Serialization.deserialize(base_result_path)
-    head_results = Serialization.deserialize(head_result_path)
-
-    base_flat = flatten_group(base_results)
-    head_flat = flatten_group(head_results)
 
     # Use short SHA labels when directories carry them; otherwise use directory names.
     base_label = basename(rstrip(base_dir, '/'))
     head_label = basename(rstrip(head_dir, '/'))
 
-    body = build_body(base_flat, head_flat, base_label, head_label, julia_version)
+    # Once per revision, not once per (revision, thread count): see `ensure_instantiated!`.
+    ensure_instantiated!(base_dir)
+    ensure_instantiated!(head_dir)
+
+    sections = ThreadSection[]
+    for threads in thread_counts
+        base_result_path = joinpath(output_dir, "results_base_t$(threads).jls")
+        head_result_path = joinpath(output_dir, "results_head_t$(threads).jls")
+
+        run_suite(base_dir, base_result_path, threads)
+        run_suite(head_dir, head_result_path, threads)
+
+        @info "Loading results (threads = $threads) …"
+        base_flat = flatten_group(Serialization.deserialize(base_result_path))
+        head_flat = flatten_group(Serialization.deserialize(head_result_path))
+        push!(sections, (threads, base_flat, head_flat))
+    end
+
+    body = build_body(sections, base_label, head_label, julia_version)
 
     write(joinpath(output_dir, "body.md"), body)
     write(joinpath(output_dir, "pr_number.txt"), pr_number)
     write(joinpath(output_dir, "julia_version.txt"), julia_version)
 
     @info "Benchmark comparison written to $(output_dir)/body.md"
+    return
 end
 
 main()

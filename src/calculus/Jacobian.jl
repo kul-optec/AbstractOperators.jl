@@ -42,7 +42,7 @@ function Jacobian(H::DCAT, b::AbstractArray)
             A = (A..., jacobian(H.A[k], xx))
         end
     end
-    return DCAT(A, H.idxD, H.idxC)
+    return _dcat_unshared(A, H.idxD, H.idxC, is_block_threaded(H))
 end
 #Jacobian of HCAT
 function Jacobian(H::HCAT, b::ArrayPartition)
@@ -58,12 +58,12 @@ function Jacobian(H::HCAT, x::Tuple)
             A = (A..., jacobian(H.A[k], xx))
         end
     end
-    return HCAT(A, H.idxs, H.buf)
+    return HCAT(A, H.idxs, H.buf; threaded = is_block_threaded(H))
 end
 #Jacobian of VCAT
 function Jacobian(V::VCAT, x::AbstractArray)
     JJ = ([Jacobian(a, x) for a in V.A]...,)
-    return VCAT(JJ, V.idxs, V.buf)
+    return VCAT(JJ, V.idxs, V.buf; threaded = is_block_threaded(V))
 end
 #Jacobian of Compose
 function Jacobian(L::Compose, x::AbstractArray)
@@ -111,3 +111,13 @@ domain_type(L::Jacobian) = domain_type(L.A)
 codomain_type(L::Jacobian) = codomain_type(L.A)
 domain_array_type(L::Jacobian) = domain_array_type(L.A)
 codomain_array_type(L::Jacobian) = codomain_array_type(L.A)
+
+_children(L::Jacobian) = (L.A,)
+
+function _copy_operator_impl(J::Jacobian; storage_type = nothing, threaded = nothing)
+    # `x` is the linearization point: its *value* is part of the operator's meaning, so it
+    # is copied rather than merely reallocated when the storage backend changes.
+    new_x = storage_type === nothing ? J.x :
+        copyto!(similar(storage_type{eltype(J.x)}, size(J.x)), J.x)
+    return Jacobian(copy_operator(J.A; storage_type, threaded), new_x)
+end

@@ -32,22 +32,22 @@ function GetIndex(x::AbstractGPUArray, idx::AbstractVector{Int})
     dim_in = size(x)
     dim_out = AbstractOperators.get_dim_out(dim_in, idx)
     if dim_out == dim_in
-        return AbstractOperators.Eye(eltype(x), dim_in; array_type = typeof(x))
+        return Eye(eltype(x), dim_in; array_type = typeof(x))
     end
     S = AbstractOperators._array_wrapper(x){eltype(x)}
     gpu_idx = _to_gpu_indices(x, idx)
-    return AbstractOperators.GetIndex(eltype(x), S, dim_out, dim_in, gpu_idx)
+    return GetIndex(eltype(x), S, dim_out, dim_in, gpu_idx)
 end
 
 function GetIndex(x::AbstractGPUArray, mask::AbstractArray{Bool})
     dim_in = size(x)
     dim_out = AbstractOperators.get_dim_out(dim_in, mask)
     if dim_out[1] == prod(dim_in)
-        return reshape(AbstractOperators.Eye(eltype(x), dim_in; array_type = typeof(x)), dim_out)
+        return reshape(Eye(eltype(x), dim_in; array_type = typeof(x)), dim_out)
     end
     S = AbstractOperators._array_wrapper(x){eltype(x)}
     gpu_idx = _to_gpu_indices(x, _mask_to_linear_indices(mask))
-    return AbstractOperators.GetIndex(eltype(x), S, dim_out, dim_in, gpu_idx)
+    return GetIndex(eltype(x), S, dim_out, dim_in, gpu_idx)
 end
 
 function mul!(

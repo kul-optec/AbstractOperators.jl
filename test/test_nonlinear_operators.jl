@@ -56,8 +56,10 @@ end
     x = randn(n, m, l)
     r = randn(n, m, l)
     op = Exp(n, m, l)
+    op = Exp((n, m, l))  # tuple-only constructor, no `domain_type`
     op = Exp(Float64, (n, m, l))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Exp(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Sin" tags = [:nonlinearoperator, :Sin] setup = [TestUtils] begin
@@ -68,8 +70,10 @@ end
     x = randn(n, m, l)
     r = randn(n, m, l)
     op = Sin(n, m, l)
+    op = Sin((n, m, l))  # tuple-only constructor, no `domain_type`
     op = Sin(Float64, (n, m, l))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Sin(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Cos" tags = [:nonlinearoperator, :Cos] setup = [TestUtils] begin
@@ -80,8 +84,10 @@ end
     x = randn(n, m, l)
     r = randn(n, m, l)
     op = Cos(n, m, l)
+    op = Cos((n, m, l))  # tuple-only constructor, no `domain_type`
     op = Cos(Float64, (n, m, l))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Cos(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Atan" tags = [:nonlinearoperator, :Atan] setup = [TestUtils] begin
@@ -92,8 +98,10 @@ end
     x = randn(n)
     r = randn(n)
     op = Atan(n)
+    op = Atan((n,))  # tuple-only constructor, no `domain_type`
     op = Atan(Float64, (n,))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Atan(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Tanh" tags = [:nonlinearoperator, :Tanh] setup = [TestUtils] begin
@@ -104,8 +112,10 @@ end
     x = randn(n)
     r = randn(n)
     op = Tanh(n)
+    op = Tanh((n,))  # tuple-only constructor, no `domain_type`
     op = Tanh(Float64, (n,))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Tanh(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Sech" tags = [:nonlinearoperator, :Sech] setup = [TestUtils] begin
@@ -116,8 +126,10 @@ end
     x = randn(n)
     r = randn(n)
     op = Sech(n)
+    op = Sech((n,))  # tuple-only constructor, no `domain_type`
     op = Sech(Float64, (n,))
     y, grad = test_NLop(op, x, r, verb)
+    y, grad = test_NLop(Sech(x), x, r, verb)  # construct from an array
 end
 
 @testitem "NonlinearOp: Pow" tags = [:nonlinearoperator, :Pow] setup = [TestUtils] begin
@@ -138,7 +150,7 @@ end
 
 # ─── GPU test items for nonlinear operators ───────────────────────────────────
 
-@testitem "NonlinearOp: Sigmoid (GPU)" tags = [:gpu, :nonlinearoperator, :Sigmoid] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Sigmoid (GPU)" tags = [:gpu, :nonlinearoperator, :Sigmoid] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -150,7 +162,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: SoftMax (GPU)" tags = [:gpu, :nonlinearoperator, :SoftMax] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: SoftMax (GPU)" tags = [:gpu, :nonlinearoperator, :SoftMax] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -162,7 +174,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: SoftPlus (GPU)" tags = [:gpu, :nonlinearoperator, :SoftPlus] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: SoftPlus (GPU)" tags = [:gpu, :nonlinearoperator, :SoftPlus] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -174,7 +186,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Exp (GPU)" tags = [:gpu, :nonlinearoperator, :Exp] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Exp (GPU)" tags = [:gpu, :nonlinearoperator, :Exp] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -186,7 +198,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Sin (GPU)" tags = [:gpu, :nonlinearoperator, :Sin] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Sin (GPU)" tags = [:gpu, :nonlinearoperator, :Sin] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -198,7 +210,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Cos (GPU)" tags = [:gpu, :nonlinearoperator, :Cos] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Cos (GPU)" tags = [:gpu, :nonlinearoperator, :Cos] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -210,7 +222,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Atan (GPU)" tags = [:gpu, :nonlinearoperator, :Atan] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Atan (GPU)" tags = [:gpu, :nonlinearoperator, :Atan] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -222,7 +234,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Tanh (GPU)" tags = [:gpu, :nonlinearoperator, :Tanh] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Tanh (GPU)" tags = [:gpu, :nonlinearoperator, :Tanh] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -234,7 +246,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Sech (GPU)" tags = [:gpu, :nonlinearoperator, :Sech] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Sech (GPU)" tags = [:gpu, :nonlinearoperator, :Sech] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
@@ -246,7 +258,7 @@ end
     end
 end
 
-@testitem "NonlinearOp: Pow (GPU)" tags = [:gpu, :nonlinearoperator, :Pow] setup = [TestUtils, GPUNLTestUtils] begin
+@testitem "NonlinearOp: Pow (GPU)" tags = [:gpu, :nonlinearoperator, :Pow] setup = [TestUtils, GPUNLTestUtils, GpuEnvSetup] begin
     using GPUEnv, Random, AbstractOperators
 
     for backend in gpu_backends()
