@@ -107,7 +107,7 @@ end
     Random.seed!(0)
     A = MatrixOp(randn(3, 3))
     B = MatrixOp(randn(3, 3))
-    @test_throws DimensionMismatch AbstractOperators.Compose((B, A), ())
+    @test_throws DimensionMismatch Compose((B, A), ())
 end
 
 @testitem "Compose: type mismatch error" tags = [:calculus, :Compose] setup = [TestUtils] begin
@@ -157,7 +157,7 @@ end
     using Random, AbstractOperators
     Random.seed!(0)
     G = GetIndex((5,), 2:4)
-    L = AbstractOperators.Compose((G, G'), (randn(size(G, 1)),))
+    L = Compose((G, G'), (randn(size(G, 1)),))
     x = randn(5)
     @test L * x == G' * (G * x)
     @test is_diagonal(L)
@@ -168,7 +168,7 @@ end
     Random.seed!(0)
     M = MatrixOp(randn(3, 3))
     S = Scale(2.0, Eye(3))
-    L = AbstractOperators.Compose((S, M), (zeros(3),))
+    L = Compose((S, M), (zeros(3),))
     @test L * randn(3) isa AbstractVector
     x = randn(3)
     @test L * x ≈ 2.0 * (M * x)
@@ -218,7 +218,7 @@ end
     Random.seed!(0)
     op1 = MyLinOp(Float64, (3,), Float64, (3,), (y, x) -> (y .= x), (y, x) -> (y .= x))
     op2 = MatrixOp(randn(2, 3))
-    L = AbstractOperators.Compose((op1, op2), (zeros(3),))
+    L = Compose((op1, op2), (zeros(3),))
     @test_throws ArgumentError AbstractOperators.remove_slicing(L)
 end
 
@@ -295,10 +295,10 @@ end
         original_stdout = stdout
         (read_pipe, write_pipe) = redirect_stdout()
         G = GetIndex((5,), 2:4)
-        _ = AbstractOperators.Compose((G, G'), (randn(3),))
+        _ = Compose((G, G'), (randn(3),))
         D1 = DiagOp(randn(3))
         D2 = DiagOp(randn(3))
-        _ = AbstractOperators.Compose((D1, D2), (randn(3),))
+        _ = Compose((D1, D2), (randn(3),))
         redirect_stdout(original_stdout)
         close(write_pipe)
         log_str = read(read_pipe, String)
@@ -425,14 +425,14 @@ end
     @test AbstractOperators.is_eye(AbstractOperators.remove_slicing(af))
     # length == 2 case: Compose((af, A2), buf) → remove_slicing returns A2
     A2 = MatrixOp(randn(3, 3))
-    L2 = AbstractOperators.Compose((af, A2), (zeros(3),))
+    L2 = Compose((af, A2), (zeros(3),))
     out = AbstractOperators.remove_slicing(L2)
     @test out === A2
     # length > 2 case: Compose((af, fd, M), bufs) → remove_slicing returns Compose(fd, M)
     # use FiniteDiff + MatrixOp (no combine rule → stays Compose after remove_slicing)
     fd = FiniteDiff((3,))
     A3 = MatrixOp(randn(4, 3))
-    L3 = AbstractOperators.Compose((af, fd, A3), (zeros(3), zeros(3)))
+    L3 = Compose((af, fd, A3), (zeros(3), zeros(3)))
     out3 = AbstractOperators.remove_slicing(L3)
     @test out3 isa Compose
     @test length(out3.A) == 2
@@ -465,8 +465,8 @@ end
     # At i=2: can_be_combined(s, M) → combine returns a Compose → triggers i -= 1 (line 73)
     buf1 = zeros(n - 1)
     buf2 = zeros(n - 1)
-    L = AbstractOperators.Compose((fd, M, s), (buf1, buf2))
-    @test L isa AbstractOperators.Compose
+    L = Compose((fd, M, s), (buf1, buf2))
+    @test L isa Compose
     x = randn(n)
     @test L * x ≈ s * (M * (fd * x))
 end
@@ -483,8 +483,8 @@ end
     # At i=2: can_be_combined(diag2, diag1)=true → non-Compose result → elseif branch,
     # i > 1 and buffers not equal → i -= 1 (line 88)
     buf1, buf2, buf3 = zeros(n - 1), zeros(n - 1), zeros(n - 1)
-    L = AbstractOperators.Compose((fd_n, diag1, diag2, fd_nm1), (buf1, buf2, buf3))
-    @test L isa AbstractOperators.Compose
+    L = Compose((fd_n, diag1, diag2, fd_nm1), (buf1, buf2, buf3))
+    @test L isa Compose
     x = randn(n)
     @test length(L * x) == n - 2
     @test L * x ≈ fd_nm1 * (diag2 * (diag1 * (fd_n * x)))
@@ -503,8 +503,8 @@ end
     # buf[i-1] === buf[i] is detected → reallocation triggered (lines 81-82)
     shared_buf = zeros(n - 1)
     mid_buf = zeros(n - 1)
-    L = AbstractOperators.Compose((fd_n, diag1, diag2, fd_nm1), (shared_buf, mid_buf, shared_buf))
-    @test L isa AbstractOperators.Compose
+    L = Compose((fd_n, diag1, diag2, fd_nm1), (shared_buf, mid_buf, shared_buf))
+    @test L isa Compose
     x = randn(n)
     @test length(L * x) == n - 2
     @test L * x ≈ fd_nm1 * (diag2 * (diag1 * (fd_n * x)))

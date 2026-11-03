@@ -105,7 +105,7 @@ julia> batch_op = BatchOp(ops, 6, (:s, :_, :_, :_, :b) => (:s, :_, :b, :_))
 ```
 """
 function BatchOp(
-        operators::Array{<:AbstractOperators.AbstractOperator};
+        operators::Array{<:AbstractOperator};
         threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
     )
@@ -123,7 +123,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operators::Array{<:AbstractOperators.AbstractOperator},
+        operators::Array{<:AbstractOperator},
         batch_size;
         threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
@@ -147,7 +147,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operators::Array{<:AbstractOperators.AbstractOperator},
+        operators::Array{<:AbstractOperator},
         batch_dim_mask::NTuple{M, Symbol};
         threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
@@ -162,7 +162,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operators::Array{<:AbstractOperators.AbstractOperator},
+        operators::Array{<:AbstractOperator},
         batch_size,
         batch_dim_mask::NTuple{M, Symbol};
         threaded::Bool = true,
@@ -178,7 +178,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operators::Array{<:AbstractOperators.AbstractOperator},
+        operators::Array{<:AbstractOperator},
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
         threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
@@ -193,7 +193,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operators::Array{<:AbstractOperators.AbstractOperator},
+        operators::Array{<:AbstractOperator},
         batch_size,
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
         threaded::Bool = true,
@@ -243,7 +243,7 @@ function create_BatchOp(
         spreading_dims::NTuple{K, Int};
         threaded::Bool = true,
         threading_strategy::Symbol = ThreadingStrategy.AUTO,
-    ) where {M, N, K, opT <: AbstractOperators.AbstractOperator}
+    ) where {M, N, K, opT <: AbstractOperator}
     batch_size, dType, cdType, opType = prepare_SpreadingBatchOp(
         operators,
         domain_size,
@@ -259,7 +259,7 @@ function create_BatchOp(
         # parameter, so this changes `opType` -- hence it happens here rather than inside
         # `create_threaded_SpreadingBatchOp`, whose THREAD_SAFE and LOCKING strategies
         # store the operators without ever reaching a copy.
-        operators = map(op -> AbstractOperators.adapt_operator(op; threaded = false), operators)
+        operators = map(op -> adapt_operator(op; threaded = false), operators)
         opType = eltype(operators)
         type_args = (
             dType,
@@ -374,7 +374,7 @@ function create_threaded_SpreadingBatchOp(
         if threading_strategy == ThreadingStrategy.COPYING
             operators = [
                 i == 1 ? operators :
-                    [AbstractOperators.copy_operator(op; threaded = false) for op in operators]
+                    [copy_operator(op; threaded = false) for op in operators]
                     for i in 1:min(nthreads(), prod(batch_size))
             ]
             return SpreadingBatchOpCopying{type_args...}(
@@ -431,17 +431,17 @@ end
 function get_nested_ops(op, collection)
     for fieldname in fieldnames(typeof(op))
         field = getfield(op, fieldname)
-        if field isa AbstractOperators.AbstractOperator
+        if field isa AbstractOperator
             !is_thread_safe(field) && push!(collection, field)
             get_nested_ops(field, collection)
-        elseif field isa AbstractArray{<:AbstractOperators.AbstractOperator}
+        elseif field isa AbstractArray{<:AbstractOperator}
             for sub_op in field
                 !is_thread_safe(sub_op) && push!(collection, sub_op)
                 get_nested_ops(sub_op, collection)
             end
         elseif field isa Tuple || field isa NTuple
             for sub_field in field
-                if sub_field isa AbstractOperators.AbstractOperator
+                if sub_field isa AbstractOperator
                     !is_thread_safe(sub_field) && push!(collection, sub_field)
                     get_nested_ops(sub_field, collection)
                 end

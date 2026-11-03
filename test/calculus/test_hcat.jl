@@ -357,7 +357,7 @@ end
         # indexed multi-element forms.
         big_n = 1 << 17
         H_big = build_hcat(big_n)
-        H_big = AbstractOperators.adapt_operator(H_big; threaded = true)
+        H_big = adapt_operator(H_big; threaded = true)
         @test AbstractOperators.is_block_threaded(H_big) == true
         xb = ArrayPartition(randn(big_n - 1), randn(big_n - 1), randn(big_n - 1), randn(big_n), randn(big_n))
         rb = randn(big_n - 1)

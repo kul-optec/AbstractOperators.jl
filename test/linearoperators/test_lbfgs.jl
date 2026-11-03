@@ -207,8 +207,8 @@ end
     @test ones(size(H, 1)) != H * ones(size(H, 1))
     @test ArrayPartition(ones.(size(HH, 1))) != HH * ArrayPartition(ones.(size(HH, 1))...)
 
-    AbstractOperators.reset!(H)
-    AbstractOperators.reset!(HH)
+    reset!(H)
+    reset!(HH)
 
     @test ones(size(H, 1)) == H * ones(size(H, 1))
     @test ArrayPartition(ones.(size(HH, 1))) == HH * ArrayPartition(ones.(size(HH, 1))...)

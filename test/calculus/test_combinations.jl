@@ -307,7 +307,7 @@ end
     T1 = AffineAdd(Eye(n), d1)        # x + d1, S=true
     T2 = AffineAdd(Eye(n), d2)        # x + d2, S=true
     Tc = T1 * T2                       # should combine, not stay as Compose
-    @test !(Tc isa AbstractOperators.Compose)
+    @test !(Tc isa Compose)
     x = randn(n)
     @test norm(Tc * x - (x + d2 + d1)) < 1.0e-12
 
@@ -315,14 +315,14 @@ end
     T3 = AffineAdd(Eye(n), d1, true)  # x + d1
     T4 = AffineAdd(Eye(n), d2, false) # x - d2
     Tc2 = T3 * T4
-    @test !(Tc2 isa AbstractOperators.Compose)
+    @test !(Tc2 isa Compose)
     @test norm(Tc2 * x - (x - d2 + d1)) < 1.0e-12
 
     # AffineAdd(linear) * AffineAdd(linear) — S1=false, S2=true
     T5 = AffineAdd(Eye(n), d1, false) # x - d1
     T6 = AffineAdd(Eye(n), d2, true)  # x + d2
     Tc3 = T5 * T6
-    @test !(Tc3 isa AbstractOperators.Compose)
+    @test !(Tc3 isa Compose)
     @test norm(Tc3 * x - (x + d2 - d1)) < 1.0e-12
 
     # combine(linear_op, AffineAdd) with scalar displacement
@@ -332,7 +332,7 @@ end
     opA = MatrixOp(A)
     opAA_scalar = AffineAdd(Eye(n), scalar_d)  # scalar displacement: x + 2.5
     Tc4 = opA * opAA_scalar                     # A * (x + 2.5) = A*x + A*fill(2.5,n)
-    @test !(Tc4 isa AbstractOperators.Compose)
+    @test !(Tc4 isa Compose)
     @test norm(Tc4 * x - A * (x .+ scalar_d)) < 1.0e-12
 
     # combine(L, Sum) with non-square L
@@ -342,7 +342,7 @@ end
     A2 = MatrixOp(randn(m2, n2))       # m2 × n2
     Sop = Sum(A1, A2)
     combined_sum = A_outer * Sop       # should combine; non-square → Sum(ops...) branch
-    @test !(combined_sum isa AbstractOperators.Compose)
+    @test !(combined_sum isa Compose)
     x2 = randn(n2)
     y_ref = A_outer.A * (A1.A * x2 + A2.A * x2)
     @test norm(combined_sum * x2 - y_ref) < 1.0e-12

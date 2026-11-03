@@ -66,7 +66,7 @@ julia> batch_op = BatchOp(op, (2, 6), (:b, :_, :_, :_, :b) => (:b, :_, :b, :_))
 ```
 """
 function BatchOp(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         batch_size;
         threaded::Bool = true,
     )
@@ -82,7 +82,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         batch_size,
         batch_dim_mask::NTuple{M, Symbol};
         threaded::Bool = true,
@@ -96,7 +96,7 @@ function BatchOp(
 end
 
 function BatchOp(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         batch_size,
         batch_dim_mask::Pair{NTuple{M1, Symbol}, NTuple{M2, Symbol}};
         threaded::Bool = true,
@@ -112,7 +112,7 @@ end
 # Internal constructors
 
 function create_BatchOp(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::NTuple{M, Bool};
         threaded::Bool = true,
@@ -122,7 +122,7 @@ function create_BatchOp(
 end
 
 function create_BatchOp(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::Pair{NTuple{M1, Bool}, NTuple{M2, Bool}};
         threaded::Bool = true,
@@ -133,7 +133,7 @@ function create_BatchOp(
 end
 
 function create_BatchOp(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         domain_size::NTuple{N, Int},
         domain_batch_dim_mask::NTuple{N2, Bool},
         codomain_size::NTuple{M, Int},

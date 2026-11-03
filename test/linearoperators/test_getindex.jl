@@ -267,7 +267,7 @@ end
     using Random, AbstractOperators
     Random.seed!(0)
     N = AbstractOperators.NormalGetIndex(Float64, Array{Float64}, (5,), 2:3)
-    @test AbstractOperators.AdjointOperator(N) === N
+    @test AdjointOperator(N) === N
     @test AbstractOperators.codomain_array_type(N) == Array{Float64}
 end
 

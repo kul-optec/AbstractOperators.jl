@@ -1,6 +1,6 @@
 export BatchOp, ThreadingStrategy
 
-abstract type BatchOp{dT, cT, dM, cM} <: AbstractOperators.AbstractOperator end
+abstract type BatchOp{dT, cT, dM, cM} <: AbstractOperator end
 
 # Which axes are batched, in the domain and in the codomain.
 _batch_masks(::BatchOp{dT, cT, dM, cM}) where {dT, cT, dM, cM} = (dM, cM)
@@ -29,10 +29,10 @@ Two things happen here, and both are required for nesting safety:
    copying does not change that answer (see `adapt_operator`), so the branch has to happen
    here rather than being delegated to `require_thread_safe`.
 """
-function _per_thread_operators(operator::AbstractOperators.AbstractOperator, count::Int)
-    base = AbstractOperators.adapt_operator(operator; threaded = false)
+function _per_thread_operators(operator::AbstractOperator, count::Int)
+    base = adapt_operator(operator; threaded = false)
     AbstractOperators.is_thread_safe(base) && return fill(base, count)
-    return [i == 1 ? base : AbstractOperators.copy_operator(base; threaded = false) for i in 1:count]
+    return [i == 1 ? base : copy_operator(base; threaded = false) for i in 1:count]
 end
 
 function ensure_batch_size_is_tuple(batch_size::Int)
@@ -52,7 +52,7 @@ get_domain_batch_dim_mask(::Type{<:BatchOp{T1, T2, dM, cM}}) where {T1, T2, dM, 
 get_codomain_batch_dim_mask(::Type{<:BatchOp{T1, T2, dM, cM}}) where {T1, T2, dM, cM} = cM
 
 function prepare_batch_op(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         domain_size::NTuple{M1, Int},
         domain_batch_dim_mask::NTuple{M2, Bool},
         codomain_size::NTuple{N1, Int},
@@ -90,7 +90,7 @@ function symbol_mask_to_bool(mask::Pair{NTuple{N1, Symbol}, NTuple{N2, Symbol}})
 end
 
 function calculate_shapes(
-        operator::AbstractOperators.AbstractOperator,
+        operator::AbstractOperator,
         batch_size::NTuple{N, Int},
         batch_dim_mask::Pair{NTuple{M1, Bool}, NTuple{M2, Bool}},
     ) where {N, M1, M2}

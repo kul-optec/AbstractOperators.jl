@@ -478,7 +478,7 @@ end
 
     # IDFT must stay an adjoint-wrapped DFT: that is what makes the DFT/IDFT combination
     # rules fire.
-    @test IDFT(8) isa AbstractOperators.AdjointOperator
+    @test IDFT(8) isa AdjointOperator
     @test AbstractOperators.can_be_combined(DFT(ComplexF64, 8), IDFT(8))
 
     # `Conv`/`Xcorr` plan their own FFTW transforms (DSPOperators does not depend on

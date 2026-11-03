@@ -369,7 +369,7 @@ end
 
     S = Scale(2.0, serial_leaf)
     S2 = copy_operator(S; threaded = true)
-    @test S2 isa AbstractOperators.Scale
+    @test S2 isa Scale
     x = randn(n)
     @test S * x ≈ S2 * x
 

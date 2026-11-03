@@ -91,7 +91,7 @@
         batch_op = BatchOp(op, (2,); threaded)
         io = IOBuffer(); show(io, batch_op); s = String(take!(io))
         @test occursin("⟳", s)
-        batch_op_copy = AbstractOperators.copy_operator(batch_op)
+        batch_op_copy = copy_operator(batch_op)
         @test batch_op == batch_op_copy
         @test isequal(batch_op, batch_op_copy)
         @test domain_array_type(batch_op) == domain_array_type(op)
