@@ -396,7 +396,8 @@ function _copy_operator_impl(
     ) where {N, C, D, Dir, S, T1, T2, R}
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
     if storage_type === nothing && new_threaded == is_threaded(op)
-        # Plans are immutable and hold no per-call scratch, so a copy shares them.
+        # The struct is immutable and its plans hold no per-call scratch, so a copy would
+        # be `===` to `op` anyway.
         return op
     end
     # Changing the storage type or thread count means replanning. The prototype must use

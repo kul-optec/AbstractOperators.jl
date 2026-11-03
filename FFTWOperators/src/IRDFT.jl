@@ -112,8 +112,8 @@ function _copy_operator_impl(
         op::IRDFT{T, N, D, T1, T2, T3, S}; storage_type = nothing, threaded = nothing
     ) where {T, N, D, T1, T2, T3, S}
     new_threaded = threaded === nothing ? is_threaded(op) : threaded
-    # No per-call scratch fields, so an unchanged storage type and thread count means the
-    # plans can be shared.
+    # The struct is immutable and has no per-call scratch fields, so with an unchanged storage
+    # type and thread count a copy would be `===` to `op` anyway.
     if storage_type === nothing && new_threaded == is_threaded(op)
         return op
     end

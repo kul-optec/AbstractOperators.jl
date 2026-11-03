@@ -233,8 +233,8 @@ end
 
 # Properties
 
-# The batch loop's threading (`_loop_threaded`) is encoded in the struct type; `is_threaded`
-# also counts the wrapped operator.
+# The batch loop's threading (`_loop_threaded`) is encoded in the struct type. The serial
+# variant uses the default `is_threaded`, which asks the wrapped operator via `_children`.
 is_threaded(::SimpleBatchOpMultiThreaded) = true
 supports_threading(::SimpleBatchOp) = true
 _children(L::SimpleBatchOpSingleThreaded) = (L.operator,)

@@ -298,7 +298,7 @@ Consequently `is_threaded(copy_operator(L; threaded = true))` is **not** guarant
 `true`; `is_threaded(copy_operator(L; threaded = false))` *is* guaranteed to be `false`,
 which is the direction nesting safety depends on.
 
-Defaults to whether any of [`_children`](@ref) is threaded, so `false` for a leaf.
+Defaults to whether any of `_children(L)` is threaded, so `false` for a leaf.
 """
 is_threaded(L::AbstractOperator) = _is_threaded_from_children(L)
 
@@ -339,15 +339,16 @@ deliberately no override that makes `is_threaded` disagree with the executed pat
 end
 
 """
-	_children(L::AbstractOperator) -> Tuple
+	_children(L::AbstractOperator)
 
-The wrapped operators of a forwarding (calculus) operator, or `()` for a leaf.
+The wrapped operators of a forwarding (calculus) operator, or `()` for a leaf. The result
+is only iterated, so any iterable works (a tuple, an array, or a flattened array of arrays).
 
-Forwarders get `is_threaded` for free from this, which matters for more than tidiness:
-`adapt_operator(op; threaded = false)` decides whether to copy by asking `is_threaded`, so
-a forwarder that inherited the `false` default would report "constraint already satisfied"
-and hand back an operator whose children are still threaded. That is a silent nesting bug,
-not a missing optimization.
+The default `is_threaded` and `supports_threading` are derived from it, which matters for
+more than tidiness: `adapt_operator(op; threaded = false)` decides whether to copy by
+asking `is_threaded`, so a forwarder whose children are missing here would report
+"constraint already satisfied" and hand back an operator whose children are still
+threaded. That is a silent nesting bug, not a missing optimization.
 """
 _children(::AbstractOperator) = ()
 
@@ -368,7 +369,7 @@ while `threaded = false` is a **demand** ("do not spawn threads", required for n
 safety). Without the distinction, passing `threaded = true` down a `Compose` to a
 memory-bound `Eye` would copy the `Eye` forever without ever satisfying the constraint.
 
-Defaults to whether any of [`_children`](@ref) supports threading, so `false` for a leaf;
+Defaults to whether any of `_children(L)` supports threading, so `false` for a leaf;
 leaf operators with a threaded path override it.
 """
 supports_threading(L::AbstractOperator) = _supports_threading_from_children(L)
