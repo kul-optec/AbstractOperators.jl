@@ -136,3 +136,6 @@ function _copy_operator_impl(op::HadamardProdJac; storage_type = nothing, thread
         new_A, new_B, new_bufA, new_bufB, new_bufD
     )
 end
+
+_children(L::HadamardProd) = (L.A, L.B)
+_children(L::HadamardProdJac) = (L.A, L.B)

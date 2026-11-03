@@ -24,9 +24,9 @@ end
 
 # Constructors
 #standard constructor
-function ZeroPad(
-        domain_type::Type{T}, dim_in::NTuple{N, Int}, zp::NTuple{M, Int};
-        array_type::Type = Array{T}
+function _zeropad_impl(
+        domain_type::Type{T}, dim_in::NTuple{N, Int}, zp::NTuple{M, Int},
+        array_type::Type{<:AbstractArray},
     ) where {T, N, M}
     M != N && error("dim_in and zp must have the same length")
     any([zp...] .< 0) && error("zero padding cannot be negative")
@@ -34,16 +34,28 @@ function ZeroPad(
     return ZeroPad{N, T, S}(dim_in, zp)
 end
 
-function ZeroPad(dim_in::Tuple, zp::NTuple{N, Int}; array_type::Type = Array{Float64}) where {N}
-    return ZeroPad(Float64, dim_in, zp; array_type)
+function ZeroPad(
+        domain_type::Type{T}, dim_in::NTuple{N, Int}, zp::NTuple{M, Int};
+        array_type::Type{<:AbstractArray} = Array{T}
+    ) where {T, N, M}
+    return _zeropad_impl(domain_type, dim_in, zp, array_type)
+end
+
+function ZeroPad(
+        dim_in::Tuple, zp::NTuple{N, Int}; array_type::Type{<:AbstractArray} = Array{Float64}
+    ) where {N}
+    return _zeropad_impl(Float64, dim_in, zp, array_type)
 end
 function ZeroPad(
-        domain_type::Type{T}, dim_in::Tuple, zp::Vararg{Int, N}; array_type::Type = Array{T}
+        domain_type::Type{T}, dim_in::Tuple, zp::Vararg{Int, N};
+        array_type::Type{<:AbstractArray} = Array{T}
     ) where {T, N}
-    return ZeroPad(domain_type, dim_in, zp; array_type)
+    return _zeropad_impl(domain_type, dim_in, zp, array_type)
 end
-function ZeroPad(dim_in::Tuple, zp::Vararg{Int, N}; array_type::Type = Array{Float64}) where {N}
-    return ZeroPad(Float64, dim_in, zp; array_type)
+function ZeroPad(
+        dim_in::Tuple, zp::Vararg{Int, N}; array_type::Type{<:AbstractArray} = Array{Float64}
+    ) where {N}
+    return _zeropad_impl(Float64, dim_in, zp, array_type)
 end
 function ZeroPad(x::AbstractArray{T}, zp::NTuple{N, Int}) where {T, N}
     S = _normalize_array_type(_array_wrapper(x), T)
@@ -116,3 +128,14 @@ is_full_column_rank(L::ZeroPad) = true
 
 has_fast_opnorm(::ZeroPad) = true
 LinearAlgebra.opnorm(L::ZeroPad) = one(real(domain_type(L)))
+
+# No threaded execution path (see `supports_threading`), so `threaded` is accepted purely so
+# that forwarders can pass it down uniformly, and has no effect here. `storage_type` is
+# honoured: it is the whole reason this method exists rather than the deepcopy fallback.
+
+function _copy_operator_impl(
+        op::ZeroPad{N, T, S}; storage_type = nothing, threaded = nothing
+    ) where {N, T, S}
+    new_at = storage_type === nothing ? _array_wrapper_type(S) : storage_type
+    return ZeroPad(T, op.dim_in, op.zp; array_type = new_at)
+end

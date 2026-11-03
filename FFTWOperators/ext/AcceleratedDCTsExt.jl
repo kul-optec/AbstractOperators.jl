@@ -24,16 +24,19 @@ struct OrthoIDCTPlan{T, N, P, S, B} <: AbstractFFTs.Plan{T}
     pinv::Base.RefValue{Any}
 end
 
-function FFTWOperators.DCT(x::AbstractGPUArray{T, N}) where {T <: Real, N}
+# `num_threads = 1`: a GPU DCT plan has no CPU thread count, and the device kernel is
+# already parallel, so `is_threaded` correctly reports false for GPU-backed transforms.
+# `kwargs...` swallows the CPU-only `num_threads`/`threaded` keywords.
+function FFTWOperators.DCT(x::AbstractGPUArray{T, N}; kwargs...) where {T <: Real, N}
     A, At = _ortho_plan_pair(x)
     buf = similar(x, 0)  # zero-length marker for storage type inference
-    return DCT{N, T, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf)
+    return DCT{N, T, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf, 1)
 end
 
-function FFTWOperators.IDCT(x::AbstractGPUArray{T, N}) where {T <: Real, N}
+function FFTWOperators.IDCT(x::AbstractGPUArray{T, N}; kwargs...) where {T <: Real, N}
     At, A = _ortho_plan_pair(x)
     buf = similar(x, 0)  # zero-length marker for storage type inference
-    return IDCT{N, T, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf)
+    return IDCT{N, T, typeof(A), typeof(At), typeof(buf)}(size(x), A, At, buf, 1)
 end
 
 Base.size(p::OrthoDCTPlan) = size(p.scale)

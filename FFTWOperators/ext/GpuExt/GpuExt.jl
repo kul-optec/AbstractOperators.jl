@@ -1,6 +1,7 @@
 module GpuExt
 
 using AbstractFFTs: plan_fft, plan_bfft
+using FFTW: FFTW
 using GPUArrays
 using AbstractOperators: check
 using FFTWOperators
@@ -21,8 +22,10 @@ function FFTWOperators.DFT(
     S = typeof(x isa SubArray ? parent(x) : x).name.wrapper
     dims_t = tuple(dims...)
     scaling = _dft_scaling(size(x), dims_t, normalization)
+    # `num_threads = 1`: a GPU FFT plan has no CPU thread count, and the device kernel is
+    # already parallel, so `is_threaded` correctly reports false for GPU-backed DFTs.
     return DFT{N, Complex{D}, D, dims_t, S, typeof(A), typeof(At), D}(
-        size(x), A, At, normalization, scaling,
+        size(x), A, At, normalization, scaling, 1, FFTW.ESTIMATE, Inf,
     )
 end
 
@@ -39,7 +42,7 @@ function FFTWOperators.DFT(
     dims_t = tuple(dims...)
     scaling = _dft_scaling(size(x), dims_t, normalization)
     return DFT{N, D, D, dims_t, S, typeof(A), typeof(At), real(D)}(
-        size(x), A, At, normalization, scaling,
+        size(x), A, At, normalization, scaling, 1, FFTW.ESTIMATE, Inf,
     )
 end
 

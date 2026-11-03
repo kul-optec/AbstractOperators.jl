@@ -138,3 +138,23 @@ size(A::LBFGS{R, T}) where {R, T <: ArrayPartition} = (size.(A.s.x), size.(A.s.x
 size(A::LBFGS) = (size(A.s), size(A.s))
 
 fun_name(A::LBFGS) = "LBFGS"
+
+# `update!` and `mul!` mutate `s`, `y`, the history and the scalars, so LBFGS is not
+# thread-safe and has no threaded path. A copy gets its own buffers, holding the same history.
+is_threaded(::LBFGS) = false
+
+function _copy_operator_impl(
+        op::LBFGS{R, T, M, I}; storage_type = nothing, threaded = nothing
+    ) where {R, T, M, I}
+    # LBFGS has no threaded path at all (`supports_threading(::LBFGS) == false`), so a
+    # `threaded` request -- true or false -- is vacuous here, exactly as the generic
+    # fallback treats it for any operator that doesn't support threading; see `properties.jl`.
+    move(a) = storage_type === nothing ? copy(a) :
+        copyto!(similar(storage_type{eltype(a)}, size(a)), a)
+    s = move(op.s)
+    # `ys_M` and `alphas` stay on the CPU: they are only used with scalar indexing.
+    return LBFGS{R, typeof(s), M, I}(
+        op.currmem, op.curridx, s, move(op.y), map(move, op.s_M), map(move, op.y_M),
+        copy(op.ys_M), copy(op.alphas), op.H,
+    )
+end

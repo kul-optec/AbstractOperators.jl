@@ -36,9 +36,9 @@ jobs:
         run: |
           julia --project=test -e '
             using Pkg
-            Pkg.rm(["DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"])
+            Pkg.rm(["ContourletOperators", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators"])
             Pkg.develop(path = pwd())
-            for pkg in ("DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators")
+            for pkg in ("ContourletOperators", "DSPOperators", "FFTWOperators", "NFFTOperators", "WaveletOperators")
                 Pkg.develop(path = joinpath(pwd(), pkg))
             end
             Pkg.instantiate()

@@ -55,7 +55,8 @@ GPU extension conventions live in `ext/GpuExt/CLAUDE.md`.
 - Prefer `@testitem` with explicit tags and optional setup modules; keep test files
   standalone-capable and aligned with TestItems setup modules.
 - Use type tags from: `:linearoperator`, `:nonlinearoperator`, `:batching`, `:calculus`,
-  `:jet`, `:quality`, `:misc`.
+  `:jet`, `:quality`, `:misc`. Add `:threading` to any testitem that exercises the
+  threading policy or a threaded code path.
 - Operator tags must use exact CamelCase type names, e.g. `:MatrixOp`, `:FiniteDiff`,
   `:Compose`, `:SpreadingBatchOp`. Mixed tests may use multiple operator tags when the
   behavior genuinely spans operators.

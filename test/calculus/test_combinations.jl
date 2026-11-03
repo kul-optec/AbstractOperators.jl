@@ -307,7 +307,7 @@ end
     T1 = AffineAdd(Eye(n), d1)        # x + d1, S=true
     T2 = AffineAdd(Eye(n), d2)        # x + d2, S=true
     Tc = T1 * T2                       # should combine, not stay as Compose
-    @test !(Tc isa AbstractOperators.Compose)
+    @test !(Tc isa Compose)
     x = randn(n)
     @test norm(Tc * x - (x + d2 + d1)) < 1.0e-12
 
@@ -315,14 +315,14 @@ end
     T3 = AffineAdd(Eye(n), d1, true)  # x + d1
     T4 = AffineAdd(Eye(n), d2, false) # x - d2
     Tc2 = T3 * T4
-    @test !(Tc2 isa AbstractOperators.Compose)
+    @test !(Tc2 isa Compose)
     @test norm(Tc2 * x - (x - d2 + d1)) < 1.0e-12
 
     # AffineAdd(linear) * AffineAdd(linear) — S1=false, S2=true
     T5 = AffineAdd(Eye(n), d1, false) # x - d1
     T6 = AffineAdd(Eye(n), d2, true)  # x + d2
     Tc3 = T5 * T6
-    @test !(Tc3 isa AbstractOperators.Compose)
+    @test !(Tc3 isa Compose)
     @test norm(Tc3 * x - (x + d2 - d1)) < 1.0e-12
 
     # combine(linear_op, AffineAdd) with scalar displacement
@@ -332,7 +332,7 @@ end
     opA = MatrixOp(A)
     opAA_scalar = AffineAdd(Eye(n), scalar_d)  # scalar displacement: x + 2.5
     Tc4 = opA * opAA_scalar                     # A * (x + 2.5) = A*x + A*fill(2.5,n)
-    @test !(Tc4 isa AbstractOperators.Compose)
+    @test !(Tc4 isa Compose)
     @test norm(Tc4 * x - A * (x .+ scalar_d)) < 1.0e-12
 
     # combine(L, Sum) with non-square L
@@ -342,7 +342,7 @@ end
     A2 = MatrixOp(randn(m2, n2))       # m2 × n2
     Sop = Sum(A1, A2)
     combined_sum = A_outer * Sop       # should combine; non-square → Sum(ops...) branch
-    @test !(combined_sum isa AbstractOperators.Compose)
+    @test !(combined_sum isa Compose)
     x2 = randn(n2)
     y_ref = A_outer.A * (A1.A * x2 + A2.A * x2)
     @test norm(combined_sum * x2 - y_ref) < 1.0e-12
@@ -462,11 +462,11 @@ end
     n = 5
     # Build a 2-op Compose that doesn't get simplified: FD(n) * MatrixOp(n-1,n-1)
     # A tuple order is (inner, outer) so comp.A = (FD(n), MatrixOp(n-1,n-1))
-    comp = MatrixOp(randn(n-1, n-1)) * FiniteDiff((n,))   # domain (n,) → codomain (n-1,)
+    comp = MatrixOp(randn(n - 1, n - 1)) * FiniteDiff((n,))   # domain (n,) → codomain (n-1,)
 
     # Line 82 else: combine(Scale, Compose) when can_be_combined(L.A, comp.A[end]) = false
     # but can_be_combined(Scale, comp) = true via the all-linear+MatrixOp condition
-    L_82 = Scale(2.0, FiniteDiff((n-1,)))  # domain (n-1,) → codomain (n-2,)
+    L_82 = Scale(2.0, FiniteDiff((n - 1,)))  # domain (n-1,) → codomain (n-2,)
     @test can_be_combined(L_82, comp)
     result_82 = combine(L_82, comp)
     x1 = randn(n)
@@ -474,7 +474,7 @@ end
 
     # Line 90 else: combine(AdjointScale, Compose) when can_be_combined(FD(n)', comp.A[end]) = false
     # Use MatrixOp(n-1,n-1) * FD(n,) so inner operator (FD') doesn't combine with outer (MatrixOp)
-    comp2 = MatrixOp(randn(n-1, n-1)) * FiniteDiff((n,))  # domain (n,) → codomain (n-1,)
+    comp2 = MatrixOp(randn(n - 1, n - 1)) * FiniteDiff((n,))  # domain (n,) → codomain (n-1,)
     adj_L = Scale(2.0, FiniteDiff((n,)))'   # domain (n-1,) → codomain (n,)
     @test can_be_combined(adj_L, comp2)
     result_90 = combine(adj_L, comp2)
@@ -482,21 +482,21 @@ end
     @test result_90 * x2 ≈ adj_L * (comp2 * x2)
 
     # Lines 98-99 else: combine(Compose, Scale) when can_be_combined(comp.A[1]=FD(n), FD(n+1)) = false
-    scale_inner = Scale(2.0, FiniteDiff((n+1,)))  # domain (n+1,) → codomain (n,)
+    scale_inner = Scale(2.0, FiniteDiff((n + 1,)))  # domain (n+1,) → codomain (n,)
     @test can_be_combined(comp, scale_inner)
     result_98 = combine(comp, scale_inner)
-    x3 = randn(n+1)
+    x3 = randn(n + 1)
     @test result_98 * x3 ≈ comp * (scale_inner * x3)
 
     # Lines 109-110 else: combine(Compose, AdjointScale) when can_be_combined(comp.A[1]=FD(n), FD(n)') = false
     adj_scale_inner = Scale(2.0, FiniteDiff((n,)))'  # domain (n-1,) → codomain (n,)
     @test can_be_combined(comp, adj_scale_inner)
     result_109 = combine(comp, adj_scale_inner)
-    x4 = randn(n-1)
+    x4 = randn(n - 1)
     @test result_109 * x4 ≈ comp * (adj_scale_inner * x4)
 end
 
-@testitem "Combinations (GPU)" tags = [:gpu, :calculus, :Combinations] setup = [TestUtils] begin
+@testitem "Combinations (GPU)" tags = [:gpu, :calculus, :Combinations] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

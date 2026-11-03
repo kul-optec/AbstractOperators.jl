@@ -1,13 +1,13 @@
 using Documenter
 using LinearAlgebra, OperatorCore
-using AbstractOperators, DSPOperators, FFTWOperators, NFFTOperators, WaveletOperators
+using AbstractOperators, ContourletOperators, DSPOperators, FFTWOperators, NFFTOperators, WaveletOperators
 
 DocMeta.setdocmeta!(
     AbstractOperators, :DocTestSetup, :(using AbstractOperators); recursive = true
 )
 
 makedocs(;
-    modules = [OperatorCore, AbstractOperators, DSPOperators, FFTWOperators, NFFTOperators, WaveletOperators],
+    modules = [OperatorCore, AbstractOperators, ContourletOperators, DSPOperators, FFTWOperators, NFFTOperators, WaveletOperators],
     format = Documenter.HTML(),
     sitename = "AbstractOperators.jl",
     authors = "Niccolò Antonello, Lorenzo Stella and Tamás Hakkel",

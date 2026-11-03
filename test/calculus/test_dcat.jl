@@ -109,7 +109,7 @@ end
     @test norm(ArrayPartition(A * x.x[1], B * x.x[2]) - y) < 1.0e-8
 end
 
-@testitem "DCAT (GPU)" tags = [:gpu, :calculus, :DCAT] setup = [TestUtils] begin
+@testitem "DCAT (GPU)" tags = [:gpu, :calculus, :DCAT] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()

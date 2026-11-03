@@ -207,14 +207,14 @@ end
     @test ones(size(H, 1)) != H * ones(size(H, 1))
     @test ArrayPartition(ones.(size(HH, 1))) != HH * ArrayPartition(ones.(size(HH, 1))...)
 
-    AbstractOperators.reset!(H)
-    AbstractOperators.reset!(HH)
+    reset!(H)
+    reset!(HH)
 
     @test ones(size(H, 1)) == H * ones(size(H, 1))
     @test ArrayPartition(ones.(size(HH, 1))) == HH * ArrayPartition(ones.(size(HH, 1))...)
 end
 
-@testitem "L-BFGS (GPU)" tags = [:gpu, :linearoperator, :LBFGS] setup = [TestUtils] begin
+@testitem "L-BFGS (GPU)" tags = [:gpu, :linearoperator, :LBFGS] setup = [TestUtils, GpuEnvSetup] begin
     using Random, AbstractOperators, GPUEnv
 
     for backend in gpu_backends()
@@ -252,4 +252,42 @@ end
         yp = Hp * gp
         @test yp isa typeof(xp)
     end
+end
+
+@testitem "L-BFGS: copy_operator keeps the curvature history" tags = [
+    :linearoperator, :LBFGS,
+] setup = [TestUtils] begin
+    using AbstractOperators, LinearAlgebra, Random, JLArrays
+    Random.seed!(0)
+
+    # `y = A * s` with a symmetric positive definite `A` that is not the identity: with
+    # `y == s` every history gives the identity, and a copy that lost its history would
+    # still match.
+    n = 5
+    Q = randn(n, n)
+    A = Q' * Q + 5I
+    L = LBFGS(zeros(n), 5)
+    for _ in 1:3
+        s = randn(n)
+        x_prev = randn(n)
+        g_prev = randn(n)
+        update!(L, x_prev .+ s, x_prev, g_prev .+ A * s, g_prev)
+    end
+    g = randn(n)
+    Lg = L * g
+    @test Lg != g
+
+    Lc = copy_operator(L)
+    @test Lc.currmem == L.currmem
+    @test Lc.curridx == L.curridx
+    @test Lc * g == Lg
+    # The copy owns its history: updating it leaves the original untouched.
+    @test Lc.s_M[1] !== L.s_M[1]
+    s = randn(n)
+    update!(Lc, s, zero(s), A * s, zero(s))
+    @test L * g == Lg
+
+    Lj = copy_operator(L; storage_type = JLArray)
+    @test domain_array_type(Lj) <: JLArray
+    @test collect(Lj * JLArray(g)) ≈ Lg
 end
