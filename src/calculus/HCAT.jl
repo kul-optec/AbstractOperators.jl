@@ -60,7 +60,7 @@ struct HCAT{
     buf::C   # buffer memory
     A_par::LP  # `A` with every block forced `threaded = false`; used only by the threaded
     # adjoint block loop, to avoid nesting each block's own threading inside that loop.
-    # Blocks that are not thread-safe are copied, so shared ones do not share scratch.
+    # Blocks that share a non-thread-safe operator are copied; see `_block_loop_operators`.
     # Aliases `A` (LP === L, no extra copy) whenever the adjoint loop itself is not threaded.
     function HCAT(A::L, idxs::P, buf::C; threaded::Bool = true) where {N, L <: NTuple{N, AbstractOperator}, P <: Tuple, C}
         if any([size(A[1], 1) != size(a, 1) for a in A])
@@ -78,7 +78,7 @@ struct HCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(HCAT, A)
         end
-        A_par = th ? map(_block_loop_operator, A) : A
+        A_par = th ? _block_loop_operators(A) : A
         return new{N, L, P, C, DS, th, typeof(A_par)}(A, idxs, buf, A_par)
     end
 end

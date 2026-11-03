@@ -738,6 +738,10 @@ end
         @test allunique(map(objectid, H.A_par))
     end
 
+    if AO.is_block_threaded(Dn)
+        @test allunique(map(b -> objectid(b isa Scale ? b.A : b), Dn.A))
+    end
+
     Cx = [C * x.x[i] for i in 1:4]
     for _ in 1:5
         @test D * x == ArrayPartition(Cx...)
@@ -745,6 +749,37 @@ end
         @test all(==(C * xv), (V * xv).x)
         @test all(==(C' * y), (H' * y).x)
     end
+end
+
+@testitem "Threading contract: block loops keep the caller's unshared blocks" tags = [
+    :calculus, :threading, :DCAT, :VCAT, :HCAT, :LBFGS,
+] setup = [TestUtils] begin
+    using AbstractOperators, LinearAlgebra, Random
+    using AbstractOperators: update!
+    using RecursiveArrayTools: ArrayPartition
+    const AO = AbstractOperators
+    Random.seed!(0)
+
+    # `LBFGS` is not thread-safe and holds state the caller updates.
+    n = 1 << 16
+    Ls = [LBFGS(zeros(n), 3) for _ in 1:4]
+    @test is_thread_safe(Ls[1]) == false
+    D = DCAT(Ls...)
+    V = VCAT(Ls...)
+    H = HCAT(Ls...)
+    if Threads.nthreads() > 1
+        @test AO.is_block_threaded(D)
+    end
+    AO.is_block_threaded(D) && @test all(i -> D.A[i] === Ls[i], 1:4)
+    AO.is_block_threaded(V) && @test all(i -> V.A_par[i] === Ls[i], 1:4)
+    AO.is_block_threaded(H) && @test all(i -> H.A_par[i] === Ls[i], 1:4)
+
+    x, x_old, g, g_old = randn(n), zeros(n), randn(n), zeros(n)
+    update!(Ls[1], x, x_old, g, g_old)
+    xs = ArrayPartition([randn(n) for _ in 1:4]...)
+    @test (D * xs).x[1] == Ls[1] * xs.x[1]
+    @test (V * xs.x[1]).x[1] == Ls[1] * xs.x[1]
+    @test (H' * xs.x[1]).x[1] == Ls[1]' * xs.x[1]
 end
 
 @testitem "Threading contract: block loops thread only when every block is on the CPU" tags = [

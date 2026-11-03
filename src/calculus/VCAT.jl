@@ -43,7 +43,7 @@ struct VCAT{
     buf::C   # buffer memory
     A_par::LP  # `A` with every block forced `threaded = false`; used only by the threaded
     # forward block loop, to avoid nesting each block's own threading inside that loop.
-    # Blocks that are not thread-safe are copied, so shared ones do not share scratch.
+    # Blocks that share a non-thread-safe operator are copied; see `_block_loop_operators`.
     # Aliases `A` (LP === L, no extra copy) whenever the forward loop itself is not threaded.
     function VCAT(
             A::L, idxs::P, buf::C; threaded::Bool = true
@@ -62,7 +62,7 @@ struct VCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(VCAT, A)
         end
-        A_par = th ? map(_block_loop_operator, A) : A
+        A_par = th ? _block_loop_operators(A) : A
         return new{N, L, P, C, CS, th, typeof(A_par)}(A, idxs, buf, A_par)
     end
 end

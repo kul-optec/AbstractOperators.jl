@@ -239,15 +239,33 @@ function _is_cpu_domain(::Type{<:ArrayPartition{T, S}}) where {T, S <: Tuple}
 end
 
 """
-	_block_loop_operator(block) -> AbstractOperator
+	_block_loop_operators(blocks) -> Tuple
 
-The form of `block` that a threaded block loop calls: serial, since the loop is the
-parallel layer, and copied when it is not thread-safe, since the same operator may fill
-several blocks (`DCAT(C, C)`, `DCAT(C, 2 * C)`).
+The forms of `blocks` that a threaded block loop calls: serial, since the loop is the
+parallel layer, and copied when a block shares an operator that is not thread-safe with
+another block (`DCAT(C, C)`, `DCAT(C, 2 * C)`). Other blocks stay the caller's objects, so
+state the caller updates (e.g. `update!` on an `LBFGS`) still reaches them.
 """
-function _block_loop_operator(block::AbstractOperator)
-    is_thread_safe(block) && return adapt_operator(block; threaded = false)
-    return copy_operator(block; threaded = false)
+function _block_loop_operators(blocks::Tuple)
+    counts = IdDict{Any, Int}()
+    for b in blocks
+        for o in _thread_unsafe_nodes!(IdSet{Any}(), b)
+            counts[o] = get(counts, o, 0) + 1
+        end
+    end
+    shared(b) = any(o -> counts[o] > 1, _thread_unsafe_nodes!(IdSet{Any}(), b))
+    return map(blocks) do b
+        shared(b) ? copy_operator(b; threaded = false) : adapt_operator(b; threaded = false)
+    end
+end
+
+# The operators in the tree of `op` that are not thread-safe.
+function _thread_unsafe_nodes!(nodes::IdSet{Any}, op::AbstractOperator)
+    is_thread_safe(op) || push!(nodes, op)
+    for c in _children(op)
+        _thread_unsafe_nodes!(nodes, c)
+    end
+    return nodes
 end
 
 # Multi-domain operators report an ArrayPartition, which the size policy cannot use

@@ -42,8 +42,8 @@ struct DCAT{
         th = _resolve_threaded(threaded) do
             default_block_threaded(DCAT, A)
         end
-        # The block loop is the parallel layer; see `_block_loop_operator`.
-        blocks = th ? map(_block_loop_operator, A) : A
+        # The block loop is the parallel layer; see `_block_loop_operators`.
+        blocks = th ? _block_loop_operators(A) : A
         return new{length(blocks), typeof(blocks), P1, P2, DS, CS, th}(blocks, idxD, idxC)
     end
     # For blocks already prepared for `th`.
